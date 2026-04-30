@@ -1,0 +1,25 @@
+name = "packrift-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-09-23"
+
+[vars]
+SHOPIFY_STORE_DOMAIN = "packrift.myshopify.com"
+SHOPIFY_API_VERSION = "2025-04"
+STOREFRONT_DOMAIN = "packrift.com"
+
+# KV for catalog list cache (5-min TTL).
+# Before first deploy: `wrangler kv namespace create CATALOG_CACHE` and paste the
+# returned id below. For local `wrangler dev`, an in-memory KV is auto-created
+# from the binding name regardless of id.
+[[kv_namespaces]]
+binding = "CATALOG_CACHE"
+id = "c5aa45b19ebe4520b81ad219ba054443"
+preview_id = "c5aa45b19ebe4520b81ad219ba054443"
+
+# Custom domain route — live as of 2026-04-29
+# Cert ID: e00b37b1-f812-410f-b127-98272edeb61c
+# Configured via API: PUT /accounts/.../workers/domains
+[[routes]]
+pattern = "mcp.packrift.com"
+custom_domain = true
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
