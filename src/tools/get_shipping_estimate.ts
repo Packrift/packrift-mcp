@@ -30,6 +30,8 @@ export const getShippingEstimateSchema = {
     },
     required: ["destination_postal_code", "country", "items"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const getShippingEstimateZod = z.object({

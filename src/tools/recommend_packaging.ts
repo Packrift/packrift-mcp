@@ -20,6 +20,8 @@ export const recommendPackagingSchema = {
     },
     required: ["item_length_in", "item_width_in", "item_depth_in", "item_weight_lb", "use_case"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const recommendPackagingZod = z.object({

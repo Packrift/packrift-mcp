@@ -11,6 +11,8 @@ export const checkInventorySchema = {
     },
     required: ["variant_ids"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const checkInventoryZod = z.object({ variant_ids: z.array(z.string()).min(1) });

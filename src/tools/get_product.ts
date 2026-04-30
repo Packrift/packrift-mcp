@@ -10,6 +10,8 @@ export const getProductSchema = {
     properties: { handle: { type: "string" } },
     required: ["handle"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const getProductZod = z.object({ handle: z.string().min(1) });

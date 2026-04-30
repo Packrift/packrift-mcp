@@ -13,6 +13,8 @@ export const searchProductsSchema = {
     },
     required: ["query"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const searchProductsZod = z.object({

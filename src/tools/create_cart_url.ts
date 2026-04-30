@@ -25,6 +25,8 @@ export const createCartUrlSchema = {
     },
     required: ["items"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const createCartUrlZod = z.object({

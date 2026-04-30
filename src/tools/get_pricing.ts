@@ -12,6 +12,8 @@ export const getPricingSchema = {
     },
     required: ["variant_ids"],
   },
+
+  annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const getPricingZod = z.object({
