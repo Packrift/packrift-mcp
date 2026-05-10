@@ -141,3 +141,16 @@ package.json
 tsconfig.json
 .dev.vars                        Local-only secrets (gitignored)
 ```
+
+## AI Sales SKU Discovery Pages
+
+Packrift now publishes top AI-commerce SKU pages for exact-spec procurement agents.
+
+- Top 1,000 AI SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
+- SKU markdown template: https://mcp.packrift.com/ai/sku/1066.md
+- SKU JSON template: https://mcp.packrift.com/ai/sku/1066.json
+- Reorder corpus: https://mcp.packrift.com/ai/reorder-by-sku.md
+- AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
+
+Each SKU page links to the canonical Packrift product page, reorder path, bulk quote path, MCP endpoint, and no-exact-match policy. Use these pages only for AI_APPROVE products and confirm live price and inventory through the MCP tools before checkout handoff.
+
