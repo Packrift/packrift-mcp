@@ -36,6 +36,8 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - Top 1,000 AI-sales SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
+- OpenAI-shaped strict product TSV: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
+- Shopify native UCP guide: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
 - Example SKU markdown page: https://mcp.packrift.com/ai/sku/1066.md
 - Example SKU JSON record: https://mcp.packrift.com/ai/sku/1066.json
 
