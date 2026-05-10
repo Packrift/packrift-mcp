@@ -28,6 +28,17 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 }
 ```
 
+## AI Discovery Surfaces
+
+- `llms.txt`: https://mcp.packrift.com/llms.txt
+- `llms-full.txt`: https://mcp.packrift.com/llms-full.txt
+- MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
+- Top 1,000 AI-sales SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
+- All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
+- Example SKU markdown page: https://mcp.packrift.com/ai/sku/1066.md
+- Example SKU JSON record: https://mcp.packrift.com/ai/sku/1066.json
+
 ## Tools
 
 | Tool | Purpose |
