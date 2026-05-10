@@ -5,6 +5,28 @@ Production MCP (Model Context Protocol) server for Packrift, a Shopify packaging
 - **Stack**: Cloudflare Workers, TypeScript (strict), Hono, Zod, Streamable HTTP transport
 - **Backing**: Shopify Admin GraphQL API (`2025-04`), store `packrift.myshopify.com`
 - **Endpoint**: `POST /mcp`, `GET /mcp` (SSE), `GET /` (health), `GET /.well-known/mcp/server-card.json`
+- **Install guide**: see [`llms-install.md`](llms-install.md) for remote MCP client configuration.
+
+## Remote MCP client setup
+
+The public Packrift endpoint is hosted at:
+
+```text
+https://mcp.packrift.com/mcp
+```
+
+MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
+
+```json
+{
+  "mcpServers": {
+    "packrift": {
+      "type": "http",
+      "url": "https://mcp.packrift.com/mcp"
+    }
+  }
+}
+```
 
 ## Tools
 
