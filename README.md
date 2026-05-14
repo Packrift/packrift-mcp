@@ -28,6 +28,29 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 }
 ```
 
+## Container image
+
+The public hosted endpoint above is the primary integration path. A container
+build is also available for MCP directories and local environments that require a
+package-style install surface:
+
+```sh
+docker run --rm -p 8787:8787 \
+  -e SHOPIFY_PACKRIFT_TOKEN=... \
+  ghcr.io/packrift/packrift-mcp:latest
+```
+
+Optional environment variables:
+
+- `PORT` defaults to `8787`
+- `SHOPIFY_STORE_DOMAIN` defaults to `packrift.myshopify.com`
+- `SHOPIFY_API_VERSION` defaults to `2025-04`
+- `STOREFRONT_DOMAIN` defaults to `packrift.com`
+
+The container uses an in-memory cache instead of Cloudflare KV. It is intended
+for discovery and client testing; the production server remains the Cloudflare
+Workers endpoint at `https://mcp.packrift.com/mcp`.
+
 ## AI Discovery Surfaces
 
 - `llms.txt`: https://mcp.packrift.com/llms.txt
@@ -166,4 +189,3 @@ Packrift now publishes top AI-commerce SKU pages for exact-spec procurement agen
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 
 Each SKU page links to the canonical Packrift product page, reorder path, bulk quote path, MCP endpoint, and no-exact-match policy. Use these pages only for AI_APPROVE products and confirm live price and inventory through the MCP tools before checkout handoff.
-
