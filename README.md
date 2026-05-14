@@ -28,12 +28,20 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 }
 ```
 
-## Container-ready Dockerfile
+## Container Image
 
 The public hosted endpoint above is the primary integration path. A container
-Dockerfile is included for MCP directories and local environments that require a
-package-style install surface. Until a public registry image is published, build
-the image from this repository:
+image is published for MCP directories and local environments that require a
+package-style install surface:
+
+```sh
+docker pull ghcr.io/packrift/packrift-mcp:latest
+docker run --rm -p 8787:8787 \
+  -e SHOPIFY_PACKRIFT_TOKEN=... \
+  ghcr.io/packrift/packrift-mcp:latest
+```
+
+You can also build the image from this repository:
 
 ```sh
 docker build -t packrift-mcp .
