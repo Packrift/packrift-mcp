@@ -13,6 +13,7 @@ RUN npm run build
 
 FROM node:24-alpine AS runner
 WORKDIR /app
+LABEL io.modelcontextprotocol.server.name="io.github.Packrift/packrift-mcp"
 ENV NODE_ENV=production
 ENV PORT=8787
 ENV SHOPIFY_STORE_DOMAIN=packrift.myshopify.com
