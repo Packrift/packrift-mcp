@@ -1,7 +1,7 @@
 {
   "name": "packrift-mcp-server",
-  "version": "0.1.0",
-  "description": "MCP server for Packrift (Shopify) catalog, pricing, inventory, and checkout helpers.",
+  "version": "0.2.1",
+  "description": "MCP server for Packrift exact-spec packaging procurement, live pricing, inventory, reorder, quote, and cart handoff.",
   "private": true,
   "type": "module",
   "scripts": {

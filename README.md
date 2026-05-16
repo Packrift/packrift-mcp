@@ -1,6 +1,6 @@
 # Packrift MCP Server
 
-Production MCP (Model Context Protocol) server for Packrift, a Shopify packaging-supplies store. Lets AI agents search the catalog, get live pricing and inventory, recommend a box for an item, estimate shipping, and produce checkout URLs.
+Production MCP (Model Context Protocol) server for Packrift exact-spec packaging procurement. Hero use case: find the right packaging supply for a given item, SKU, or reorder need, then confirm live price, inventory, shipping, and cart handoff.
 
 - **Stack**: Cloudflare Workers, TypeScript (strict), Hono, Zod, Streamable HTTP transport
 - **Backing**: Shopify Admin GraphQL API (`2025-04`), store `packrift.myshopify.com`
@@ -76,15 +76,35 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 
 ## Tools
 
+Tools are framed around exact-spec procurement, not generic browsing. Use `find_packaging_for_item` when the buyer has item dimensions or a fit question; use SKU and exact-spec tools when the buyer is replenishing a known product.
+
 | Tool | Purpose |
 |---|---|
-| `search_products(query, limit?)` | Keyword search across the catalog. Cached 5 min in KV. |
-| `get_product(handle)` | Full product detail incl. variants, dimensions metafield, weight. |
-| `get_pricing(variant_ids[], quantity?)` | Live unit price + line total. Never cached. |
-| `check_inventory(variant_ids[])` | Live inventory count. Never cached. |
-| `recommend_packaging(dims, weight, use_case)` | Up to 5 ranked variant suggestions with 0.5–2 in padding. |
-| `get_shipping_estimate(zip, country, items[])` | Carrier rates via Shopify `draftOrderCalculate`. |
-| `create_cart_url(items[], discount_code?, ref?)` | Builds `packrift.com/cart/...?ref=mcp[&discount=...]`. |
+| `find_packaging_for_item(dims, weight, use_case)` | Item L/W/D + weight + use case -> ranked packaging SKUs that fit. Use for smallest-fit, box-vs-mailer, and Uline-by-size style questions. |
+| `search_products(query, limit?)` | Keyword fallback when dimensions are unknown, such as kraft tape, bubble mailer, starter kit, or weather-resistant labels. Cached 5 min in KV. |
+| `get_product(handle)` | Full product detail including variants, dimensions/metafields, weight, stock, and product URL. |
+| `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. Never cached. |
+| `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. Never cached. |
+| `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
+| `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
+| `get_reorder_link(sku, handle?)` | Reorder URL, product URL, and copy-procurement-spec text for an AI-approved SKU or handle. |
+| `get_bulk_quote_link(requested_spec, family?, sku?, quantity?)` | Tracked bulk quote URL for no-exact-match, large-volume, or procurement-review workflows. |
+| `explain_no_exact_match(requested_spec, missing_or_mismatched_fields?)` | Explains why a nearby product should not be presented as exact, then routes to safe next actions and quote recovery. |
+
+## MCP Prompts And Resources
+
+The server advertises prompts and resources in addition to tools.
+
+Prompts:
+
+- `find_exact_packaging_spec`
+- `reorder_packrift_sku`
+- `request_bulk_quote_for_no_match`
+- `copy_procurement_spec`
+- `find_box_by_lwh`
+- `find_label_by_size_material_printer`
+
+Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
 
 ## Local development
 
