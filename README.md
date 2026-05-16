@@ -6,6 +6,7 @@ Production MCP (Model Context Protocol) server for Packrift exact-spec packaging
 - **Backing**: Shopify Admin GraphQL API (`2025-04`), store `packrift.myshopify.com`
 - **Endpoint**: `POST /mcp`, `GET /mcp` (SSE), `GET /` (health), `GET /.well-known/mcp/server-card.json`
 - **Install guide**: see [`llms-install.md`](llms-install.md) for remote MCP client configuration.
+- **Discovery gate**: product lookup, reorder, quote, and cart handoff flows are constrained to AI-approved Packrift catalog records where SKU selection is involved.
 
 ## Remote MCP client setup
 
@@ -67,6 +68,9 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - `llms-full.txt`: https://mcp.packrift.com/llms-full.txt
 - MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
+- AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
+- AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
+- Reorder by SKU corpus: https://mcp.packrift.com/ai/reorder-by-sku.md
 - Top 1,000 AI-sales SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
 - OpenAI-shaped strict product TSV: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
@@ -80,7 +84,7 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 
 | Tool | Purpose |
 |---|---|
-| `find_packaging_for_item(dims, weight, use_case)` | Item L/W/D + weight + use case -> ranked packaging SKUs that fit. Use for smallest-fit, box-vs-mailer, and Uline-by-size style questions. |
+| `find_packaging_for_item(dims, weight, use_case)` | Hero. Item L/W/D + weight + use case -> ranked packaging SKUs that fit. Use for smallest-fit, box-vs-mailer, and Uline-by-size style questions. |
 | `search_products(query, limit?)` | Keyword fallback when dimensions are unknown, such as kraft tape, bubble mailer, starter kit, or weather-resistant labels. Cached 5 min in KV. |
 | `get_product(handle)` | Full product detail including variants, dimensions/metafields, weight, stock, and product URL. |
 | `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. Never cached. |
@@ -105,6 +109,16 @@ Prompts:
 - `find_label_by_size_material_printer`
 
 Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
+
+## Exact-spec AI-commerce examples
+
+Packrift is optimized for exact-spec packaging procurement: agents should not treat nearby sizes, materials, colors, adhesives, strength ratings, or case counts as exact substitutes. If there is no exact AI-approved match, route the buyer to reorder, no-match explanation, or bulk quote recovery instead of forcing a substitute.
+
+Current paid ChatGPT / product-card order families that are represented in the public corpus:
+
+- SKU `1066`: 10 x 6 x 6 ECT-32 kraft corrugated boxes, 25/bundle
+- SKU `MFL1295`: 12 1/8 x 9 1/4 x 5 white self-seal literature mailers, 50/pack
+- SKU `LL251WR`: 2 5/8 x 1 weather-resistant polyester laser labels, 3000/case
 
 ## Local development
 
@@ -210,7 +224,7 @@ tsconfig.json
 
 ## AI Sales SKU Discovery Pages
 
-Packrift now publishes top AI-commerce SKU pages for exact-spec procurement agents.
+Packrift publishes AI-commerce SKU pages for exact-spec procurement agents.
 
 - Top 1,000 AI SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - SKU markdown template: https://mcp.packrift.com/ai/sku/1066.md
@@ -218,4 +232,4 @@ Packrift now publishes top AI-commerce SKU pages for exact-spec procurement agen
 - Reorder corpus: https://mcp.packrift.com/ai/reorder-by-sku.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 
-Each SKU page links to the canonical Packrift product page, reorder path, bulk quote path, MCP endpoint, and no-exact-match policy. Use these pages only for AI_APPROVE products and confirm live price and inventory through the MCP tools before checkout handoff.
+Each SKU page links to the canonical Packrift product page, reorder path, bulk quote path, MCP endpoint, and no-exact-match policy. Use these pages only for AI-approved products and confirm live price and inventory through the MCP tools before checkout handoff.
