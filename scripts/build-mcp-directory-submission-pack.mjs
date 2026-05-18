@@ -23,13 +23,22 @@ const TARGETS = [
     action: "Submit the GitHub repo and request a recrawl so the listing includes the current tools and cart-handoff resources.",
   },
   {
-    name: "glama",
-    label: "Glama",
+    name: "glama_connector",
+    label: "Glama Connector",
+    listing_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+    submission_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+    category: "Business",
+    priority: "high",
+    action: "Monitor the hosted Glama connector; it should stay healthy and list the 14 live tools.",
+  },
+  {
+    name: "glama_server_listing",
+    label: "Glama Server Listing",
     listing_url: "https://glama.ai/mcp/servers/ye4xxr7qiu",
     submission_url: "https://glama.ai/",
     category: "Business",
     priority: "high",
-    action: "Refresh the GitHub repo listing and verify Glama indexes the 14 live tools, not just the connector shell.",
+    action: "Refresh the GitHub repo listing so it no longer shows the old zero-tool, token-required server record.",
   },
   {
     name: "mcp_directory",
@@ -298,17 +307,19 @@ function liveProofDigest(liveProof) {
 }
 
 function glamaRecrawlNote(payload) {
-  const glama = payload.targets.find((target) => target.name === "glama");
-  const glamaEnvRequired = glama?.distribution_observation?.environment_required ?? [];
+  const glamaConnector = payload.targets.find((target) => target.name === "glama_connector");
+  const glamaServer = payload.targets.find((target) => target.name === "glama_server_listing");
+  const glamaEnvRequired = glamaServer?.distribution_observation?.environment_required ?? [];
   const tools = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return [
     "Packrift MCP has a current hosted Streamable HTTP endpoint at https://mcp.packrift.com/mcp that requires no user-supplied API token.",
     `Live JSON-RPC tools/list now returns ${payload.live_proof.mcp_tools_list.tools_count ?? tools.length} tools: ${tools.join(", ")}.`,
     `Live resources/list returns ${payload.live_proof.mcp_resources_list.resources_count ?? "unknown"} resources and prompts/list returns ${payload.live_proof.mcp_prompts_list.prompts_count ?? "unknown"} prompts.`,
+    `Glama's hosted connector is ${glamaConnector?.current_status ?? "not checked"} at ${glamaConnector?.current_evidence_url ?? "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp"} and should remain the primary Glama traffic target.`,
     `The Glama ownership claim is live at ${payload.live_proof.glama_claim.url} and uses ${payload.live_proof.glama_claim.schema}.`,
-    glama?.current_status === "stale"
-      ? `Glama's public API is stale for ${glama.current_evidence_url}: observed ${glama.distribution_observation?.tools_count ?? 0} tools and required env vars ${glamaEnvRequired.length ? glamaEnvRequired.join(", ") : "none"}. Please recrawl the latest official registry entry and hosted endpoint.`
-      : `Glama status is ${glama?.current_status ?? "not checked"} in the latest distribution check.`,
+    glamaServer?.current_status === "stale"
+      ? `Glama's open-source server API is stale for ${glamaServer.current_evidence_url}: observed ${glamaServer.distribution_observation?.tools_count ?? 0} tools and required env vars ${glamaEnvRequired.length ? glamaEnvRequired.join(", ") : "none"}. Please recrawl the latest official registry entry and hosted endpoint.`
+      : `Glama server-listing status is ${glamaServer?.current_status ?? "not checked"} in the latest distribution check.`,
   ].join("\n");
 }
 

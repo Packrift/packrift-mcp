@@ -32,11 +32,17 @@ const SURFACE_GUIDANCE = {
     priority: "medium",
     follow_up_action: "Monitor its official-registry ingestion and use the current official-registry pass as recrawl evidence.",
   },
-  glama: {
+  glama_connector: {
+    listing_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+    submission_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+    priority: "high",
+    follow_up_action: "Keep the hosted Glama connector healthy and listing all 14 current tools.",
+  },
+  glama_server_listing: {
     listing_url: "https://glama.ai/mcp/servers/ye4xxr7qiu",
     submission_url: "https://glama.ai/",
     priority: "high",
-    follow_up_action: "Resubmit or refresh the GitHub repo through Glama and verify it indexes tool schemas instead of only the connector shell.",
+    follow_up_action: "Refresh the open-source server listing so it no longer shows the old token-required zero-tool record.",
   },
   mcp_directory: {
     listing_url: "https://mcp.directory/servers?q=packrift",
@@ -225,11 +231,26 @@ async function mcpbenchCheck() {
   });
 }
 
-async function glamaCheck() {
+async function glamaConnectorCheck() {
+  const result = await fetchText("https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp");
+  const text = result.text;
+  const toolNames = [...new Set([...text.matchAll(/[?&]tool=([a-z_]+)/g)].map((match) => match[1]))].sort();
+  const required = ["create_cart_url", "get_cart_handoff_candidates", "find_packaging_for_item", "inventory_status"];
+  return check("glama_connector", result.ok && text.includes("Healthy") && toolNames.length >= 14 && hasAll(text, required) ? "pass" : "stale", {
+    http_status: result.status,
+    url: result.url,
+    status_label: text.includes("Healthy") ? "Healthy" : null,
+    tools_count: toolNames.length,
+    tool_names: toolNames,
+    missing: required.filter((needle) => !text.includes(needle)),
+  });
+}
+
+async function glamaServerListingCheck() {
   const result = await fetchText("https://glama.ai/api/mcp/v1/servers/Packrift/packrift-mcp");
-  if (!result.ok) return check("glama", "fail", { http_status: result.status, url: result.url });
+  if (!result.ok) return check("glama_server_listing", "fail", { http_status: result.status, url: result.url });
   const parsed = JSON.parse(result.text);
-  return check("glama", Array.isArray(parsed.tools) && parsed.tools.length >= 14 ? "pass" : "stale", {
+  return check("glama_server_listing", Array.isArray(parsed.tools) && parsed.tools.length >= 14 ? "pass" : "stale", {
     http_status: result.status,
     url: parsed.url,
     id: parsed.id,
@@ -303,7 +324,8 @@ async function main() {
       liveMcpCheck(),
       mcpserversCheck(),
       mcpbenchCheck(),
-      glamaCheck(),
+      glamaConnectorCheck(),
+      glamaServerListingCheck(),
       simplePresenceCheck("mcp_directory", "https://mcp.directory/servers?q=packrift", ["Packrift"]),
       simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
       mcpMarketplaceCheck(),
