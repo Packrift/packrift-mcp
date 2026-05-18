@@ -156,6 +156,7 @@ async function main() {
     mcpserversCheck(),
     mcpbenchCheck(),
     glamaCheck(),
+    simplePresenceCheck("mcp_directory", "https://mcp.directory/servers?q=packrift", ["Packrift"]),
     simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
     simplePresenceCheck("mcp_marketplace_io", "https://mcp-marketplace.io/server/packrift", ["Packrift"]),
     simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),

@@ -6,6 +6,7 @@ node_modules/
 .env.local
 .env.cloudflare.local
 outputs/
+.playwright-cli/
 *.log
 .DS_Store
 dist/
