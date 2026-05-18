@@ -122,6 +122,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   const canUseLandingUrl = input.items.length === 1 && Boolean(input.selected_sku);
   const landingUrl = canUseLandingUrl ? new URL(`https://mcp.packrift.com/r/cart/${encodeURIComponent(input.selected_sku!)}`) : null;
   if (landingUrl) {
+    landingUrl.searchParams.set("ref", input.ref);
     landingUrl.searchParams.set("qty", String(input.items[0]?.qty ?? 1));
     landingUrl.searchParams.set("utm_source", cartTracking.utm_source);
     landingUrl.searchParams.set("utm_medium", cartTracking.utm_medium);

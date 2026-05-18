@@ -1247,6 +1247,7 @@ function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: RouteRedirec
     url.searchParams.set("product_url", productUrlForItem(item));
   }
   if (action === "cart") {
+    url.searchParams.set("ref", "mcp");
     url.searchParams.set("qty", "1");
   }
   return url.toString();
