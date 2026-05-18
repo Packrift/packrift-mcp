@@ -9,10 +9,13 @@ const ANALYTICS_ROOT = "/Users/farhan/Downloads/packrift-ai-commerce-execution-2
 const FACTORY_OUTPUT_ROOT = "/Users/farhan/Downloads/packrift-ai-commerce-factory/outputs";
 const GA4_PULLER = join(ANALYTICS_ROOT, "packrift_ga4_pull.py");
 const GA4_ENV = join(ANALYTICS_ROOT, "packrift-ga4-env.local");
+const GA4_REALTIME_PULLER = resolve(REPO_ROOT, "scripts/pull-ga4-realtime-mcp-cart.py");
 const MCP_STATS_ENV = "/Users/farhan/Downloads/env-packrift-mcp-stats.txt";
 const OUT_ROOT = resolve(REPO_ROOT, "outputs/mcp-funnel-snapshot");
 const DEFAULT_PROPERTY_ID = "531219331";
 const DEFAULT_REPORTS = "ai_mcp_events,mcp_cart_url_landings";
+const DEFAULT_GA4_START_DATE = "90daysAgo";
+const DEFAULT_GA4_END_DATE = "today";
 
 const args = parseArgs(process.argv.slice(2));
 loadEnvFile(GA4_ENV);
@@ -90,6 +93,7 @@ try {
     first_party_total_events: snapshot.first_party_mcp?.total_events ?? null,
     first_party_total_tool_calls: snapshot.first_party_mcp?.total_tool_calls ?? null,
     ga4_mcp_cart_url_landing_events: snapshot.ga4?.mcp_cart_url_landings?.event_count ?? null,
+    ga4_realtime_mcp_cart_events: snapshot.ga4?.realtime_mcp_cart_events?.event_count ?? null,
     distribution_counts: snapshot.distribution?.counts ?? null,
     live_discovery_ok: snapshot.live_discovery?.ok ?? null,
     static_availability_ok: snapshot.static_availability?.ok ?? null,
@@ -155,6 +159,8 @@ function runGa4Pull() {
   if (!existsSync(GA4_PULLER)) return { ok: false, error: `Missing GA4 puller at ${GA4_PULLER}` };
   const outputDir = join(outDir, "ga4-pull");
   const reports = args.reports || DEFAULT_REPORTS;
+  const startDate = args["ga4-start-date"] || args["start-date"] || DEFAULT_GA4_START_DATE;
+  const endDate = args["ga4-end-date"] || args["end-date"] || DEFAULT_GA4_END_DATE;
   const result = spawnSync("python3", [
     GA4_PULLER,
     "--property-id",
@@ -163,6 +169,10 @@ function runGa4Pull() {
     args["auth-mode"] || process.env.PACKRIFT_GA4_AUTH_MODE || "oauth",
     "--reports",
     reports,
+    "--start-date",
+    startDate,
+    "--end-date",
+    endDate,
     "--output-dir",
     outputDir,
   ], {
@@ -176,6 +186,8 @@ function runGa4Pull() {
     ok: result.status === 0,
     output_dir: outputDir,
     reports,
+    start_date: startDate,
+    end_date: endDate,
     exit_status: result.status,
     stderr: result.status === 0 ? "" : (result.stderr || "").slice(0, 1000),
     summary_path: join(outputDir, "packrift-ga4-pull-summary.md"),
@@ -186,6 +198,30 @@ function runGa4Pull() {
     ...base,
     ai_mcp_events: existsSync(eventsPath) ? summarizeGa4AiMcpEvents(readCsv(eventsPath)) : { row_count: 0 },
     mcp_cart_url_landings: existsSync(cartPath) ? summarizeGa4CartLandings(readCsv(cartPath)) : { row_count: 0 },
+    realtime_mcp_cart_events: args["skip-ga4-realtime"] ? { ok: false, skipped: true } : runGa4RealtimeMcpCart(),
+  };
+}
+
+function runGa4RealtimeMcpCart() {
+  if (!existsSync(GA4_REALTIME_PULLER)) return { ok: false, error: `Missing GA4 realtime puller at ${GA4_REALTIME_PULLER}` };
+  const result = spawnSync("python3", [GA4_REALTIME_PULLER], {
+    cwd: REPO_ROOT,
+    env: process.env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: Number(args["ga4-realtime-timeout-ms"] || 120000),
+  });
+  let parsed = null;
+  try {
+    parsed = result.stdout ? JSON.parse(result.stdout) : null;
+  } catch {
+    parsed = null;
+  }
+  return {
+    ...(parsed || {}),
+    ok: result.status === 0 && Boolean(parsed?.ok),
+    exit_status: result.status,
+    stderr: result.status === 0 ? "" : (result.stderr || "").slice(0, 1000),
   };
 }
 
@@ -525,11 +561,13 @@ function markdownReport(value) {
     "## GA4 MCP Attribution",
     "",
     `- GA4 output: ${ga4.output_dir ?? "not run"}`,
+    `- GA4 date range: ${ga4.start_date ?? "not set"} to ${ga4.end_date ?? "not set"}`,
     `- AI/MCP event rows: ${ga4.ai_mcp_events?.row_count ?? 0}`,
     `- Total AI/MCP session_start events: ${ga4.ai_mcp_events?.ai_session_start_events ?? 0}`,
     `- MCP-specific session_start events: ${ga4.ai_mcp_events?.mcp_specific_session_start_events ?? 0}`,
     `- Stamped cart landing rows: ${cart.row_count ?? 0}`,
     `- Stamped cart landing events: ${cart.event_count ?? 0}`,
+    `- Realtime MCP cart events: ${ga4.realtime_mcp_cart_events?.event_count ?? 0}`,
     `- Stamped cart landing revenue: $${numberValue(cart.revenue).toFixed(2)}`,
     "",
     "## Distribution",
