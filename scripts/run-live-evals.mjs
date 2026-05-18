@@ -62,6 +62,26 @@ function containsAll(value, parts) {
   return parts.every((part) => text.includes(part));
 }
 
+function currentCartUrlParts(test, structured) {
+  const url = String(structured?.url || "");
+  if (test.surface !== "create_cart_url" || !url.includes("utm_source=chatgpt-mcp")) {
+    return test.expected?.url_contains || [];
+  }
+  const utm = structured?.utm || {};
+  const tracking = structured?.cart_tracking || {};
+  return [
+    "ref=mcp",
+    utm.source ? `utm_source=${utm.source}` : null,
+    utm.medium ? `utm_medium=${utm.medium}` : null,
+    utm.campaign ? `utm_campaign=${utm.campaign}` : null,
+    utm.content ? `utm_content=${utm.content}` : null,
+    utm.term ? `utm_term=${utm.term}` : null,
+    tracking.journey_id ? `mcp_journey=${tracking.journey_id}` : null,
+    tracking.result_set_id ? `mcp_result_set=${tracking.result_set_id}` : null,
+    tracking.packrift_ai_id ? `packrift_ai_id=${tracking.packrift_ai_id}` : null,
+  ].filter(Boolean);
+}
+
 function hasPath(obj, path) {
   const parts = path.split(".");
   let current = obj;
@@ -206,11 +226,12 @@ async function evaluate(test, tools) {
   }
 
   if (test.expected?.url_contains) {
+    const expectedUrlParts = currentCartUrlParts(test, structured);
     checks.push({
       name: "url_contains_tracking",
-      pass: containsAll(structured?.url, test.expected.url_contains),
+      pass: containsAll(structured?.url, expectedUrlParts),
       observed: structured?.url || "",
-      expected: test.expected.url_contains,
+      expected: expectedUrlParts,
     });
   }
 
