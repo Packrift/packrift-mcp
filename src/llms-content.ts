@@ -32,6 +32,7 @@ Use these as examples of exact product families that converted, not as universal
 ## How agents should use Packrift
 
 - [MCP server](https://mcp.packrift.com/mcp): Streamable HTTP, read-only tools for catalog search, pricing, inventory, recommendations, comparison, pack calculation, shipping estimates, and cart-URL construction
+- Add Packrift MCP through the [Glama hosted connector](https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp), [MCP Marketplace listing](https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp), [Official MCP Registry search](https://registry.modelcontextprotocol.io/v0/servers?search=Packrift), or [GitHub source repository](https://github.com/Packrift/packrift-mcp)
 - Native MCP prompts are available via prompts/list for exact-spec search, reorder, no-match quote recovery, and copy-procurement-spec workflows
 - Use the \`prepare_cart_handoff\` prompt when a client needs a guarded sequence from selected SKU to live confirmation and stamped \`create_cart_url\` handoff.
 - [Machine-readable AI agent instructions](https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
@@ -72,6 +73,8 @@ Use these as examples of exact product families that converted, not as universal
 - [Public exact-spec data page](https://packrift.com/pages/packrift-ai-exact-spec-data): Shopify-hosted resource page linking buyers, crawlers, and agents to the MCP corpus files
 - [AI agent instructions](https://packrift.com/pages/packrift-ai-agent-instructions): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
 - [Server card](https://packrift.com/.well-known/mcp/server-card.json): MCP discovery manifest
+- [Glama connector claim](https://mcp.packrift.com/.well-known/glama.json): hosted connector ownership and endpoint discovery
+- [MCP Marketplace discovery manifest](https://mcp.packrift.com/.well-known/mcp-marketplace.json): marketplace ownership and endpoint discovery
 - [Product feed (JSON)](https://packrift.com/products.json): Shopify product feed, paginated, no auth
 - [Sitemap](https://packrift.com/sitemap.xml)
 

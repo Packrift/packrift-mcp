@@ -358,6 +358,14 @@ Packrift exposes a public MCP server for AI agents that need real-time catalog a
 
 **Endpoint:** https://mcp.packrift.com/mcp (Streamable HTTP, no auth, read-only)
 
+**Add or install Packrift MCP:**
+
+- Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
+- MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
+- Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
+- Source repository and install docs: https://github.com/Packrift/packrift-mcp
+- Direct JSON-RPC endpoint for Streamable HTTP clients: https://mcp.packrift.com/mcp
+
 **Tools:**
 
 - \`search_products(query, limit)\` — keyword product search
@@ -405,6 +413,8 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Public exact-spec data page: https://packrift.com/pages/packrift-ai-exact-spec-data
 - AI agent instructions: https://packrift.com/pages/packrift-ai-agent-instructions
 - Server card: https://packrift.com/.well-known/mcp/server-card.json
+- Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
+- MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - Product feed: https://packrift.com/products.json (paginated)
 - Sitemap: https://packrift.com/sitemap.xml
 
@@ -436,7 +446,8 @@ https://packrift.com/cart/44192837465920:50,44192837498688:10?ref=mcp
 
 - Domain: packrift.com (DNS managed via Cloudflare; storefront hosted on Shopify; MCP infrastructure on Cloudflare Workers).
 - Source repository for the public MCP server: https://github.com/Packrift/packrift-mcp (MIT licensed).
-- Listed in: Official MCP Registry (\`io.github.Packrift/packrift-mcp\`), Glama, awesome-mcp-servers (pending merge), Anthropic Connectors.
+- Listed in: Official MCP Registry (\`io.github.Packrift/packrift-mcp\`), Glama hosted connector, MCP Marketplace, awesome-mcp-servers (pending merge), Anthropic Connectors.
+- Connector discovery: Glama hosted connector at https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp and MCP Marketplace at https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp.
 - AI crawlers explicitly NOT blocked at the Cloudflare zone — GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and standard search crawlers are all permitted.
 
 ---
