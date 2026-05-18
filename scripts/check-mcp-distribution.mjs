@@ -204,6 +204,7 @@ async function liveMcpCheck() {
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
+      browserAgentBridge?.workflows?.length >= 3 &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
@@ -230,6 +231,7 @@ async function liveMcpCheck() {
       buyer_use_cases_release: buyerUseCases?.release ?? null,
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
       browser_agent_bridge_release: browserAgentBridge?.release ?? null,
+      browser_agent_bridge_workflows: browserAgentBridge?.workflows?.length ?? 0,
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
         tools_count: toolNames.length,

@@ -195,5 +195,7 @@ export function browserAgentBridgeMarkdown(runtime: BrowserAgentBridgeRuntime): 
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",
+    "Machine-readable version: https://mcp.packrift.com/ai/browser-agent-bridge.json",
+    "",
   ].join("\n");
 }

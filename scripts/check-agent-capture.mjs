@@ -126,6 +126,7 @@ async function main() {
     "mcp_adoption_kit",
     "mcp_usage_snapshot",
     "buyer_mcp_use_cases",
+    "browser_agent_bridge",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
     "claude_desktop_and_claude_code",

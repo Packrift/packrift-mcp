@@ -88,6 +88,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Keep this crawler-readable buyer workflow map aligned with MCP prompts, cart handoff candidates, and measured handoff URLs.",
     }),
     surface({
+      id: "browser_agent_bridge",
+      name: "Packrift browser-agent bridge",
+      agent_type: "browser_agent_bridge",
+      audience: "Browserbase Browse-style agents, browser-use, Playwright, Computer Use, CUA, and AI shopping agents that can read URLs before calling MCP.",
+      status: "live",
+      priority: "high",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+      install_or_call:
+        "Read the bridge first for browser-safe discovery URLs, then use the hosted Packrift MCP endpoint for live price, inventory, shipping, and cart URL construction.",
+      proof_url: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      next_action: "Track browser-agent bridge fetches as discovery reads and only count them as qualified demand after MCP tool use or stamped cart progression.",
+    }),
+    surface({
       id: "chatgpt_openai_product_cards",
       name: "ChatGPT and OpenAI product-card commerce",
       agent_type: "chat_commerce",

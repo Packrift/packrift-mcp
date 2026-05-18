@@ -673,7 +673,7 @@ function matchesInternalSynthetic(text) {
 }
 
 function matchesSelfGeneratedDistribution(text) {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|mcp_buyer_use_cases|mcp_usage_snapshot|generated_ai_resource)/i.test(text);
 }
 
 function matchesExternalQualifiedDemand(text) {
