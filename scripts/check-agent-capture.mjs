@@ -158,6 +158,7 @@ async function main() {
     "usage snapshot",
     "buyer use cases",
     "browser-agent bridge",
+    "directory refresh",
     "Browserbase Browse",
     "ChatGPT/OpenAI commerce",
     "Claude",
@@ -207,6 +208,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises directory refresh pack", hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.md"), {
       detail: `resources=${resources.length}`,
     }),
   ];

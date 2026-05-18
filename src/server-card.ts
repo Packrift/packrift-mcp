@@ -47,6 +47,8 @@ export const serverCard = {
     mcpBuyerUseCasesMarkdown: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
     browserAgentBridgeJson: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     browserAgentBridgeMarkdown: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
+    mcpDirectoryRefreshJson: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+    mcpDirectoryRefreshMarkdown: "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
     shopifyNativeUcpGuide: "https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md",
     agentEndpointsStatus: "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
     conversionStarterRoutesJson: "https://mcp.packrift.com/ai/conversion-starter-routes.json",
