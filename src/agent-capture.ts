@@ -324,7 +324,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       id: "mcp_directory_refreshes",
       name: "Secondary MCP directory refreshes",
       agent_type: "mcp_directory",
-      audience: "MCPBench, mcpservers.org, mcp.directory, PulseMCP, Chiark, and other secondary discovery surfaces.",
+      audience: "MCPBench, mcpservers.org, mcp.directory, PulseMCP, Chiark, Docker MCP Catalog, and other secondary discovery surfaces.",
       status: "monitored",
       priority: "high",
       packrift_owned: false,
