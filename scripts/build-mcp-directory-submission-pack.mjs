@@ -11,6 +11,8 @@ const DISTRIBUTION_LATEST = resolve(REPO_ROOT, "outputs/mcp-distribution-check/l
 
 const CONTACT_EMAIL_PLACEHOLDER = "[directory contact email]";
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const RUN_CACHE_BUST = Date.now().toString(36);
+const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
 
 const TARGETS = [
   {
@@ -113,12 +115,21 @@ const LIVE_PROOF_URLS = {
   docker_mcp_catalog_pr: "https://api.github.com/repos/docker/mcp-registry/pulls/3388",
 };
 
+function cacheBustedUrl(url) {
+  if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
+  const parsed = new URL(url);
+  parsed.searchParams.set("packrift_check", RUN_CACHE_BUST);
+  return parsed.toString();
+}
+
 async function fetchJson(url) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(cacheBustedUrl(url), {
       headers: {
         "User-Agent": "Packrift-MCP-Directory-Pack/1.0 (+https://mcp.packrift.com/mcp)",
         Accept: "application/json,*/*;q=0.8",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
       },
       redirect: "follow",
     });

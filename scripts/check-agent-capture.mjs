@@ -13,14 +13,24 @@ const args = Object.fromEntries(
 const BASE_URL = String(args["base-url"] || "https://mcp.packrift.com").replace(/\/$/, "");
 const MCP_ENDPOINT = String(args["mcp-endpoint"] || `${BASE_URL}/mcp`);
 const OUT_ROOT = resolve(process.cwd(), "outputs/agent-capture-check");
+const RUN_CACHE_BUST = Date.now().toString(36);
 const TEXT_HEADERS = {
   "User-Agent": "Packrift-Agent-Capture-Check/1.0 (+https://mcp.packrift.com/ai/all-agent-capture.json)",
   Accept: "application/json,text/markdown,text/plain;q=0.9,*/*;q=0.8",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
 };
+
+function cacheBustedUrl(url) {
+  if (!url.startsWith(BASE_URL)) return url;
+  const parsed = new URL(url);
+  parsed.searchParams.set("packrift_check", RUN_CACHE_BUST);
+  return parsed.toString();
+}
 
 async function fetchText(url) {
   try {
-    const response = await fetch(url, { headers: TEXT_HEADERS, redirect: "follow" });
+    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow" });
     const text = await response.text();
     return { ok: response.ok, status: response.status, url: response.url, text };
   } catch (error) {
