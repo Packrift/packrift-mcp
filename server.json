@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
-  "description": "Exact-spec Packrift packaging search with live price, stock, shipping, reorder, quote, GA4-visible cart handoff, and no-match recovery.",
+  "description": "Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
   "version": "0.2.4",
   "websiteUrl": "https://packrift.com/pages/agents",
   "repository": {
