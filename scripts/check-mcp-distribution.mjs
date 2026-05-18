@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 const PACKAGE_JSON = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
 const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JSON.version;
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
+const RUN_CACHE_BUST = Date.now().toString(36);
+const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
 
 const SURFACE_GUIDANCE = {
   official_registry: {
@@ -79,13 +81,22 @@ const SURFACE_GUIDANCE = {
 const TEXT_HEADERS = {
   "User-Agent": "Packrift-MCP-Distribution-Check/1.0 (+https://mcp.packrift.com/mcp)",
   Accept: "text/html,application/json,text/plain;q=0.9,*/*;q=0.8",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
 };
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 
+function cacheBustedUrl(url) {
+  if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
+  const parsed = new URL(url);
+  parsed.searchParams.set("packrift_check", RUN_CACHE_BUST);
+  return parsed.toString();
+}
+
 async function fetchText(url) {
   try {
-    const response = await fetch(url, { headers: TEXT_HEADERS, redirect: "follow" });
+    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow" });
     const text = await response.text();
     return { ok: response.ok, status: response.status, url: response.url, text };
   } catch (error) {
