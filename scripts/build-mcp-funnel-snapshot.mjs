@@ -485,7 +485,7 @@ function summarizeGa4CartLandings(rows) {
     }, new Map())),
     landing_pages: rows.slice(0, 25).map((row) => ({
       source_medium: row.sessionSourceMedium || "",
-      landing_page: row.landingPagePlusQueryString || "",
+      landing_page: row.landingPagePlusQueryString || row.pagePathPlusQueryString || row.pageLocation || "",
       event_name: row.eventName || "",
       event_count: numberValue(row.eventCount),
       key_events: numberValue(row.keyEvents),
@@ -542,7 +542,7 @@ function markdownReport(value) {
     "| Requirement | Proven | Evidence |",
     "| --- | --- | --- |",
     `| Thousands of qualified MCP visitors | ${yesNo(value.proof_gate.thousands_of_qualified_visitors)} | ${ga4.ai_mcp_events?.mcp_specific_session_start_events ?? 0} MCP-specific session_start events in pulled GA4 report |`,
-    `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${cart.event_count ?? 0} GA4 events on create_cart_url UTM landing pages |`,
+    `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${cart.event_count ?? 0} GA4 mcp_cart_landing events on stamped cart shim pages |`,
     `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(cart.revenue).toFixed(2)} revenue on stamped MCP cart landing rows |`,
     `| Material MCP tool usage | ${yesNo(value.proof_gate.mcp_tool_usage_is_material)} | ${fp.total_tool_calls ?? 0} first-party MCP tool calls for ${fp.date ?? "selected date"} |`,
     `| Distribution core live | ${yesNo(value.proof_gate.distribution_core_live)} | ${dist.counts ? `${dist.counts.pass} pass, ${dist.counts.stale} stale, ${dist.counts.blocked} blocked, ${dist.counts.fail} fail` : "not checked"} |`,

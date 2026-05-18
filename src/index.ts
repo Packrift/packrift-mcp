@@ -452,7 +452,7 @@ const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-16-
 const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R02";
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
-const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R01";
+const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
 const AI_SALES_EVENT_PREFIX = "events/ai-sales";
@@ -1091,6 +1091,26 @@ function copyRouteTrackingParams(source: URL, target: URL): URL {
   return target;
 }
 
+function copyRouteCartAttributeParams(source: URL, target: URL): URL {
+  const attributes: Record<string, string | null> = {
+    packrift_packrift_ai_id: source.searchParams.get("packrift_ai_id") ?? source.searchParams.get("ai_commerce_id"),
+    packrift_ai_commerce_id: source.searchParams.get("ai_commerce_id") ?? source.searchParams.get("packrift_ai_id"),
+    packrift_mcp_key: source.searchParams.get("mcp_key"),
+    packrift_mcp_journey: source.searchParams.get("mcp_journey"),
+    packrift_mcp_result_set: source.searchParams.get("mcp_result_set"),
+    packrift_match_type: source.searchParams.get("match_type"),
+    packrift_utm_source: source.searchParams.get("utm_source"),
+    packrift_utm_medium: source.searchParams.get("utm_medium"),
+    packrift_utm_campaign: source.searchParams.get("utm_campaign"),
+    packrift_utm_content: source.searchParams.get("utm_content"),
+    packrift_utm_term: source.searchParams.get("utm_term"),
+  };
+  for (const [key, value] of Object.entries(attributes)) {
+    if (value) target.searchParams.set(`attributes[${key}]`, value);
+  }
+  return target;
+}
+
 function routeRedirectTargetUrl(action: RouteRedirectAction, item: ApprovedCatalogItem, requestUrl: URL): URL {
   if (action === "product") {
     return copyRouteTrackingParams(requestUrl, new URL(productHandoffUrlForItem(item)));
@@ -1104,7 +1124,7 @@ function routeRedirectTargetUrl(action: RouteRedirectAction, item: ApprovedCatal
   }
   if (action === "cart") {
     const quantity = boundedInteger(requestUrl.searchParams.get("qty") ?? requestUrl.searchParams.get("quantity"), 1, 1, 999);
-    return new URL(cartUrlForItem(item, quantity));
+    return copyRouteCartAttributeParams(requestUrl, copyRouteTrackingParams(requestUrl, new URL(cartUrlForItem(item, quantity))));
   }
 
   const target = new URL("https://packrift.com/pages/bulk-quote");
@@ -1133,7 +1153,10 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', '${PACKRIFT_GA4_MEASUREMENT_ID}', { page_location: window.location.href });
+    gtag('config', '${PACKRIFT_GA4_MEASUREMENT_ID}', {
+      page_location: window.location.href,
+      send_page_view: true
+    });
     const finalCartUrl = ${JSON.stringify(finalCartUrl)};
     let redirected = false;
     function continueToCart() {
@@ -1143,11 +1166,24 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
     }
     gtag('event', 'mcp_cart_landing', {
       event_callback: continueToCart,
-      event_timeout: 1200,
+      event_timeout: 2500,
+      transport_type: 'beacon',
       sku: ${JSON.stringify(item.sku)},
-      quantity: ${quantity}
+      quantity: ${quantity},
+      page_location: window.location.href,
+      source: ${JSON.stringify(requestUrl.searchParams.get("utm_source") ?? "")},
+      medium: ${JSON.stringify(requestUrl.searchParams.get("utm_medium") ?? "")},
+      campaign: ${JSON.stringify(requestUrl.searchParams.get("utm_campaign") ?? "")},
+      content: ${JSON.stringify(requestUrl.searchParams.get("utm_content") ?? "")},
+      term: ${JSON.stringify(requestUrl.searchParams.get("utm_term") ?? "")},
+      packrift_ai_id: ${JSON.stringify(requestUrl.searchParams.get("packrift_ai_id") ?? "")},
+      ai_commerce_id: ${JSON.stringify(requestUrl.searchParams.get("ai_commerce_id") ?? "")},
+      mcp_key: ${JSON.stringify(requestUrl.searchParams.get("mcp_key") ?? "")},
+      mcp_journey: ${JSON.stringify(requestUrl.searchParams.get("mcp_journey") ?? "")},
+      mcp_result_set: ${JSON.stringify(requestUrl.searchParams.get("mcp_result_set") ?? "")},
+      match_type: ${JSON.stringify(requestUrl.searchParams.get("match_type") ?? "")}
     });
-    window.setTimeout(continueToCart, 1500);
+    window.setTimeout(continueToCart, 3000);
   </script>
   <noscript><meta http-equiv="refresh" content="1;url=${escapeHtml(finalCartUrl)}"></noscript>
   <style>
