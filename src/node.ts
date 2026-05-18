@@ -33,6 +33,29 @@ function createMemoryKV(): KVNamespace {
     async delete(key: string) {
       store.delete(key);
     },
+    async list(options?: KVNamespaceListOptions) {
+      const prefix = options?.prefix ?? "";
+      const limit = Math.max(1, Math.min(1000, options?.limit ?? 1000));
+      const offset = options?.cursor ? Number.parseInt(options.cursor, 10) || 0 : 0;
+      const now = Date.now();
+      const names = [...store.entries()]
+        .filter(([key, entry]) => {
+          if (entry.expiresAt && now > entry.expiresAt) {
+            store.delete(key);
+            return false;
+          }
+          return key.startsWith(prefix);
+        })
+        .map(([key]) => key)
+        .sort();
+      const page = names.slice(offset, offset + limit);
+      const nextOffset = offset + page.length;
+      return {
+        keys: page.map((name) => ({ name })),
+        list_complete: nextOffset >= names.length,
+        cursor: nextOffset < names.length ? String(nextOffset) : undefined,
+      };
+    },
   } as unknown as KVNamespace;
 }
 
@@ -41,6 +64,8 @@ const env: Env = {
   SHOPIFY_API_VERSION: process.env.SHOPIFY_API_VERSION ?? "2025-04",
   STOREFRONT_DOMAIN: process.env.STOREFRONT_DOMAIN ?? "packrift.com",
   SHOPIFY_PACKRIFT_TOKEN: process.env.SHOPIFY_PACKRIFT_TOKEN ?? "",
+  AI_SALES_SKU_PAGE_TELEMETRY: process.env.AI_SALES_SKU_PAGE_TELEMETRY,
+  MCP_STATS_TOKEN: process.env.MCP_STATS_TOKEN,
   CATALOG_CACHE: createMemoryKV(),
 };
 

@@ -215,6 +215,7 @@ interface JsonRpcRequest {
 
 interface RpcExecutionContext {
   sessionId?: string;
+  userAgent?: string;
 }
 
 function rpcResult(id: unknown, result: unknown) {
@@ -335,6 +336,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
                 latencyMs: Date.now() - startedAt,
                 resultSizeBytes: jsonByteSize(out),
                 sessionId: context.sessionId,
+                userAgent: context.userAgent,
                 ok: true,
               })
             );
@@ -352,6 +354,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
                 latencyMs: Date.now() - startedAt,
                 resultSizeBytes: jsonByteSize({ error: msg }),
                 sessionId: context.sessionId,
+                userAgent: context.userAgent,
                 ok: false,
                 errorMessage: msg,
               })
@@ -1254,11 +1257,13 @@ function buildMcpToolCallEvent(
     latencyMs: number;
     resultSizeBytes: number;
     sessionId?: string;
+    userAgent?: string;
     ok: boolean;
     errorMessage?: string;
   }
 ): Record<string, unknown> {
   const row = summarizeToolResult(out);
+  const userAgent = meta.userAgent ?? "";
   return {
     event: "mcp_tool_call",
     source: "mcp_tool_call",
@@ -1267,6 +1272,9 @@ function buildMcpToolCallEvent(
     latency_ms: meta.latencyMs,
     result_size_bytes: meta.resultSizeBytes,
     mcp_session_id: safeEventText(meta.sessionId, 120),
+    transport: "streamable_http",
+    user_agent: safeEventText(userAgent, 240),
+    bot_family: classifyAgentFamily(userAgent),
     error: safeEventText(meta.errorMessage, 240),
     result_count: row.result_count,
     sku: row.sku,
@@ -1358,6 +1366,10 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         received_at: safeEventText(event.received_at, 40),
         source: safeEventText(event.source, 80),
         sku: safeEventText(event.sku, 80) || null,
+        tool_name: safeEventText(event.tool_name, 80) || null,
+        ok: typeof event.ok === "boolean" ? event.ok : null,
+        latency_ms: typeof event.latency_ms === "number" ? event.latency_ms : null,
+        result_size_bytes: typeof event.result_size_bytes === "number" ? event.result_size_bytes : null,
         handle: safeEventText(event.handle, 160) || null,
         family: safeEventText(event.family, 80) || null,
         requested_spec: safeEventText(event.requested_spec, 180) || null,
@@ -1366,6 +1378,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         result_count: typeof event.result_count === "number" ? event.result_count : null,
         fit_score: typeof event.fit_score === "number" ? event.fit_score : null,
         match_type: safeEventText(event.match_type, 80) || null,
+        bot_family: safeEventText(event.bot_family, 80) || null,
         packrift_ai_id: safeEventText(event.packrift_ai_id ?? event.ai_commerce_id, 160) || null,
       }));
   return {
@@ -1377,6 +1390,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     tool_latency_ms: toolLatency,
     by_bot_family: top(byBotFamily),
     by_packrift_ai_id: top(byPackriftAiId),
+    recent_tool_calls: recent("mcp_tool_call"),
     recent_no_matches: recent("no_match"),
     recent_exact_matches: recent("exact_match"),
     recent_multi_matches: recent("multi_match"),
@@ -4014,14 +4028,16 @@ app.post("/mcp", async (c) => {
     return r;
   };
 
+  const userAgent = c.req.header("User-Agent") ?? "";
+
   if (Array.isArray(body)) {
-    const results = await Promise.all(body.map((req) => handleRpc(env, req as JsonRpcRequest, { sessionId })));
+    const results = await Promise.all(body.map((req) => handleRpc(env, req as JsonRpcRequest, { sessionId, userAgent })));
     const filtered = results.filter((r) => r !== null);
     if (filtered.length === 0) return new Response(null, { status: 202, headers: { "Mcp-Session-Id": sessionId } });
     return respond(filtered);
   }
 
-  const result = await handleRpc(env, body as JsonRpcRequest, { sessionId });
+  const result = await handleRpc(env, body as JsonRpcRequest, { sessionId, userAgent });
   if (result === null) {
     return new Response(null, { status: 202, headers: { "Mcp-Session-Id": sessionId } });
   }
