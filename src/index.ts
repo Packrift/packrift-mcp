@@ -1185,8 +1185,10 @@ function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: RouteRedirec
         : action === "cart"
           ? "create_cart_url"
           : "request_bulk_quote";
-  const host = action === "cart" ? "https://packrift.com" : "https://mcp.packrift.com";
-  const url = new URL(`${host}/r/${action}/${encodeURIComponent(item.sku)}`);
+  const url =
+    action === "cart"
+      ? new URL(`https://packrift.com/pages/mcp-cart/${encodeURIComponent(item.sku)}`)
+      : new URL(`https://mcp.packrift.com/r/${action}/${encodeURIComponent(item.sku)}`);
   const day = compactDate();
   url.searchParams.set("utm_source", action === "cart" ? "chatgpt-mcp" : source);
   url.searchParams.set("utm_medium", action === "cart" ? "mcp_tool" : "ai_retrieval");
@@ -3782,6 +3784,31 @@ app.get("/resources", (c) => {
   );
 });
 
+app.get("/pages/mcp-cart/:sku", async (c) => {
+  const requestUrl = new URL(c.req.url);
+  if (requestUrl.hostname !== "packrift.com") {
+    requestUrl.protocol = "https:";
+    requestUrl.hostname = "packrift.com";
+    return c.redirect(requestUrl.toString(), 302);
+  }
+
+  const item = skuRouteItem(c.req.param("sku"));
+  if (!item) {
+    return c.json(
+      {
+        error: "sku_not_ai_approved",
+        message: "This cart landing only works for Packrift AI_APPROVE public MCP catalog SKUs.",
+        sku: decodeURIComponent(c.req.param("sku") ?? ""),
+      },
+      404,
+      { ...RAW_HEADERS, "Cache-Control": "no-store" }
+    );
+  }
+
+  await recordRouteRedirectTelemetry(c.env, c.req.raw, requestUrl, "cart", item);
+  return cartLandingResponse(requestUrl, item);
+});
+
 app.get("/products/:identifier", async (c) => {
   const url = new URL(c.req.url);
   if (url.hostname === "packrift.com" || url.hostname === "www.packrift.com") {
@@ -3994,16 +4021,16 @@ app.get("/r/*", async (c) => {
     );
   }
 
-  if (action === "cart" && requestUrl.hostname !== "packrift.com") {
-    requestUrl.protocol = "https:";
-    requestUrl.hostname = "packrift.com";
-    return c.redirect(requestUrl.toString(), 302);
+  if (action === "cart") {
+    const target = new URL(routeRedirectUrlForItem(item, "cart"));
+    for (const [key, value] of requestUrl.searchParams.entries()) {
+      target.searchParams.set(key, value);
+    }
+    if (!target.searchParams.has("qty")) target.searchParams.set("qty", "1");
+    return c.redirect(target.toString(), 302);
   }
 
   await recordRouteRedirectTelemetry(c.env, c.req.raw, requestUrl, action, item);
-  if (action === "cart") {
-    return cartLandingResponse(requestUrl, item);
-  }
   const target = routeRedirectTargetUrl(action, item, requestUrl);
   return c.redirect(target.toString(), 302);
 });
