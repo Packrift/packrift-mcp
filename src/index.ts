@@ -1185,10 +1185,7 @@ function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: RouteRedirec
         : action === "cart"
           ? "create_cart_url"
           : "request_bulk_quote";
-  const url =
-    action === "cart"
-      ? new URL(`https://packrift.com/pages/mcp-cart/${encodeURIComponent(item.sku)}`)
-      : new URL(`https://mcp.packrift.com/r/${action}/${encodeURIComponent(item.sku)}`);
+  const url = new URL(`https://mcp.packrift.com/r/${action}/${encodeURIComponent(item.sku)}`);
   const day = compactDate();
   url.searchParams.set("utm_source", action === "cart" ? "chatgpt-mcp" : source);
   url.searchParams.set("utm_medium", action === "cart" ? "mcp_tool" : "ai_retrieval");
@@ -4021,16 +4018,10 @@ app.get("/r/*", async (c) => {
     );
   }
 
-  if (action === "cart") {
-    const target = new URL(routeRedirectUrlForItem(item, "cart"));
-    for (const [key, value] of requestUrl.searchParams.entries()) {
-      target.searchParams.set(key, value);
-    }
-    if (!target.searchParams.has("qty")) target.searchParams.set("qty", "1");
-    return c.redirect(target.toString(), 302);
-  }
-
   await recordRouteRedirectTelemetry(c.env, c.req.raw, requestUrl, action, item);
+  if (action === "cart") {
+    return cartLandingResponse(requestUrl, item);
+  }
   const target = routeRedirectTargetUrl(action, item, requestUrl);
   return c.redirect(target.toString(), 302);
 });

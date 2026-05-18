@@ -74,7 +74,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
 - Measured handoff directory: https://mcp.packrift.com/ai/measured-handoffs.json
-- Measured cart landing example: https://packrift.com/pages/mcp-cart/1066
+- Measured cart landing example: https://mcp.packrift.com/r/cart/1066
 - Reorder by SKU corpus: https://mcp.packrift.com/ai/reorder-by-sku.md
 - Top 1,000 AI-sales SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
