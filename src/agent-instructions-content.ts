@@ -98,7 +98,7 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - Mailer sizes by dimension: https://packrift.com/pages/mailer-sizes-by-dimension
 - Label sizes by spec: https://packrift.com/pages/label-sizes-by-spec
 
-For SKU-specific product, reorder, or quote handoff, prefer the measured MCP URLs in https://mcp.packrift.com/ai/purchase-paths.jsonl or https://mcp.packrift.com/ai/conversion-route-catalog.json. Those records preserve the canonical Shopify product URL while routing buyer handoff through measured MCP redirects.
+For SKU-specific product, reorder, quote, or cart handoff, prefer the measured MCP URLs in https://mcp.packrift.com/ai/purchase-paths.jsonl, https://mcp.packrift.com/ai/measured-handoffs.json, or https://mcp.packrift.com/ai/conversion-route-catalog.json. Those records preserve the canonical Shopify product URL while routing buyer handoff through measured MCP redirects.
 
 ## Shopify native UCP usage
 

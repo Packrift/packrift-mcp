@@ -73,6 +73,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
+- Measured handoff directory: https://mcp.packrift.com/ai/measured-handoffs.json
+- Measured cart redirect example: https://mcp.packrift.com/r/cart/1066
 - Reorder by SKU corpus: https://mcp.packrift.com/ai/reorder-by-sku.md
 - Top 1,000 AI-sales SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
@@ -93,8 +95,8 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 | `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. Never cached. |
 | `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. Never cached. |
 | `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
-| `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority AI-approved SKUs with ready `create_cart_url` arguments, measured SKU/product/reorder/quote links, and required live-confirmation sequence. |
-| `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
+| `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority AI-approved SKUs with ready `create_cart_url` arguments, measured SKU/product/reorder/quote/cart links, and required live-confirmation sequence. |
+| `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a GA4-visible Packrift cart landing URL plus the final `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
 | `compare_alternatives(requested_spec, family?, competitor_reference?, limit?)` | Ranks AI-approved Packrift alternatives for open-ended buyer requests, including competitor-style packaging specs. |
 | `pack_calculator(item, padding?, use_case?, limit?)` | Calculates protected inside dimensions and returns fitted box or mailer candidates with void-fill guidance. |
 | `inventory_status(variant_ids?, sku?, handle?, quantity?)` | Live total and location-level Shopify inventory status for exact SKUs, handles, or variant IDs. |

@@ -6,7 +6,7 @@ import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackin
 export const createCartUrlSchema = {
   name: "create_cart_url",
   description:
-    "Final step: hand the user off to checkout. Inputs: items[{variant_id, qty}], optional discount_code. Returns a packrift.com/cart/... permalink with ref=mcp plus UTM attribution for AI-commerce purchase tracking.",
+    "Final step: hand the user off to checkout. Inputs: items[{variant_id, qty}], optional discount_code. Returns a Packrift cart landing URL with ref=mcp plus UTM attribution for AI-commerce purchase tracking, and the final Shopify cart permalink.",
   inputSchema: {
     type: "object",
     properties: {
@@ -118,9 +118,27 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   if (tracking.match_type) params.set("match_type", tracking.match_type);
   if (input.discount_code) params.set("discount", input.discount_code);
   addCartPermalinkAttribution(params, cartTracking);
-  const url = `https://${env.STOREFRONT_DOMAIN}/cart/${path}?${params.toString()}`;
+  const finalCartUrl = `https://${env.STOREFRONT_DOMAIN}/cart/${path}?${params.toString()}`;
+  const canUseLandingUrl = input.items.length === 1 && Boolean(input.selected_sku);
+  const landingUrl = canUseLandingUrl ? new URL(`https://${env.STOREFRONT_DOMAIN}/r/cart/${encodeURIComponent(input.selected_sku!)}`) : null;
+  if (landingUrl) {
+    landingUrl.searchParams.set("qty", String(input.items[0]?.qty ?? 1));
+    landingUrl.searchParams.set("utm_source", cartTracking.utm_source);
+    landingUrl.searchParams.set("utm_medium", cartTracking.utm_medium);
+    landingUrl.searchParams.set("utm_campaign", cartTracking.utm_campaign);
+    landingUrl.searchParams.set("utm_content", cartTracking.utm_content);
+    if (cartTracking.utm_term) landingUrl.searchParams.set("utm_term", cartTracking.utm_term);
+    landingUrl.searchParams.set("packrift_ai_id", tracking.packrift_ai_id);
+    landingUrl.searchParams.set("ai_commerce_id", tracking.ai_commerce_id);
+    landingUrl.searchParams.set("mcp_key", tracking.continuity_key);
+    landingUrl.searchParams.set("mcp_journey", tracking.journey_id);
+    if (tracking.result_set_id) landingUrl.searchParams.set("mcp_result_set", tracking.result_set_id);
+    if (tracking.match_type) landingUrl.searchParams.set("match_type", tracking.match_type);
+  }
+  const url = landingUrl?.toString() ?? finalCartUrl;
   const response = {
     url,
+    final_cart_url: finalCartUrl,
     items: input.items,
     ref: input.ref,
     utm: {

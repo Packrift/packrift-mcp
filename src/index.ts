@@ -218,6 +218,8 @@ interface RpcExecutionContext {
   userAgent?: string;
 }
 
+type RouteRedirectAction = "product" | "reorder" | "quote" | "cart";
+
 function rpcResult(id: unknown, result: unknown) {
   return { jsonrpc: "2.0", id: id ?? null, result };
 }
@@ -450,6 +452,8 @@ const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-16-
 const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R02";
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
+const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R01";
+const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
 const AI_SALES_EVENT_PREFIX = "events/ai-sales";
 const AI_SALES_EVENT_TTL_SECONDS = 60 * 60 * 24 * 90;
@@ -1006,8 +1010,11 @@ function shouldRecordConversionRouteResourceTelemetry(env: Env, userAgent: strin
 
 function routeLandingTelemetrySurface(
   url: URL
-): "conversion_route_catalog" | "conversion_starter_routes" | "measured_handoff_directory" | "shopify_ai_exact_spec_data_page" | "" {
+): "conversion_route_catalog" | "conversion_starter_routes" | "measured_handoff_directory" | "shopify_ai_exact_spec_data_page" | "create_cart_url" | "" {
   const source = (url.searchParams.get("utm_source") ?? "").toLowerCase();
+  const medium = (url.searchParams.get("utm_medium") ?? "").toLowerCase();
+  const campaign = (url.searchParams.get("utm_campaign") ?? "").toLowerCase();
+  if (source === "chatgpt-mcp" && medium === "mcp_tool" && campaign === "create_cart_url") return "create_cart_url";
   if (source === "conversion_route_catalog") return "conversion_route_catalog";
   if (source === "conversion_starter_routes") return "conversion_starter_routes";
   if (source === "measured_handoff_directory") return "measured_handoff_directory";
@@ -1030,8 +1037,12 @@ function routeLandingTelemetrySurface(
   return "";
 }
 
-function routeLandingEventName(url: URL): "product_click" | "reorder_click" | "quote_click" | "ai_corpus_click" {
+function routeLandingEventName(url: URL): "product_click" | "reorder_click" | "quote_click" | "cart_click" | "ai_corpus_click" {
   const content = (url.searchParams.get("utm_content") ?? "").toLowerCase();
+  const campaign = (url.searchParams.get("utm_campaign") ?? "").toLowerCase();
+  if (url.pathname.startsWith("/cart/") || content === "create_cart_url" || content === "cart_click" || campaign === "create_cart_url") {
+    return "cart_click";
+  }
   if (url.pathname.startsWith("/products/") || content === "view_product" || content === "product_click") {
     return "product_click";
   }
@@ -1080,7 +1091,7 @@ function copyRouteTrackingParams(source: URL, target: URL): URL {
   return target;
 }
 
-function routeRedirectTargetUrl(action: "product" | "reorder" | "quote", item: ApprovedCatalogItem, requestUrl: URL): URL {
+function routeRedirectTargetUrl(action: RouteRedirectAction, item: ApprovedCatalogItem, requestUrl: URL): URL {
   if (action === "product") {
     return copyRouteTrackingParams(requestUrl, new URL(productHandoffUrlForItem(item)));
   }
@@ -1090,6 +1101,10 @@ function routeRedirectTargetUrl(action: "product" | "reorder" | "quote", item: A
     target.searchParams.set("sku", item.sku);
     target.hash = skuAnchor(item.sku);
     return copyRouteTrackingParams(requestUrl, target);
+  }
+  if (action === "cart") {
+    const quantity = boundedInteger(requestUrl.searchParams.get("qty") ?? requestUrl.searchParams.get("quantity"), 1, 1, 999);
+    return new URL(cartUrlForItem(item, quantity));
   }
 
   const target = new URL("https://packrift.com/pages/bulk-quote");
@@ -1102,15 +1117,81 @@ function routeRedirectTargetUrl(action: "product" | "reorder" | "quote", item: A
   return copyRouteTrackingParams(requestUrl, target);
 }
 
-function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: "product" | "reorder" | "quote", source = "conversion_route_catalog"): string {
+function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Response {
+  const quantity = boundedInteger(requestUrl.searchParams.get("qty") ?? requestUrl.searchParams.get("quantity"), 1, 1, 999);
+  const finalCartUrl = routeRedirectTargetUrl("cart", item, requestUrl).toString();
+  const pageTitle = `Packrift cart for ${item.sku}`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, follow">
+  <title>${escapeHtml(pageTitle)}</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${PACKRIFT_GA4_MEASUREMENT_ID}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '${PACKRIFT_GA4_MEASUREMENT_ID}', { page_location: window.location.href });
+    const finalCartUrl = ${JSON.stringify(finalCartUrl)};
+    let redirected = false;
+    function continueToCart() {
+      if (redirected) return;
+      redirected = true;
+      window.location.replace(finalCartUrl);
+    }
+    gtag('event', 'mcp_cart_landing', {
+      event_callback: continueToCart,
+      event_timeout: 1200,
+      sku: ${JSON.stringify(item.sku)},
+      quantity: ${quantity}
+    });
+    window.setTimeout(continueToCart, 1500);
+  </script>
+  <noscript><meta http-equiv="refresh" content="1;url=${escapeHtml(finalCartUrl)}"></noscript>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#f8f6f1;color:#182235}
+    main{max-width:520px;padding:28px}
+    h1{font-size:1.35rem;margin:0 0 8px}
+    p{margin:0 0 14px;color:#526070;line-height:1.45}
+    a{color:#0f5caa}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Preparing Packrift cart</h1>
+    <p>SKU ${escapeHtml(item.sku)} is being opened in a tracked Packrift cart.</p>
+    <p><a href="${escapeHtml(finalCartUrl)}">Continue to cart</a></p>
+  </main>
+</body>
+</html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "x-packrift-cart-landing-shim": CART_LANDING_SHIM_RELEASE,
+    },
+  });
+}
+
+function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: RouteRedirectAction, source = "conversion_route_catalog"): string {
   const actionContent =
-    action === "product" ? "view_product" : action === "reorder" ? "reorder_by_sku" : "request_bulk_quote";
-  const url = new URL(`https://mcp.packrift.com/r/${action}/${encodeURIComponent(item.sku)}`);
+    action === "product"
+      ? "view_product"
+      : action === "reorder"
+        ? "reorder_by_sku"
+        : action === "cart"
+          ? "create_cart_url"
+          : "request_bulk_quote";
+  const host = action === "cart" ? "https://packrift.com" : "https://mcp.packrift.com";
+  const url = new URL(`${host}/r/${action}/${encodeURIComponent(item.sku)}`);
   const day = compactDate();
-  url.searchParams.set("utm_source", source);
-  url.searchParams.set("utm_medium", "ai_retrieval");
-  url.searchParams.set("utm_campaign", `packrift_${source}_${campaignDate()}`);
-  url.searchParams.set("utm_content", actionContent);
+  url.searchParams.set("utm_source", action === "cart" ? "chatgpt-mcp" : source);
+  url.searchParams.set("utm_medium", action === "cart" ? "mcp_tool" : "ai_retrieval");
+  url.searchParams.set("utm_campaign", action === "cart" ? "create_cart_url" : `packrift_${source}_${campaignDate()}`);
+  url.searchParams.set("utm_content", action === "cart" ? item.sku : actionContent);
   url.searchParams.set("utm_term", item.sku);
   url.searchParams.set("packrift_ai_id", `${source}_${day}_${item.sku}_${actionContent}`);
   url.searchParams.set("ai_commerce_id", `${source}_${day}_${item.sku}_${actionContent}`);
@@ -1130,6 +1211,9 @@ function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: "product" | 
     url.searchParams.set("product", item.title);
     url.searchParams.set("product_url", productUrlForItem(item));
   }
+  if (action === "cart") {
+    url.searchParams.set("qty", "1");
+  }
   return url.toString();
 }
 
@@ -1137,13 +1221,13 @@ async function recordRouteRedirectTelemetry(
   env: Env,
   request: Request,
   requestUrl: URL,
-  action: "product" | "reorder" | "quote",
+  action: RouteRedirectAction,
   item: ApprovedCatalogItem
 ): Promise<void> {
   const userAgent = request.headers.get("User-Agent") ?? "";
   if (!shouldRecordRouteLandingTelemetry(env, userAgent)) return;
   const surface = routeLandingTelemetrySurface(requestUrl) || "mcp_route_redirect";
-  const event = action === "product" ? "product_click" : action === "reorder" ? "reorder_click" : "quote_click";
+  const event = action === "product" ? "product_click" : action === "reorder" ? "reorder_click" : action === "cart" ? "cart_click" : "quote_click";
   const packriftAiId =
     requestUrl.searchParams.get("packrift_ai_id") ||
     requestUrl.searchParams.get("ai_commerce_id") ||
@@ -1156,6 +1240,8 @@ async function recordRouteRedirectTelemetry(
     sku: item.sku,
     handle: item.handle,
     family: item.family || "",
+    variant_id: action === "cart" ? item.variantId : "",
+    quantity: action === "cart" ? String(boundedInteger(requestUrl.searchParams.get("qty") ?? requestUrl.searchParams.get("quantity"), 1, 1, 999)) : "",
     requested_spec: requestUrl.searchParams.get("spec") ?? "",
     match_type: requestUrl.searchParams.get("match_type") ?? "",
     packrift_ai_id: packriftAiId,
@@ -2973,6 +3059,7 @@ function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
       product: routeRedirectUrlForItem(item, "product"),
       reorder: routeRedirectUrlForItem(item, "reorder"),
       quote: routeRedirectUrlForItem(item, "quote"),
+      cart: routeRedirectUrlForItem(item, "cart"),
     },
     no_match_rule:
       "If the buyer-requested dimensions, material, color, count, SKU, closure, adhesive, printer type, or product family differ, do not create a cart URL; explain no exact match and route to quote recovery.",
@@ -3195,6 +3282,7 @@ function measuredHandoffItem(item: ApprovedCatalogItem) {
     measured_product_url: routeRedirectUrlForItem(item, "product", "measured_handoff_directory"),
     measured_reorder_url: routeRedirectUrlForItem(item, "reorder", "measured_handoff_directory"),
     measured_quote_url: routeRedirectUrlForItem(item, "quote", "measured_handoff_directory"),
+    measured_cart_url: routeRedirectUrlForItem(item, "cart", "measured_handoff_directory"),
     cart_confirmation_required: true,
     live_confirmation_required: payload.live_confirmation_required,
     copy_procurement_spec: payload.copy_procurement_spec,
@@ -3205,7 +3293,7 @@ function measuredHandoffItem(item: ApprovedCatalogItem) {
 
 function measuredHandoffDirectoryPayload(limit = 250) {
   return {
-    release: "PACKRIFT-MEASURED-HANDOFF-DIRECTORY-2026-05-17-R01",
+    release: "PACKRIFT-MEASURED-HANDOFF-DIRECTORY-R02",
     generated_at: new Date().toISOString(),
     source: "measured_handoff_directory",
     status: "live_mcp_controlled_directory",
@@ -3227,7 +3315,7 @@ function measuredHandoffDirectoryMarkdown(limit = 75): string {
   const rows = payload.items
     .map(
       (item) =>
-        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.measured_product_url} | ${item.measured_reorder_url} | ${item.measured_quote_url} |`
+        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.measured_product_url} | ${item.measured_reorder_url} | ${item.measured_quote_url} | ${item.measured_cart_url} |`
     )
     .join("\n");
   return [
@@ -3249,8 +3337,8 @@ function measuredHandoffDirectoryMarkdown(limit = 75): string {
     "",
     "## Priority Exact-Spec Handoffs",
     "",
-    "| SKU | Product | Family | MCP SKU record | Measured product | Measured reorder | Measured quote |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| SKU | Product | Family | MCP SKU record | Measured product | Measured reorder | Measured quote | Measured cart |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## No-Match Policy",
@@ -3278,6 +3366,7 @@ function measuredHandoffDirectoryCsv(limit = 250): string {
       item.measured_product_url,
       item.measured_reorder_url,
       item.measured_quote_url,
+      item.measured_cart_url,
       item.copy_procurement_spec,
     ].map(csvField).join(",")
   );
@@ -3293,6 +3382,7 @@ function measuredHandoffDirectoryCsv(limit = 250): string {
       "measured_product_url",
       "measured_reorder_url",
       "measured_quote_url",
+      "measured_cart_url",
       "copy_procurement_spec",
     ].join(","),
     ...rows,
@@ -3322,13 +3412,14 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
     measured_product_url: payload.measured_product_url,
     measured_reorder_url: payload.measured_reorder_url,
     measured_quote_url: payload.measured_quote_url,
+    measured_cart_url: payload.mcp_cart_handoff.measured_fallbacks.cart,
     no_match_policy: payload.no_match_policy,
   };
 }
 
 function cartHandoffCandidatesPayload(limit = 50) {
   return {
-    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R01",
+    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R02",
     generated_at: new Date().toISOString(),
     source: "mcp_cart_handoff_candidates",
     purpose:
@@ -3347,7 +3438,7 @@ function cartHandoffCandidatesMarkdown(limit = 25): string {
   const rows = payload.items
     .map(
       (item) =>
-        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.cart_url_qty_1_candidate} |`
+        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.measured_cart_url} | ${item.cart_url_qty_1_candidate} |`
     )
     .join("\n");
   return [
@@ -3373,8 +3464,8 @@ function cartHandoffCandidatesMarkdown(limit = 25): string {
     "",
     "## Priority Cart Candidates",
     "",
-    "| SKU | Product | Family | MCP SKU record | UTM-stamped cart candidate |",
-    "| --- | --- | --- | --- | --- |",
+    "| SKU | Product | Family | MCP SKU record | Measured cart redirect | UTM-stamped cart candidate |",
+    "| --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "Machine-readable version: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
@@ -3876,19 +3967,19 @@ app.get("/ai/*", async (c) => {
 
 app.get("/r/*", async (c) => {
   const requestUrl = new URL(c.req.url);
-  const match = requestUrl.pathname.match(/^\/r\/(product|reorder|quote)\/([^/]+)$/);
+  const match = requestUrl.pathname.match(/^\/r\/(product|reorder|quote|cart)\/([^/]+)$/);
   if (!match) {
     return c.json(
       {
         error: "not_found",
-        message: "Use /r/product/{SKU}, /r/reorder/{SKU}, or /r/quote/{SKU}.",
+        message: "Use /r/product/{SKU}, /r/reorder/{SKU}, /r/quote/{SKU}, or /r/cart/{SKU}.",
       },
       404,
       RAW_HEADERS
     );
   }
 
-  const action = match[1] as "product" | "reorder" | "quote";
+  const action = match[1] as RouteRedirectAction;
   const sku = match[2] ?? "";
   const item = skuRouteItem(sku);
   if (!item) {
@@ -3903,7 +3994,16 @@ app.get("/r/*", async (c) => {
     );
   }
 
+  if (action === "cart" && requestUrl.hostname !== "packrift.com") {
+    requestUrl.protocol = "https:";
+    requestUrl.hostname = "packrift.com";
+    return c.redirect(requestUrl.toString(), 302);
+  }
+
   await recordRouteRedirectTelemetry(c.env, c.req.raw, requestUrl, action, item);
+  if (action === "cart") {
+    return cartLandingResponse(requestUrl, item);
+  }
   const target = routeRedirectTargetUrl(action, item, requestUrl);
   return c.redirect(target.toString(), 302);
 });
