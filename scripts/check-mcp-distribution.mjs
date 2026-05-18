@@ -68,6 +68,12 @@ const SURFACE_GUIDANCE = {
     priority: "high",
     follow_up_action: "PulseMCP is blocked to this checker; use official-registry publication and public server.json as the recrawl source.",
   },
+  docker_mcp_catalog: {
+    listing_url: "https://github.com/docker/mcp-registry/pull/3388",
+    submission_url: "https://github.com/docker/mcp-registry/pull/3388",
+    priority: "medium",
+    follow_up_action: "Keep the Docker MCP Catalog remote-server PR mergeable until Docker reviews and merges it.",
+  },
 };
 
 const TEXT_HEADERS = {
@@ -219,7 +225,7 @@ async function liveMcpCheck() {
       buyerUseCases?.use_cases?.length >= 6 &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R01" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
@@ -348,6 +354,25 @@ async function simplePresenceCheck(name, url, needles) {
   });
 }
 
+async function dockerMcpCatalogCheck() {
+  const result = await fetchText("https://api.github.com/repos/docker/mcp-registry/pulls/3388");
+  if (!result.ok) return check("docker_mcp_catalog", "blocked", { http_status: result.status, url: result.url, error: result.error ?? null });
+  const parsed = JSON.parse(result.text);
+  const merged = parsed.merged_at != null;
+  const open = parsed.state === "open";
+  const mergeable = parsed.mergeable == null || parsed.mergeable === true;
+  return check("docker_mcp_catalog", merged ? "pass" : open && mergeable ? "pending" : "stale", {
+    http_status: result.status,
+    url: parsed.html_url ?? result.url,
+    state: parsed.state,
+    merged_at: parsed.merged_at,
+    mergeable: parsed.mergeable,
+    title: parsed.title,
+    head_ref: parsed.head?.ref,
+    base_ref: parsed.base?.ref,
+  });
+}
+
 function markdownReport(payload) {
   const rows = payload.checks
     .map(
@@ -391,6 +416,7 @@ async function main() {
       simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
       mcpMarketplaceCheck(),
       simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),
+      dockerMcpCatalogCheck(),
     ])
   ).map(withGuidance);
   const generatedAt = new Date().toISOString();
@@ -403,6 +429,7 @@ async function main() {
     counts: {
       pass: checks.filter((row) => row.status === "pass").length,
       stale: checks.filter((row) => row.status === "stale").length,
+      pending: checks.filter((row) => row.status === "pending").length,
       blocked: checks.filter((row) => row.status === "blocked").length,
       fail: checks.filter((row) => row.status === "fail").length,
     },

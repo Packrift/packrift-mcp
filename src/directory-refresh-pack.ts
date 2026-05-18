@@ -56,12 +56,21 @@ const DIRECTORY_TARGETS = [
     priority: "high",
     requested_action: "Use the official registry entry and public server.json as the recrawl source if direct crawler access is blocked.",
   },
+  {
+    id: "docker_mcp_catalog",
+    name: "Docker MCP Catalog",
+    listing_url: "https://github.com/docker/mcp-registry/pull/3388",
+    refresh_url: "https://github.com/docker/mcp-registry/pull/3388",
+    priority: "medium",
+    requested_action:
+      "Review and merge the hosted remote-server entry so Packrift can appear in Docker Desktop MCP Toolkit and Docker MCP Catalog discovery.",
+  },
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public server card, official registry entry, browser-agent bridge, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R01",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R02",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -104,6 +113,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      docker_mcp_catalog_pr: "https://github.com/docker/mcp-registry/pull/3388",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },

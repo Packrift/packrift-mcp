@@ -451,7 +451,7 @@ https://packrift.com/cart/44192837465920:50,44192837498688:10?ref=mcp
 
 - Domain: packrift.com (DNS managed via Cloudflare; storefront hosted on Shopify; MCP infrastructure on Cloudflare Workers).
 - Source repository for the public MCP server: https://github.com/Packrift/packrift-mcp (MIT licensed).
-- Listed in: Official MCP Registry (\`io.github.Packrift/packrift-mcp\`), Glama hosted connector, MCP Marketplace, awesome-mcp-servers (pending merge), Anthropic Connectors.
+- Listed in: Official MCP Registry (\`io.github.Packrift/packrift-mcp\`), Glama hosted connector, MCP Marketplace, Docker MCP Catalog (pending review), awesome-mcp-servers (pending merge), Anthropic Connectors.
 - Connector discovery: Glama hosted connector at https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp and MCP Marketplace at https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp.
 - AI crawlers explicitly NOT blocked at the Cloudflare zone — GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and standard search crawlers are all permitted.
 
