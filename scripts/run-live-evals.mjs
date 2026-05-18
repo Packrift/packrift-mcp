@@ -104,7 +104,7 @@ async function evaluate(test, tools) {
     });
     checks.push({
       name: "required_tools_present",
-      pass: ["search_products", "find_packaging_for_item", "create_cart_url"].every((name) =>
+      pass: ["search_products", "find_packaging_for_item", "get_cart_handoff_candidates", "create_cart_url"].every((name) =>
         toolNames.includes(name),
       ),
       observed: toolNames,

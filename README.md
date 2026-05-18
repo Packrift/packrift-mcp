@@ -91,6 +91,7 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 | `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. Never cached. |
 | `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. Never cached. |
 | `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
+| `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority AI-approved SKUs with ready `create_cart_url` arguments, measured SKU/product/reorder/quote links, and required live-confirmation sequence. |
 | `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
 | `compare_alternatives(requested_spec, family?, competitor_reference?, limit?)` | Ranks AI-approved Packrift alternatives for open-ended buyer requests, including competitor-style packaging specs. |
 | `pack_calculator(item, padding?, use_case?, limit?)` | Calculates protected inside dimensions and returns fitted box or mailer candidates with void-fill guidance. |

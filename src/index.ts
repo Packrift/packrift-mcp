@@ -50,6 +50,61 @@ interface ToolDef {
   handler: (env: Env, args: unknown) => unknown | Promise<unknown>;
 }
 
+const CART_HANDOFF_CANDIDATE_FAMILIES = [
+  "boxes",
+  "mailers",
+  "labels",
+  "tape",
+  "poly_bags",
+  "stretch_film",
+  "strapping",
+  "tags",
+  "void_fill",
+  "packing_list_envelopes",
+] as const;
+
+const CART_HANDOFF_FAMILY_ALIASES: Record<string, string> = {
+  box: "boxes",
+  boxes: "boxes",
+  corrugated_box: "boxes",
+  corrugated_boxes: "boxes",
+  mailer: "mailers",
+  mailers: "mailers",
+  label: "labels",
+  labels: "labels",
+  tape: "tape",
+  poly_bag: "poly_bags",
+  poly_bags: "poly_bags",
+  bag: "poly_bags",
+  bags: "poly_bags",
+  stretch_film: "stretch_film",
+  strapping: "strapping",
+  tag: "tags",
+  tags: "tags",
+  void_fill: "void_fill",
+  packing_list_envelope: "packing_list_envelopes",
+  packing_list_envelopes: "packing_list_envelopes",
+};
+
+const getCartHandoffCandidatesSchema = {
+  name: "get_cart_handoff_candidates",
+  description:
+    "Returns priority AI-approved Packrift SKUs that are ready for MCP cart handoff exploration, including create_cart_url arguments, SKU records, measured product/reorder/quote links, and the required live-confirmation sequence.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
+      family: {
+        type: "string",
+        enum: CART_HANDOFF_CANDIDATE_FAMILIES,
+        description: "Optional product family filter.",
+      },
+      sku: { type: "string", description: "Optional exact Packrift SKU filter." },
+    },
+  },
+  annotations: { readOnlyHint: true, openWorldHint: true },
+};
+
 interface PromptArgumentDef {
   name: string;
   description: string;
@@ -70,6 +125,7 @@ const TOOLS: ToolDef[] = [
   { schema: checkInventorySchema, handler: checkInventoryHandler },
   { schema: recommendPackagingSchema, handler: recommendPackagingHandler },
   { schema: getShippingEstimateSchema, handler: getShippingEstimateHandler },
+  { schema: getCartHandoffCandidatesSchema, handler: getCartHandoffCandidatesHandler },
   { schema: createCartUrlSchema, handler: createCartUrlHandler },
   { schema: compareAlternativesSchema, handler: compareAlternativesHandler },
   { schema: packCalculatorSchema, handler: packCalculatorHandler },
@@ -178,6 +234,50 @@ function isSyntheticToolCall(args: unknown): boolean {
   return row.suppress_analytics === true || context.synthetic === true;
 }
 
+function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number.parseInt(value, 10) : fallback;
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
+}
+
+function normalizeCartHandoffFamily(value: unknown): string {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return "";
+  return CART_HANDOFF_FAMILY_ALIASES[raw] ?? raw;
+}
+
+function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
+  const args = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const limit = boundedInteger(args.limit, 10, 1, 50);
+  const sku = String(args.sku ?? "").trim().toUpperCase();
+  const family = normalizeCartHandoffFamily(args.family);
+  if (family && !CART_HANDOFF_CANDIDATE_FAMILIES.includes(family as (typeof CART_HANDOFF_CANDIDATE_FAMILIES)[number])) {
+    throw new Error(`Unsupported family filter: ${family}`);
+  }
+
+  const payload = cartHandoffCandidatesPayload(50);
+  const filtered = payload.items
+    .filter((item) => !sku || item.sku.toUpperCase() === sku)
+    .filter((item) => !family || item.family === family)
+    .slice(0, limit);
+
+  return {
+    ...payload,
+    tool_name: "get_cart_handoff_candidates",
+    filters: {
+      sku: sku || null,
+      family: family || null,
+      limit,
+    },
+    result_count: filtered.length,
+    items: filtered,
+    recommended_next_step:
+      filtered.length > 0
+        ? "For a selected item, call get_product, get_pricing, and check_inventory. After the buyer confirms exact SKU and quantity, pass create_cart_url_arguments to create_cart_url."
+        : "No priority cart handoff candidate matched this filter. Use search_products for the exact spec, or get_bulk_quote_link when no exact approved match exists.",
+  };
+}
+
 async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionContext = {}): Promise<unknown | null> {
   const { method, params, id } = req;
   // Notifications (no id) get no response.
@@ -195,7 +295,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             prompts: { listChanged: false },
           },
           instructions:
-            "Packrift finds the right packaging supply for a given item. All product discovery, product detail, price, inventory, shipping, reorder, quote, and cart handoff tools are AI_APPROVE-gated where a product SKU is involved. Hero use case: the user has an item's dimensions (or a use case like 'mailer' / 'fragile') and needs the smallest box, mailer, or container that fits — call find_packaging_for_item. Use search_products only when the user names a specific product type and dimensions are unknown. After picking a SKU, use get_product for full detail, get_pricing/check_inventory for live confirmation, get_reorder_link or get_bulk_quote_link for procurement handoff, get_shipping_estimate for rates, then create_cart_url to hand off to checkout (always carries ?ref=mcp). If no exact match exists, call explain_no_exact_match.",
+            "Packrift finds the right packaging supply for a given item. All product discovery, product detail, price, inventory, shipping, reorder, quote, and cart handoff tools are AI_APPROVE-gated where a product SKU is involved. Hero use case: the user has an item's dimensions (or a use case like 'mailer' / 'fragile') and needs the smallest box, mailer, or container that fits — call find_packaging_for_item. Use search_products only when the user names a specific product type and dimensions are unknown. Use get_cart_handoff_candidates to discover priority AI-approved SKUs with ready create_cart_url arguments for agentic cart exploration. After picking a SKU, use get_product for full detail, get_pricing/check_inventory for live confirmation, get_reorder_link or get_bulk_quote_link for procurement handoff, get_shipping_estimate for rates, then create_cart_url to hand off to checkout (always carries ?ref=mcp). If no exact match exists, call explain_no_exact_match.",
         });
 
       case "notifications/initialized":
@@ -1178,6 +1278,8 @@ function summarizeToolResult(out: unknown): {
     ? out
     : Array.isArray(obj.results)
       ? obj.results
+      : Array.isArray(obj.items)
+        ? obj.items
       : [];
   const first = (rows[0] && typeof rows[0] === "object" ? (rows[0] as Record<string, unknown>) : obj) ?? {};
   const match = first.match && typeof first.match === "object" ? (first.match as Record<string, unknown>) : {};

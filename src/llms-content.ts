@@ -37,6 +37,7 @@ Use these as examples of exact product families that converted, not as universal
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration
 - MCP product results include tracked product URLs, reorder URLs, quote URLs, copy-procurement-spec text, and cart URL candidates. Confirm live price and inventory before presenting a cart handoff.
+- Use \`get_cart_handoff_candidates\` when an MCP client needs a compact tool-callable list of priority AI-approved SKUs with ready \`create_cart_url\` arguments and required live-confirmation steps.
 - Exploration tools are available for open-ended packaging questions: \`compare_alternatives\`, \`pack_calculator\`, and \`inventory_status\`. Use these before final product confirmation when the buyer asks what fits, what alternative to choose, or where stock exists.
 - After \`get_pricing\`, \`check_inventory\`, \`get_shipping_estimate\`, or \`create_cart_url\`, use the returned \`post_confirmation_handoff\` object to keep the buyer moving with exact product, reorder, quote, copy-spec, and cart-click actions.
 - [AI-approved product corpus](https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl): JSONL product/spec index for exact-match procurement

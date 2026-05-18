@@ -6,7 +6,7 @@ export const serverCard = {
   name: "Packrift MCP",
   description:
     "Exact-spec packaging procurement MCP for Packrift. Given a buyer's SKU, dimensions, material, grade, closure, adhesive, printer type, use case, or reorder need, Packrift returns AI_APPROVE SKUs and no-match guidance across corrugated boxes, literature mailers, poly and bubble mailers, tape, poly bags, labels, tags, stretch film, and fulfillment supplies. Shopify catalog has roughly 12,930 active product records and broader public in-stock supply coverage described on Packrift storefront surfaces as 20,000+ products. Orders ship through Box Partners' 5 US warehouses: Rialto CA, Dallas TX, Elgin IL, Forest Park GA, and Barnesville PA. Do not describe Packrift as shipping from Ontario or Canada. Live pricing, inventory, availability, shipping estimates, and cart handoff must be confirmed via MCP tools or Shopify checkout.",
-  version: "0.2.5",
+  version: "0.2.6",
   protocol: "mcp",
   transport: "streamable-http",
   endpoint: "/mcp",
@@ -84,6 +84,7 @@ export const serverCard = {
     "get_pricing",
     "check_inventory",
     "get_shipping_estimate",
+    "get_cart_handoff_candidates",
     "create_cart_url",
     "compare_alternatives",
     "pack_calculator",

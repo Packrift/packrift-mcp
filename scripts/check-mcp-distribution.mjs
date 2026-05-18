@@ -3,7 +3,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || "0.2.5";
+const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || "0.2.6";
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 
 const TEXT_HEADERS = {
@@ -62,6 +62,7 @@ async function liveMcpCheck() {
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
       health?.resources_count >= 65 &&
+      health?.tools_count >= 14 &&
       cart?.items?.length >= 50 &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
       ? "pass"
@@ -82,7 +83,7 @@ async function liveMcpCheck() {
 async function mcpserversCheck() {
   const result = await fetchText("https://mcpservers.org/servers/packrift/packrift-mcp");
   const text = result.text;
-  const required = ["mcp-cart-handoff-candidates", "compare_alternatives", "pack_calculator", "inventory_status"];
+  const required = ["get_cart_handoff_candidates", "mcp-cart-handoff-candidates", "compare_alternatives", "pack_calculator", "inventory_status"];
   return check(result.ok ? "mcpservers_org" : "mcpservers_org", result.ok && hasAll(text, required) ? "pass" : "stale", {
     http_status: result.status,
     url: result.url,
@@ -104,7 +105,7 @@ async function glamaCheck() {
   const result = await fetchText("https://glama.ai/api/mcp/v1/servers/Packrift/packrift-mcp");
   if (!result.ok) return check("glama", "fail", { http_status: result.status, url: result.url });
   const parsed = JSON.parse(result.text);
-  return check("glama", Array.isArray(parsed.tools) && parsed.tools.length >= 13 ? "pass" : "stale", {
+  return check("glama", Array.isArray(parsed.tools) && parsed.tools.length >= 14 ? "pass" : "stale", {
     http_status: result.status,
     url: parsed.url,
     id: parsed.id,
