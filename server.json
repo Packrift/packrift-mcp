@@ -3,7 +3,7 @@
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
   "description": "Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "websiteUrl": "https://packrift.com/pages/agents",
   "repository": {
     "url": "https://github.com/Packrift/packrift-mcp",
@@ -27,9 +27,9 @@
       "environmentVariables": [
         {
           "name": "SHOPIFY_PACKRIFT_TOKEN",
-          "description": "Packrift Shopify Admin API token.",
+          "description": "Optional for MCP introspection and directory scanning. Required only when self-hosting live Shopify-backed catalog, pricing, inventory, shipping, and cart tools. The public hosted endpoint at https://mcp.packrift.com/mcp needs no user-supplied token.",
           "format": "string",
-          "isRequired": true,
+          "isRequired": false,
           "isSecret": true
         },
         {

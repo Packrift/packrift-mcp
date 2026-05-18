@@ -57,6 +57,7 @@ Optional environment variables:
 - `SHOPIFY_STORE_DOMAIN` defaults to `packrift.myshopify.com`
 - `SHOPIFY_API_VERSION` defaults to `2025-04`
 - `STOREFRONT_DOMAIN` defaults to `packrift.com`
+- `SHOPIFY_PACKRIFT_TOKEN` is optional for MCP introspection and directory scanning, but required when self-hosting live Shopify-backed catalog, pricing, inventory, shipping, and cart tools
 
 The container uses an in-memory cache instead of Cloudflare KV. It is intended
 for discovery and client testing; the production server remains the Cloudflare
