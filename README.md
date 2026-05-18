@@ -108,6 +108,7 @@ Prompts:
 
 - `find_exact_packaging_spec`
 - `reorder_packrift_sku`
+- `prepare_cart_handoff`
 - `request_bulk_quote_for_no_match`
 - `copy_procurement_spec`
 - `find_box_by_lwh`

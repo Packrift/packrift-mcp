@@ -3,7 +3,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || "0.2.6";
+const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || "0.2.7";
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 
 const TEXT_HEADERS = {

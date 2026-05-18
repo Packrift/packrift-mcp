@@ -33,6 +33,7 @@ Use these as examples of exact product families that converted, not as universal
 
 - [MCP server](https://mcp.packrift.com/mcp): Streamable HTTP, read-only tools for catalog search, pricing, inventory, recommendations, comparison, pack calculation, shipping estimates, and cart-URL construction
 - Native MCP prompts are available via prompts/list for exact-spec search, reorder, no-match quote recovery, and copy-procurement-spec workflows
+- Use the \`prepare_cart_handoff\` prompt when a client needs a guarded sequence from selected SKU to live confirmation and stamped \`create_cart_url\` handoff.
 - [Machine-readable AI agent instructions](https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration

@@ -154,6 +154,16 @@ const PROMPTS: PromptDef[] = [
       "Reorder Packrift SKU {{sku}}. Use search_products with the SKU, then get_product, get_pricing, and check_inventory. Return the product URL, reorder URL, copy-procurement-spec text, and cart URL only after live commercial facts are confirmed.",
   },
   {
+    name: "prepare_cart_handoff",
+    description: "Prepare a live-confirmed Packrift cart handoff for a selected exact SKU and quantity.",
+    arguments: [
+      { name: "sku", description: "Selected Packrift SKU such as 1066.", required: true },
+      { name: "quantity", description: "Buyer-selected quantity. Default to 1 when not provided." },
+    ],
+    template:
+      "Prepare a Packrift MCP cart handoff for SKU {{sku}} and quantity {{quantity}}. First call get_cart_handoff_candidates with the exact SKU to retrieve the approved variant and create_cart_url arguments. Then call get_product, get_pricing, and check_inventory for live confirmation. Only after the exact SKU, variant, live price, inventory, and buyer-selected quantity are confirmed, call create_cart_url with MCP attribution. Return the stamped cart URL plus the measured product, reorder, quote, and copy-procurement-spec fallback actions. If the requested SKU is not an exact AI_APPROVE match, do not create a cart URL; call explain_no_exact_match or get_bulk_quote_link instead.",
+  },
+  {
     name: "request_bulk_quote_for_no_match",
     description: "Route a buyer to quote recovery when Packrift has no exact approved match.",
     arguments: [
@@ -2481,7 +2491,8 @@ async function cachedStaticTextResponse(
   const url = new URL(c.req.url);
   url.search = "";
   const cacheRequest = new Request(url.toString(), { method: "GET" });
-  const cached = await caches.default.match(cacheRequest);
+  const edgeCache = typeof caches !== "undefined" ? caches.default : null;
+  const cached = edgeCache ? await edgeCache.match(cacheRequest) : null;
   if (cached) return cached;
 
   const mirrorKey = `${STATIC_CACHE_MIRROR_PREFIX}${cacheName}`;
@@ -2509,7 +2520,7 @@ async function cachedStaticTextResponse(
       ...RAW_HEADERS,
     },
   });
-  await caches.default.put(cacheRequest, response.clone());
+  if (edgeCache) await edgeCache.put(cacheRequest, response.clone());
   return response;
 }
 
