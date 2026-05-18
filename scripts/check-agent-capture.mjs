@@ -120,7 +120,9 @@ async function main() {
   ]);
 
   const capture = jsonResult.value;
-  const surfaceIds = new Set((capture?.surfaces ?? []).map((row) => row.id));
+  const surfaceIdRows = (capture?.surfaces ?? []).map((row) => row.id);
+  const surfaceIds = new Set(surfaceIdRows);
+  const duplicateSurfaceIds = Array.from(new Set(surfaceIdRows.filter((id, index) => surfaceIdRows.indexOf(id) !== index)));
   const requiredSurfaceIds = [
     "hosted_mcp_endpoint",
     "mcp_adoption_kit",
@@ -173,6 +175,9 @@ async function main() {
     }),
     check("surface coverage", (capture?.surfaces?.length ?? 0) >= 20 && missingSurfaceIds.length === 0, {
       detail: missingSurfaceIds.length ? `missing ${missingSurfaceIds.join(", ")}` : `${capture?.surfaces?.length ?? 0} surfaces`,
+    }),
+    check("surface ids are unique", duplicateSurfaceIds.length === 0, {
+      detail: duplicateSurfaceIds.length ? `duplicates ${duplicateSurfaceIds.join(", ")}` : "unique",
     }),
     check("operating rule blocks duplicate CLI", (capture?.operating_rules ?? []).some((rule) => /separate Packrift CLI/.test(rule)), {
       detail: "duplicate CLI guard",
