@@ -25,6 +25,13 @@ Use this configuration in MCP clients that support remote HTTP or Streamable HTT
 
 If your client uses a UI instead of JSON, add a remote MCP server named `packrift` with URL `https://mcp.packrift.com/mcp`.
 
+## Hosted Connector Listings
+
+- Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
+- MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
+- Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
+- Source repository: https://github.com/Packrift/packrift-mcp
+
 ## What It Provides
 
 - Search Packrift packaging supplies by product, use case, or packaging need.
@@ -37,3 +44,5 @@ If your client uses a UI instead of JSON, add a remote MCP server named `packrif
 - Documentation: https://packrift.com/pages/agents
 - Source: https://github.com/Packrift/packrift-mcp
 - Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
+- MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json

@@ -14,6 +14,13 @@ The server is designed for buyers and AI agents that need packaging supplies by 
 - `SHOPIFY_STORE_DOMAIN` (optional): Defaults to `packrift.myshopify.com`.
 - `STOREFRONT_DOMAIN` (optional): Defaults to `packrift.com`.
 
+## Hosted Connector
+- Primary hosted endpoint: `https://mcp.packrift.com/mcp`
+- Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
+- MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
+- Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
+- Source repository: https://github.com/Packrift/packrift-mcp
+
 ## Category
 Business Tools
 

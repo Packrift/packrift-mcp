@@ -29,6 +29,16 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 }
 ```
 
+## Hosted connector and directory listings
+
+Use the hosted endpoint above when possible. It requires no buyer-side API key and exposes the current 14-tool Packrift exact-spec commerce surface.
+
+- Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
+- MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
+- Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
+- Source repository: https://github.com/Packrift/packrift-mcp
+- Direct Streamable HTTP endpoint: https://mcp.packrift.com/mcp
+
 ## Container Image
 
 The public hosted endpoint above is the primary integration path. A container
@@ -68,6 +78,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - `llms.txt`: https://mcp.packrift.com/llms.txt
 - `llms-full.txt`: https://mcp.packrift.com/llms-full.txt
 - MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
 - MCP Marketplace manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
