@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || "0.2.7";
+const PACKAGE_JSON = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
+const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JSON.version;
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 
 const TEXT_HEADERS = {

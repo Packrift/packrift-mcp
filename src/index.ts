@@ -2338,6 +2338,10 @@ const FIRST20_EXACT_SPEC_VIEW_SKUS = [
 const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
+  "https://mcp.packrift.com/manifest",
+  "https://mcp.packrift.com/resources",
+  "https://mcp.packrift.com/health",
+  "https://mcp.packrift.com/server-card.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
   "https://mcp.packrift.com/.well-known/glama.json",
   "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
@@ -2404,6 +2408,10 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/robots.txt": "MCP subdomain crawler policy and sitemap references.",
   "/sitemap.xml": "MCP discovery sitemap for machine-readable Packrift resources.",
   "/ai/sitemap.xml": "AI corpus sitemap for exact-spec Packrift product data files.",
+  "/manifest": "REST discovery manifest for Packrift MCP tools, prompts, resources, and health endpoints.",
+  "/resources": "Paginated REST resource adapter listing Packrift MCP and AI-commerce discovery resources.",
+  "/health": "Packrift MCP health check with version, tool count, resource count, and KV status.",
+  "/server-card.json": "Root Packrift MCP server discovery card.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
   "/.well-known/glama.json": "Glama remote connector claim file for the Packrift hosted MCP endpoint.",
   "/agents.md": "Root-domain Packrift exact-spec AI-agent instructions.",
@@ -2554,6 +2562,8 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
       ? "text/markdown"
       : pathname.match(/^\/ai\/sku\/[^/]+\.json$/)
         ? "application/json"
+        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health"
+          ? "application/json"
         : pathname.endsWith(".jsonl")
           ? "application/x-ndjson"
         : route?.contentType.split(";")[0] ??
@@ -2583,6 +2593,10 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/top-1000-ai-sales-sitemap.xml") return topAiSalesSkuSitemapXml();
   if (pathname === "/ai/all-ai-approved-sku-sitemap.xml") return allAiApprovedSkuSitemapXml();
   if (pathname === "/ai/conversion-route-redirect-sitemap.xml") return routeRedirectSitemapXml();
+  if (pathname === "/manifest") return JSON.stringify(mcpManifestPayload(), null, 2);
+  if (pathname === "/resources") return JSON.stringify(mcpResourcesPayload(MCP_RESOURCES.length, 0), null, 2);
+  if (pathname === "/health") return JSON.stringify(await mcpHealthPayload(env), null, 2);
+  if (pathname === "/server-card.json") return JSON.stringify(serverCard, null, 2);
   if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(serverCard, null, 2);
   if (pathname === "/.well-known/glama.json") return JSON.stringify(glamaConnectorClaim(), null, 2);
   if (pathname === "/agents.md") return agentInstructionsMd;
@@ -2622,6 +2636,54 @@ function aiSitemapXml(): string {
     (url) => `  <url><loc>${url}</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq></url>`
   ).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
+async function mcpHealthPayload(env: Env) {
+  let kvStatus: "ok" | "error" = "ok";
+  try {
+    await env.CATALOG_CACHE.get("health:probe");
+  } catch {
+    kvStatus = "error";
+  }
+  return {
+    ok: kvStatus === "ok",
+    server: serverCard.name,
+    version: serverCard.version,
+    uptime_seconds: workerUptimeSeconds(),
+    kv_status: kvStatus,
+    resources_count: MCP_RESOURCES.length,
+    tools_count: TOOLS.length,
+  };
+}
+
+function mcpManifestPayload() {
+  return {
+    ...serverCard,
+    endpoint_url: "https://mcp.packrift.com/mcp",
+    sse_url: "https://mcp.packrift.com/sse",
+    health_url: "https://mcp.packrift.com/health",
+    resources_url: "https://mcp.packrift.com/resources",
+    product_resource_template: "https://mcp.packrift.com/products/{handle_or_sku}",
+    resource_count: MCP_RESOURCES.length,
+    tool_count: TOOLS.length,
+    tools: TOOLS.map((tool) => tool.schema.name),
+    prompts: PROMPTS.map((prompt) => prompt.name),
+  };
+}
+
+function mcpResourcesPayload(limit: number, offset: number) {
+  const boundedLimit = Math.max(1, Math.min(500, limit));
+  const boundedOffset = Math.max(0, offset);
+  const resources = MCP_RESOURCES.slice(boundedOffset, boundedOffset + boundedLimit);
+  const nextCursor = boundedOffset + resources.length < MCP_RESOURCES.length ? String(boundedOffset + resources.length) : null;
+  return {
+    ok: true,
+    total: MCP_RESOURCES.length,
+    limit: boundedLimit,
+    cursor: String(boundedOffset),
+    next_cursor: nextCursor,
+    resources,
+  };
 }
 
 function topAiSalesSkuItems(limit = AI_SALES_SKU_ROUTE_LIMIT): ApprovedCatalogItem[] {
@@ -3460,23 +3522,10 @@ app.get("/health", async (c) => {
   if (url.hostname === "packrift.com" || url.hostname === "www.packrift.com") {
     return storefrontPassThrough(c.req.raw, c.env);
   }
-  let kvStatus: "ok" | "error" = "ok";
-  try {
-    await c.env.CATALOG_CACHE.get("health:probe");
-  } catch {
-    kvStatus = "error";
-  }
+  const payload = await mcpHealthPayload(c.env);
   return c.json(
-    {
-      ok: kvStatus === "ok",
-      server: serverCard.name,
-      version: serverCard.version,
-      uptime_seconds: workerUptimeSeconds(),
-      kv_status: kvStatus,
-      resources_count: MCP_RESOURCES.length,
-      tools_count: TOOLS.length,
-    },
-    kvStatus === "ok" ? 200 : 503,
+    payload,
+    payload.ok ? 200 : 503,
     { ...RAW_HEADERS, "Cache-Control": "no-store" }
   );
 });
@@ -3487,18 +3536,7 @@ app.get("/manifest", (c) => {
     return storefrontPassThrough(c.req.raw, c.env);
   }
   return c.json(
-    {
-      ...serverCard,
-      endpoint_url: "https://mcp.packrift.com/mcp",
-      sse_url: "https://mcp.packrift.com/sse",
-      health_url: "https://mcp.packrift.com/health",
-      resources_url: "https://mcp.packrift.com/resources",
-      product_resource_template: "https://mcp.packrift.com/products/{handle_or_sku}",
-      resource_count: MCP_RESOURCES.length,
-      tool_count: TOOLS.length,
-      tools: TOOLS.map((tool) => tool.schema.name),
-      prompts: PROMPTS.map((prompt) => prompt.name),
-    },
+    mcpManifestPayload(),
     200,
     RAW_HEADERS
   );
@@ -3512,17 +3550,8 @@ app.get("/resources", (c) => {
   const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "100", 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(500, requestedLimit)) : 100;
   const offset = Math.max(0, Number.parseInt(url.searchParams.get("cursor") ?? "0", 10) || 0);
-  const resources = MCP_RESOURCES.slice(offset, offset + limit);
-  const nextCursor = offset + resources.length < MCP_RESOURCES.length ? String(offset + resources.length) : null;
   return c.json(
-    {
-      ok: true,
-      total: MCP_RESOURCES.length,
-      limit,
-      cursor: String(offset),
-      next_cursor: nextCursor,
-      resources,
-    },
+    mcpResourcesPayload(limit, offset),
     200,
     RAW_HEADERS
   );
