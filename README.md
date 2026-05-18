@@ -199,6 +199,15 @@ npm run check:static-availability -- --samples-per-ua 200 --concurrency 30
 
 This writes JSON and Markdown evidence under `outputs/static-availability/`. The funnel snapshot also runs this check and reports failure rate, 5xx rate, content validation, and p95 latency.
 
+Refresh MCP directory evidence:
+
+```sh
+npm run check:distribution
+npm run build:directory-submission-pack
+```
+
+The distribution check reports which public MCP directories are current, stale, blocked, or failing. The submission pack turns stale rows into copy-ready listing fields, live proof URLs, and the next refresh action for each directory.
+
 ## Deployment
 
 The Cloudflare account is being created in a separate process. Once it's ready and `wrangler` is logged in (`wrangler login`), run these in order:

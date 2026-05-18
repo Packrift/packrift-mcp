@@ -7,6 +7,63 @@ const PACKAGE_JSON = JSON.parse(readFileSync(resolve(process.cwd(), "package.jso
 const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JSON.version;
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 
+const SURFACE_GUIDANCE = {
+  official_registry: {
+    listing_url: "https://registry.modelcontextprotocol.io/servers/io.github.Packrift/packrift-mcp",
+    submission_url: "https://github.com/modelcontextprotocol/registry",
+    priority: "core",
+    follow_up_action: "Keep server.json published with mcp-publisher whenever the public MCP surface changes.",
+  },
+  live_mcp_surface: {
+    listing_url: "https://mcp.packrift.com/health",
+    submission_url: "https://mcp.packrift.com/manifest",
+    priority: "core",
+    follow_up_action: "Keep the live health, manifest, server-card, and cart-handoff resources passing before pushing directory refreshes.",
+  },
+  mcpservers_org: {
+    listing_url: "https://mcpservers.org/servers/packrift/packrift-mcp",
+    submission_url: "https://mcpservers.org/submit",
+    priority: "high",
+    follow_up_action: "Submit the GitHub repo and ask for the listing to be recrawled with the current 14-tool cart-handoff README.",
+  },
+  mcpbench: {
+    listing_url: "https://mcpbench.ai/servers/io.github.Packrift/packrift-mcp",
+    submission_url: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
+    priority: "medium",
+    follow_up_action: "Monitor its official-registry ingestion and use the current official-registry pass as recrawl evidence.",
+  },
+  glama: {
+    listing_url: "https://glama.ai/mcp/servers/ye4xxr7qiu",
+    submission_url: "https://glama.ai/",
+    priority: "high",
+    follow_up_action: "Resubmit or refresh the GitHub repo through Glama and verify it indexes tool schemas instead of only the connector shell.",
+  },
+  mcp_directory: {
+    listing_url: "https://mcp.directory/servers?q=packrift",
+    submission_url: "https://mcp.directory/submit",
+    priority: "high",
+    follow_up_action: "Submit the GitHub repo, remote endpoint, and short description; request verified edit access if it appears via auto-discovery.",
+  },
+  chiark: {
+    listing_url: "https://chiark.ai/",
+    submission_url: "https://chiark.ai/methodology",
+    priority: "medium",
+    follow_up_action: "Chiark crawls upstream registries daily, so push official/PulseMCP/Smithery-style coverage first and then monitor for Packrift by endpoint URL.",
+  },
+  mcp_marketplace_io: {
+    listing_url: "https://mcp-marketplace.io/server/packrift",
+    submission_url: "https://mcp-marketplace.io/for-creators",
+    priority: "medium",
+    follow_up_action: "Create or update the creator listing as a free remote MCP server with the hosted endpoint and current proof bundle.",
+  },
+  pulsemcp_packrift: {
+    listing_url: "https://www.pulsemcp.com/servers/packrift",
+    submission_url: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
+    priority: "high",
+    follow_up_action: "PulseMCP is blocked to this checker; use official-registry publication and public server.json as the recrawl source.",
+  },
+};
+
 const TEXT_HEADERS = {
   "User-Agent": "Packrift-MCP-Distribution-Check/1.0 (+https://mcp.packrift.com/mcp)",
   Accept: "text/html,application/json,text/plain;q=0.9,*/*;q=0.8",
@@ -28,6 +85,18 @@ function hasAll(text, needles) {
 
 function check(name, status, details = {}) {
   return { name, status, ...details };
+}
+
+function withGuidance(row) {
+  const guidance = SURFACE_GUIDANCE[row.name] ?? {};
+  return {
+    ...guidance,
+    ...row,
+    listing_url: row.listing_url ?? guidance.listing_url ?? row.url ?? null,
+    submission_url: row.submission_url ?? guidance.submission_url ?? null,
+    follow_up_action: row.follow_up_action ?? guidance.follow_up_action ?? "Review and refresh this surface manually.",
+    priority: row.priority ?? guidance.priority ?? "medium",
+  };
 }
 
 async function officialRegistryCheck() {
@@ -129,7 +198,10 @@ async function simplePresenceCheck(name, url, needles) {
 
 function markdownReport(payload) {
   const rows = payload.checks
-    .map((row) => `| ${row.name} | ${row.status} | ${row.url ?? row.latest?.version ?? ""} |`)
+    .map(
+      (row) =>
+        `| ${row.name} | ${row.status} | ${row.priority} | ${row.url ?? row.latest?.version ?? row.listing_url ?? ""} | ${row.submission_url ?? ""} |`
+    )
     .join("\n");
   const stale = payload.checks.filter((row) => row.status !== "pass");
   return [
@@ -138,31 +210,36 @@ function markdownReport(payload) {
     `Generated: ${payload.generated_at}`,
     `Expected version: ${payload.expected_version}`,
     "",
-    "| Surface | Status | Evidence |",
-    "| --- | --- | --- |",
+    "| Surface | Status | Priority | Evidence | Refresh URL |",
+    "| --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Follow-Up",
     "",
     ...(stale.length
-      ? stale.map((row) => `- ${row.name}: ${row.status}${row.missing?.length ? `; missing ${row.missing.join(", ")}` : ""}`)
+      ? stale.map(
+          (row) =>
+            `- ${row.name}: ${row.status}${row.missing?.length ? `; missing ${row.missing.join(", ")}` : ""}. ${row.follow_up_action}`
+        )
       : ["- None. All tracked distribution surfaces are current."]),
     "",
   ].join("\n");
 }
 
 async function main() {
-  const checks = await Promise.all([
-    officialRegistryCheck(),
-    liveMcpCheck(),
-    mcpserversCheck(),
-    mcpbenchCheck(),
-    glamaCheck(),
-    simplePresenceCheck("mcp_directory", "https://mcp.directory/servers?q=packrift", ["Packrift"]),
-    simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
-    simplePresenceCheck("mcp_marketplace_io", "https://mcp-marketplace.io/server/packrift", ["Packrift"]),
-    simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),
-  ]);
+  const checks = (
+    await Promise.all([
+      officialRegistryCheck(),
+      liveMcpCheck(),
+      mcpserversCheck(),
+      mcpbenchCheck(),
+      glamaCheck(),
+      simplePresenceCheck("mcp_directory", "https://mcp.directory/servers?q=packrift", ["Packrift"]),
+      simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
+      simplePresenceCheck("mcp_marketplace_io", "https://mcp-marketplace.io/server/packrift", ["Packrift"]),
+      simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),
+    ])
+  ).map(withGuidance);
   const generatedAt = new Date().toISOString();
   const outDir = resolve(OUT_ROOT, generatedAt.replace(/[:.]/g, "-"));
   mkdirSync(outDir, { recursive: true });
