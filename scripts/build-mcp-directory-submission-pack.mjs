@@ -10,6 +10,7 @@ const SERVER_JSON = JSON.parse(readFileSync(resolve(REPO_ROOT, "server.json"), "
 const DISTRIBUTION_LATEST = resolve(REPO_ROOT, "outputs/mcp-distribution-check/latest.json");
 
 const CONTACT_EMAIL_PLACEHOLDER = "[directory contact email]";
+const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 
 const TARGETS = [
   {
@@ -82,6 +83,8 @@ const LIVE_PROOF_URLS = {
   manifest: "https://mcp.packrift.com/manifest",
   server_card: "https://mcp.packrift.com/server-card.json",
   well_known_server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+  glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
+  marketplace_manifest: "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
   cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
 };
 
@@ -113,6 +116,43 @@ async function fetchJson(url) {
   }
 }
 
+async function fetchMcp(method, params = undefined) {
+  try {
+    const response = await fetch(MCP_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "User-Agent": "Packrift-MCP-Directory-Pack/1.0 (+https://mcp.packrift.com/mcp)",
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: method,
+        method,
+        ...(params ? { params } : {}),
+      }),
+      redirect: "follow",
+    });
+    const text = await response.text();
+    const value = text ? JSON.parse(text) : null;
+    return {
+      ok: response.ok && !value?.error,
+      status: response.status,
+      url: response.url,
+      value,
+      error: value?.error?.message ?? null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      url: MCP_ENDPOINT,
+      value: null,
+      error: error.message,
+    };
+  }
+}
+
 function readDistribution() {
   if (!existsSync(DISTRIBUTION_LATEST)) return null;
   return JSON.parse(readFileSync(DISTRIBUTION_LATEST, "utf8"));
@@ -123,9 +163,10 @@ function checksByName(distribution) {
 }
 
 function canonicalListingCopy(liveProof) {
-  const toolsCount = liveProof.health?.value?.tools_count ?? 14;
-  const resourcesCount = liveProof.health?.value?.resources_count ?? 70;
-  const promptsCount = liveProof.manifest?.value?.prompts?.length ?? 7;
+  const toolsCount = liveProof.mcp_tools_list?.value?.result?.tools?.length ?? liveProof.health?.value?.tools_count ?? 14;
+  const resourcesCount =
+    liveProof.mcp_resources_list?.value?.result?.resources?.length ?? liveProof.health?.value?.resources_count ?? 70;
+  const promptsCount = liveProof.mcp_prompts_list?.value?.result?.prompts?.length ?? liveProof.manifest?.value?.prompts?.length ?? 7;
   return {
     server_name: SERVER_JSON.title,
     registry_name: SERVER_JSON.name,
@@ -146,7 +187,7 @@ function canonicalListingCopy(liveProof) {
     },
     category: "Business",
     tags: ["mcp", "ecommerce", "packaging", "procurement", "shopify", "cart-handoff", "inventory"],
-    proof_summary: `${toolsCount} tools, ${promptsCount} prompts, ${resourcesCount} resources, live health check, public manifest, public server cards, and MCP-attributed cart handoff candidates.`,
+    proof_summary: `${toolsCount} tools, ${promptsCount} prompts, ${resourcesCount} resources, direct live MCP introspection, public manifests, valid Glama claim, and MCP-attributed cart handoff candidates.`,
     contact_email: CONTACT_EMAIL_PLACEHOLDER,
   };
 }
@@ -158,6 +199,7 @@ function targetRows(distribution, copy) {
     current_status: byName[target.name]?.status ?? "not_checked",
     current_evidence_url: byName[target.name]?.url ?? target.listing_url,
     missing: byName[target.name]?.missing ?? [],
+    distribution_observation: byName[target.name] ?? null,
     form_fields: {
       server_name: copy.server_name,
       short_description: copy.short_description,
@@ -166,6 +208,15 @@ function targetRows(distribution, copy) {
       remote_endpoint: copy.remote_endpoint,
       category: target.category,
       contact_email: copy.contact_email,
+    },
+    proof_urls: {
+      hosted_endpoint: copy.remote_endpoint,
+      live_health: LIVE_PROOF_URLS.health,
+      live_manifest: LIVE_PROOF_URLS.manifest,
+      mcp_tools_list: `${MCP_ENDPOINT} via JSON-RPC method tools/list`,
+      glama_claim: LIVE_PROOF_URLS.glama_claim,
+      cart_handoff_candidates: LIVE_PROOF_URLS.cart_handoff_candidates,
+      official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     },
   }));
 }
@@ -202,6 +253,40 @@ function liveProofDigest(liveProof) {
       name: liveProof.well_known_server_card.value?.name ?? null,
       version: liveProof.well_known_server_card.value?.version ?? null,
     },
+    glama_claim: {
+      ok: liveProof.glama_claim.ok,
+      status: liveProof.glama_claim.status,
+      url: liveProof.glama_claim.url,
+      schema: liveProof.glama_claim.value?.$schema ?? null,
+      maintainers_count: liveProof.glama_claim.value?.maintainers?.length ?? null,
+    },
+    marketplace_manifest: {
+      ok: liveProof.marketplace_manifest.ok,
+      status: liveProof.marketplace_manifest.status,
+      url: liveProof.marketplace_manifest.url,
+      tool_count: liveProof.marketplace_manifest.value?.signals?.tool_count ?? null,
+      hosted_endpoint_requires_auth: liveProof.marketplace_manifest.value?.signals?.hosted_endpoint_requires_auth ?? null,
+    },
+    mcp_tools_list: {
+      ok: liveProof.mcp_tools_list.ok,
+      status: liveProof.mcp_tools_list.status,
+      url: liveProof.mcp_tools_list.url,
+      tools_count: liveProof.mcp_tools_list.value?.result?.tools?.length ?? null,
+      tool_names: (liveProof.mcp_tools_list.value?.result?.tools ?? []).map((tool) => tool.name),
+    },
+    mcp_resources_list: {
+      ok: liveProof.mcp_resources_list.ok,
+      status: liveProof.mcp_resources_list.status,
+      url: liveProof.mcp_resources_list.url,
+      resources_count: liveProof.mcp_resources_list.value?.result?.resources?.length ?? null,
+    },
+    mcp_prompts_list: {
+      ok: liveProof.mcp_prompts_list.ok,
+      status: liveProof.mcp_prompts_list.status,
+      url: liveProof.mcp_prompts_list.url,
+      prompts_count: liveProof.mcp_prompts_list.value?.result?.prompts?.length ?? null,
+      prompt_names: (liveProof.mcp_prompts_list.value?.result?.prompts ?? []).map((prompt) => prompt.name),
+    },
     cart_handoff_candidates: {
       ok: liveProof.cart_handoff_candidates.ok,
       status: liveProof.cart_handoff_candidates.status,
@@ -210,6 +295,21 @@ function liveProofDigest(liveProof) {
       items_count: liveProof.cart_handoff_candidates.value?.items?.length ?? null,
     },
   };
+}
+
+function glamaRecrawlNote(payload) {
+  const glama = payload.targets.find((target) => target.name === "glama");
+  const glamaEnvRequired = glama?.distribution_observation?.environment_required ?? [];
+  const tools = payload.live_proof.mcp_tools_list.tool_names ?? [];
+  return [
+    "Packrift MCP has a current hosted Streamable HTTP endpoint at https://mcp.packrift.com/mcp that requires no user-supplied API token.",
+    `Live JSON-RPC tools/list now returns ${payload.live_proof.mcp_tools_list.tools_count ?? tools.length} tools: ${tools.join(", ")}.`,
+    `Live resources/list returns ${payload.live_proof.mcp_resources_list.resources_count ?? "unknown"} resources and prompts/list returns ${payload.live_proof.mcp_prompts_list.prompts_count ?? "unknown"} prompts.`,
+    `The Glama ownership claim is live at ${payload.live_proof.glama_claim.url} and uses ${payload.live_proof.glama_claim.schema}.`,
+    glama?.current_status === "stale"
+      ? `Glama's public API is stale for ${glama.current_evidence_url}: observed ${glama.distribution_observation?.tools_count ?? 0} tools and required env vars ${glamaEnvRequired.length ? glamaEnvRequired.join(", ") : "none"}. Please recrawl the latest official registry entry and hosted endpoint.`
+      : `Glama status is ${glama?.current_status ?? "not checked"} in the latest distribution check.`,
+  ].join("\n");
 }
 
 function fencedJson(value) {
@@ -240,6 +340,9 @@ function markdownReport(payload) {
         fencedJson(target.form_fields),
         "",
         `Proof summary: ${payload.copy.proof_summary}`,
+        "",
+        "Proof URLs:",
+        fencedJson(target.proof_urls),
         "",
       ].join("\n")
     )
@@ -282,6 +385,10 @@ function markdownReport(payload) {
     "",
     copyBlocks || "All tracked targets are already passing.",
     "",
+    "## Glama Recrawl Note",
+    "",
+    payload.glama_recrawl_note,
+    "",
   ].join("\n");
 }
 
@@ -289,6 +396,9 @@ async function main() {
   const liveProofRaw = Object.fromEntries(
     await Promise.all(Object.entries(LIVE_PROOF_URLS).map(async ([name, url]) => [name, await fetchJson(url)]))
   );
+  liveProofRaw.mcp_tools_list = await fetchMcp("tools/list");
+  liveProofRaw.mcp_resources_list = await fetchMcp("resources/list");
+  liveProofRaw.mcp_prompts_list = await fetchMcp("prompts/list");
   const distribution = readDistribution();
   const liveProof = liveProofDigest(liveProofRaw);
   const copy = canonicalListingCopy(liveProofRaw);
@@ -302,6 +412,7 @@ async function main() {
     targets,
     distribution_counts: distribution?.counts ?? null,
   };
+  payload.glama_recrawl_note = glamaRecrawlNote(payload);
 
   mkdirSync(outDir, { recursive: true });
   writeFileSync(resolve(outDir, "directory-submission-pack.json"), JSON.stringify(payload, null, 2) + "\n");

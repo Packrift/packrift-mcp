@@ -39,7 +39,7 @@ Business Tools
 - Tool: `get_pricing` — Confirm live price for a specific SKU.
 - Tool: `check_inventory` — Confirm availability for a specific SKU.
 - Tool: `get_shipping_estimate` — Estimate shipping for a Packrift packaging order.
-- Tool: `recommend_packaging` — Recommend packaging from item dimensions or use case.
+- Tool: `find_packaging_for_item` — Recommend packaging from item dimensions or use case.
 - Tool: `compare_alternatives` — Compare viable Packrift packaging alternatives.
 - Tool: `pack_calculator` — Calculate a recommended packaging fit.
 - Tool: `inventory_status` — Summarize inventory status for buyer handoff.

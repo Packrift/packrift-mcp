@@ -118,7 +118,7 @@ Prompts:
 - `find_box_by_lwh`
 - `find_label_by_size_material_printer`
 
-Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
+Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, measured handoff directories with cart routes, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
 
 ## Exact-spec AI-commerce examples
 

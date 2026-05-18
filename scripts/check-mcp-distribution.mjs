@@ -69,6 +69,8 @@ const TEXT_HEADERS = {
   Accept: "text/html,application/json,text/plain;q=0.9,*/*;q=0.8",
 };
 
+const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+
 async function fetchText(url) {
   try {
     const response = await fetch(url, { headers: TEXT_HEADERS, redirect: "follow" });
@@ -76,6 +78,37 @@ async function fetchText(url) {
     return { ok: response.ok, status: response.status, url: response.url, text };
   } catch (error) {
     return { ok: false, status: 0, url, text: "", error: error.message };
+  }
+}
+
+async function fetchMcp(method, params = undefined) {
+  try {
+    const response = await fetch(MCP_ENDPOINT, {
+      method: "POST",
+      headers: {
+        ...TEXT_HEADERS,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: method,
+        method,
+        ...(params ? { params } : {}),
+      }),
+      redirect: "follow",
+    });
+    const text = await response.text();
+    const value = text ? JSON.parse(text) : null;
+    return {
+      ok: response.ok && !value?.error,
+      status: response.status,
+      url: response.url,
+      value,
+      error: value?.error?.message ?? null,
+    };
+  } catch (error) {
+    return { ok: false, status: 0, url: MCP_ENDPOINT, value: null, error: error.message };
   }
 }
 
@@ -121,18 +154,29 @@ async function officialRegistryCheck() {
 }
 
 async function liveMcpCheck() {
-  const [healthResult, cartResult] = await Promise.all([
+  const [healthResult, cartResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
     fetchText("https://mcp.packrift.com/health"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
+    fetchMcp("tools/list"),
+    fetchMcp("resources/list"),
+    fetchMcp("prompts/list"),
   ]);
   const health = healthResult.ok ? JSON.parse(healthResult.text) : null;
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
+  const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
+  const resourcesCount = resourcesResult.value?.result?.resources?.length ?? 0;
+  const promptsCount = promptsResult.value?.result?.prompts?.length ?? 0;
   return check(
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
       health?.resources_count >= 65 &&
       health?.tools_count >= 14 &&
+      toolNames.length >= 14 &&
+      toolNames.includes("create_cart_url") &&
+      toolNames.includes("get_cart_handoff_candidates") &&
+      resourcesCount >= 65 &&
+      promptsCount >= 7 &&
       cart?.items?.length >= 50 &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
       ? "pass"
@@ -141,6 +185,16 @@ async function liveMcpCheck() {
       health,
       cart_release: cart?.release ?? null,
       cart_items: cart?.items?.length ?? 0,
+      mcp_introspection: {
+        endpoint: MCP_ENDPOINT,
+        tools_count: toolNames.length,
+        tool_names: toolNames,
+        resources_count: resourcesCount,
+        prompts_count: promptsCount,
+        tools_status: toolsResult.status,
+        resources_status: resourcesResult.status,
+        prompts_status: promptsResult.status,
+      },
       first_cart_url_has_mcp_attribution: hasAll(firstCartUrl, [
         "utm_source=chatgpt-mcp",
         "utm_medium=mcp_tool",
@@ -181,6 +235,9 @@ async function glamaCheck() {
     id: parsed.id,
     attributes: parsed.attributes,
     tools_count: parsed.tools?.length ?? 0,
+    tool_names: (parsed.tools ?? []).map((tool) => tool.name).filter(Boolean),
+    environment_required: parsed.environmentVariablesJsonSchema?.required ?? [],
+    environment_properties: Object.keys(parsed.environmentVariablesJsonSchema?.properties ?? {}),
     description: parsed.description,
   });
 }
