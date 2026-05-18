@@ -69,11 +69,11 @@ const TARGETS = [
   {
     name: "mcp_marketplace_io",
     label: "MCP Marketplace",
-    listing_url: "https://mcp-marketplace.io/server/packrift",
+    listing_url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
     submission_url: "https://mcp-marketplace.io/for-creators",
     category: "Business",
     priority: "medium",
-    action: "Create or update the free remote-server creator listing with the hosted endpoint and proof bundle.",
+    action: "Keep LAUNCHGUIDE.md and the public marketplace discovery manifest current, then monitor marketplace score and installs.",
   },
 ];
 

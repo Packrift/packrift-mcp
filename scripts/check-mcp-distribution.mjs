@@ -51,10 +51,10 @@ const SURFACE_GUIDANCE = {
     follow_up_action: "Chiark crawls upstream registries daily, so push official/PulseMCP/Smithery-style coverage first and then monitor for Packrift by endpoint URL.",
   },
   mcp_marketplace_io: {
-    listing_url: "https://mcp-marketplace.io/server/packrift",
+    listing_url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
     submission_url: "https://mcp-marketplace.io/for-creators",
     priority: "medium",
-    follow_up_action: "Create or update the creator listing as a free remote MCP server with the hosted endpoint and current proof bundle.",
+    follow_up_action: "Keep LAUNCHGUIDE.md and the public marketplace discovery manifest current, then monitor marketplace score and installs.",
   },
   pulsemcp_packrift: {
     listing_url: "https://www.pulsemcp.com/servers/packrift",
@@ -185,6 +185,19 @@ async function glamaCheck() {
   });
 }
 
+async function mcpMarketplaceCheck() {
+  const result = await fetchText("https://mcp-marketplace.io/api/registry/search?q=packrift&limit=5");
+  if (!result.ok) return check("mcp_marketplace_io", "fail", { http_status: result.status, url: result.url });
+  const parsed = JSON.parse(result.text);
+  const listing = parsed.results?.find((row) => row.slug === "io-github-packrift-packrift-mcp") ?? null;
+  return check("mcp_marketplace_io", listing?.toolCount >= 14 && listing?.mode === "remote" ? "pass" : "stale", {
+    http_status: result.status,
+    url: listing?.url ?? result.url,
+    listing,
+    missing: listing ? [] : ["Packrift"],
+  });
+}
+
 async function simplePresenceCheck(name, url, needles) {
   const result = await fetchText(url);
   const text = result.text;
@@ -236,7 +249,7 @@ async function main() {
       glamaCheck(),
       simplePresenceCheck("mcp_directory", "https://mcp.directory/servers?q=packrift", ["Packrift"]),
       simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
-      simplePresenceCheck("mcp_marketplace_io", "https://mcp-marketplace.io/server/packrift", ["Packrift"]),
+      mcpMarketplaceCheck(),
       simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),
     ])
   ).map(withGuidance);
