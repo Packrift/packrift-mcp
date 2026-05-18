@@ -11,6 +11,7 @@
     "start": "node dist/node.js",
     "eval:live": "node scripts/run-live-evals.mjs",
     "check:distribution": "node scripts/check-mcp-distribution.mjs",
+    "snapshot:funnel": "node scripts/build-mcp-funnel-snapshot.mjs",
     "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
     "refresh:llms-full": "node scripts/refresh-llms-full-priority.mjs",
     "purge:cache": "node scripts/purge-cloudflare-cache.mjs",
