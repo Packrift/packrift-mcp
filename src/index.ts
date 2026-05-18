@@ -1755,7 +1755,14 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const cartClicks = byEvent.mcp_cart_click ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks;
+  const directAgentResourceEvents =
+    (bySource.all_agent_capture ?? 0) +
+    (bySource.mcp_adoption_kit ?? 0) +
+    (bySource.mcp_usage_snapshot ?? 0) +
+    (bySource.mcp_buyer_use_cases ?? 0) +
+    (bySource.browser_agent_bridge ?? 0) +
+    (bySource.mcp_cart_handoff_candidates ?? 0);
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + directAgentResourceEvents;
   return {
     release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R01",
     generated_at: new Date().toISOString(),
@@ -1781,6 +1788,13 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_cart_clicks: cartClicks,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
+      direct_agent_resource_events: directAgentResourceEvents,
+      adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
+      all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,
+      buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
+      browser_agent_bridge_resource_events: bySource.browser_agent_bridge ?? 0,
+      cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
+      usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
       sources: bySource,
     },
     proof_gate: {
@@ -1804,6 +1818,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       dashboard: `https://mcp.packrift.com/events/ai-sales/dashboard?date=${date}`,
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+      buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
@@ -1840,6 +1856,11 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
+    `- Direct agent resource events: ${payload.counts.direct_agent_resource_events}`,
+    `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
+    `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
+    `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
+    `- Cart-handoff candidate resource events: ${payload.counts.cart_handoff_candidate_resource_events}`,
     "",
     "## Proof Gate",
     "",
@@ -4168,27 +4189,35 @@ app.get("/ai/crawler-safe-purchase-paths.md", (c) =>
   })
 );
 
-app.get("/ai/all-agent-capture.json", (c) =>
-  c.json(allAgentCapturePayload(agentCaptureRuntime()), 200, RAW_HEADERS)
-);
+app.get("/ai/all-agent-capture.json", async (c) => {
+  const payload = allAgentCapturePayload(agentCaptureRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/all-agent-capture.json", "all_agent_capture", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
 
-app.get("/ai/all-agent-capture.md", (c) =>
-  c.body(allAgentCaptureMarkdown(agentCaptureRuntime()), 200, {
+app.get("/ai/all-agent-capture.md", async (c) => {
+  const body = allAgentCaptureMarkdown(agentCaptureRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/all-agent-capture.md", "all_agent_capture", jsonByteSize(body));
+  return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
-  })
-);
+  });
+});
 
-app.get("/ai/mcp-adoption-kit.json", (c) =>
-  c.json(mcpAdoptionKitPayload(adoptionKitRuntime()), 200, RAW_HEADERS)
-);
+app.get("/ai/mcp-adoption-kit.json", async (c) => {
+  const payload = mcpAdoptionKitPayload(adoptionKitRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-adoption-kit.json", "mcp_adoption_kit", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
 
-app.get("/ai/mcp-adoption-kit.md", (c) =>
-  c.body(mcpAdoptionKitMarkdown(adoptionKitRuntime()), 200, {
+app.get("/ai/mcp-adoption-kit.md", async (c) => {
+  const body = mcpAdoptionKitMarkdown(adoptionKitRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-adoption-kit.md", "mcp_adoption_kit", jsonByteSize(body));
+  return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
-  })
-);
+  });
+});
 
 app.get("/ai/mcp-usage-snapshot.json", async (c) => {
   const url = new URL(c.req.url);
@@ -4243,16 +4272,20 @@ app.get("/ai/browser-agent-bridge.md", async (c) => {
   });
 });
 
-app.get("/ai/mcp-cart-handoff-candidates.json", (c) =>
-  c.json(cartHandoffCandidatesPayload(), 200, RAW_HEADERS)
-);
+app.get("/ai/mcp-cart-handoff-candidates.json", async (c) => {
+  const payload = cartHandoffCandidatesPayload();
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-cart-handoff-candidates.json", "mcp_cart_handoff_candidates", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
 
-app.get("/ai/mcp-cart-handoff-candidates.md", (c) =>
-  c.body(cartHandoffCandidatesMarkdown(), 200, {
+app.get("/ai/mcp-cart-handoff-candidates.md", async (c) => {
+  const body = cartHandoffCandidatesMarkdown();
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-cart-handoff-candidates.md", "mcp_cart_handoff_candidates", jsonByteSize(body));
+  return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
-  })
-);
+  });
+});
 
 app.get("/ai/measured-handoffs.json", (c) =>
   c.json(measuredHandoffDirectoryPayload(), 200, RAW_HEADERS)
