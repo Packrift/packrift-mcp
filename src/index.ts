@@ -341,6 +341,14 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
         return rpcResult(id, {});
 
       case "tools/list":
+        await recordMcpDiscoveryEvent(env, "mcp_tools_list", {
+          mcpMethod: method,
+          resultCount: TOOLS.length,
+          resultSizeBytes: jsonByteSize(TOOLS.map((t) => t.schema)),
+          sessionId: context.sessionId,
+          userAgent: context.userAgent,
+          ok: true,
+        });
         return rpcResult(id, { tools: TOOLS.map((t) => t.schema) });
 
       case "tools/call": {
@@ -394,46 +402,123 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
       }
 
       case "resources/list":
+        await recordMcpDiscoveryEvent(env, "mcp_resource_list", {
+          mcpMethod: method,
+          resultCount: MCP_RESOURCES.length,
+          resultSizeBytes: jsonByteSize(MCP_RESOURCES),
+          sessionId: context.sessionId,
+          userAgent: context.userAgent,
+          ok: true,
+        });
         return rpcResult(id, { resources: MCP_RESOURCES });
 
       case "resources/templates/list":
+        await recordMcpDiscoveryEvent(env, "mcp_resource_templates_list", {
+          mcpMethod: method,
+          resultCount: MCP_RESOURCE_TEMPLATES.length,
+          resultSizeBytes: jsonByteSize(MCP_RESOURCE_TEMPLATES),
+          sessionId: context.sessionId,
+          userAgent: context.userAgent,
+          ok: true,
+        });
         return rpcResult(id, { resourceTemplates: MCP_RESOURCE_TEMPLATES });
 
       case "resources/read": {
+        const startedAt = Date.now();
         const uri = (params?.["uri"] as string) ?? "";
         const pathname = new URL(uri).pathname;
         const skuResourceMatch = pathname.match(/^\/ai\/sku\/[^/]+\.(md|json)$/);
         const resource = MCP_RESOURCES.find((item) => item.uri === uri);
         if (!resource && !skuResourceMatch) {
+          await recordMcpDiscoveryEvent(env, "mcp_resource_read", {
+            mcpMethod: method,
+            resourceUri: uri,
+            format: skuResourceMatch?.[1] ?? "",
+            latencyMs: Date.now() - startedAt,
+            resultSizeBytes: 0,
+            sessionId: context.sessionId,
+            userAgent: context.userAgent,
+            ok: false,
+            errorMessage: `Unknown resource: ${uri}`,
+          });
           return rpcError(id, -32602, `Unknown resource: ${uri}`);
         }
         const text = await readResourceText(env, uri);
         const mimeType = resource?.mimeType ?? (skuResourceMatch?.[1] === "json" ? "application/json" : "text/markdown");
+        await recordMcpDiscoveryEvent(env, "mcp_resource_read", {
+          mcpMethod: method,
+          resourceUri: uri,
+          format: skuResourceMatch?.[1] ?? mimeType,
+          latencyMs: Date.now() - startedAt,
+          resultSizeBytes: jsonByteSize(text),
+          sessionId: context.sessionId,
+          userAgent: context.userAgent,
+          ok: true,
+        });
         return rpcResult(id, {
           contents: [{ uri, mimeType, text }],
         });
       }
 
       case "prompts/list":
+        await recordMcpDiscoveryEvent(env, "mcp_prompt_list", {
+          mcpMethod: method,
+          resultCount: PROMPTS.length,
+          resultSizeBytes: jsonByteSize(PROMPTS.map(promptListItem)),
+          sessionId: context.sessionId,
+          userAgent: context.userAgent,
+          ok: true,
+        });
         return rpcResult(id, { prompts: PROMPTS.map(promptListItem) });
 
       case "prompts/get": {
+        const startedAt = Date.now();
         const name = (params?.["name"] as string) ?? "";
         const args = ((params?.["arguments"] as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>;
         const prompt = PROMPTS.find((item) => item.name === name);
         if (!prompt) {
+          await recordMcpDiscoveryEvent(env, "mcp_prompt_get", {
+            mcpMethod: method,
+            promptName: name,
+            latencyMs: Date.now() - startedAt,
+            resultSizeBytes: 0,
+            sessionId: context.sessionId,
+            userAgent: context.userAgent,
+            ok: false,
+            errorMessage: `Unknown prompt: ${name}`,
+          });
           return rpcError(id, -32602, `Unknown prompt: ${name}`);
         }
         const missing = prompt.arguments.filter((arg) => arg.required && !String(args[arg.name] ?? "").trim());
         if (missing.length > 0) {
+          await recordMcpDiscoveryEvent(env, "mcp_prompt_get", {
+            mcpMethod: method,
+            promptName: name,
+            latencyMs: Date.now() - startedAt,
+            resultSizeBytes: 0,
+            sessionId: context.sessionId,
+            userAgent: context.userAgent,
+            ok: false,
+            errorMessage: `Missing required prompt argument: ${missing.map((arg) => arg.name).join(", ")}`,
+          });
           return rpcError(id, -32602, `Missing required prompt argument: ${missing.map((arg) => arg.name).join(", ")}`);
         }
+        const text = renderPrompt(prompt.template, args);
+        await recordMcpDiscoveryEvent(env, "mcp_prompt_get", {
+          mcpMethod: method,
+          promptName: name,
+          latencyMs: Date.now() - startedAt,
+          resultSizeBytes: jsonByteSize(text),
+          sessionId: context.sessionId,
+          userAgent: context.userAgent,
+          ok: true,
+        });
         return rpcResult(id, {
           description: prompt.description,
           messages: [
             {
               role: "user",
-              content: { type: "text", text: renderPrompt(prompt.template, args) },
+              content: { type: "text", text },
             },
           ],
         });
@@ -474,6 +559,7 @@ const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-16-
 const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R02";
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
+const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
@@ -489,6 +575,12 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "copy_procurement_spec",
   "ai_corpus_click",
   "mcp_tool_call",
+  "mcp_tools_list",
+  "mcp_prompt_list",
+  "mcp_prompt_get",
+  "mcp_resource_list",
+  "mcp_resource_templates_list",
+  "mcp_resource_read",
   "spec_search",
   "exact_match",
   "multi_match",
@@ -1428,6 +1520,45 @@ function buildMcpToolCallEvent(
   };
 }
 
+async function recordMcpDiscoveryEvent(
+  env: Env,
+  eventName: string,
+  meta: {
+    mcpMethod: string;
+    resultCount?: number;
+    latencyMs?: number;
+    resultSizeBytes?: number;
+    sessionId?: string;
+    userAgent?: string;
+    ok: boolean;
+    errorMessage?: string;
+    promptName?: string;
+    resourceUri?: string;
+    format?: string;
+  }
+): Promise<void> {
+  const userAgent = meta.userAgent ?? "";
+  if (shouldSkipInternalTelemetry(userAgent)) return;
+  await recordAiSalesEvent(env, {
+    event: eventName,
+    source: "mcp_discovery",
+    release: MCP_DISCOVERY_TELEMETRY_RELEASE,
+    ok: meta.ok,
+    mcp_method: safeEventText(meta.mcpMethod, 80),
+    prompt_name: safeEventText(meta.promptName, 120),
+    resource_uri: safeEventText(meta.resourceUri, 500),
+    format: safeEventText(meta.format, 80),
+    result_count: typeof meta.resultCount === "number" ? meta.resultCount : null,
+    latency_ms: typeof meta.latencyMs === "number" ? meta.latencyMs : null,
+    result_size_bytes: typeof meta.resultSizeBytes === "number" ? meta.resultSizeBytes : null,
+    mcp_session_id: safeEventText(meta.sessionId, 120),
+    transport: "streamable_http",
+    user_agent: safeEventText(userAgent, 240),
+    bot_family: classifyAgentFamily(userAgent),
+    error: safeEventText(meta.errorMessage, 240),
+  });
+}
+
 function summarizeToolResult(out: unknown): {
   result_count: number;
   sku: string;
@@ -1461,6 +1592,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const bySku: Record<string, number> = {};
   const bySource: Record<string, number> = {};
   const byTool: Record<string, number> = {};
+  const byPrompt: Record<string, number> = {};
+  const byResource: Record<string, number> = {};
+  const byMcpMethod: Record<string, number> = {};
   const byBotFamily: Record<string, number> = {};
   const byPackriftAiId: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
@@ -1469,11 +1603,17 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const sku = String(event.sku ?? "") || "unknown";
     const source = String(event.source ?? "") || "unknown";
     const toolName = String(event.tool_name ?? "") || "unknown";
+    const promptName = String(event.prompt_name ?? "") || "unknown";
+    const resourceUri = String(event.resource_uri ?? "") || "unknown";
+    const mcpMethod = String(event.mcp_method ?? "") || "unknown";
     const botFamily = String(event.bot_family ?? "") || "unknown";
     const packriftAiId = String(event.packrift_ai_id ?? event.ai_commerce_id ?? "") || "unknown";
     byEvent[eventName] = (byEvent[eventName] ?? 0) + 1;
     bySku[sku] = (bySku[sku] ?? 0) + 1;
     bySource[source] = (bySource[source] ?? 0) + 1;
+    if (eventName === "mcp_prompt_get") byPrompt[promptName] = (byPrompt[promptName] ?? 0) + 1;
+    if (eventName === "mcp_resource_read") byResource[resourceUri] = (byResource[resourceUri] ?? 0) + 1;
+    if (mcpMethod !== "unknown") byMcpMethod[mcpMethod] = (byMcpMethod[mcpMethod] ?? 0) + 1;
     if (eventName === "mcp_tool_call") {
       byTool[toolName] = (byTool[toolName] ?? 0) + 1;
       if (typeof event.latency_ms === "number" && Number.isFinite(event.latency_ms)) {
@@ -1518,6 +1658,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         family: safeEventText(event.family, 80) || null,
         requested_spec: safeEventText(event.requested_spec, 180) || null,
         query: safeEventText(event.query, 180) || null,
+        prompt_name: safeEventText(event.prompt_name, 120) || null,
+        resource_uri: safeEventText(event.resource_uri, 500) || null,
+        mcp_method: safeEventText(event.mcp_method, 80) || null,
         use_case: safeEventText(event.use_case, 80) || null,
         result_count: typeof event.result_count === "number" ? event.result_count : null,
         fit_score: typeof event.fit_score === "number" ? event.fit_score : null,
@@ -1531,10 +1674,15 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_sku: top(bySku),
     by_source: top(bySource),
     by_tool: top(byTool),
+    by_prompt: top(byPrompt),
+    by_resource: top(byResource),
+    by_mcp_method: top(byMcpMethod),
     tool_latency_ms: toolLatency,
     by_bot_family: top(byBotFamily),
     by_packrift_ai_id: top(byPackriftAiId),
     recent_tool_calls: recent("mcp_tool_call"),
+    recent_prompt_gets: recent("mcp_prompt_get"),
+    recent_resource_reads: recent("mcp_resource_read"),
     recent_no_matches: recent("no_match"),
     recent_exact_matches: recent("exact_match"),
     recent_multi_matches: recent("multi_match"),

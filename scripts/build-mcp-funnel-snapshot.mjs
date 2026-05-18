@@ -133,6 +133,14 @@ async function buildFirstPartyMcpSummary() {
   const byEvent = objectFromTopRows(parsed.by_event);
   const byTool = objectFromTopRows(parsed.by_tool);
   const bySource = objectFromTopRows(parsed.by_source);
+  const mcpDiscoveryEvents = sum([
+    byEvent.mcp_tools_list,
+    byEvent.mcp_prompt_list,
+    byEvent.mcp_prompt_get,
+    byEvent.mcp_resource_list,
+    byEvent.mcp_resource_templates_list,
+    byEvent.mcp_resource_read,
+  ]);
   return {
     ok: Boolean(parsed.ok),
     date: parsed.date,
@@ -140,6 +148,13 @@ async function buildFirstPartyMcpSummary() {
     latency_ms: Date.now() - startedAt,
     total_events: Number(parsed.total_events || 0),
     total_tool_calls: Number(parsed.total_tool_calls || 0),
+    mcp_discovery_events: mcpDiscoveryEvents,
+    tools_list_events: Number(byEvent.mcp_tools_list || 0),
+    prompt_list_events: Number(byEvent.mcp_prompt_list || 0),
+    prompt_get_events: Number(byEvent.mcp_prompt_get || 0),
+    resource_list_events: Number(byEvent.mcp_resource_list || 0),
+    resource_template_list_events: Number(byEvent.mcp_resource_templates_list || 0),
+    resource_read_events: Number(byEvent.mcp_resource_read || 0),
     create_cart_url_calls: Number(byTool.create_cart_url || 0),
     cart_clicks: Number(byEvent.cart_click || 0),
     product_clicks: Number(byEvent.product_click || 0),
@@ -149,6 +164,9 @@ async function buildFirstPartyMcpSummary() {
     ai_corpus_clicks: Number(byEvent.ai_corpus_click || 0),
     top_events: parsed.by_event || [],
     top_tools: parsed.by_tool || [],
+    top_prompts: parsed.by_prompt || [],
+    top_resources: parsed.by_resource || [],
+    top_mcp_methods: parsed.by_mcp_method || [],
     top_sources: parsed.by_source || [],
     top_skus: parsed.by_sku || [],
     top_bot_families: parsed.by_bot_family || [],
@@ -553,6 +571,10 @@ function markdownReport(value) {
     `- Date: ${fp.date ?? "not available"}`,
     `- Total events: ${fp.total_events ?? 0}`,
     `- MCP tool calls: ${fp.total_tool_calls ?? 0}`,
+    `- MCP discovery events: ${fp.mcp_discovery_events ?? 0}`,
+    `- Tools list events: ${fp.tools_list_events ?? 0}`,
+    `- Prompt events: ${(fp.prompt_list_events ?? 0) + (fp.prompt_get_events ?? 0)} (${fp.prompt_list_events ?? 0} list, ${fp.prompt_get_events ?? 0} get)`,
+    `- Resource events: ${(fp.resource_list_events ?? 0) + (fp.resource_template_list_events ?? 0) + (fp.resource_read_events ?? 0)} (${fp.resource_list_events ?? 0} list, ${fp.resource_template_list_events ?? 0} template list, ${fp.resource_read_events ?? 0} read)`,
     `- create_cart_url calls: ${fp.create_cart_url_calls ?? 0}`,
     `- Cart clicks: ${fp.cart_clicks ?? 0}`,
     `- AI corpus clicks: ${fp.ai_corpus_clicks ?? 0}`,

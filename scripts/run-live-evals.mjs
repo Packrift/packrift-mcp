@@ -31,7 +31,10 @@ async function rpc(method, params = undefined) {
   };
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Packrift-MCP-Live-Eval/1.0 (+https://mcp.packrift.com/mcp)",
+    },
     body: JSON.stringify(body),
   });
   const text = await response.text();
