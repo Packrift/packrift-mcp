@@ -1,6 +1,6 @@
 {
   "name": "packrift-mcp-server",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "MCP server for Packrift exact-spec packaging procurement, live pricing, inventory, reorder, quote, and cart handoff.",
   "private": true,
   "type": "module",
@@ -10,6 +10,7 @@
     "deploy": "wrangler deploy",
     "start": "node dist/node.js",
     "eval:live": "node scripts/run-live-evals.mjs",
+    "check:distribution": "node scripts/check-mcp-distribution.mjs",
     "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
     "refresh:llms-full": "node scripts/refresh-llms-full-priority.mjs",
     "purge:cache": "node scripts/purge-cloudflare-cache.mjs",

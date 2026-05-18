@@ -2227,6 +2227,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+  "https://mcp.packrift.com/.well-known/glama.json",
   "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
   "https://packrift.com/agents.md",
   "https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md",
@@ -2292,6 +2293,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/sitemap.xml": "MCP discovery sitemap for machine-readable Packrift resources.",
   "/ai/sitemap.xml": "AI corpus sitemap for exact-spec Packrift product data files.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
+  "/.well-known/glama.json": "Glama remote connector claim file for the Packrift hosted MCP endpoint.",
   "/agents.md": "Root-domain Packrift exact-spec AI-agent instructions.",
   "/ai/packrift-ai-agent-instructions.md": "Machine-readable Packrift AI-agent instructions, exact-match policy, and handoff rules.",
   "/ai/packrift-exact-spec-packaging-catalog.md": "Human and crawler-readable exact-spec catalog overview.",
@@ -2469,6 +2471,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/all-ai-approved-sku-sitemap.xml") return allAiApprovedSkuSitemapXml();
   if (pathname === "/ai/conversion-route-redirect-sitemap.xml") return routeRedirectSitemapXml();
   if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(serverCard, null, 2);
+  if (pathname === "/.well-known/glama.json") return JSON.stringify(glamaConnectorClaim(), null, 2);
   if (pathname === "/agents.md") return agentInstructionsMd;
   if (pathname === "/ai/packrift-ai-agent-instructions.md") return agentInstructionsMd;
   if (pathname === "/ai/crawler-safe-purchase-paths.md") return crawlerSafePurchasePathsMarkdown();
@@ -3189,6 +3192,22 @@ app.get("/.well-known/mcp/server-card.json", (c) =>
     c,
     "server-card.json",
     JSON.stringify(serverCard, null, 2),
+    "application/json; charset=utf-8"
+  )
+);
+
+function glamaConnectorClaim() {
+  return {
+    $schema: "https://glama.ai/mcp/schemas/connector.json",
+    maintainers: [{ email: "farhan@packrift.com" }],
+  };
+}
+
+app.get("/.well-known/glama.json", (c) =>
+  cachedStaticTextResponse(
+    c,
+    "glama.json",
+    JSON.stringify(glamaConnectorClaim(), null, 2),
     "application/json; charset=utf-8"
   )
 );
