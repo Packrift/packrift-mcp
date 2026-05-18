@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ANALYTICS_ROOT = "/Users/farhan/Downloads/packrift-ai-commerce-execution-2026-05-04/analytics-1000x";
+const FACTORY_OUTPUT_ROOT = "/Users/farhan/Downloads/packrift-ai-commerce-factory/outputs";
 const GA4_PULLER = join(ANALYTICS_ROOT, "packrift_ga4_pull.py");
 const GA4_ENV = join(ANALYTICS_ROOT, "packrift-ga4-env.local");
 const MCP_STATS_ENV = "/Users/farhan/Downloads/env-packrift-mcp-stats.txt";
@@ -24,6 +25,8 @@ mkdirSync(outDir, { recursive: true });
 const snapshot = {
   generated_at: new Date().toISOString(),
   status: "not_proven",
+  partial_snapshot: skippedChecks().length > 0,
+  skipped_checks: skippedChecks(),
   proof_gate: {
     thousands_of_qualified_visitors: false,
     stamped_mcp_cart_landings: false,
@@ -32,6 +35,8 @@ const snapshot = {
   first_party_mcp: null,
   ga4: null,
   distribution: null,
+  live_discovery: null,
+  indexnow: null,
   artifacts: {
     snapshot_json: join(outDir, "mcp-funnel-snapshot.json"),
     snapshot_md: join(outDir, "mcp-funnel-snapshot.md"),
@@ -57,6 +62,18 @@ try {
 }
 
 try {
+  if (!args["skip-live-discovery"]) snapshot.live_discovery = await buildLiveDiscoverySummary();
+} catch (error) {
+  snapshot.live_discovery = { ok: false, error: error.message || String(error) };
+}
+
+try {
+  if (!args["skip-indexnow"]) snapshot.indexnow = buildIndexNowSummary();
+} catch (error) {
+  snapshot.indexnow = { ok: false, error: error.message || String(error) };
+}
+
+try {
   applyProofGate(snapshot);
 } finally {
   writeArtifacts(snapshot);
@@ -67,6 +84,10 @@ try {
     first_party_total_tool_calls: snapshot.first_party_mcp?.total_tool_calls ?? null,
     ga4_mcp_cart_url_landing_events: snapshot.ga4?.mcp_cart_url_landings?.event_count ?? null,
     distribution_counts: snapshot.distribution?.counts ?? null,
+    live_discovery_ok: snapshot.live_discovery?.ok ?? null,
+    indexnow_ok: snapshot.indexnow?.ok ?? null,
+    partial_snapshot: snapshot.partial_snapshot,
+    skipped_checks: snapshot.skipped_checks,
   }, null, 2));
 }
 
@@ -185,6 +206,155 @@ function runDistributionCheck() {
   };
 }
 
+async function buildLiveDiscoverySummary() {
+  const [manifest, serverCard, wellKnownServerCard, llmsFull] = await Promise.all([
+    fetchJsonWithMeta("https://mcp.packrift.com/manifest"),
+    fetchJsonWithMeta("https://mcp.packrift.com/server-card.json"),
+    fetchJsonWithMeta("https://mcp.packrift.com/.well-known/mcp/server-card.json"),
+    fetchTextWithMeta("https://mcp.packrift.com/llms-full.txt", { "User-Agent": "ChatGPT-User" }),
+  ]);
+  const manifestBody = manifest.body || {};
+  const tools = stringArray(manifestBody.tools);
+  const prompts = stringArray(manifestBody.prompts);
+  const serverCards = [serverCard, wellKnownServerCard].map((card) => summarizeServerCard(card));
+  const llmsFullSummary = summarizeLlmsFull(llmsFull);
+  return {
+    ok: Boolean(
+      manifest.ok
+        && llmsFull.ok
+        && serverCards.every((card) => card.ok)
+        && tools.includes("create_cart_url")
+        && tools.includes("get_cart_handoff_candidates")
+        && prompts.includes("prepare_cart_handoff")
+        && llmsFullSummary.priority_sku_count > 0
+    ),
+    manifest: {
+      url: manifest.url,
+      ok: manifest.ok,
+      http_status: manifest.http_status,
+      version: manifestBody.version ?? null,
+      tool_count: tools.length,
+      prompt_count: prompts.length,
+      has_create_cart_url: tools.includes("create_cart_url"),
+      has_get_cart_handoff_candidates: tools.includes("get_cart_handoff_candidates"),
+      has_prepare_cart_handoff_prompt: prompts.includes("prepare_cart_handoff"),
+      cache: manifest.cache,
+    },
+    server_cards: serverCards,
+    llms_full: llmsFullSummary,
+  };
+}
+
+function buildIndexNowSummary() {
+  const manifestPath = findLatestIndexNowManifest();
+  if (!manifestPath) {
+    return {
+      ok: false,
+      error: `No IndexNow release manifest found under ${FACTORY_OUTPUT_ROOT}`,
+    };
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  return {
+    ok: Boolean(
+      manifest.status === "pass"
+        && manifest.qa_pass === true
+        && Number(manifest.preflight_fail_count || 0) === 0
+        && Number(manifest.submitted_url_count || 0) > 0
+        && Number(manifest.endpoint_ok_count || 0) > 0
+    ),
+    manifest_path: manifestPath,
+    release_id: manifest.release_id ?? null,
+    generated_at: manifest.generated_at ?? null,
+    host: manifest.host ?? null,
+    core_only: manifest.core_only ?? null,
+    status: manifest.status ?? null,
+    qa_pass: manifest.qa_pass ?? null,
+    key_location_ok: manifest.key_location_ok ?? null,
+    candidate_url_count: Number(manifest.candidate_url_count || 0),
+    preflight_pass_count: Number(manifest.preflight_pass_count || 0),
+    preflight_fail_count: Number(manifest.preflight_fail_count || 0),
+    submitted_url_count: Number(manifest.submitted_url_count || 0),
+    endpoint_ok_count: Number(manifest.endpoint_ok_count || 0),
+    source_meta: manifest.source_meta ?? null,
+    artifacts: manifest.artifacts ?? null,
+  };
+}
+
+async function fetchJsonWithMeta(url, headers = {}) {
+  const text = await fetchTextWithMeta(url, headers);
+  if (!text.ok) return { ...text, body: null };
+  try {
+    return { ...text, body: JSON.parse(text.body) };
+  } catch (error) {
+    return { ...text, ok: false, body: null, error: `Invalid JSON: ${error.message || String(error)}` };
+  }
+}
+
+async function fetchTextWithMeta(url, headers = {}) {
+  const startedAt = Date.now();
+  const response = await fetch(url, {
+    headers: { "User-Agent": "Packrift-MCP-Funnel-Snapshot/1.0", ...headers },
+    signal: AbortSignal.timeout(Number(args["live-timeout-ms"] || 45000)),
+  });
+  const body = await response.text();
+  return {
+    url,
+    ok: response.ok,
+    http_status: response.status,
+    latency_ms: Date.now() - startedAt,
+    bytes: body.length,
+    content_type: response.headers.get("content-type"),
+    cache: response.headers.get("x-packrift-static-cache")
+      || response.headers.get("cf-cache-status")
+      || response.headers.get("cache-control"),
+    body,
+  };
+}
+
+function summarizeServerCard(card) {
+  const body = card.body || {};
+  const tools = stringArray(body.tools);
+  const prompts = stringArray(body.prompts);
+  return {
+    url: card.url,
+    ok: card.ok,
+    http_status: card.http_status,
+    version: body.version ?? null,
+    tool_count: tools.length,
+    prompt_count: prompts.length,
+    has_create_cart_url: tools.includes("create_cart_url"),
+    has_get_cart_handoff_candidates: tools.includes("get_cart_handoff_candidates"),
+    has_prepare_cart_handoff_prompt: prompts.includes("prepare_cart_handoff"),
+    cache: card.cache,
+  };
+}
+
+function summarizeLlmsFull(result) {
+  if (!result.ok) {
+    return {
+      url: result.url,
+      ok: false,
+      http_status: result.http_status,
+      error: result.body?.slice(0, 240) || "llms-full fetch failed",
+    };
+  }
+  const text = result.body || "";
+  const priorityRows = parsePrioritySkuRows(text);
+  const lastUpdated = text.match(/Last updated:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i)?.[1] ?? null;
+  return {
+    url: result.url,
+    ok: true,
+    http_status: result.http_status,
+    bytes: result.bytes,
+    cache: result.cache,
+    content_type: result.content_type,
+    last_updated: lastUpdated,
+    last_updated_age_days: lastUpdated ? daysSinceDate(lastUpdated) : null,
+    priority_sku_count: priorityRows.length,
+    top_priority_skus: priorityRows.slice(0, 5),
+  };
+}
+
 function summarizeGa4AiMcpEvents(rows) {
   const bySource = new Map();
   const byEvent = new Map();
@@ -267,6 +437,7 @@ function applyProofGate(value) {
 function writeArtifacts(value) {
   writeFileSync(join(outDir, "mcp-funnel-snapshot.json"), JSON.stringify(value, null, 2) + "\n", "utf8");
   writeFileSync(join(outDir, "mcp-funnel-snapshot.md"), markdownReport(value), "utf8");
+  if (value.partial_snapshot) return;
   mkdirSync(OUT_ROOT, { recursive: true });
   writeFileSync(join(OUT_ROOT, "latest.json"), JSON.stringify(value, null, 2) + "\n", "utf8");
   writeFileSync(join(OUT_ROOT, "latest.md"), markdownReport(value), "utf8");
@@ -277,11 +448,16 @@ function markdownReport(value) {
   const ga4 = value.ga4 || {};
   const cart = ga4.mcp_cart_url_landings || {};
   const dist = value.distribution || {};
+  const live = value.live_discovery || {};
+  const indexnow = value.indexnow || {};
+  const liveManifest = live.manifest || {};
+  const liveLlms = live.llms_full || {};
   return [
     "# Packrift MCP Funnel Snapshot",
     "",
     `Generated: ${value.generated_at}`,
     `Status: ${value.status}`,
+    value.partial_snapshot ? `Partial snapshot: yes (${value.skipped_checks.join(", ")} skipped)` : "Partial snapshot: no",
     "",
     "## Proof Gate",
     "",
@@ -317,6 +493,22 @@ function markdownReport(value) {
     "",
     `- Distribution output: ${dist.latest_path ?? "not run"}`,
     `- Counts: ${dist.counts ? `${dist.counts.pass} pass, ${dist.counts.stale} stale, ${dist.counts.blocked} blocked, ${dist.counts.fail} fail` : "not checked"}`,
+    "",
+    "## Live Discovery",
+    "",
+    `- Status: ${live.ok == null ? "not checked" : yesNo(live.ok)}`,
+    `- Manifest: version ${liveManifest.version ?? "unknown"}, ${liveManifest.tool_count ?? 0} tools, ${liveManifest.prompt_count ?? 0} prompts`,
+    `- Cart handoff surfaces: create_cart_url ${yesNo(liveManifest.has_create_cart_url)}, get_cart_handoff_candidates ${yesNo(liveManifest.has_get_cart_handoff_candidates)}, prepare_cart_handoff ${yesNo(liveManifest.has_prepare_cart_handoff_prompt)}`,
+    `- Server cards live: ${Array.isArray(live.server_cards) ? `${live.server_cards.filter((card) => card.ok).length}/${live.server_cards.length}` : "not checked"}`,
+    `- llms-full: ${liveLlms.priority_sku_count ?? 0} priority SKUs, top SKU ${liveLlms.top_priority_skus?.[0]?.sku ?? "not available"}, cache ${liveLlms.cache ?? "unknown"}`,
+    "",
+    "## IndexNow Discovery",
+    "",
+    `- Status: ${indexnow.status ?? (indexnow.ok == null ? "not checked" : yesNo(indexnow.ok))}`,
+    `- Submitted URLs: ${indexnow.submitted_url_count ?? 0} / ${indexnow.candidate_url_count ?? 0}`,
+    `- Preflight failures: ${indexnow.preflight_fail_count ?? 0}`,
+    `- Endpoint ok count: ${indexnow.endpoint_ok_count ?? 0}`,
+    `- Manifest: ${indexnow.manifest_path ?? "not found"}`,
     "",
     "## Next Actions",
     "",
@@ -361,6 +553,46 @@ function parseCsvLine(line) {
   return values;
 }
 
+function parsePrioritySkuRows(text) {
+  const section = text.split("## Priority exact-spec SKUs for agent lookup")[1]?.split(/\n##\s+/)[0] || "";
+  return section
+    .split(/\r?\n/)
+    .filter((line) => /^\|\s*\d+\s*\|/.test(line))
+    .map((line) => {
+      const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+      return {
+        rank: numberValue(cells[0]),
+        sku: cells[1] || "",
+        family: cells[2] || "",
+        exact_spec: cells[3] || "",
+        recent_signal: cells[4] || "",
+        mcp_sku_record: cells[5] || "",
+      };
+    })
+    .filter((row) => row.sku);
+}
+
+function findLatestIndexNowManifest() {
+  if (!existsSync(FACTORY_OUTPUT_ROOT)) return null;
+  return readdirSync(FACTORY_OUTPUT_ROOT, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(FACTORY_OUTPUT_ROOT, entry.name, "mcp_ai_corpus_indexnow_submission", "release_manifest.json"))
+    .filter((path) => existsSync(path))
+    .map((path) => {
+      try {
+        const parsed = JSON.parse(readFileSync(path, "utf8"));
+        return { path, generated_at: parsed.generated_at || "" };
+      } catch {
+        return { path, generated_at: "" };
+      }
+    })
+    .sort((a, b) => b.generated_at.localeCompare(a.generated_at) || b.path.localeCompare(a.path))[0]?.path || null;
+}
+
+function stringArray(value) {
+  return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
 function objectFromTopRows(rows = []) {
   return Object.fromEntries(rows.map((row) => [row.key, Number(row.count || 0)]));
 }
@@ -393,6 +625,12 @@ function utcDate(date) {
   return date.toISOString().slice(0, 10);
 }
 
+function daysSinceDate(value) {
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor((Date.now() - parsed) / 86400000));
+}
+
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
   for (const rawLine of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -420,4 +658,13 @@ function parseArgs(argv) {
     }
   }
   return parsed;
+}
+
+function skippedChecks() {
+  return [
+    args["skip-ga4"] ? "ga4" : "",
+    args["skip-distribution"] ? "distribution" : "",
+    args["skip-live-discovery"] ? "live_discovery" : "",
+    args["skip-indexnow"] ? "indexnow" : "",
+  ].filter(Boolean);
 }
