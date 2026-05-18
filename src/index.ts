@@ -5,6 +5,7 @@ import { serverCard } from "./server-card.js";
 import { llmsTxt } from "./llms-content.js";
 import { llmsFullTxt } from "./llms-full-content.js";
 import { agentInstructionsMd } from "./agent-instructions-content.js";
+import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
@@ -2681,6 +2682,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md",
   "https://mcp.packrift.com/ai/shopify-native-search-exceptions.md",
   "https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md",
+  "https://mcp.packrift.com/ai/all-agent-capture.json",
+  "https://mcp.packrift.com/ai/all-agent-capture.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -2752,6 +2755,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/shopify-native-ucp-commerce-surface.md": "Guide for using Packrift Shopify-native UCP alongside the Packrift exact-spec MCP.",
   "/ai/shopify-native-search-exceptions.md": "Known Shopify native search ranking collisions and safe exact-SKU fallback routes.",
   "/ai/crawler-safe-purchase-paths.md": "Fallback purchase handoff guide for AI agents when Shopify PDP fetches are challenged or unavailable.",
+  "/ai/all-agent-capture.json": "Machine-readable capture matrix for every Packrift agent surface: MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, corpora, crawlers, and Browserbase Browse candidates.",
+  "/ai/all-agent-capture.md": "Crawler-readable Packrift all-agent capture matrix and operating rules.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -2911,6 +2916,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/agents.md") return agentInstructionsMd;
   if (pathname === "/ai/packrift-ai-agent-instructions.md") return agentInstructionsMd;
   if (pathname === "/ai/crawler-safe-purchase-paths.md") return crawlerSafePurchasePathsMarkdown();
+  if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
+  if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -2977,6 +2984,16 @@ function mcpManifestPayload() {
     tool_count: TOOLS.length,
     tools: TOOLS.map((tool) => tool.schema.name),
     prompts: PROMPTS.map((prompt) => prompt.name),
+    all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+  };
+}
+
+function agentCaptureRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
   };
 }
 
@@ -3020,6 +3037,7 @@ function mcpMarketplaceDiscoveryPayload() {
       launch_guide: "https://github.com/Packrift/packrift-mcp/blob/main/LAUNCHGUIDE.md",
       sitemap: "https://mcp.packrift.com/sitemap.xml",
       robots: "https://mcp.packrift.com/robots.txt",
+      all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
     },
     signals: {
       category: "Business Tools",
@@ -3901,6 +3919,17 @@ app.get("/ai/crawler-safe-purchase-paths.md", (c) =>
   })
 );
 
+app.get("/ai/all-agent-capture.json", (c) =>
+  c.json(allAgentCapturePayload(agentCaptureRuntime()), 200, RAW_HEADERS)
+);
+
+app.get("/ai/all-agent-capture.md", (c) =>
+  c.body(allAgentCaptureMarkdown(agentCaptureRuntime()), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  })
+);
+
 app.get("/ai/mcp-cart-handoff-candidates.json", (c) =>
   c.json(cartHandoffCandidatesPayload(), 200, RAW_HEADERS)
 );
@@ -4314,6 +4343,7 @@ app.get("/admin/mcp-stats", async (c) => {
   return c.json(
     {
       ok: true,
+      admin_schema_release: MCP_DISCOVERY_TELEMETRY_RELEASE,
       date,
       limit,
       total_tool_calls: toolEvents.length,

@@ -81,6 +81,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
 - MCP Marketplace manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
+- All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
+- All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
@@ -189,6 +191,25 @@ Type-check:
 npx tsc --noEmit
 ```
 
+Smoke-test the hosted cart handoff path without creating an order or collecting
+payment:
+
+```sh
+npm run smoke:cart-handoff
+```
+
+This synthetic check calls the current hosted MCP endpoint, verifies
+`get_cart_handoff_candidates -> get_product -> get_pricing -> check_inventory ->
+create_cart_url`, and checks the MCP cart landing route. It writes JSON and
+Markdown evidence under `outputs/mcp-cart-handoff-smoke/`. Add
+`-- --sku LL251WR --qty 1` to test another AI-approved SKU. Use
+`-- --verify-final-cart` only when intentionally checking Shopify's final cart
+redirect.
+
+GitHub Actions also runs the hosted smoke checks every six hours and on manual
+dispatch through `.github/workflows/mcp-live-smoke.yml`. The scheduled job
+checks both `1066` and `LL251WR`, then uploads the smoke evidence artifact.
+
 Refresh the `llms-full.txt` priority SKU block from recent GA4 item activity joined to the AI-approved catalog and live Shopify inventory:
 
 ```sh
@@ -224,6 +245,17 @@ npm run build:directory-submission-pack
 ```
 
 The distribution check reports which public MCP directories are current, stale, blocked, or failing. The submission pack turns stale rows into copy-ready listing fields, live proof URLs, and the next refresh action for each directory.
+
+Check the all-agent capture hub:
+
+```sh
+npm run check:agent-capture
+```
+
+This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
+`.md` are live, advertised in `resources/list`, include the core agent surfaces
+and Browserbase Browse candidate lane, and preserve the rule that Packrift uses
+the hosted MCP endpoint instead of a duplicate CLI surface.
 
 ## Deployment
 

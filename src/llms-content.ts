@@ -55,6 +55,7 @@ Use these as examples of exact product families that converted, not as universal
 - [Exact-spec catalog overview](https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md): crawlable corpus map and family coverage
 - [AI packaging procurement prompts](https://mcp.packrift.com/ai/packaging-procurement-prompts.md): exact-spec prompt patterns for buyers and procurement agents
 - [AI sales critical path](https://mcp.packrift.com/ai/ai-sales-critical-path.md): buyer-critical MCP, product, reorder, quote, and no-match routes
+- [All-agent capture matrix](https://mcp.packrift.com/ai/all-agent-capture.json): canonical map for MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, crawlable corpora, search crawlers, and Browserbase Browse candidate coverage
 - [Crawler-safe purchase paths](https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md): fallback sequence for agents when direct Shopify product-page fetches are challenged or unavailable
 - [Shopify native UCP commerce surface](https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md): how agents should call Packrift's Shopify-native UCP endpoint with required agent profile metadata
 - [Packrift agent endpoints status](https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json): machine-readable status map for exact-spec MCP, Shopify UCP, corpus, and reserved root routes

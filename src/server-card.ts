@@ -37,6 +37,8 @@ export const serverCard = {
     procurementPrompts: "https://mcp.packrift.com/ai/packaging-procurement-prompts.md",
     aiSalesCriticalPath: "https://mcp.packrift.com/ai/ai-sales-critical-path.md",
     crawlerSafePurchasePaths: "https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md",
+    allAgentCaptureJson: "https://mcp.packrift.com/ai/all-agent-capture.json",
+    allAgentCaptureMarkdown: "https://mcp.packrift.com/ai/all-agent-capture.md",
     shopifyNativeUcpGuide: "https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md",
     agentEndpointsStatus: "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
     conversionStarterRoutesJson: "https://mcp.packrift.com/ai/conversion-starter-routes.json",
