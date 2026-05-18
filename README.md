@@ -70,6 +70,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
+- MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
 - Reorder by SKU corpus: https://mcp.packrift.com/ai/reorder-by-sku.md
 - Top 1,000 AI-sales SKU sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
@@ -111,7 +112,7 @@ Prompts:
 - `find_box_by_lwh`
 - `find_label_by_size_material_printer`
 
-Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
+Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
 
 ## Exact-spec AI-commerce examples
 

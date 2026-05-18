@@ -2257,6 +2257,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md",
   "https://mcp.packrift.com/ai/shopify-native-search-exceptions.md",
   "https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md",
+  "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+  "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
   "https://mcp.packrift.com/ai/conversion-starter-routes.json",
   "https://mcp.packrift.com/ai/conversion-starter-routes.md",
@@ -2320,6 +2322,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/shopify-native-ucp-commerce-surface.md": "Guide for using Packrift Shopify-native UCP alongside the Packrift exact-spec MCP.",
   "/ai/shopify-native-search-exceptions.md": "Known Shopify native search ranking collisions and safe exact-SKU fallback routes.",
   "/ai/crawler-safe-purchase-paths.md": "Fallback purchase handoff guide for AI agents when Shopify PDP fetches are challenged or unavailable.",
+  "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
+  "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
   "/ai/conversion-starter-routes.json": "Machine-readable top conversion starter routes with product, reorder, quote, SKU markdown, SKU JSON, and copy-procurement-spec handoffs.",
   "/ai/conversion-starter-routes.md": "Crawler-readable top conversion starter routes for exact AI_APPROVE product, reorder, quote, and procurement-spec handoffs.",
@@ -2468,6 +2472,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/agents.md") return agentInstructionsMd;
   if (pathname === "/ai/packrift-ai-agent-instructions.md") return agentInstructionsMd;
   if (pathname === "/ai/crawler-safe-purchase-paths.md") return crawlerSafePurchasePathsMarkdown();
+  if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
+  if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
   if (pathname === "/ai/first20-exact-spec-routes.md") return first20ExactSpecRouteMarkdown();
   if (pathname === "/ai/measured-handoffs.json") return JSON.stringify(measuredHandoffDirectoryPayload(), null, 2);
@@ -2668,7 +2674,12 @@ function cartUrlForItem(item: ApprovedCatalogItem, quantity = 1): string {
   const safeQuantity = Math.max(1, Math.floor(quantity));
   return trackedUrl(`https://packrift.com/cart/${encodeURIComponent(item.variantId)}:${safeQuantity}`, {
     ...skuPageTrackingForItem(item),
-    utm_content: "cart_click",
+    source: "create_cart_url",
+    utm_source: "chatgpt-mcp",
+    utm_medium: "mcp_tool",
+    utm_campaign: "create_cart_url",
+    utm_content: item.sku,
+    match_type: "cart_handoff_candidate",
   });
 }
 
@@ -2978,6 +2989,96 @@ function measuredHandoffDirectoryCsv(limit = 250): string {
   ].join("\n");
 }
 
+function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
+  const safeQuantity = Math.max(1, Math.floor(quantity));
+  const payload = skuPagePayload(item);
+  return {
+    sku: item.sku,
+    title: item.title,
+    family: item.family || "other",
+    variant_id: item.variantId,
+    quantity: safeQuantity,
+    status: "AI_APPROVE",
+    live_confirmation_required: ["get_product", "get_pricing", "check_inventory"],
+    cart_confirmation_required: true,
+    mcp_endpoint: "https://mcp.packrift.com/mcp",
+    create_cart_url_tool: "create_cart_url",
+    create_cart_url_arguments: {
+      items: [{ variant_id: item.variantId, qty: safeQuantity }],
+      selected_sku: item.sku,
+      selected_handle: item.handle,
+      match_type: "cart_handoff_candidate",
+      source_context: "exact_spec_ai_agent",
+      journey_id: `mcp_${item.sku}_${item.variantId}`,
+      result_set_id: "mcp_cart_handoff_candidates",
+      utm_term: item.sku,
+    },
+    cart_url_qty_1_candidate: cartUrlForItem(item, safeQuantity),
+    mcp_sku_md: payload.retrieval_safe_url,
+    mcp_sku_json: payload.retrieval_safe_json_url,
+    measured_product_url: payload.measured_product_url,
+    measured_reorder_url: payload.measured_reorder_url,
+    measured_quote_url: payload.measured_quote_url,
+    no_match_policy: payload.no_match_policy,
+  };
+}
+
+function cartHandoffCandidatesPayload(limit = 50) {
+  return {
+    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R01",
+    generated_at: new Date().toISOString(),
+    source: "mcp_cart_handoff_candidates",
+    purpose:
+      "Give AI agents a compact exact-spec path from MCP product retrieval to a GA4-visible cart handoff while preserving live price and inventory confirmation.",
+    attribution_rule:
+      "Cart candidates and create_cart_url calls use utm_source=chatgpt-mcp, utm_medium=mcp_tool, and utm_campaign=create_cart_url so GA4 can isolate MCP-driven cart landings.",
+    safety_rule:
+      "Do not present a cart handoff until get_product, get_pricing, and check_inventory confirm the exact SKU, variant, live price, and inventory. If any requested spec differs, use the measured quote URL instead.",
+    mcp_sequence: ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
+    items: topAiSalesSkuItems(limit).map((item) => cartHandoffCandidateItem(item, 1)),
+  };
+}
+
+function cartHandoffCandidatesMarkdown(limit = 25): string {
+  const payload = cartHandoffCandidatesPayload(limit);
+  const rows = payload.items
+    .map(
+      (item) =>
+        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.cart_url_qty_1_candidate} |`
+    )
+    .join("\n");
+  return [
+    "# Packrift MCP Cart Handoff Candidates",
+    "",
+    `Release: ${payload.release}`,
+    "",
+    "## Purpose",
+    "",
+    payload.purpose,
+    "",
+    "## Attribution Rule",
+    "",
+    payload.attribution_rule,
+    "",
+    "## Safety Rule",
+    "",
+    payload.safety_rule,
+    "",
+    "## Required MCP Sequence",
+    "",
+    payload.mcp_sequence.map((step, index) => `${index + 1}. \`${step}\``).join("\n"),
+    "",
+    "## Priority Cart Candidates",
+    "",
+    "| SKU | Product | Family | MCP SKU record | UTM-stamped cart candidate |",
+    "| --- | --- | --- | --- | --- |",
+    rows,
+    "",
+    "Machine-readable version: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+    "",
+  ].join("\n");
+}
+
 function crawlerSafePurchasePathsMarkdown(): string {
   const examples = topAiSalesSkuItems(25)
     .map((item) => {
@@ -3170,6 +3271,17 @@ app.get("/ai/packrift-ai-agent-instructions.md", (c) =>
 
 app.get("/ai/crawler-safe-purchase-paths.md", (c) =>
   c.body(crawlerSafePurchasePathsMarkdown(), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  })
+);
+
+app.get("/ai/mcp-cart-handoff-candidates.json", (c) =>
+  c.json(cartHandoffCandidatesPayload(), 200, RAW_HEADERS)
+);
+
+app.get("/ai/mcp-cart-handoff-candidates.md", (c) =>
+  c.body(cartHandoffCandidatesMarkdown(), 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
   })

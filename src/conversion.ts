@@ -171,7 +171,13 @@ export function buildConversionActions(input: ProductCardInput) {
   quote.searchParams.set("spec", buildProcurementSpec(input));
   if (input.handle) quote.searchParams.set("handle", input.handle);
   const cartUrl = input.variantId
-    ? trackedUrl(`https://packrift.com/cart/${input.variantId}:1`, { ...tracking, utm_content: "mcp_cart_click" })
+    ? trackedUrl(`https://packrift.com/cart/${input.variantId}:1`, {
+        ...tracking,
+        utm_source: "chatgpt-mcp",
+        utm_medium: "mcp_tool",
+        utm_campaign: "create_cart_url",
+        utm_content: input.sku ?? input.variantId ?? "cart_click",
+      })
     : null;
   return {
     tracking,
@@ -264,7 +270,13 @@ export function buildPostConfirmationHandoff(input: PostConfirmationHandoffInput
       variant_id: input.variantId ?? null,
       quantity,
       url_candidate: cartCandidate
-        ? trackedUrl(cartCandidate, { ...tracking, utm_content: "cart_click" })
+        ? trackedUrl(cartCandidate, {
+            ...tracking,
+            utm_source: "chatgpt-mcp",
+            utm_medium: "mcp_tool",
+            utm_campaign: "create_cart_url",
+            utm_content: input.selectedSku ?? input.variantId ?? "cart_click",
+          })
         : null,
       eligible_after_this_check: input.cartEligible !== false,
     },

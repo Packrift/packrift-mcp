@@ -41,6 +41,7 @@ Use these as examples of exact product families that converted, not as universal
 - After \`get_pricing\`, \`check_inventory\`, \`get_shipping_estimate\`, or \`create_cart_url\`, use the returned \`post_confirmation_handoff\` object to keep the buyer moving with exact product, reorder, quote, copy-spec, and cart-click actions.
 - [AI-approved product corpus](https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl): JSONL product/spec index for exact-match procurement
 - [AI purchase paths JSONL](https://mcp.packrift.com/ai/purchase-paths.jsonl): top 1,000 AI-sales SKUs with crawler-safe SKU records, variant IDs, tracked product/reorder/quote links, and cart URL candidates that still require live MCP confirmation
+- [MCP cart handoff candidates](https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json): priority exact-spec SKUs with \`create_cart_url\` arguments and GA4-visible \`chatgpt-mcp / mcp_tool / create_cart_url\` cart candidates
 - [Measured handoff directory](https://mcp.packrift.com/ai/measured-handoffs.json): compact MCP-controlled priority SKU directory with measured product, reorder, quote, MCP SKU, and copy-procurement-spec routes
 - [Measured handoff directory Markdown](https://mcp.packrift.com/ai/measured-handoffs.md): crawler-readable priority exact-spec handoff table
 - [Top 1,000 AI-sales SKU index](https://mcp.packrift.com/ai/top-1000-ai-sales-skus.md): balanced revenue-priority AI_APPROVE product set for agentic shopping, reorder, and quote paths
