@@ -2861,6 +2861,45 @@ function cartUrlForItem(item: ApprovedCatalogItem, quantity = 1): string {
   });
 }
 
+function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
+  const safeQuantity = Math.max(1, Math.floor(quantity));
+  return {
+    status: "candidate_requires_live_confirmation",
+    purpose: "Turn this exact AI_APPROVE SKU into a GA4-visible MCP cart handoff after live price and inventory checks.",
+    mcp_endpoint: "https://mcp.packrift.com/mcp",
+    prompt_name: "prepare_cart_handoff",
+    discovery_tool: "get_cart_handoff_candidates",
+    create_cart_url_tool: "create_cart_url",
+    required_sequence: ["get_product", "get_pricing", "check_inventory", "create_cart_url"],
+    required_before_presenting_cart_url: ["exact SKU confirmed", "variant ID confirmed", "live price confirmed", "inventory confirmed", "buyer quantity confirmed"],
+    create_cart_url_arguments: {
+      items: [{ variant_id: item.variantId, qty: safeQuantity }],
+      selected_sku: item.sku,
+      selected_handle: item.handle,
+      match_type: "cart_handoff_candidate",
+      source_context: "exact_spec_ai_agent",
+      journey_id: `mcp_${item.sku}_${item.variantId}`,
+      result_set_id: "mcp_cart_handoff_candidates",
+      utm_term: item.sku,
+    },
+    cart_url_candidate: cartUrlForItem(item, safeQuantity),
+    attribution: {
+      utm_source: "chatgpt-mcp",
+      utm_medium: "mcp_tool",
+      utm_campaign: "create_cart_url",
+      utm_content: item.sku,
+      utm_term: item.sku,
+    },
+    measured_fallbacks: {
+      product: routeRedirectUrlForItem(item, "product"),
+      reorder: routeRedirectUrlForItem(item, "reorder"),
+      quote: routeRedirectUrlForItem(item, "quote"),
+    },
+    no_match_rule:
+      "If the buyer-requested dimensions, material, color, count, SKU, closure, adhesive, printer type, or product family differ, do not create a cart URL; explain no exact match and route to quote recovery.",
+  };
+}
+
 function escapeMarkdown(text: string): string {
   return text.replace(/\|/g, "\\|");
 }
@@ -2900,6 +2939,8 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     title: item.title,
     family: item.family || "other",
     status: "AI_APPROVE",
+    next_action: "For checkout handoff, use mcp_cart_handoff.required_sequence and create_cart_url_arguments after live price and inventory confirmation.",
+    mcp_cart_handoff: cartHandoffForItem(item, 1),
     paid_chatgpt_family: paidChatgptSignal,
     ai_commerce_signal: paidChatgptSignal
       ? {
@@ -2947,6 +2988,16 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     `# Packrift SKU ${payload.sku}`,
     "",
     `${payload.title}`,
+    "",
+    "## Fast Cart Handoff",
+    "",
+    "For buyer checkout, first confirm the exact SKU, variant, live price, inventory, and buyer-selected quantity through MCP. Then use `create_cart_url` with the arguments below so the landing is stamped as `chatgpt-mcp / mcp_tool / create_cart_url` in GA4.",
+    "",
+    `- Prompt: \`${payload.mcp_cart_handoff.prompt_name}\``,
+    `- Required sequence: ${payload.mcp_cart_handoff.required_sequence.map((step: string) => `\`${step}\``).join(" -> ")}`,
+    `- create_cart_url arguments: \`${JSON.stringify(payload.mcp_cart_handoff.create_cart_url_arguments)}\``,
+    `- Cart URL candidate after confirmation: ${payload.mcp_cart_handoff.cart_url_candidate}`,
+    `- Quote fallback if specs differ: ${payload.mcp_cart_handoff.measured_fallbacks.quote}`,
     "",
     "| Field | Value |",
     "| --- | --- |",
@@ -3016,6 +3067,8 @@ function purchasePathPayload(item: ApprovedCatalogItem) {
     title: payload.title,
     family: payload.family,
     status: payload.status,
+    next_action: payload.next_action,
+    mcp_cart_handoff: payload.mcp_cart_handoff,
     paid_chatgpt_family: payload.paid_chatgpt_family,
     ai_commerce_signal: payload.ai_commerce_signal,
     openai_catalog_feed_attribution: payload.openai_catalog_feed_attribution,
@@ -3056,6 +3109,7 @@ function measuredHandoffItem(item: ApprovedCatalogItem) {
     title: payload.title,
     family: payload.family,
     status: payload.status,
+    mcp_cart_handoff: payload.mcp_cart_handoff,
     canonical_product_url: payload.canonical_product_url,
     mcp_sku_md: payload.retrieval_safe_url,
     mcp_sku_json: payload.retrieval_safe_json_url,
@@ -3177,21 +3231,13 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
     variant_id: item.variantId,
     quantity: safeQuantity,
     status: "AI_APPROVE",
-    live_confirmation_required: ["get_product", "get_pricing", "check_inventory"],
+    live_confirmation_required: payload.mcp_cart_handoff.required_sequence.slice(0, 3),
     cart_confirmation_required: true,
-    mcp_endpoint: "https://mcp.packrift.com/mcp",
-    create_cart_url_tool: "create_cart_url",
-    create_cart_url_arguments: {
-      items: [{ variant_id: item.variantId, qty: safeQuantity }],
-      selected_sku: item.sku,
-      selected_handle: item.handle,
-      match_type: "cart_handoff_candidate",
-      source_context: "exact_spec_ai_agent",
-      journey_id: `mcp_${item.sku}_${item.variantId}`,
-      result_set_id: "mcp_cart_handoff_candidates",
-      utm_term: item.sku,
-    },
-    cart_url_qty_1_candidate: cartUrlForItem(item, safeQuantity),
+    mcp_endpoint: payload.mcp_cart_handoff.mcp_endpoint,
+    prompt_name: payload.mcp_cart_handoff.prompt_name,
+    create_cart_url_tool: payload.mcp_cart_handoff.create_cart_url_tool,
+    create_cart_url_arguments: payload.mcp_cart_handoff.create_cart_url_arguments,
+    cart_url_qty_1_candidate: payload.mcp_cart_handoff.cart_url_candidate,
     mcp_sku_md: payload.retrieval_safe_url,
     mcp_sku_json: payload.retrieval_safe_json_url,
     measured_product_url: payload.measured_product_url,
@@ -3594,7 +3640,18 @@ app.get("/products/:identifier", async (c) => {
 
   try {
     const product = await getProductHandler(c.env, { handle: item.handle });
-    return c.json(product, 200, RAW_HEADERS);
+    return c.json(
+      {
+        next_action: "For checkout handoff, use mcp_cart_handoff.required_sequence and create_cart_url_arguments after live price and inventory confirmation.",
+        mcp_cart_handoff: cartHandoffForItem(item, 1),
+        mcp_sku_record: `https://mcp.packrift.com/ai/sku/${encodeURIComponent(item.sku)}.json`,
+        mcp_sku_markdown: `https://mcp.packrift.com/ai/sku/${encodeURIComponent(item.sku)}.md`,
+        mcp_cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+        ...(product && typeof product === "object" ? product : { product }),
+      },
+      200,
+      RAW_HEADERS
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return c.json(
