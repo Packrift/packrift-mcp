@@ -97,6 +97,8 @@ const LIVE_PROOF_URLS = {
   cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
   mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+  mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+  mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
 };
 
 async function fetchJson(url) {
@@ -229,6 +231,8 @@ function targetRows(distribution, copy) {
       cart_handoff_candidates: LIVE_PROOF_URLS.cart_handoff_candidates,
       all_agent_capture: LIVE_PROOF_URLS.all_agent_capture,
       mcp_adoption_kit: LIVE_PROOF_URLS.mcp_adoption_kit,
+      mcp_usage_snapshot: LIVE_PROOF_URLS.mcp_usage_snapshot,
+      mcp_buyer_use_cases: LIVE_PROOF_URLS.mcp_buyer_use_cases,
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     },
   }));
@@ -322,6 +326,22 @@ function liveProofDigest(liveProof) {
       release: liveProof.mcp_adoption_kit.value?.release ?? null,
       steps_count: liveProof.mcp_adoption_kit.value?.first_five_minutes?.length ?? null,
       canonical_endpoint: liveProof.mcp_adoption_kit.value?.canonical_endpoint ?? null,
+    },
+    mcp_usage_snapshot: {
+      ok: liveProof.mcp_usage_snapshot.ok,
+      status: liveProof.mcp_usage_snapshot.status,
+      url: liveProof.mcp_usage_snapshot.url,
+      release: liveProof.mcp_usage_snapshot.value?.release ?? null,
+      snapshot_status: liveProof.mcp_usage_snapshot.value?.status ?? null,
+      canonical_endpoint: liveProof.mcp_usage_snapshot.value?.canonical_endpoint ?? null,
+    },
+    mcp_buyer_use_cases: {
+      ok: liveProof.mcp_buyer_use_cases.ok,
+      status: liveProof.mcp_buyer_use_cases.status,
+      url: liveProof.mcp_buyer_use_cases.url,
+      release: liveProof.mcp_buyer_use_cases.value?.release ?? null,
+      use_cases_count: liveProof.mcp_buyer_use_cases.value?.use_cases?.length ?? null,
+      canonical_endpoint: liveProof.mcp_buyer_use_cases.value?.canonical_endpoint ?? null,
     },
   };
 }

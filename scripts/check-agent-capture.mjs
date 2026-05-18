@@ -120,8 +120,8 @@ async function main() {
   const requiredSurfaceIds = [
     "hosted_mcp_endpoint",
     "mcp_adoption_kit",
-    "buyer_mcp_use_cases",
     "mcp_usage_snapshot",
+    "buyer_mcp_use_cases",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
     "claude_desktop_and_claude_code",
@@ -147,8 +147,8 @@ async function main() {
   const mdNeedles = [
     "Packrift All-Agent Capture Matrix",
     "adoption kit",
-    "buyer use cases",
     "usage snapshot",
+    "buyer use cases",
     "Browserbase Browse",
     "ChatGPT/OpenAI commerce",
     "Claude",
@@ -164,7 +164,7 @@ async function main() {
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
-    check("surface coverage", (capture?.surfaces?.length ?? 0) >= 17 && missingSurfaceIds.length === 0, {
+    check("surface coverage", (capture?.surfaces?.length ?? 0) >= 20 && missingSurfaceIds.length === 0, {
       detail: missingSurfaceIds.length ? `missing ${missingSurfaceIds.join(", ")}` : `${capture?.surfaces?.length ?? 0} surfaces`,
     }),
     check("operating rule blocks duplicate CLI", (capture?.operating_rules ?? []).some((rule) => /separate Packrift CLI/.test(rule)), {
@@ -188,10 +188,10 @@ async function main() {
     check("resources/list advertises adoption kit", resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.md`), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises buyer use cases", resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.md`), {
+    check("resources/list advertises usage snapshot", resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.md`), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises usage snapshot", resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.md`), {
+    check("resources/list advertises buyer use cases", resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.md`), {
       detail: `resources=${resources.length}`,
     }),
   ];

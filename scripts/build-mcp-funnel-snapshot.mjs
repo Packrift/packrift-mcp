@@ -35,6 +35,7 @@ const snapshot = {
     stamped_mcp_cart_landings: false,
     measurable_mcp_sales: false,
   },
+  proof_metrics: null,
   first_party_mcp: null,
   ga4: null,
   distribution: null,
@@ -92,6 +93,9 @@ try {
     out_dir: outDir,
     first_party_total_events: snapshot.first_party_mcp?.total_events ?? null,
     first_party_total_tool_calls: snapshot.first_party_mcp?.total_tool_calls ?? null,
+    qualified_external_mcp_session_starts: snapshot.proof_metrics?.qualified_external_mcp_session_starts ?? null,
+    qualified_external_cart_landings: snapshot.proof_metrics?.qualified_external_cart_landings ?? null,
+    qualified_external_cart_revenue: snapshot.proof_metrics?.qualified_external_cart_revenue ?? null,
     ga4_mcp_cart_url_landing_events: snapshot.ga4?.mcp_cart_url_landings?.event_count ?? null,
     ga4_realtime_mcp_cart_events: snapshot.ga4?.realtime_mcp_cart_events?.event_count ?? null,
     distribution_counts: snapshot.distribution?.counts ?? null,
@@ -170,6 +174,7 @@ async function buildFirstPartyMcpSummary() {
     top_sources: parsed.by_source || [],
     top_skus: parsed.by_sku || [],
     top_bot_families: parsed.by_bot_family || [],
+    traffic_quality: summarizeFirstPartyTrafficQuality(parsed),
   };
 }
 
@@ -472,6 +477,7 @@ function summarizeGa4AiMcpEvents(rows) {
       .map((row) => ({ source_medium: row.sessionSourceMedium || "", event_count: numberValue(row.eventCount) }))
       .sort((a, b) => b.event_count - a.event_count),
     commerce_by_source: summarizeCommerceRows(rows),
+    traffic_quality: summarizeGa4TrafficQuality(rows),
     top_sources: topMap(bySource),
     top_events: topMap(byEvent),
   };
@@ -497,6 +503,7 @@ function summarizeGa4CartLandings(rows) {
     event_count: sum(rows.map((row) => numberValue(row.eventCount))),
     key_events: sum(rows.map((row) => numberValue(row.keyEvents))),
     revenue: sum(rows.map((row) => numberValue(row.totalRevenue))),
+    traffic_quality: summarizeGa4TrafficQuality(rows, { cartLanding: true }),
     sources: topMap(rows.reduce((map, row) => {
       addToMap(map, row.sessionSourceMedium || "(not set)", numberValue(row.eventCount));
       return map;
@@ -512,15 +519,205 @@ function summarizeGa4CartLandings(rows) {
   };
 }
 
+function summarizeFirstPartyTrafficQuality(parsed) {
+  const bySource = summarizeTopRowsByTrafficBucket(parsed.by_source || [], classifyFirstPartySource);
+  const byBotFamily = summarizeTopRowsByTrafficBucket(parsed.by_bot_family || [], classifyBotFamily);
+  const byEvent = summarizeTopRowsByTrafficBucket(parsed.by_event || [], classifyFirstPartyEvent);
+  return {
+    rules: [
+      "external_qualified_demand: MCP tool, cart, checkout, quote, reorder, or ChatGPT-user activity not tagged as internal or self-generated",
+      "external_unqualified_ai_crawl: known crawler/bot discovery activity without cart or commerce progression",
+      "internal_synthetic: QA, smoke, eval, test, curl, python, Codex, or Packrift-owned checker traffic",
+      "self_generated_distribution: corpus, route-catalog, sitemap, directory, and outreach surfaces created by Packrift to seed discovery",
+      "unknown: browser_or_unknown and other rows that cannot prove external qualified buyer demand",
+    ],
+    source: bySource,
+    bot_family: byBotFamily,
+    event: byEvent,
+    excluded_internal_or_synthetic_events:
+      bucketCount(bySource.buckets, "internal_synthetic") + bucketCount(bySource.buckets, "internal_operator"),
+    self_generated_distribution_events: bucketCount(bySource.buckets, "self_generated_distribution"),
+    external_qualified_events: bucketCount(bySource.buckets, "external_qualified_demand"),
+  };
+}
+
+function summarizeGa4TrafficQuality(rows, options = {}) {
+  const classified = rows.map((row) => {
+    const classification = classifyGa4Row(row, options);
+    const eventCount = numberValue(row.eventCount);
+    const revenue = numberValue(row.totalRevenue);
+    const eventName = row.eventName || "(not set)";
+    return {
+      bucket: classification.bucket,
+      reason: classification.reason,
+      source_medium: row.sessionSourceMedium || "(not set)",
+      event_name: eventName,
+      landing_page: row.landingPagePlusQueryString || row.pagePathPlusQueryString || row.pageLocation || "",
+      event_count: eventCount,
+      session_start_count: eventName === "session_start" ? eventCount : 0,
+      revenue,
+    };
+  });
+  const eventBuckets = emptyTrafficBuckets();
+  const sessionStartBuckets = emptyTrafficBuckets();
+  const revenueBuckets = emptyTrafficBuckets();
+  for (const row of classified) {
+    eventBuckets[row.bucket] += row.event_count;
+    sessionStartBuckets[row.bucket] += row.session_start_count;
+    revenueBuckets[row.bucket] += row.revenue;
+  }
+  return {
+    rules: [
+      "MCP-qualified GA4 demand requires chatgpt-mcp/mcp_tool/create_cart_url attribution, MCP cart landing parameters, or commerce progression tied to an MCP source.",
+      "Internal and synthetic source strings are excluded before any qualified-demand count.",
+      "Catalog, sitemap, route catalog, and crawler-only rows can prove discovery, but not qualified buyer demand.",
+    ],
+    event_count_buckets: eventBuckets,
+    session_start_buckets: sessionStartBuckets,
+    revenue_buckets: revenueBuckets,
+    qualified_external_events: eventBuckets.external_qualified_demand,
+    qualified_external_session_starts: sessionStartBuckets.external_qualified_demand,
+    qualified_external_revenue: revenueBuckets.external_qualified_demand,
+    excluded_internal_or_synthetic_events: eventBuckets.internal_synthetic + eventBuckets.internal_operator,
+    self_generated_distribution_events: eventBuckets.self_generated_distribution,
+    classified_top_rows: classified
+      .sort((a, b) => b.event_count - a.event_count || a.source_medium.localeCompare(b.source_medium))
+      .slice(0, 25),
+  };
+}
+
+function summarizeTopRowsByTrafficBucket(rows, classifier) {
+  const buckets = emptyTrafficBuckets();
+  const classified_top_rows = rows.map((row) => {
+    const key = String(row.key ?? "");
+    const count = Number(row.count || 0);
+    const classification = classifier(key);
+    buckets[classification.bucket] += count;
+    return {
+      key,
+      count,
+      bucket: classification.bucket,
+      reason: classification.reason,
+    };
+  });
+  return { buckets, classified_top_rows };
+}
+
+function emptyTrafficBuckets() {
+  return {
+    external_qualified_demand: 0,
+    external_unqualified_ai_crawl: 0,
+    internal_synthetic: 0,
+    internal_operator: 0,
+    self_generated_distribution: 0,
+    unknown: 0,
+  };
+}
+
+function bucketCount(buckets, name) {
+  return Number(buckets?.[name] || 0);
+}
+
+function classifyFirstPartySource(value) {
+  const text = String(value || "").toLowerCase();
+  if (matchesInternalSynthetic(text)) return { bucket: "internal_synthetic", reason: "internal_or_synthetic_source" };
+  if (matchesSelfGeneratedDistribution(text)) return { bucket: "self_generated_distribution", reason: "packrift_seeded_discovery_surface" };
+  if (matchesExternalQualifiedDemand(text)) return { bucket: "external_qualified_demand", reason: "mcp_tool_or_cart_handoff_source" };
+  if (text === "mcp_discovery" || matchesExternalCrawler(text)) return { bucket: "external_unqualified_ai_crawl", reason: "discovery_without_buyer_progression" };
+  return { bucket: "unknown", reason: "source_not_enough_to_prove_external_qualified_demand" };
+}
+
+function classifyFirstPartyEvent(value) {
+  const text = String(value || "").toLowerCase();
+  if (/mcp_tool_call|cart_click|product_click|quote_click|reorder_click|exact_match|multi_match|spec_search|copy_procurement_spec/.test(text)) {
+    return { bucket: "external_qualified_demand", reason: "buyer_or_tool_progression_event_type" };
+  }
+  if (/mcp_tools_list|mcp_prompt_list|mcp_prompt_get|mcp_resource_list|mcp_resource_templates_list|mcp_resource_read|sku_page_view|ai_corpus_click/.test(text)) {
+    return { bucket: "external_unqualified_ai_crawl", reason: "discovery_or_resource_read_event_type" };
+  }
+  return { bucket: "unknown", reason: "event_type_not_classified" };
+}
+
+function classifyBotFamily(value) {
+  const text = String(value || "").toLowerCase();
+  if (/openai_chatgpt_user|perplexity_user/.test(text)) return { bucket: "external_qualified_demand", reason: "known_user_agent_fetch" };
+  if (/bot|crawler|spider|gptbot|oai_searchbot|claude|anthropic|google|bing|duckduck|bytespider|storebot/.test(text)) {
+    return { bucket: "external_unqualified_ai_crawl", reason: "known_crawler_or_bot_family" };
+  }
+  if (text === "unknown" || text === "browser_or_unknown") return { bucket: "unknown", reason: "unknown_or_browser_family" };
+  return { bucket: "unknown", reason: "bot_family_not_classified" };
+}
+
+function classifyGa4Row(row, options = {}) {
+  const source = row.sessionSourceMedium || "";
+  const event = row.eventName || "";
+  const landing = row.landingPagePlusQueryString || row.pagePathPlusQueryString || row.pageLocation || "";
+  const combined = `${source} ${event} ${landing}`.toLowerCase();
+  if (matchesInternalSynthetic(combined)) return { bucket: "internal_synthetic", reason: "internal_or_synthetic_ga4_source" };
+  if (options.cartLanding && matchesMcpCartAttribution(combined)) {
+    return { bucket: "external_qualified_demand", reason: "mcp_cart_landing_attribution" };
+  }
+  if (matchesExternalQualifiedDemand(combined) && /session_start|add_to_cart|begin_checkout|purchase|mcp_cart_landing|cart/.test(combined)) {
+    return { bucket: "external_qualified_demand", reason: "mcp_source_with_session_or_commerce_progression" };
+  }
+  if (matchesSelfGeneratedDistribution(combined)) return { bucket: "self_generated_distribution", reason: "packrift_seeded_discovery_surface" };
+  if (matchesExternalCrawler(combined)) return { bucket: "external_unqualified_ai_crawl", reason: "crawler_or_bot_source_without_commerce_progression" };
+  return { bucket: "unknown", reason: "ga4_row_not_enough_to_prove_external_qualified_demand" };
+}
+
+function matchesInternalSynthetic(text) {
+  return (
+    /(codex|localhost|packrift-agent|packrift-mcp-funnel|packrift-static|routecatalogqa|packriftqa|criticalpathqa|curl\/|python-urllib|node-fetch|undici)/i.test(text)
+    || /(^|[^a-z0-9])(qa|smoke|synthetic|eval|test)([^a-z0-9]|$)/i.test(text)
+  );
+}
+
+function matchesSelfGeneratedDistribution(text) {
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list)/i.test(text);
+}
+
+function matchesExternalQualifiedDemand(text) {
+  return /(chatgpt-mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
+}
+
+function matchesMcpCartAttribution(text) {
+  return /utm_source=chatgpt-mcp/.test(text) && /utm_medium=mcp_tool/.test(text) && /utm_campaign=create_cart_url/.test(text);
+}
+
+function matchesExternalCrawler(text) {
+  return /(gptbot|oai-searchbot|perplexitybot|perplexity-user|googlebot|bingbot|claudebot|anthropic-ai|bytespider|duckduckbot|crawler|spider|bot)/i.test(text);
+}
+
 function applyProofGate(value) {
   const firstParty = value.first_party_mcp || {};
   const ga4 = value.ga4 || {};
   const distribution = value.distribution || {};
   const totalMcpSessions = Number(ga4.ai_mcp_events?.mcp_specific_session_start_events || 0);
+  const qualifiedExternalMcpSessions = Number(ga4.ai_mcp_events?.traffic_quality?.qualified_external_session_starts || 0);
+  const qualifiedExternalCartLandings = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_events || 0);
+  const qualifiedExternalCartRevenue = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_revenue || 0);
+  const excludedInternalOrSyntheticEvents =
+    Number(firstParty.traffic_quality?.excluded_internal_or_synthetic_events || 0)
+    + Number(ga4.ai_mcp_events?.traffic_quality?.excluded_internal_or_synthetic_events || 0)
+    + Number(ga4.mcp_cart_url_landings?.traffic_quality?.excluded_internal_or_synthetic_events || 0);
+  const selfGeneratedDistributionEvents =
+    Number(firstParty.traffic_quality?.self_generated_distribution_events || 0)
+    + Number(ga4.ai_mcp_events?.traffic_quality?.self_generated_distribution_events || 0)
+    + Number(ga4.mcp_cart_url_landings?.traffic_quality?.self_generated_distribution_events || 0);
+  value.proof_metrics = {
+    raw_mcp_specific_session_starts: totalMcpSessions,
+    qualified_external_mcp_session_starts: qualifiedExternalMcpSessions,
+    raw_stamped_mcp_cart_landings: Number(ga4.mcp_cart_url_landings?.event_count || 0),
+    qualified_external_cart_landings: qualifiedExternalCartLandings,
+    raw_stamped_mcp_cart_revenue: Number(ga4.mcp_cart_url_landings?.revenue || 0),
+    qualified_external_cart_revenue: qualifiedExternalCartRevenue,
+    excluded_internal_or_synthetic_events: excludedInternalOrSyntheticEvents,
+    self_generated_distribution_events: selfGeneratedDistributionEvents,
+  };
   value.proof_gate = {
-    thousands_of_qualified_visitors: totalMcpSessions >= 1000,
-    stamped_mcp_cart_landings: Number(ga4.mcp_cart_url_landings?.event_count || 0) > 0,
-    measurable_mcp_sales: Number(ga4.mcp_cart_url_landings?.revenue || 0) > 0,
+    thousands_of_qualified_visitors: qualifiedExternalMcpSessions >= 1000,
+    stamped_mcp_cart_landings: qualifiedExternalCartLandings > 0,
+    measurable_mcp_sales: qualifiedExternalCartRevenue > 0,
     mcp_tool_usage_is_material: Number(firstParty.total_tool_calls || 0) >= 50,
     distribution_core_live: Number(distribution.counts?.pass || 0) >= 2 && Number(distribution.counts?.fail || 0) === 0,
     llms_full_static_availability: Boolean(value.static_availability?.ok)
@@ -546,6 +743,7 @@ function markdownReport(value) {
   const live = value.live_discovery || {};
   const availability = value.static_availability || {};
   const indexnow = value.indexnow || {};
+  const proofMetrics = value.proof_metrics || {};
   const liveManifest = live.manifest || {};
   const liveLlms = live.llms_full || {};
   return [
@@ -559,9 +757,9 @@ function markdownReport(value) {
     "",
     "| Requirement | Proven | Evidence |",
     "| --- | --- | --- |",
-    `| Thousands of qualified MCP visitors | ${yesNo(value.proof_gate.thousands_of_qualified_visitors)} | ${ga4.ai_mcp_events?.mcp_specific_session_start_events ?? 0} MCP-specific session_start events in pulled GA4 report |`,
-    `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${cart.event_count ?? 0} GA4 mcp_cart_landing events on stamped cart shim pages |`,
-    `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(cart.revenue).toFixed(2)} revenue on stamped MCP cart landing rows |`,
+    `| Thousands of qualified MCP visitors | ${yesNo(value.proof_gate.thousands_of_qualified_visitors)} | ${proofMetrics.qualified_external_mcp_session_starts ?? 0} qualified external MCP session_start events (${proofMetrics.raw_mcp_specific_session_starts ?? 0} raw MCP-specific) |`,
+    `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${proofMetrics.qualified_external_cart_landings ?? 0} qualified external cart landings (${proofMetrics.raw_stamped_mcp_cart_landings ?? 0} raw stamped) |`,
+    `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)} qualified external MCP cart revenue ($${numberValue(proofMetrics.raw_stamped_mcp_cart_revenue).toFixed(2)} raw stamped) |`,
     `| Material MCP tool usage | ${yesNo(value.proof_gate.mcp_tool_usage_is_material)} | ${fp.total_tool_calls ?? 0} first-party MCP tool calls for ${fp.date ?? "selected date"} |`,
     `| Distribution core live | ${yesNo(value.proof_gate.distribution_core_live)} | ${dist.counts ? `${dist.counts.pass} pass, ${dist.counts.stale} stale, ${dist.counts.blocked} blocked, ${dist.counts.fail} fail` : "not checked"} |`,
     `| llms-full static availability | ${yesNo(value.proof_gate.llms_full_static_availability)} | ${availability.total_fetches ?? 0} fetches, ${percentValue(availability.failed_fetch_rate)} failure rate, ${percentValue(availability.status_5xx_rate)} 5xx rate |`,
@@ -579,6 +777,17 @@ function markdownReport(value) {
     `- Cart clicks: ${fp.cart_clicks ?? 0}`,
     `- AI corpus clicks: ${fp.ai_corpus_clicks ?? 0}`,
     `- SKU page views: ${fp.sku_page_views ?? 0}`,
+    "",
+    "## Traffic Quality",
+    "",
+    `- Qualified external MCP sessions: ${proofMetrics.qualified_external_mcp_session_starts ?? 0}`,
+    `- Qualified external cart landings: ${proofMetrics.qualified_external_cart_landings ?? 0}`,
+    `- Qualified external cart revenue: $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)}`,
+    `- Excluded internal/synthetic events: ${proofMetrics.excluded_internal_or_synthetic_events ?? 0}`,
+    `- Self-generated distribution events: ${proofMetrics.self_generated_distribution_events ?? 0}`,
+    `- First-party source buckets: ${trafficBucketSummary(fp.traffic_quality?.source?.buckets)}`,
+    `- GA4 session buckets: ${trafficBucketSummary(ga4.ai_mcp_events?.traffic_quality?.session_start_buckets)}`,
+    `- GA4 cart landing buckets: ${trafficBucketSummary(cart.traffic_quality?.event_count_buckets)}`,
     "",
     "## GA4 MCP Attribution",
     "",
@@ -735,6 +944,13 @@ function yesNo(value) {
 
 function percentValue(value) {
   return `${(numberValue(value) * 100).toFixed(2)}%`;
+}
+
+function trafficBucketSummary(buckets) {
+  if (!buckets) return "not available";
+  return Object.entries(buckets)
+    .map(([key, value]) => `${key}=${numberValue(value)}`)
+    .join(", ");
 }
 
 function utcDate(date) {
