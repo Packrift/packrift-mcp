@@ -43,6 +43,7 @@ function evidenceLinks(capture) {
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+    browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     health: "https://mcp.packrift.com/health",
     manifest: "https://mcp.packrift.com/manifest",
     server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",

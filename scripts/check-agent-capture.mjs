@@ -122,6 +122,7 @@ async function main() {
     "mcp_adoption_kit",
     "mcp_usage_snapshot",
     "buyer_mcp_use_cases",
+    "browser_agent_bridge",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
     "claude_desktop_and_claude_code",
@@ -149,6 +150,7 @@ async function main() {
     "adoption kit",
     "usage snapshot",
     "buyer use cases",
+    "browser-agent bridge",
     "Browserbase Browse",
     "ChatGPT/OpenAI commerce",
     "Claude",
@@ -192,6 +194,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises buyer use cases", resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.md`), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises browser-agent bridge", resourceUris.has(`${BASE_URL}/ai/browser-agent-bridge.json`) && resourceUris.has(`${BASE_URL}/ai/browser-agent-bridge.md`), {
       detail: `resources=${resources.length}`,
     }),
   ];

@@ -8,6 +8,7 @@ import { agentInstructionsMd } from "./agent-instructions-content.js";
 import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture.js";
 import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js";
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
+import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
@@ -563,6 +564,7 @@ const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
+const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
@@ -1559,6 +1561,46 @@ async function recordMcpDiscoveryEvent(
     user_agent: safeEventText(userAgent, 240),
     bot_family: classifyAgentFamily(userAgent),
     error: safeEventText(meta.errorMessage, 240),
+  });
+}
+
+async function recordGeneratedAiResourceFetch(
+  c: AppContext,
+  pathname: string,
+  source: string,
+  resultSizeBytes: number
+): Promise<void> {
+  if (c.env.AI_SALES_SKU_PAGE_TELEMETRY !== "enabled") return;
+  const userAgent = c.req.header("User-Agent") ?? "";
+  if (shouldSkipInternalTelemetry(userAgent)) return;
+  const format = pathname.split(".").pop() ?? "";
+  const day = compactDate();
+  const id = `${source}_${day}_http_get_${format}`;
+  await recordAiSalesEvent(c.env, {
+    event: "mcp_resource_read",
+    source,
+    release: GENERATED_AI_RESOURCE_TELEMETRY_RELEASE,
+    ok: true,
+    mcp_method: "http_get",
+    resource_uri: `https://mcp.packrift.com${pathname}`,
+    format,
+    result_count: 1,
+    result_size_bytes: resultSizeBytes,
+    transport: "http_get",
+    user_agent: safeEventText(userAgent, 240),
+    bot_family: classifyAgentFamily(userAgent),
+    packrift_ai_id: id,
+    ai_commerce_id: id,
+    mcp_key: source,
+    mcp_journey: `${source}:http_get:${format}`,
+    mcp_result_set: `${source}_${day}`,
+    utm_source: source,
+    utm_medium: "ai_resource",
+    utm_campaign: `packrift_${source}_${campaignDate()}`,
+    utm_content: `http_get_${format}`,
+    source_url: `https://mcp.packrift.com${pathname}`,
+    page_url: c.req.url,
+    referrer: c.req.header("Referer") ?? "",
   });
 }
 
@@ -2838,6 +2880,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
+  "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+  "https://mcp.packrift.com/ai/browser-agent-bridge.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -2917,6 +2961,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
+  "/ai/browser-agent-bridge.json": "Machine-readable bridge for Browserbase Browse, browser-use, Playwright, CUA, and browser agents that should read public Packrift resources and confirm live commerce facts through MCP.",
+  "/ai/browser-agent-bridge.md": "Crawler-readable browser-agent bridge that keeps Browse-style workflows routed through the canonical Packrift MCP endpoint.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -3084,6 +3130,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
+  if (pathname === "/ai/browser-agent-bridge.json") return JSON.stringify(browserAgentBridgePayload(browserAgentBridgeRuntime()), null, 2);
+  if (pathname === "/ai/browser-agent-bridge.md") return browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -3154,6 +3202,7 @@ function mcpManifestPayload() {
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+    browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
   };
 }
 
@@ -3176,6 +3225,15 @@ function adoptionKitRuntime() {
 }
 
 function buyerUseCasesRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function browserAgentBridgeRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -3228,6 +3286,7 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     },
     signals: {
       category: "Business Tools",
@@ -4136,7 +4195,9 @@ app.get("/ai/mcp-usage-snapshot.json", async (c) => {
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
   const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "1000", 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(1000, requestedLimit)) : 1000;
-  return c.json(await mcpUsageSnapshotPayload(c.env, date, limit), 200, RAW_HEADERS);
+  const payload = await mcpUsageSnapshotPayload(c.env, date, limit);
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-usage-snapshot.json", "mcp_usage_snapshot", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
 });
 
 app.get("/ai/mcp-usage-snapshot.md", async (c) => {
@@ -4144,22 +4205,43 @@ app.get("/ai/mcp-usage-snapshot.md", async (c) => {
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
   const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "1000", 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(1000, requestedLimit)) : 1000;
-  return c.body(mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(c.env, date, limit)), 200, {
+  const body = mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(c.env, date, limit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-usage-snapshot.md", "mcp_usage_snapshot", jsonByteSize(body));
+  return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
   });
 });
 
-app.get("/ai/mcp-buyer-use-cases.json", (c) =>
-  c.json(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), 200, RAW_HEADERS)
-);
+app.get("/ai/mcp-buyer-use-cases.json", async (c) => {
+  const payload = mcpBuyerUseCasesPayload(buyerUseCasesRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-buyer-use-cases.json", "mcp_buyer_use_cases", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
 
-app.get("/ai/mcp-buyer-use-cases.md", (c) =>
-  c.body(mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime()), 200, {
+app.get("/ai/mcp-buyer-use-cases.md", async (c) => {
+  const body = mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-buyer-use-cases.md", "mcp_buyer_use_cases", jsonByteSize(body));
+  return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
-  })
-);
+  });
+});
+
+app.get("/ai/browser-agent-bridge.json", async (c) => {
+  const payload = browserAgentBridgePayload(browserAgentBridgeRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/browser-agent-bridge.json", "browser_agent_bridge", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/browser-agent-bridge.md", async (c) => {
+  const body = browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/browser-agent-bridge.md", "browser_agent_bridge", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
 
 app.get("/ai/mcp-cart-handoff-candidates.json", (c) =>
   c.json(cartHandoffCandidatesPayload(), 200, RAW_HEADERS)

@@ -89,6 +89,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
+- Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
+- Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
@@ -262,11 +264,12 @@ npm run build:agent-capture-outreach
 This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `.md`, `https://mcp.packrift.com/ai/mcp-adoption-kit.json` and `.md`,
 `https://mcp.packrift.com/ai/mcp-usage-snapshot.json` and `.md`, and
-`https://mcp.packrift.com/ai/mcp-buyer-use-cases.json` and `.md` are live,
+`https://mcp.packrift.com/ai/mcp-buyer-use-cases.json` and `.md`, and
+`https://mcp.packrift.com/ai/browser-agent-bridge.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, public usage snapshot, buyer workflow map,
-and Browserbase Browse candidate lane, and preserve the rule that Packrift uses the hosted MCP
-endpoint instead of a duplicate CLI surface. The outreach build writes
+browser-agent bridge, and Browserbase Browse candidate lane, and preserve the
+rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate
 briefs, proof links, and MCP install snippets under
 `outputs/agent-capture-outreach/`.
