@@ -160,13 +160,13 @@ async function officialRegistryCheck() {
 }
 
 async function liveMcpCheck() {
-  const [healthResult, cartResult, agentCaptureResult, adoptionKitResult, buyerUseCasesResult, usageSnapshotResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
+  const [healthResult, cartResult, agentCaptureResult, adoptionKitResult, usageSnapshotResult, buyerUseCasesResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
     fetchText("https://mcp.packrift.com/health"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
-    fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("prompts/list"),
@@ -175,8 +175,8 @@ async function liveMcpCheck() {
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
-  const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
+  const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
@@ -195,20 +195,20 @@ async function liveMcpCheck() {
       promptsCount >= 7 &&
       cart?.items?.length >= 50 &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R01" &&
-      agentCapture?.surfaces?.length >= 18 &&
+      agentCapture?.surfaces?.length >= 20 &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R01" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R01" &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R01" &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.md") &&
-      resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
-      resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
       ? "pass"
       : "fail",
@@ -220,10 +220,10 @@ async function liveMcpCheck() {
       agent_capture_surfaces: agentCapture?.surfaces?.length ?? 0,
       adoption_kit_release: adoptionKit?.release ?? null,
       adoption_kit_steps: adoptionKit?.first_five_minutes?.length ?? 0,
-      buyer_use_cases_release: buyerUseCases?.release ?? null,
-      buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
+      buyer_use_cases_release: buyerUseCases?.release ?? null,
+      buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
         tools_count: toolNames.length,
