@@ -9,6 +9,10 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "start": "node dist/node.js",
+    "eval:live": "node scripts/run-live-evals.mjs",
+    "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
+    "refresh:llms-full": "node scripts/refresh-llms-full-priority.mjs",
+    "purge:cache": "node scripts/purge-cloudflare-cache.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

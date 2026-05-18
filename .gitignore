@@ -1,8 +1,11 @@
 node_modules/
 .wrangler/
+.runtime/
 .dev.vars
 .env
 .env.local
+.env.cloudflare.local
+outputs/
 *.log
 .DS_Store
 dist/

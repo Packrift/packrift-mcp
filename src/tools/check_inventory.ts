@@ -1,13 +1,21 @@
 import { z } from "zod";
 import { Env, shopifyQuery, numericToVariantGid, variantIdToNumeric } from "../shopify.js";
+import { approvalForVariantId, approvalStatus, assertApprovedVariantIds } from "../approval.js";
+import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
 
 export const checkInventorySchema = {
   name: "check_inventory",
-  description: "Real-time available inventory count for one or more variant ids. Live, never cached.",
+  description:
+    "Use to confirm a SKU is in stock before recommending it or building a cart. Input: variant_ids (numeric). Returns available count and in_stock boolean per variant. Live, never cached.",
   inputSchema: {
     type: "object",
     properties: {
       variant_ids: { type: "array", items: { type: "string" }, minItems: 1 },
+      journey_id: { type: "string" },
+      result_set_id: { type: "string" },
+      selected_sku: { type: "string" },
+      selected_handle: { type: "string" },
+      match_type: { type: "string" },
     },
     required: ["variant_ids"],
   },
@@ -15,7 +23,14 @@ export const checkInventorySchema = {
   annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
-export const checkInventoryZod = z.object({ variant_ids: z.array(z.string()).min(1) });
+export const checkInventoryZod = z.object({
+  variant_ids: z.array(z.string()).min(1),
+  journey_id: z.string().min(1).max(120).optional(),
+  result_set_id: z.string().min(1).max(120).optional(),
+  selected_sku: z.string().min(1).max(80).optional(),
+  selected_handle: z.string().min(1).max(160).optional(),
+  match_type: z.string().min(1).max(80).optional(),
+});
 
 const QUERY = `
   query Inventory($ids: [ID!]!) {
@@ -32,7 +47,9 @@ interface VariantNode {
 }
 
 export async function checkInventoryHandler(env: Env, raw: unknown) {
-  const { variant_ids } = checkInventoryZod.parse(raw);
+  const { variant_ids, journey_id, result_set_id, selected_sku, selected_handle, match_type } =
+    checkInventoryZod.parse(raw);
+  assertApprovedVariantIds(variant_ids);
   const ids = variant_ids.map(numericToVariantGid);
   const data = await shopifyQuery<{ nodes: Array<VariantNode | null> }>(env, QUERY, { ids });
 
@@ -41,10 +58,33 @@ export async function checkInventoryHandler(env: Env, raw: unknown) {
       return { variant_id: variant_ids[i], available: 0, in_stock: false, error: "variant not found" };
     }
     const qty = n.inventoryQuantity ?? 0;
+    const variantId = variantIdToNumeric(n.id);
+    const tracking = buildTrackingContext({
+      source: "check_inventory",
+      variantId,
+      journeyId: journey_id,
+      resultSetId: result_set_id,
+      selectedSku: selected_sku,
+      selectedHandle: selected_handle,
+      matchType: match_type ?? "inventory_check",
+    });
     return {
-      variant_id: variantIdToNumeric(n.id),
+      variant_id: variantId,
+      ...approvalStatus(approvalForVariantId(variantId)),
+      continuity_key: tracking.continuity_key,
       available: qty,
       in_stock: n.availableForSale && qty > 0,
+      tracking,
+      post_confirmation_handoff: buildPostConfirmationHandoff({
+        source: "check_inventory",
+        variantId,
+        journeyId: journey_id,
+        resultSetId: result_set_id,
+        selectedSku: selected_sku,
+        selectedHandle: selected_handle,
+        matchType: match_type ?? "inventory_check",
+        cartEligible: n.availableForSale && qty > 0,
+      }),
     };
   });
 }

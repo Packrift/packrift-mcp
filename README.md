@@ -91,6 +91,9 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 | `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. Never cached. |
 | `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
 | `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
+| `compare_alternatives(requested_spec, family?, competitor_reference?, limit?)` | Ranks AI-approved Packrift alternatives for open-ended buyer requests, including competitor-style packaging specs. |
+| `pack_calculator(item, padding?, use_case?, limit?)` | Calculates protected inside dimensions and returns fitted box or mailer candidates with void-fill guidance. |
+| `inventory_status(variant_ids?, sku?, handle?, quantity?)` | Live total and location-level Shopify inventory status for exact SKUs, handles, or variant IDs. |
 | `get_reorder_link(sku, handle?)` | Reorder URL, product URL, and copy-procurement-spec text for an AI-approved SKU or handle. |
 | `get_bulk_quote_link(requested_spec, family?, sku?, quantity?)` | Tracked bulk quote URL for no-exact-match, large-volume, or procurement-review workflows. |
 | `explain_no_exact_match(requested_spec, missing_or_mismatched_fields?)` | Explains why a nearby product should not be presented as exact, then routes to safe next actions and quote recovery. |
@@ -166,6 +169,25 @@ Type-check:
 npx tsc --noEmit
 ```
 
+Refresh the `llms-full.txt` priority SKU block from recent GA4 item activity joined to the AI-approved catalog and live Shopify inventory:
+
+```sh
+npm run build:llms-full -- \
+  --ga4-items /path/to/packrift-ga4-items.csv \
+  --approved-jsonl /path/to/packrift-ai-approved-products.jsonl \
+  --limit 20
+```
+
+The generated public block must not include local paths, internal notes, or non-public campaign details. A private JSON report is written under `outputs/llms-full-priority-skus/`.
+
+To run the whole refresh path, pull fresh GA4 reports, publish the public `llms-full.txt` override into Workers KV, purge the public agent URLs, and verify the live surfaces:
+
+```sh
+npm run refresh:llms-full -- --publish-kv
+```
+
+This updates the `static-override:llms-full.txt` KV key. The Worker serves that override after the current deploy, so future priority-SKU refreshes do not require deploying unrelated Worker source changes.
+
 ## Deployment
 
 The Cloudflare account is being created in a separate process. Once it's ready and `wrangler` is logged in (`wrangler login`), run these in order:
@@ -216,6 +238,8 @@ src/
     recommend_packaging.ts
     get_shipping_estimate.ts
     create_cart_url.ts
+    exploration_tools.ts
+    procurement_links.ts
 wrangler.toml                    Worker config (KV binding, vars, route)
 package.json
 tsconfig.json

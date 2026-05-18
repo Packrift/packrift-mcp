@@ -6,6 +6,8 @@ compatibility_date = "2025-09-23"
 SHOPIFY_STORE_DOMAIN = "packrift.myshopify.com"
 SHOPIFY_API_VERSION = "2025-04"
 STOREFRONT_DOMAIN = "packrift.com"
+INDEXNOW_ROOT_KEY = "5050e763abb8dafdc736a5971e107171"
+AI_SALES_SKU_PAGE_TELEMETRY = "enabled"
 
 # KV for catalog list cache (5-min TTL).
 # Before first deploy: `wrangler kv namespace create CATALOG_CACHE` and paste the
@@ -22,4 +24,41 @@ preview_id = "c5aa45b19ebe4520b81ad219ba054443"
 [[routes]]
 pattern = "mcp.packrift.com"
 custom_domain = true
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+# Root storefront raw-agent routes. The path-scoped routes are the preferred
+# low-risk hooks. The broad route is a guarded fallback: src/index.ts serves
+# only known agent files and passes normal packrift.com requests through to
+# Shopify. These only execute after packrift.com traffic reaches Farhan's
+# Cloudflare zone through a proxied/O2O DNS record.
+[[routes]]
+pattern = "packrift.com/llms.txt*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/llms-full.txt*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/.well-known/mcp/server-card.json*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/agents.md*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/5050e763abb8dafdc736a5971e107171.txt*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/products/*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/pages/*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/*"
 zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"

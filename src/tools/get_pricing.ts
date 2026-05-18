@@ -1,14 +1,22 @@
 import { z } from "zod";
 import { Env, shopifyQuery, numericToVariantGid, variantIdToNumeric } from "../shopify.js";
+import { approvalForVariantId, approvalStatus, assertApprovedVariantIds } from "../approval.js";
+import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
 
 export const getPricingSchema = {
   name: "get_pricing",
-  description: "Real-time price and available quantity for one or more variant ids. Live, never cached.",
+  description:
+    "Use to confirm live unit price and line total for variants about to go in a cart. Inputs: variant_ids (numeric), quantity. Returns unit_price, currency, available_quantity, line_total. Never cached.",
   inputSchema: {
     type: "object",
     properties: {
       variant_ids: { type: "array", items: { type: "string" }, minItems: 1 },
       quantity: { type: "integer", minimum: 1, default: 1 },
+      journey_id: { type: "string" },
+      result_set_id: { type: "string" },
+      selected_sku: { type: "string" },
+      selected_handle: { type: "string" },
+      match_type: { type: "string" },
     },
     required: ["variant_ids"],
   },
@@ -19,6 +27,11 @@ export const getPricingSchema = {
 export const getPricingZod = z.object({
   variant_ids: z.array(z.string()).min(1),
   quantity: z.number().int().min(1).default(1),
+  journey_id: z.string().min(1).max(120).optional(),
+  result_set_id: z.string().min(1).max(120).optional(),
+  selected_sku: z.string().min(1).max(80).optional(),
+  selected_handle: z.string().min(1).max(160).optional(),
+  match_type: z.string().min(1).max(80).optional(),
 });
 
 const QUERY = `
@@ -44,7 +57,9 @@ interface VariantNode {
 }
 
 export async function getPricingHandler(env: Env, raw: unknown) {
-  const { variant_ids, quantity } = getPricingZod.parse(raw);
+  const { variant_ids, quantity, journey_id, result_set_id, selected_sku, selected_handle, match_type } =
+    getPricingZod.parse(raw);
+  assertApprovedVariantIds(variant_ids);
   const ids = variant_ids.map(numericToVariantGid);
   const data = await shopifyQuery<{ nodes: Array<VariantNode | null> }>(env, QUERY, { ids });
 
@@ -60,14 +75,38 @@ export async function getPricingHandler(env: Env, raw: unknown) {
       };
     }
     const unit = Number(n.price);
+    const variantId = variantIdToNumeric(n.id);
+    const tracking = buildTrackingContext({
+      source: "get_pricing",
+      variantId,
+      journeyId: journey_id,
+      resultSetId: result_set_id,
+      selectedSku: selected_sku,
+      selectedHandle: selected_handle,
+      matchType: match_type ?? "pricing_check",
+    });
     return {
-      variant_id: variantIdToNumeric(n.id),
+      variant_id: variantId,
+      ...approvalStatus(approvalForVariantId(variantId)),
+      continuity_key: tracking.continuity_key,
       unit_price: unit,
       currency: n.product.priceRangeV2.minVariantPrice.currencyCode,
       available_quantity: n.inventoryQuantity ?? 0,
       available: n.availableForSale,
       line_total: Number((unit * quantity).toFixed(2)),
       quantity,
+      tracking,
+      post_confirmation_handoff: buildPostConfirmationHandoff({
+        source: "get_pricing",
+        variantId,
+        journeyId: journey_id,
+        resultSetId: result_set_id,
+        selectedSku: selected_sku,
+        selectedHandle: selected_handle,
+        matchType: match_type ?? "pricing_check",
+        quantity,
+        cartEligible: n.availableForSale,
+      }),
     };
   });
 }

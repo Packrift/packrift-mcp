@@ -2,7 +2,10 @@ export interface Env {
   SHOPIFY_STORE_DOMAIN: string;
   SHOPIFY_API_VERSION: string;
   STOREFRONT_DOMAIN: string;
+  INDEXNOW_ROOT_KEY?: string;
   SHOPIFY_PACKRIFT_TOKEN: string;
+  AI_SALES_SKU_PAGE_TELEMETRY?: string;
+  MCP_STATS_TOKEN?: string;
   CATALOG_CACHE: KVNamespace;
 }
 
