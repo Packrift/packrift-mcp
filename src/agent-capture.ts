@@ -58,6 +58,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the primary handoff link for anyone trying Packrift MCP for the first time.",
     }),
     surface({
+      id: "mcp_usage_snapshot",
+      name: "Packrift MCP usage snapshot",
+      agent_type: "usage_measurement",
+      audience: "Directory reviewers, agent builders, and Packrift operators who need public aggregate proof of MCP discovery, tool-call, and cart-handoff activity.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      install_or_call:
+        "Use the public usage snapshot to verify first-party MCP discovery events, tool calls, create_cart_url calls, cart clicks, and proof-gate status by date.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
+      fallback_url: "https://mcp.packrift.com/events/ai-sales/summary",
+      next_action: "Use this as the iteration proof layer while pushing installs and cart-handoff workflows toward measurable usage.",
+    }),
+    surface({
       id: "chatgpt_openai_product_cards",
       name: "ChatGPT and OpenAI product-card commerce",
       agent_type: "chat_commerce",

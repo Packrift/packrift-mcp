@@ -120,6 +120,7 @@ async function main() {
   const requiredSurfaceIds = [
     "hosted_mcp_endpoint",
     "mcp_adoption_kit",
+    "mcp_usage_snapshot",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
     "claude_desktop_and_claude_code",
@@ -145,6 +146,7 @@ async function main() {
   const mdNeedles = [
     "Packrift All-Agent Capture Matrix",
     "adoption kit",
+    "usage snapshot",
     "Browserbase Browse",
     "ChatGPT/OpenAI commerce",
     "Claude",
@@ -182,6 +184,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises adoption kit", resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.md`), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises usage snapshot", resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.md`), {
       detail: `resources=${resources.length}`,
     }),
   ];

@@ -1691,6 +1691,152 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   };
 }
 
+function topRowsToRecord(rows: Array<{ key: string; count: number }> | undefined): Record<string, number> {
+  return Object.fromEntries((rows ?? []).map((row) => [row.key, row.count]));
+}
+
+async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000) {
+  const events = await readAiSalesEvents(env, date, limit);
+  const summary = summarizeAiSalesEvents(events);
+  const byEvent = topRowsToRecord(summary.by_event);
+  const bySource = topRowsToRecord(summary.by_source);
+  const mcpDiscoveryEvents =
+    (byEvent.mcp_tools_list ?? 0) +
+    (byEvent.mcp_prompt_list ?? 0) +
+    (byEvent.mcp_prompt_get ?? 0) +
+    (byEvent.mcp_resource_list ?? 0) +
+    (byEvent.mcp_resource_templates_list ?? 0) +
+    (byEvent.mcp_resource_read ?? 0);
+  const mcpToolCalls = byEvent.mcp_tool_call ?? 0;
+  const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
+  const cartClicks = byEvent.mcp_cart_click ?? 0;
+  const noMatches = byEvent.no_match ?? 0;
+  const exactMatches = byEvent.exact_match ?? 0;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks;
+  return {
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R01",
+    generated_at: new Date().toISOString(),
+    date,
+    limit,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    status: totalMcpSignals > 0 ? "usage_visible" : "no_usage_seen_for_date",
+    purpose:
+      "Public, aggregate Packrift MCP usage proof for agents, directory reviewers, and Packrift iteration. This is not the canonical GA4 revenue report; it is first-party MCP and AI-commerce event telemetry from the hosted endpoint.",
+    privacy:
+      "Aggregated counts only. Raw event bodies, buyer identifiers, and private admin stats are not exposed here.",
+    runtime: {
+      server_version: serverCard.version,
+      tools_count: TOOLS.length,
+      resources_count: MCP_RESOURCES.length,
+      prompts_count: PROMPTS.length,
+    },
+    counts: {
+      total_events: summary.total_events,
+      mcp_discovery_events: mcpDiscoveryEvents,
+      mcp_tool_calls: mcpToolCalls,
+      create_cart_url_calls: createCartUrlCalls,
+      mcp_cart_clicks: cartClicks,
+      exact_match_events: exactMatches,
+      no_match_events: noMatches,
+      sources: bySource,
+    },
+    proof_gate: {
+      usage_exists: totalMcpSignals > 0,
+      create_cart_url_seen: createCartUrlCalls > 0,
+      material_tool_usage_50_plus: mcpToolCalls >= 50,
+      thousands_of_qualified_visitors: false,
+      measurable_mcp_sales: false,
+    },
+    top: {
+      events: summary.by_event,
+      tools: summary.by_tool,
+      skus: summary.by_sku,
+      bot_families: summary.by_bot_family,
+      mcp_methods: summary.by_mcp_method,
+    },
+    links: {
+      usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      usage_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
+      live_summary_api: `https://mcp.packrift.com/events/ai-sales/summary?date=${date}&limit=${limit}`,
+      dashboard: `https://mcp.packrift.com/events/ai-sales/dashboard?date=${date}`,
+      adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+      cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+      measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
+    },
+    next_actions: [
+      "Push directory recrawls and partner installs toward tools/list, prompts/list, and resources/list.",
+      "Drive real workflows through get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Do not call the adoption goal complete until material MCP tool usage, stamped cart landings, and MCP-attributed sales are visible.",
+    ],
+  };
+}
+
+function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSnapshotPayload>>): string {
+  const table = (rows: Array<{ key: string; count: number }> | undefined) =>
+    (rows ?? []).slice(0, 10).map((row) => `| ${row.key} | ${row.count} |`).join("\n") || "| none | 0 |";
+  return [
+    "# Packrift MCP Usage Snapshot",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Date: ${payload.date}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    `Status: ${payload.status}`,
+    "",
+    "## Purpose",
+    "",
+    payload.purpose,
+    "",
+    "## Counts",
+    "",
+    `- Total first-party events: ${payload.counts.total_events}`,
+    `- MCP discovery events: ${payload.counts.mcp_discovery_events}`,
+    `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
+    `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
+    `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
+    `- Exact-match events: ${payload.counts.exact_match_events}`,
+    `- No-match events: ${payload.counts.no_match_events}`,
+    "",
+    "## Proof Gate",
+    "",
+    `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
+    `- create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
+    `- Material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
+    `- Thousands of qualified visitors: ${payload.proof_gate.thousands_of_qualified_visitors ? "yes" : "no"}`,
+    `- Measurable MCP sales: ${payload.proof_gate.measurable_mcp_sales ? "yes" : "no"}`,
+    "",
+    "## Top Events",
+    "",
+    "| Event | Count |",
+    "| --- | --- |",
+    table(payload.top.events),
+    "",
+    "## Top Tools",
+    "",
+    "| Tool | Count |",
+    "| --- | --- |",
+    table(payload.top.tools),
+    "",
+    "## Top SKUs",
+    "",
+    "| SKU | Count |",
+    "| --- | --- |",
+    table(payload.top.skus),
+    "",
+    "## Links",
+    "",
+    Object.entries(payload.links)
+      .map(([name, url]) => `- ${name}: ${url}`)
+      .join("\n"),
+    "",
+    "## Next Actions",
+    "",
+    payload.next_actions.map((item) => `- ${item}`).join("\n"),
+    "",
+  ].join("\n");
+}
+
 async function readAiSalesEvents(env: Env, date: string, limit: number): Promise<Array<Record<string, unknown>>> {
   const prefix = `${AI_SALES_EVENT_PREFIX}/${date}/`;
   const events: Array<Record<string, unknown>> = [];
@@ -2687,6 +2833,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/all-agent-capture.md",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
+  "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+  "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -2762,6 +2910,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/all-agent-capture.md": "Crawler-readable Packrift all-agent capture matrix and operating rules.",
   "/ai/mcp-adoption-kit.json": "Machine-readable Packrift MCP adoption kit with install snippets, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.",
   "/ai/mcp-adoption-kit.md": "Crawler-readable Packrift MCP adoption kit for developers, agents, marketplaces, and AI-commerce workflows.",
+  "/ai/mcp-usage-snapshot.json": "Machine-readable public aggregate usage snapshot for Packrift MCP discovery, tool calls, cart handoff, and proof-gate iteration.",
+  "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -2925,6 +3075,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
+  if (pathname === "/ai/mcp-usage-snapshot.json") return JSON.stringify(await mcpUsageSnapshotPayload(env), null, 2);
+  if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -2993,6 +3145,7 @@ function mcpManifestPayload() {
     prompts: PROMPTS.map((prompt) => prompt.name),
     all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+    mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   };
 }
 
@@ -3056,6 +3209,7 @@ function mcpMarketplaceDiscoveryPayload() {
       robots: "https://mcp.packrift.com/robots.txt",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     },
     signals: {
       category: "Business Tools",
@@ -3958,6 +4112,25 @@ app.get("/ai/mcp-adoption-kit.md", (c) =>
     ...RAW_HEADERS,
   })
 );
+
+app.get("/ai/mcp-usage-snapshot.json", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "1000", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(1000, requestedLimit)) : 1000;
+  return c.json(await mcpUsageSnapshotPayload(c.env, date, limit), 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-usage-snapshot.md", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "1000", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(1000, requestedLimit)) : 1000;
+  return c.body(mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(c.env, date, limit)), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
 
 app.get("/ai/mcp-cart-handoff-candidates.json", (c) =>
   c.json(cartHandoffCandidatesPayload(), 200, RAW_HEADERS)

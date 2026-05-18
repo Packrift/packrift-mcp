@@ -37,6 +37,7 @@ Use these as examples of exact product families that converted, not as universal
 - Use \`fit_item_then_prepare_cart\` when the buyer has item dimensions and needs the smallest safe package that can proceed to live checks. Use \`prepare_cart_handoff\` when a client needs a guarded sequence from selected SKU to live confirmation and stamped \`create_cart_url\` handoff.
 - [Machine-readable AI agent instructions](https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
 - [MCP adoption kit](https://mcp.packrift.com/ai/mcp-adoption-kit.json): install snippets, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules for new agents and developers
+- [MCP usage snapshot](https://mcp.packrift.com/ai/mcp-usage-snapshot.json): public aggregate first-party usage proof for MCP discovery, tool calls, cart handoff, and proof-gate iteration
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration
 - MCP product results include tracked product URLs, reorder URLs, quote URLs, copy-procurement-spec text, and cart URL candidates. Confirm live price and inventory before presenting a cart handoff.
