@@ -68,6 +68,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - `llms.txt`: https://mcp.packrift.com/llms.txt
 - `llms-full.txt`: https://mcp.packrift.com/llms-full.txt
 - MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- MCP Marketplace manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl

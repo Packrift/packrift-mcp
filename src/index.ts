@@ -2344,6 +2344,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/server-card.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
   "https://mcp.packrift.com/.well-known/glama.json",
+  "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
   "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
   "https://packrift.com/agents.md",
   "https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md",
@@ -2414,6 +2415,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/server-card.json": "Root Packrift MCP server discovery card.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
   "/.well-known/glama.json": "Glama remote connector claim file for the Packrift hosted MCP endpoint.",
+  "/.well-known/mcp-marketplace.json": "MCP Marketplace discovery manifest for Packrift MCP.",
   "/agents.md": "Root-domain Packrift exact-spec AI-agent instructions.",
   "/ai/packrift-ai-agent-instructions.md": "Machine-readable Packrift AI-agent instructions, exact-match policy, and handoff rules.",
   "/ai/packrift-exact-spec-packaging-catalog.md": "Human and crawler-readable exact-spec catalog overview.",
@@ -2599,6 +2601,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/server-card.json") return JSON.stringify(serverCard, null, 2);
   if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(serverCard, null, 2);
   if (pathname === "/.well-known/glama.json") return JSON.stringify(glamaConnectorClaim(), null, 2);
+  if (pathname === "/.well-known/mcp-marketplace.json") return JSON.stringify(mcpMarketplaceDiscoveryPayload(), null, 2);
   if (pathname === "/agents.md") return agentInstructionsMd;
   if (pathname === "/ai/packrift-ai-agent-instructions.md") return agentInstructionsMd;
   if (pathname === "/ai/crawler-safe-purchase-paths.md") return crawlerSafePurchasePathsMarkdown();
@@ -2668,6 +2671,68 @@ function mcpManifestPayload() {
     tool_count: TOOLS.length,
     tools: TOOLS.map((tool) => tool.schema.name),
     prompts: PROMPTS.map((prompt) => prompt.name),
+  };
+}
+
+function mcpMarketplaceDiscoveryPayload() {
+  return {
+    schema_version: "1",
+    name: "Packrift MCP",
+    description:
+      "Hosted MCP server for exact-spec packaging search with live price, stock, shipping, and attributed cart handoff.",
+    url: "https://mcp.packrift.com",
+    contact_email: "farhan@packrift.com",
+    mcp_server: {
+      name: "packrift",
+      version: serverCard.version,
+      transport: "streamable-http",
+      url: "https://mcp.packrift.com/mcp",
+      auth: "none",
+      install: {
+        claude_code: "claude mcp add --transport http packrift https://mcp.packrift.com/mcp",
+        codex: "codex mcp add packrift --url https://mcp.packrift.com/mcp",
+        claude_desktop_config: {
+          mcpServers: {
+            packrift: {
+              url: "https://mcp.packrift.com/mcp",
+            },
+          },
+        },
+      },
+      tools: TOOLS.map((tool) => ({
+        name: tool.schema.name,
+        description: tool.schema.description,
+      })),
+    },
+    discovery: {
+      llms_txt: "https://mcp.packrift.com/llms.txt",
+      llms_full_txt: "https://mcp.packrift.com/llms-full.txt",
+      manifest: "https://mcp.packrift.com/manifest",
+      resources: "https://mcp.packrift.com/resources",
+      health: "https://mcp.packrift.com/health",
+      server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      launch_guide: "https://github.com/Packrift/packrift-mcp/blob/main/LAUNCHGUIDE.md",
+      sitemap: "https://mcp.packrift.com/sitemap.xml",
+      robots: "https://mcp.packrift.com/robots.txt",
+    },
+    signals: {
+      category: "Business Tools",
+      tags: [
+        "mcp",
+        "ecommerce",
+        "packaging",
+        "procurement",
+        "shopify",
+        "inventory",
+        "shipping",
+        "cart-handoff",
+        "remote-mcp",
+        "ai-commerce",
+      ],
+      tool_count: TOOLS.length,
+      resource_count: MCP_RESOURCES.length,
+      hosted_endpoint_requires_auth: false,
+    },
   };
 }
 
@@ -3429,6 +3494,15 @@ app.get("/.well-known/glama.json", (c) =>
     c,
     "glama.json",
     JSON.stringify(glamaConnectorClaim(), null, 2),
+    "application/json; charset=utf-8"
+  )
+);
+
+app.get("/.well-known/mcp-marketplace.json", (c) =>
+  cachedStaticTextResponse(
+    c,
+    "mcp-marketplace.json",
+    JSON.stringify(mcpMarketplaceDiscoveryPayload(), null, 2),
     "application/json; charset=utf-8"
   )
 );
