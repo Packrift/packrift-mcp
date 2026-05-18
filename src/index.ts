@@ -1772,6 +1772,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     (bySource.mcp_usage_snapshot ?? 0) +
     (bySource.mcp_buyer_use_cases ?? 0) +
     (bySource.browser_agent_bridge ?? 0) +
+    (bySource.mcp_directory_refresh ?? 0) +
     (bySource.mcp_cart_handoff_candidates ?? 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + directAgentResourceEvents;
   return {
@@ -1804,6 +1805,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,
       buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
       browser_agent_bridge_resource_events: bySource.browser_agent_bridge ?? 0,
+      directory_refresh_resource_events: bySource.mcp_directory_refresh ?? 0,
       cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
       sources: bySource,
@@ -1831,6 +1833,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+      directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
@@ -1871,6 +1874,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
+    `- Directory refresh resource events: ${payload.counts.directory_refresh_resource_events}`,
     `- Cart-handoff candidate resource events: ${payload.counts.cart_handoff_candidate_resource_events}`,
     "",
     "## Proof Gate",
