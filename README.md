@@ -247,6 +247,19 @@ npm run check:static-availability -- --samples-per-ua 200 --concurrency 30
 
 This writes JSON and Markdown evidence under `outputs/static-availability/`. The funnel snapshot also runs this check and reports failure rate, 5xx rate, content validation, and p95 latency.
 
+Refresh the full MCP funnel proof, including first-party Shopify order stitching
+for MCP cart attributes:
+
+```sh
+npm run snapshot:funnel
+```
+
+The snapshot reads the token-protected `https://mcp.packrift.com/admin/mcp-orders`
+endpoint, scans recent Shopify orders for MCP cart attributes such as
+`packrift_mcp_key`, `packrift_ai_id`, and `utm_source=chatgpt-mcp`, and reports
+attributed order count and revenue beside GA4 cart-landing evidence. The admin
+endpoint requires `MCP_STATS_TOKEN` and does not expose customer PII.
+
 Refresh MCP directory evidence:
 
 ```sh
