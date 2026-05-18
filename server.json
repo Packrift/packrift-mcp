@@ -4,7 +4,7 @@
   "title": "Packrift MCP",
   "description": "Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
   "version": "0.2.10",
-  "websiteUrl": "https://packrift.com/pages/agents",
+  "websiteUrl": "https://packrift.com/pages/packrift-ai-agent-instructions",
   "repository": {
     "url": "https://github.com/Packrift/packrift-mcp",
     "source": "github",

@@ -41,7 +41,7 @@ If your client uses a UI instead of JSON, add a remote MCP server named `packrif
 
 ## Public Links
 
-- Documentation: https://packrift.com/pages/agents
+- Documentation: https://packrift.com/pages/packrift-ai-agent-instructions
 - Source: https://github.com/Packrift/packrift-mcp
 - Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
 - Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
