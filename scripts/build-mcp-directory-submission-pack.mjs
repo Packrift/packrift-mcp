@@ -99,6 +99,7 @@ const LIVE_PROOF_URLS = {
   mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
   mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+  browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
 };
 
 async function fetchJson(url) {
@@ -233,6 +234,7 @@ function targetRows(distribution, copy) {
       mcp_adoption_kit: LIVE_PROOF_URLS.mcp_adoption_kit,
       mcp_usage_snapshot: LIVE_PROOF_URLS.mcp_usage_snapshot,
       mcp_buyer_use_cases: LIVE_PROOF_URLS.mcp_buyer_use_cases,
+      browser_agent_bridge: LIVE_PROOF_URLS.browser_agent_bridge,
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     },
   }));
@@ -342,6 +344,14 @@ function liveProofDigest(liveProof) {
       release: liveProof.mcp_buyer_use_cases.value?.release ?? null,
       use_cases_count: liveProof.mcp_buyer_use_cases.value?.use_cases?.length ?? null,
       canonical_endpoint: liveProof.mcp_buyer_use_cases.value?.canonical_endpoint ?? null,
+    },
+    browser_agent_bridge: {
+      ok: liveProof.browser_agent_bridge.ok,
+      status: liveProof.browser_agent_bridge.status,
+      url: liveProof.browser_agent_bridge.url,
+      release: liveProof.browser_agent_bridge.value?.release ?? null,
+      workflows_count: liveProof.browser_agent_bridge.value?.workflows?.length ?? null,
+      canonical_endpoint: liveProof.browser_agent_bridge.value?.canonical_endpoint ?? null,
     },
   };
 }

@@ -160,13 +160,14 @@ async function officialRegistryCheck() {
 }
 
 async function liveMcpCheck() {
-  const [healthResult, cartResult, agentCaptureResult, adoptionKitResult, usageSnapshotResult, buyerUseCasesResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
+  const [healthResult, cartResult, agentCaptureResult, adoptionKitResult, usageSnapshotResult, buyerUseCasesResult, browserAgentBridgeResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
     fetchText("https://mcp.packrift.com/health"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
+    fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("prompts/list"),
@@ -177,6 +178,7 @@ async function liveMcpCheck() {
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
+  const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
@@ -201,6 +203,7 @@ async function liveMcpCheck() {
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R01" &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
+      browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
@@ -209,6 +212,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
       ? "pass"
       : "fail",
@@ -224,6 +229,7 @@ async function liveMcpCheck() {
       usage_snapshot_status: usageSnapshot?.status ?? null,
       buyer_use_cases_release: buyerUseCases?.release ?? null,
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
+      browser_agent_bridge_release: browserAgentBridge?.release ?? null,
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
         tools_count: toolNames.length,

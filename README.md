@@ -89,6 +89,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
+- Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
+- Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
