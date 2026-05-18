@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import type { Env } from "./shopify.js";
+import { shopifyQuery, type Env } from "./shopify.js";
 import { serverCard } from "./server-card.js";
 import { llmsTxt } from "./llms-content.js";
 import { llmsFullTxt } from "./llms-full-content.js";
@@ -567,6 +567,7 @@ const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TEL
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
 const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
+const MCP_ORDER_ATTRIBUTION_RELEASE = "PACKRIFT-MCP-ORDER-ATTRIBUTION-R01";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
 const AI_SALES_EVENT_PREFIX = "events/ai-sales";
@@ -1914,6 +1915,219 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     payload.next_actions.map((item) => `- ${item}`).join("\n"),
     "",
   ].join("\n");
+}
+
+interface ShopifyOrderMoneySet {
+  shopMoney?: { amount?: string | number | null; currencyCode?: string | null } | null;
+}
+
+interface ShopifyMcpOrderNode {
+  id: string;
+  name: string;
+  createdAt: string;
+  processedAt?: string | null;
+  displayFinancialStatus?: string | null;
+  totalPriceSet?: ShopifyOrderMoneySet | null;
+  currentTotalPriceSet?: ShopifyOrderMoneySet | null;
+  customAttributes?: Array<{ key: string; value?: string | null }> | null;
+  tags?: string[] | null;
+  lineItems?: {
+    edges?: Array<{
+      node?: {
+        sku?: string | null;
+        title?: string | null;
+        quantity?: number | null;
+        discountedTotalSet?: ShopifyOrderMoneySet | null;
+        variant?: {
+          id?: string | null;
+          product?: { handle?: string | null } | null;
+        } | null;
+      } | null;
+    }>;
+  } | null;
+}
+
+interface ShopifyMcpOrdersResponse {
+  orders: {
+    edges: Array<{ cursor: string; node: ShopifyMcpOrderNode }>;
+    pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+  };
+}
+
+const SHOPIFY_MCP_ORDERS_QUERY = `
+  query McpAttributedOrders($first: Int!, $after: String, $query: String!) {
+    orders(first: $first, after: $after, reverse: true, sortKey: CREATED_AT, query: $query) {
+      edges {
+        cursor
+        node {
+          id
+          name
+          createdAt
+          processedAt
+          displayFinancialStatus
+          tags
+          customAttributes { key value }
+          totalPriceSet { shopMoney { amount currencyCode } }
+          currentTotalPriceSet { shopMoney { amount currencyCode } }
+          lineItems(first: 25) {
+            edges {
+              node {
+                sku
+                title
+                quantity
+                discountedTotalSet { shopMoney { amount currencyCode } }
+                variant { id product { handle } }
+              }
+            }
+          }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+function isoDateDaysAgo(days: number): string {
+  const date = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return date.toISOString().slice(0, 10);
+}
+
+function moneyAmount(set: ShopifyOrderMoneySet | null | undefined): number {
+  const raw = set?.shopMoney?.amount;
+  const value = typeof raw === "number" ? raw : Number(raw ?? 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function moneyCurrency(set: ShopifyOrderMoneySet | null | undefined): string {
+  return safeEventText(set?.shopMoney?.currencyCode, 12) || "USD";
+}
+
+function orderAttributeMap(order: ShopifyMcpOrderNode): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  for (const attr of order.customAttributes ?? []) {
+    const key = safeEventText(attr.key, 120);
+    if (!key) continue;
+    attrs[key] = safeEventText(attr.value, 500);
+  }
+  return attrs;
+}
+
+function mcpOrderAttribution(attrs: Record<string, string>) {
+  const get = (key: string) => attrs[key] || attrs[`_${key}`] || "";
+  return {
+    packrift_ai_id: get("packrift_packrift_ai_id") || get("packrift_ai_id"),
+    ai_commerce_id: get("packrift_ai_commerce_id") || get("ai_commerce_id"),
+    mcp_key: get("packrift_mcp_key") || get("mcp_key"),
+    mcp_journey: get("packrift_mcp_journey") || get("mcp_journey"),
+    mcp_result_set: get("packrift_mcp_result_set") || get("mcp_result_set"),
+    match_type: get("packrift_match_type") || get("match_type"),
+    utm_source: get("packrift_utm_source") || get("utm_source"),
+    utm_medium: get("packrift_utm_medium") || get("utm_medium"),
+    utm_campaign: get("packrift_utm_campaign") || get("utm_campaign"),
+    utm_content: get("packrift_utm_content") || get("utm_content"),
+    utm_term: get("packrift_utm_term") || get("utm_term"),
+  };
+}
+
+function orderHasMcpAttribution(order: ShopifyMcpOrderNode): boolean {
+  const attrs = orderAttributeMap(order);
+  const attribution = mcpOrderAttribution(attrs);
+  const text = [
+    ...Object.keys(attrs),
+    ...Object.values(attrs),
+    ...(order.tags ?? []),
+    ...Object.values(attribution),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return (
+    attribution.utm_source === "chatgpt-mcp" ||
+    attribution.utm_medium === "mcp_tool" ||
+    attribution.utm_campaign === "create_cart_url" ||
+    Boolean(attribution.mcp_key || attribution.mcp_journey || attribution.packrift_ai_id || attribution.ai_commerce_id) ||
+    /chatgpt-mcp|mcp_tool|create_cart_url|packrift_mcp|mcp_key|mcp_journey|ref=mcp/.test(text)
+  );
+}
+
+function summarizedLineItems(order: ShopifyMcpOrderNode) {
+  return (order.lineItems?.edges ?? [])
+    .map((edge) => edge.node)
+    .filter(Boolean)
+    .map((line) => ({
+      sku: safeEventText(line?.sku, 80) || null,
+      title: safeEventText(line?.title, 180) || null,
+      quantity: typeof line?.quantity === "number" ? line.quantity : null,
+      variant_id: safeEventText(line?.variant?.id, 120) || null,
+      handle: safeEventText(line?.variant?.product?.handle, 180) || null,
+      revenue: moneyAmount(line?.discountedTotalSet),
+      currency: moneyCurrency(line?.discountedTotalSet),
+    }));
+}
+
+async function shopifyMcpOrderAttributionPayload(env: Env, days: number, limit: number) {
+  const boundedDays = Math.max(1, Math.min(365, Math.floor(days)));
+  const boundedLimit = Math.max(1, Math.min(500, Math.floor(limit)));
+  const query = `created_at:>=${isoDateDaysAgo(boundedDays)}`;
+  let after: string | null = null;
+  let scannedOrderCount = 0;
+  const attributedOrders: Array<Record<string, unknown>> = [];
+
+  while (scannedOrderCount < boundedLimit) {
+    const first = Math.min(100, boundedLimit - scannedOrderCount);
+    const data: ShopifyMcpOrdersResponse = await shopifyQuery<ShopifyMcpOrdersResponse>(env, SHOPIFY_MCP_ORDERS_QUERY, {
+      first,
+      after,
+      query,
+    });
+    const edges = data.orders.edges ?? [];
+    if (edges.length === 0) break;
+
+    for (const edge of edges) {
+      const order = edge.node;
+      scannedOrderCount += 1;
+      if (orderHasMcpAttribution(order)) {
+        const attrs = orderAttributeMap(order);
+        const attribution = mcpOrderAttribution(attrs);
+        const revenueSet = order.currentTotalPriceSet ?? order.totalPriceSet;
+        attributedOrders.push({
+          id: order.id,
+          name: order.name,
+          created_at: order.createdAt,
+          processed_at: order.processedAt ?? null,
+          financial_status: order.displayFinancialStatus ?? null,
+          revenue: moneyAmount(revenueSet),
+          currency: moneyCurrency(revenueSet),
+          attribution,
+          line_items: summarizedLineItems(order),
+        });
+      }
+      if (scannedOrderCount >= boundedLimit) break;
+    }
+
+    if (!data.orders.pageInfo.hasNextPage || !data.orders.pageInfo.endCursor) break;
+    after = data.orders.pageInfo.endCursor;
+  }
+
+  const attributedRevenue = attributedOrders.reduce((sum, order) => sum + moneyAmount({ shopMoney: { amount: order.revenue as number } }), 0);
+  const currency =
+    safeEventText(attributedOrders.find((order) => safeEventText(order.currency, 12))?.currency, 12) || "USD";
+  return {
+    ok: true,
+    release: MCP_ORDER_ATTRIBUTION_RELEASE,
+    generated_at: new Date().toISOString(),
+    query,
+    lookback_days: boundedDays,
+    scan_limit: boundedLimit,
+    scanned_order_count: scannedOrderCount,
+    attributed_order_count: attributedOrders.length,
+    attributed_revenue: Number(attributedRevenue.toFixed(2)),
+    currency,
+    proof_gate: {
+      first_party_mcp_orders_seen: attributedOrders.length > 0,
+      first_party_mcp_revenue_seen: attributedRevenue > 0,
+    },
+    orders: attributedOrders,
+  };
 }
 
 async function readAiSalesEvents(env: Env, date: string, limit: number): Promise<Array<Record<string, unknown>>> {
@@ -4716,6 +4930,35 @@ app.get("/events/ai-sales/summary", async (c) => {
     200,
     aiSalesCorsHeaders(c.req.header("Origin"))
   );
+});
+
+app.get("/admin/mcp-orders", async (c) => {
+  const url = new URL(c.req.url);
+  const token = url.searchParams.get("token") ?? "";
+  if (!c.env.MCP_STATS_TOKEN) {
+    return c.json({ ok: false, error: "stats_token_not_configured" }, 503, { "Cache-Control": "no-store" });
+  }
+  if (token !== c.env.MCP_STATS_TOKEN) {
+    return c.json({ ok: false, error: "unauthorized" }, 401, { "Cache-Control": "no-store" });
+  }
+  if (!c.env.SHOPIFY_PACKRIFT_TOKEN) {
+    return c.json({ ok: false, error: "shopify_token_not_configured" }, 503, { "Cache-Control": "no-store" });
+  }
+
+  const requestedDays = Number.parseInt(url.searchParams.get("days") ?? "90", 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "250", 10);
+  const days = Number.isFinite(requestedDays) ? Math.max(1, Math.min(365, requestedDays)) : 90;
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(500, requestedLimit)) : 250;
+  try {
+    return c.json(await shopifyMcpOrderAttributionPayload(c.env, days, limit), 200, { "Cache-Control": "no-store" });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json(
+      { ok: false, release: MCP_ORDER_ATTRIBUTION_RELEASE, error: safeEventText(message, 500) },
+      502,
+      { "Cache-Control": "no-store" }
+    );
+  }
 });
 
 app.get("/admin/mcp-stats", async (c) => {

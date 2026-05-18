@@ -37,6 +37,7 @@ const snapshot = {
   },
   proof_metrics: null,
   first_party_mcp: null,
+  first_party_orders: null,
   ga4: null,
   distribution: null,
   live_discovery: null,
@@ -52,6 +53,12 @@ try {
   snapshot.first_party_mcp = await buildFirstPartyMcpSummary();
 } catch (error) {
   snapshot.first_party_mcp = { ok: false, error: error.message || String(error) };
+}
+
+try {
+  snapshot.first_party_orders = await buildFirstPartyOrderSummary();
+} catch (error) {
+  snapshot.first_party_orders = { ok: false, error: error.message || String(error) };
 }
 
 try {
@@ -96,6 +103,8 @@ try {
     qualified_external_mcp_session_starts: snapshot.proof_metrics?.qualified_external_mcp_session_starts ?? null,
     qualified_external_cart_landings: snapshot.proof_metrics?.qualified_external_cart_landings ?? null,
     qualified_external_cart_revenue: snapshot.proof_metrics?.qualified_external_cart_revenue ?? null,
+    first_party_mcp_orders: snapshot.first_party_orders?.attributed_order_count ?? null,
+    first_party_mcp_order_revenue: snapshot.first_party_orders?.attributed_revenue ?? null,
     ga4_mcp_cart_url_landing_events: snapshot.ga4?.mcp_cart_url_landings?.event_count ?? null,
     ga4_realtime_mcp_cart_events: snapshot.ga4?.realtime_mcp_cart_events?.event_count ?? null,
     distribution_counts: snapshot.distribution?.counts ?? null,
@@ -175,6 +184,37 @@ async function buildFirstPartyMcpSummary() {
     top_skus: parsed.by_sku || [],
     top_bot_families: parsed.by_bot_family || [],
     traffic_quality: summarizeFirstPartyTrafficQuality(parsed),
+  };
+}
+
+async function buildFirstPartyOrderSummary() {
+  const token = process.env.MCP_STATS_TOKEN || "";
+  if (!token) {
+    return { ok: false, error: "MCP_STATS_TOKEN is not available in the local environment." };
+  }
+  const url = new URL("https://mcp.packrift.com/admin/mcp-orders");
+  url.searchParams.set("days", String(args["order-days"] || args["ga4-lookback-days"] || "90"));
+  url.searchParams.set("limit", String(args["order-limit"] || "250"));
+  url.searchParams.set("token", token);
+  const startedAt = Date.now();
+  const response = await fetch(url, {
+    headers: { "User-Agent": "Packrift-MCP-Funnel-Snapshot/1.0" },
+    signal: AbortSignal.timeout(Number(args["order-timeout-ms"] || 60000)),
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    return {
+      ok: false,
+      http_status: response.status,
+      latency_ms: Date.now() - startedAt,
+      error: body.slice(0, 500),
+    };
+  }
+  const parsed = JSON.parse(body);
+  return {
+    ...parsed,
+    latency_ms: Date.now() - startedAt,
+    orders: Array.isArray(parsed.orders) ? parsed.orders.slice(0, 25) : [],
   };
 }
 
@@ -690,12 +730,15 @@ function matchesExternalCrawler(text) {
 
 function applyProofGate(value) {
   const firstParty = value.first_party_mcp || {};
+  const firstPartyOrders = value.first_party_orders || {};
   const ga4 = value.ga4 || {};
   const distribution = value.distribution || {};
   const totalMcpSessions = Number(ga4.ai_mcp_events?.mcp_specific_session_start_events || 0);
   const qualifiedExternalMcpSessions = Number(ga4.ai_mcp_events?.traffic_quality?.qualified_external_session_starts || 0);
   const qualifiedExternalCartLandings = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_events || 0);
   const qualifiedExternalCartRevenue = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_revenue || 0);
+  const firstPartyMcpOrders = Number(firstPartyOrders.attributed_order_count || 0);
+  const firstPartyMcpOrderRevenue = Number(firstPartyOrders.attributed_revenue || 0);
   const excludedInternalOrSyntheticEvents =
     Number(firstParty.traffic_quality?.excluded_internal_or_synthetic_events || 0)
     + Number(ga4.ai_mcp_events?.traffic_quality?.excluded_internal_or_synthetic_events || 0)
@@ -711,13 +754,15 @@ function applyProofGate(value) {
     qualified_external_cart_landings: qualifiedExternalCartLandings,
     raw_stamped_mcp_cart_revenue: Number(ga4.mcp_cart_url_landings?.revenue || 0),
     qualified_external_cart_revenue: qualifiedExternalCartRevenue,
+    first_party_mcp_orders: firstPartyMcpOrders,
+    first_party_mcp_order_revenue: firstPartyMcpOrderRevenue,
     excluded_internal_or_synthetic_events: excludedInternalOrSyntheticEvents,
     self_generated_distribution_events: selfGeneratedDistributionEvents,
   };
   value.proof_gate = {
     thousands_of_qualified_visitors: qualifiedExternalMcpSessions >= 1000,
     stamped_mcp_cart_landings: qualifiedExternalCartLandings > 0,
-    measurable_mcp_sales: qualifiedExternalCartRevenue > 0,
+    measurable_mcp_sales: qualifiedExternalCartRevenue > 0 || firstPartyMcpOrderRevenue > 0,
     mcp_tool_usage_is_material: Number(firstParty.total_tool_calls || 0) >= 50,
     distribution_core_live: Number(distribution.counts?.pass || 0) >= 2 && Number(distribution.counts?.fail || 0) === 0,
     llms_full_static_availability: Boolean(value.static_availability?.ok)
@@ -737,6 +782,7 @@ function writeArtifacts(value) {
 
 function markdownReport(value) {
   const fp = value.first_party_mcp || {};
+  const orders = value.first_party_orders || {};
   const ga4 = value.ga4 || {};
   const cart = ga4.mcp_cart_url_landings || {};
   const dist = value.distribution || {};
@@ -759,7 +805,7 @@ function markdownReport(value) {
     "| --- | --- | --- |",
     `| Thousands of qualified MCP visitors | ${yesNo(value.proof_gate.thousands_of_qualified_visitors)} | ${proofMetrics.qualified_external_mcp_session_starts ?? 0} qualified external MCP session_start events (${proofMetrics.raw_mcp_specific_session_starts ?? 0} raw MCP-specific) |`,
     `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${proofMetrics.qualified_external_cart_landings ?? 0} qualified external cart landings (${proofMetrics.raw_stamped_mcp_cart_landings ?? 0} raw stamped) |`,
-    `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)} qualified external MCP cart revenue ($${numberValue(proofMetrics.raw_stamped_mcp_cart_revenue).toFixed(2)} raw stamped) |`,
+    `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)} qualified GA4 cart revenue; ${proofMetrics.first_party_mcp_orders ?? 0} first-party attributed orders / $${numberValue(proofMetrics.first_party_mcp_order_revenue).toFixed(2)} |`,
     `| Material MCP tool usage | ${yesNo(value.proof_gate.mcp_tool_usage_is_material)} | ${fp.total_tool_calls ?? 0} first-party MCP tool calls for ${fp.date ?? "selected date"} |`,
     `| Distribution core live | ${yesNo(value.proof_gate.distribution_core_live)} | ${dist.counts ? `${dist.counts.pass} pass, ${dist.counts.pending ?? 0} pending, ${dist.counts.stale} stale, ${dist.counts.blocked} blocked, ${dist.counts.fail} fail` : "not checked"} |`,
     `| llms-full static availability | ${yesNo(value.proof_gate.llms_full_static_availability)} | ${availability.total_fetches ?? 0} fetches, ${percentValue(availability.failed_fetch_rate)} failure rate, ${percentValue(availability.status_5xx_rate)} 5xx rate |`,
@@ -777,6 +823,14 @@ function markdownReport(value) {
     `- Cart clicks: ${fp.cart_clicks ?? 0}`,
     `- AI corpus clicks: ${fp.ai_corpus_clicks ?? 0}`,
     `- SKU page views: ${fp.sku_page_views ?? 0}`,
+    "",
+    "## First-Party MCP Orders",
+    "",
+    `- Status: ${orders.ok == null ? "not checked" : yesNo(orders.ok)}`,
+    `- Lookback: ${orders.lookback_days ?? "not set"} days`,
+    `- Shopify orders scanned: ${orders.scanned_order_count ?? 0}`,
+    `- MCP-attributed orders: ${orders.attributed_order_count ?? 0}`,
+    `- MCP-attributed order revenue: $${numberValue(orders.attributed_revenue).toFixed(2)} ${orders.currency ?? ""}`.trim(),
     "",
     "## Traffic Quality",
     "",
