@@ -46,7 +46,7 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 8. Cart candidates and final cart URLs use \`utm_source=chatgpt-mcp\`, \`utm_medium=mcp_tool\`, and \`utm_campaign=create_cart_url\` so GA4 can isolate MCP-driven cart landings.
 9. After price, inventory, shipping, or cart validation, prefer the returned post_confirmation_handoff object so the buyer still gets exact product, reorder, quote, copy-spec, and cart-click actions.
 10. Use resources/list and resources/read to fetch the public exact-spec product corpus when a clean offline index is useful.
-11. Use prompts/list and prompts/get when a client wants a native Packrift exact-spec search, reorder, cart handoff, no-match quote, or procurement-spec prompt.
+11. Use prompts/list and prompts/get when a client wants a native Packrift exact-spec search, item-fit-to-cart workflow, cart candidate review, reorder, no-match quote, or procurement-spec prompt.
 
 ## Machine-readable corpus files
 

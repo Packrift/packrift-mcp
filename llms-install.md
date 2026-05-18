@@ -39,6 +39,44 @@ If your client uses a UI instead of JSON, add a remote MCP server named `packrif
 - Recommend packaging options from item dimensions, weight, and shipping use case.
 - Create Packrift cart URLs for agent-assisted purchasing workflows.
 
+## First Tool Calls To Try
+
+Use these after adding the remote MCP server. They are designed to exercise the measured path from discovery to a stamped cart handoff.
+
+1. List tools and prompts:
+
+```json
+{"jsonrpc":"2.0","id":"tools","method":"tools/list"}
+```
+
+```json
+{"jsonrpc":"2.0","id":"prompts","method":"prompts/list"}
+```
+
+2. Review a ready cart candidate:
+
+```json
+{"jsonrpc":"2.0","id":"candidates","method":"tools/call","params":{"name":"get_cart_handoff_candidates","arguments":{"sku":"1066","limit":1}}}
+```
+
+3. Confirm live facts before cart handoff:
+
+```json
+{"jsonrpc":"2.0","id":"price","method":"tools/call","params":{"name":"get_pricing","arguments":{"variant_ids":["53472879935856"],"quantity":1}}}
+```
+
+```json
+{"jsonrpc":"2.0","id":"inventory","method":"tools/call","params":{"name":"check_inventory","arguments":{"variant_ids":["53472879935856"]}}}
+```
+
+4. Create the measured cart landing URL only after the buyer confirms exact SKU and quantity:
+
+```json
+{"jsonrpc":"2.0","id":"cart","method":"tools/call","params":{"name":"create_cart_url","arguments":{"items":[{"variant_id":"53472879935856","qty":1}],"selected_sku":"1066","selected_handle":"10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle","match_type":"cart_handoff_candidate","source_context":"exact_spec_ai_agent","journey_id":"mcp_1066_53472879935856","result_set_id":"mcp_cart_handoff_candidates","utm_term":"1066"}}}
+```
+
+The returned `url` is the MCP cart landing shim. It carries `ref=mcp`, `utm_source=chatgpt-mcp`, `utm_medium=mcp_tool`, and `utm_campaign=create_cart_url`, then redirects to the final Packrift cart.
+
 ## Public Links
 
 - Documentation: https://packrift.com/pages/packrift-ai-agent-instructions

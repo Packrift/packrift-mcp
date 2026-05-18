@@ -101,6 +101,8 @@ export const serverCard = {
   ],
   prompts: [
     "find_exact_packaging_spec",
+    "fit_item_then_prepare_cart",
+    "review_cart_handoff_candidates",
     "reorder_packrift_sku",
     "prepare_cart_handoff",
     "request_bulk_quote_for_no_match",

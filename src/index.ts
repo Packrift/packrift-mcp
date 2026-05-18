@@ -164,6 +164,28 @@ const PROMPTS: PromptDef[] = [
       "Prepare a Packrift MCP cart handoff for SKU {{sku}} and quantity {{quantity}}. First call get_cart_handoff_candidates with the exact SKU to retrieve the approved variant and create_cart_url arguments. Then call get_product, get_pricing, and check_inventory for live confirmation. Only after the exact SKU, variant, live price, inventory, and buyer-selected quantity are confirmed, call create_cart_url with MCP attribution. Return the stamped cart URL plus the measured product, reorder, quote, and copy-procurement-spec fallback actions. If the requested SKU is not an exact AI_APPROVE match, do not create a cart URL; call explain_no_exact_match or get_bulk_quote_link instead.",
   },
   {
+    name: "fit_item_then_prepare_cart",
+    description: "Find packaging for a buyer's item dimensions, confirm live facts, then prepare a stamped cart handoff.",
+    arguments: [
+      { name: "item_dimensions", description: "Item length x width x height in inches, such as 9 x 4 x 3.", required: true },
+      { name: "weight", description: "Optional item weight and unit, such as 2 lb." },
+      { name: "use_case", description: "Shipping use case such as fragile ecommerce, books, apparel, labels, or long narrow items." },
+      { name: "quantity", description: "Buyer-selected quantity. Default to 1 until confirmed." },
+    ],
+    template:
+      "Find packaging for an item with dimensions {{item_dimensions}}, weight {{weight}}, use case {{use_case}}, and desired quantity {{quantity}}. Start with find_packaging_for_item using the item dimensions and use case. For the top AI_APPROVE fit, call get_product, get_pricing, check_inventory, and get_shipping_estimate when destination data is available. If the buyer confirms the exact SKU and quantity, call create_cart_url so the returned URL includes ref=mcp plus chatgpt-mcp / mcp_tool / create_cart_url attribution. If no exact safe fit exists, call explain_no_exact_match and get_bulk_quote_link instead of forcing a substitute.",
+  },
+  {
+    name: "review_cart_handoff_candidates",
+    description: "Explore priority SKUs that already have ready create_cart_url arguments for measured MCP cart testing.",
+    arguments: [
+      { name: "family", description: "Optional family filter such as boxes, mailers, labels, tape, poly_bags, stretch_film, strapping, tags, void_fill, or envelopes." },
+      { name: "limit", description: "Number of candidates to review. Default to 10." },
+    ],
+    template:
+      "Review Packrift MCP cart handoff candidates for family {{family}} with limit {{limit}}. Call get_cart_handoff_candidates, choose one exact AI_APPROVE candidate, then call get_product, get_pricing, and check_inventory. Only after confirmation, call create_cart_url with the candidate's create_cart_url_arguments. Return the stamped MCP cart landing URL, final Packrift cart permalink, measured product/reorder/quote links, and no-match policy.",
+  },
+  {
     name: "request_bulk_quote_for_no_match",
     description: "Route a buyer to quote recovery when Packrift has no exact approved match.",
     arguments: [
