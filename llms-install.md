@@ -17,6 +17,15 @@ Use this when you want a fast, copy-ready first test after installing Packrift M
 
 The adoption kit includes remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.
 
+## Browser-Agent Bridge
+
+Use this when an agent can read public URLs with a browser but cannot install MCP directly:
+
+- JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
+- Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
+
+The bridge is read-first and MCP-confirmed. Browser agents can crawl Packrift resources for discovery, but live price, inventory, shipping, exact product detail, and cart handoff should still come from `https://mcp.packrift.com/mcp`.
+
 ## Remote MCP Config
 
 Use this configuration in MCP clients that support remote HTTP or Streamable HTTP servers:

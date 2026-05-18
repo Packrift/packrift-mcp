@@ -39,7 +39,7 @@ Use these as examples of exact product families that converted, not as universal
 - [MCP adoption kit](https://mcp.packrift.com/ai/mcp-adoption-kit.json): install snippets, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules for new agents and developers
 - [MCP usage snapshot](https://mcp.packrift.com/ai/mcp-usage-snapshot.json): public aggregate first-party usage proof for MCP discovery, tool calls, cart handoff, and proof-gate iteration
 - [MCP buyer use cases](https://mcp.packrift.com/ai/mcp-buyer-use-cases.json): buyer-facing exact SKU reorder, fit-by-dimensions, mailer selection, label procurement, no-match quote recovery, and procurement handoff workflows
-- [Browser-agent bridge](https://mcp.packrift.com/ai/browser-agent-bridge.json): read-first path for Browserbase Browse-style, browser-use, Playwright, Computer Use, CUA, and other browser agents that must confirm live commerce facts through MCP
+- [Browser-agent bridge](https://mcp.packrift.com/ai/browser-agent-bridge.json): read-first bridge for Browse-style, browser-use, Playwright, CUA, and other browser agents that must route live price, inventory, and cart handoff through MCP
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration
 - MCP product results include tracked product URLs, reorder URLs, quote URLs, copy-procurement-spec text, and cart URL candidates. Confirm live price and inventory before presenting a cart handoff.

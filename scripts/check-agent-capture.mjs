@@ -81,6 +81,10 @@ function hasAll(text, needles) {
   return needles.every((needle) => text.includes(needle));
 }
 
+function hasResourceUri(resourceUris, path) {
+  return resourceUris.has(`${BASE_URL}${path}`) || resourceUris.has(`https://mcp.packrift.com${path}`);
+}
+
 function markdownReport(payload) {
   const rows = payload.checks
     .map((row) => `| ${row.name} | ${row.ok ? "pass" : "fail"} | ${row.detail || row.status || row.url || ""} |`)
@@ -136,6 +140,7 @@ async function main() {
     "ai_product_corpus",
     "measured_handoff_directory",
     "cart_handoff_candidates",
+    "browser_agent_bridge",
     "browserbase_browse_candidate",
     "mcp_directory_refreshes",
     "search_and_answer_crawlers",
@@ -184,19 +189,19 @@ async function main() {
     check("health still current", healthResult.value?.tools_count >= 14 && healthResult.value?.resources_count >= 70, {
       detail: `tools=${healthResult.value?.tools_count ?? 0}, resources=${healthResult.value?.resources_count ?? 0}`,
     }),
-    check("resources/list advertises capture routes", resourceUris.has(jsonUrl) && resourceUris.has(mdUrl), {
+    check("resources/list advertises capture routes", hasResourceUri(resourceUris, "/ai/all-agent-capture.json") && hasResourceUri(resourceUris, "/ai/all-agent-capture.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises adoption kit", resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.md`), {
+    check("resources/list advertises adoption kit", hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.json") && hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises usage snapshot", resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-usage-snapshot.md`), {
+    check("resources/list advertises usage snapshot", hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises buyer use cases", resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-buyer-use-cases.md`), {
+    check("resources/list advertises buyer use cases", hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.json") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises browser-agent bridge", resourceUris.has(`${BASE_URL}/ai/browser-agent-bridge.json`) && resourceUris.has(`${BASE_URL}/ai/browser-agent-bridge.md`), {
+    check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {
       detail: `resources=${resources.length}`,
     }),
   ];
