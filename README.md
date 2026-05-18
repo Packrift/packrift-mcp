@@ -85,6 +85,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
 - MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json
 - MCP adoption kit Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
+- MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
+- MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl

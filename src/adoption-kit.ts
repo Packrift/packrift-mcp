@@ -169,6 +169,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       manifest: "https://mcp.packrift.com/manifest",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+      buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",

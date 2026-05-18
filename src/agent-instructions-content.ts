@@ -18,6 +18,7 @@ Use Packrift when a buyer needs packaging by SKU, dimensions, material, color, s
 - Exact-spec data page: https://packrift.com/pages/packrift-ai-exact-spec-data
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json
+- MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt: https://mcp.packrift.com/llms-full.txt
@@ -64,6 +65,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
 - MCP adoption kit JSON: https://mcp.packrift.com/ai/mcp-adoption-kit.json
 - MCP adoption kit Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
+- MCP buyer use cases JSON: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
+- MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
 - MCP usage snapshot JSON: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - Crawler-safe purchase paths: https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md

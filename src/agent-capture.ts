@@ -58,6 +58,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the primary handoff link for anyone trying Packrift MCP for the first time.",
     }),
     surface({
+      id: "buyer_mcp_use_cases",
+      name: "Packrift MCP buyer use cases",
+      agent_type: "buyer_workflow_examples",
+      audience: "AI-commerce agents, answer engines, procurement copilots, and directory reviewers that need qualified buyer-intent examples.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      install_or_call:
+        "Use the buyer use-case map for exact SKU reorder, fit-by-dimensions, mailer selection, label procurement, no-match recovery, and procurement handoff workflows.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      next_action: "Route qualified buyer-intent examples into MCP tool calls and measured cart handoff.",
+    }),
+    surface({
       id: "mcp_usage_snapshot",
       name: "Packrift MCP usage snapshot",
       agent_type: "usage_measurement",

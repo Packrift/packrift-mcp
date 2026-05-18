@@ -41,6 +41,7 @@ function evidenceLinks(capture) {
     all_agent_capture_json: CAPTURE_URL,
     all_agent_capture_markdown: CAPTURE_MD_URL,
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+    mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     health: "https://mcp.packrift.com/health",
     manifest: "https://mcp.packrift.com/manifest",

@@ -7,6 +7,7 @@ import { llmsFullTxt } from "./llms-full-content.js";
 import { agentInstructionsMd } from "./agent-instructions-content.js";
 import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture.js";
 import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js";
+import { buyerUseCasesMarkdown, buyerUseCasesPayload } from "./buyer-use-cases.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
@@ -2833,6 +2834,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/all-agent-capture.md",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
+  "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+  "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
@@ -2910,6 +2913,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/all-agent-capture.md": "Crawler-readable Packrift all-agent capture matrix and operating rules.",
   "/ai/mcp-adoption-kit.json": "Machine-readable Packrift MCP adoption kit with install snippets, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.",
   "/ai/mcp-adoption-kit.md": "Crawler-readable Packrift MCP adoption kit for developers, agents, marketplaces, and AI-commerce workflows.",
+  "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
+  "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
   "/ai/mcp-usage-snapshot.json": "Machine-readable public aggregate usage snapshot for Packrift MCP discovery, tool calls, cart handoff, and proof-gate iteration.",
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
@@ -3075,6 +3080,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
+  if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(buyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
+  if (pathname === "/ai/mcp-buyer-use-cases.md") return buyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-usage-snapshot.json") return JSON.stringify(await mcpUsageSnapshotPayload(env), null, 2);
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
@@ -3145,6 +3152,7 @@ function mcpManifestPayload() {
     prompts: PROMPTS.map((prompt) => prompt.name),
     all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+    mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   };
 }
@@ -3159,6 +3167,15 @@ function agentCaptureRuntime() {
 }
 
 function adoptionKitRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function buyerUseCasesRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -3209,6 +3226,7 @@ function mcpMarketplaceDiscoveryPayload() {
       robots: "https://mcp.packrift.com/robots.txt",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     },
     signals: {
@@ -4108,6 +4126,17 @@ app.get("/ai/mcp-adoption-kit.json", (c) =>
 
 app.get("/ai/mcp-adoption-kit.md", (c) =>
   c.body(mcpAdoptionKitMarkdown(adoptionKitRuntime()), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  })
+);
+
+app.get("/ai/mcp-buyer-use-cases.json", (c) =>
+  c.json(buyerUseCasesPayload(buyerUseCasesRuntime()), 200, RAW_HEADERS)
+);
+
+app.get("/ai/mcp-buyer-use-cases.md", (c) =>
+  c.body(buyerUseCasesMarkdown(buyerUseCasesRuntime()), 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
   })
