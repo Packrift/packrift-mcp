@@ -1738,11 +1738,21 @@ function topRowsToRecord(rows: Array<{ key: string; count: number }> | undefined
   return Object.fromEntries((rows ?? []).map((row) => [row.key, row.count]));
 }
 
+function countEventsByStringField(events: Array<Record<string, unknown>>, field: string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const event of events) {
+    const key = safeEventText(event[field], 160);
+    if (!key) continue;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}
+
 async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000) {
   const events = await readAiSalesEvents(env, date, limit);
   const summary = summarizeAiSalesEvents(events);
-  const byEvent = topRowsToRecord(summary.by_event);
-  const bySource = topRowsToRecord(summary.by_source);
+  const byEvent = countEventsByStringField(events, "event");
+  const bySource = countEventsByStringField(events, "source");
   const mcpDiscoveryEvents =
     (byEvent.mcp_tools_list ?? 0) +
     (byEvent.mcp_prompt_list ?? 0) +
