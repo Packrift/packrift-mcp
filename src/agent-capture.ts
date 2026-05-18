@@ -43,6 +43,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Keep tools/list, resources/list, prompts/list, health, and cart handoff smoke checks green.",
     }),
     surface({
+      id: "mcp_adoption_kit",
+      name: "Packrift MCP adoption kit",
+      agent_type: "developer_onboarding",
+      audience: "Developers, agent builders, marketplaces, and AI-commerce workflows that need a quick install and first useful test.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      install_or_call:
+        "Use the hosted adoption kit for remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, demo SKUs, and exact-match rules.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
+      fallback_url: "https://mcp.packrift.com/mcp",
+      next_action: "Use this as the primary handoff link for anyone trying Packrift MCP for the first time.",
+    }),
+    surface({
       id: "chatgpt_openai_product_cards",
       name: "ChatGPT and OpenAI product-card commerce",
       agent_type: "chat_commerce",

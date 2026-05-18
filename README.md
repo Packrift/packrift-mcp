@@ -83,6 +83,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
+- MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json
+- MCP adoption kit Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
@@ -250,12 +252,17 @@ Check the all-agent capture hub:
 
 ```sh
 npm run check:agent-capture
+npm run build:agent-capture-outreach
 ```
 
 This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
-`.md` are live, advertised in `resources/list`, include the core agent surfaces
-and Browserbase Browse candidate lane, and preserve the rule that Packrift uses
-the hosted MCP endpoint instead of a duplicate CLI surface.
+`.md` plus `https://mcp.packrift.com/ai/mcp-adoption-kit.json` and `.md` are
+live, advertised in `resources/list`, include the core agent surfaces,
+first-five-minute install/test path, and Browserbase Browse candidate lane, and
+preserve the rule that Packrift uses the hosted MCP endpoint instead of a
+duplicate CLI surface. The outreach build writes copy-ready stale-directory
+refresh messages, Browserbase Browse candidate briefs, proof links, and MCP
+install snippets under `outputs/agent-capture-outreach/`.
 
 ## Deployment
 

@@ -95,6 +95,8 @@ const LIVE_PROOF_URLS = {
   glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
   marketplace_manifest: "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
   cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+  all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+  mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
 };
 
 async function fetchJson(url) {
@@ -225,6 +227,8 @@ function targetRows(distribution, copy) {
       mcp_tools_list: `${MCP_ENDPOINT} via JSON-RPC method tools/list`,
       glama_claim: LIVE_PROOF_URLS.glama_claim,
       cart_handoff_candidates: LIVE_PROOF_URLS.cart_handoff_candidates,
+      all_agent_capture: LIVE_PROOF_URLS.all_agent_capture,
+      mcp_adoption_kit: LIVE_PROOF_URLS.mcp_adoption_kit,
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     },
   }));
@@ -302,6 +306,22 @@ function liveProofDigest(liveProof) {
       url: liveProof.cart_handoff_candidates.url,
       release: liveProof.cart_handoff_candidates.value?.release ?? null,
       items_count: liveProof.cart_handoff_candidates.value?.items?.length ?? null,
+    },
+    all_agent_capture: {
+      ok: liveProof.all_agent_capture.ok,
+      status: liveProof.all_agent_capture.status,
+      url: liveProof.all_agent_capture.url,
+      release: liveProof.all_agent_capture.value?.release ?? null,
+      surfaces_count: liveProof.all_agent_capture.value?.surfaces?.length ?? null,
+      canonical_endpoint: liveProof.all_agent_capture.value?.canonical_endpoint ?? null,
+    },
+    mcp_adoption_kit: {
+      ok: liveProof.mcp_adoption_kit.ok,
+      status: liveProof.mcp_adoption_kit.status,
+      url: liveProof.mcp_adoption_kit.url,
+      release: liveProof.mcp_adoption_kit.value?.release ?? null,
+      steps_count: liveProof.mcp_adoption_kit.value?.first_five_minutes?.length ?? null,
+      canonical_endpoint: liveProof.mcp_adoption_kit.value?.canonical_endpoint ?? null,
     },
   };
 }

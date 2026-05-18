@@ -8,6 +8,15 @@ Packrift MCP Server is a hosted remote MCP endpoint for Packrift's packaging-sup
 https://mcp.packrift.com/mcp
 ```
 
+## Hosted Adoption Kit
+
+Use this when you want a fast, copy-ready first test after installing Packrift MCP:
+
+- JSON: https://mcp.packrift.com/ai/mcp-adoption-kit.json
+- Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
+
+The adoption kit includes remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.
+
 ## Remote MCP Config
 
 Use this configuration in MCP clients that support remote HTTP or Streamable HTTP servers:

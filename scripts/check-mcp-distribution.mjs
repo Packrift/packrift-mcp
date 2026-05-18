@@ -160,10 +160,11 @@ async function officialRegistryCheck() {
 }
 
 async function liveMcpCheck() {
-  const [healthResult, cartResult, agentCaptureResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
+  const [healthResult, cartResult, agentCaptureResult, adoptionKitResult, toolsResult, resourcesResult, promptsResult] = await Promise.all([
     fetchText("https://mcp.packrift.com/health"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("prompts/list"),
@@ -171,6 +172,7 @@ async function liveMcpCheck() {
   const health = healthResult.ok ? JSON.parse(healthResult.text) : null;
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
+  const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
@@ -189,9 +191,13 @@ async function liveMcpCheck() {
       promptsCount >= 7 &&
       cart?.items?.length >= 50 &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R01" &&
-      agentCapture?.surfaces?.length >= 17 &&
+      agentCapture?.surfaces?.length >= 18 &&
+      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R01" &&
+      adoptionKit?.first_five_minutes?.length >= 6 &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.md") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
       ? "pass"
       : "fail",
@@ -201,6 +207,8 @@ async function liveMcpCheck() {
       cart_items: cart?.items?.length ?? 0,
       agent_capture_release: agentCapture?.release ?? null,
       agent_capture_surfaces: agentCapture?.surfaces?.length ?? 0,
+      adoption_kit_release: adoptionKit?.release ?? null,
+      adoption_kit_steps: adoptionKit?.first_five_minutes?.length ?? 0,
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
         tools_count: toolNames.length,

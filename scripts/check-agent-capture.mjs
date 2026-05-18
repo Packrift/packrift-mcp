@@ -119,6 +119,7 @@ async function main() {
   const surfaceIds = new Set((capture?.surfaces ?? []).map((row) => row.id));
   const requiredSurfaceIds = [
     "hosted_mcp_endpoint",
+    "mcp_adoption_kit",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
     "claude_desktop_and_claude_code",
@@ -143,6 +144,7 @@ async function main() {
   const browseSurface = capture?.surfaces?.find((row) => row.id === "browserbase_browse_candidate");
   const mdNeedles = [
     "Packrift All-Agent Capture Matrix",
+    "adoption kit",
     "Browserbase Browse",
     "ChatGPT/OpenAI commerce",
     "Claude",
@@ -177,6 +179,9 @@ async function main() {
       detail: `tools=${healthResult.value?.tools_count ?? 0}, resources=${healthResult.value?.resources_count ?? 0}`,
     }),
     check("resources/list advertises capture routes", resourceUris.has(jsonUrl) && resourceUris.has(mdUrl), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises adoption kit", resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.json`) && resourceUris.has(`${BASE_URL}/ai/mcp-adoption-kit.md`), {
       detail: `resources=${resources.length}`,
     }),
   ];
