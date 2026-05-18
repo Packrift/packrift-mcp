@@ -36,6 +36,7 @@ const snapshot = {
   ga4: null,
   distribution: null,
   live_discovery: null,
+  static_availability: null,
   indexnow: null,
   artifacts: {
     snapshot_json: join(outDir, "mcp-funnel-snapshot.json"),
@@ -68,6 +69,12 @@ try {
 }
 
 try {
+  if (!args["skip-static-availability"]) snapshot.static_availability = runStaticAvailabilityCheck();
+} catch (error) {
+  snapshot.static_availability = { ok: false, error: error.message || String(error) };
+}
+
+try {
   if (!args["skip-indexnow"]) snapshot.indexnow = buildIndexNowSummary();
 } catch (error) {
   snapshot.indexnow = { ok: false, error: error.message || String(error) };
@@ -85,6 +92,7 @@ try {
     ga4_mcp_cart_url_landing_events: snapshot.ga4?.mcp_cart_url_landings?.event_count ?? null,
     distribution_counts: snapshot.distribution?.counts ?? null,
     live_discovery_ok: snapshot.live_discovery?.ok ?? null,
+    static_availability_ok: snapshot.static_availability?.ok ?? null,
     indexnow_ok: snapshot.indexnow?.ok ?? null,
     partial_snapshot: snapshot.partial_snapshot,
     skipped_checks: snapshot.skipped_checks,
@@ -203,6 +211,37 @@ function runDistributionCheck() {
       url: row.url ?? null,
       missing: row.missing ?? [],
     })) ?? [],
+  };
+}
+
+function runStaticAvailabilityCheck() {
+  const result = spawnSync("node", [
+    "scripts/check-static-availability.mjs",
+    "--samples-per-ua",
+    String(args["availability-samples-per-ua"] || "5"),
+    "--concurrency",
+    String(args["availability-concurrency"] || "12"),
+    "--timeout-ms",
+    String(args["availability-timeout-ms"] || "15000"),
+    "--json",
+  ], {
+    cwd: REPO_ROOT,
+    env: process.env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: Number(args["availability-check-timeout-ms"] || 180000),
+  });
+  let parsed = null;
+  try {
+    parsed = result.stdout ? JSON.parse(result.stdout) : null;
+  } catch {
+    parsed = null;
+  }
+  return {
+    ...(parsed || {}),
+    ok: result.status === 0 && Boolean(parsed?.ok),
+    exit_status: result.status,
+    stderr: result.status === 0 ? "" : (result.stderr || "").slice(0, 1000),
   };
 }
 
@@ -430,6 +469,8 @@ function applyProofGate(value) {
     measurable_mcp_sales: Number(ga4.mcp_cart_url_landings?.revenue || 0) > 0,
     mcp_tool_usage_is_material: Number(firstParty.total_tool_calls || 0) >= 50,
     distribution_core_live: Number(distribution.counts?.pass || 0) >= 2 && Number(distribution.counts?.fail || 0) === 0,
+    llms_full_static_availability: Boolean(value.static_availability?.ok)
+      && Number(value.static_availability?.status_5xx_rate || 0) < 0.01,
   };
   value.status = Object.values(value.proof_gate).every(Boolean) ? "proven" : "not_proven";
 }
@@ -449,6 +490,7 @@ function markdownReport(value) {
   const cart = ga4.mcp_cart_url_landings || {};
   const dist = value.distribution || {};
   const live = value.live_discovery || {};
+  const availability = value.static_availability || {};
   const indexnow = value.indexnow || {};
   const liveManifest = live.manifest || {};
   const liveLlms = live.llms_full || {};
@@ -468,6 +510,7 @@ function markdownReport(value) {
     `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(cart.revenue).toFixed(2)} revenue on stamped MCP cart landing rows |`,
     `| Material MCP tool usage | ${yesNo(value.proof_gate.mcp_tool_usage_is_material)} | ${fp.total_tool_calls ?? 0} first-party MCP tool calls for ${fp.date ?? "selected date"} |`,
     `| Distribution core live | ${yesNo(value.proof_gate.distribution_core_live)} | ${dist.counts ? `${dist.counts.pass} pass, ${dist.counts.stale} stale, ${dist.counts.blocked} blocked, ${dist.counts.fail} fail` : "not checked"} |`,
+    `| llms-full static availability | ${yesNo(value.proof_gate.llms_full_static_availability)} | ${availability.total_fetches ?? 0} fetches, ${percentValue(availability.failed_fetch_rate)} failure rate, ${percentValue(availability.status_5xx_rate)} 5xx rate |`,
     "",
     "## First-Party MCP",
     "",
@@ -501,6 +544,15 @@ function markdownReport(value) {
     `- Cart handoff surfaces: create_cart_url ${yesNo(liveManifest.has_create_cart_url)}, get_cart_handoff_candidates ${yesNo(liveManifest.has_get_cart_handoff_candidates)}, prepare_cart_handoff ${yesNo(liveManifest.has_prepare_cart_handoff_prompt)}`,
     `- Server cards live: ${Array.isArray(live.server_cards) ? `${live.server_cards.filter((card) => card.ok).length}/${live.server_cards.length}` : "not checked"}`,
     `- llms-full: ${liveLlms.priority_sku_count ?? 0} priority SKUs, top SKU ${liveLlms.top_priority_skus?.[0]?.sku ?? "not available"}, cache ${liveLlms.cache ?? "unknown"}`,
+    "",
+    "## Static Availability",
+    "",
+    `- Status: ${availability.ok == null ? "not checked" : yesNo(availability.ok)}`,
+    `- Fetches: ${availability.total_fetches ?? 0} across ${availability.user_agents?.length ?? 0} AI user agents`,
+    `- Failure rate: ${percentValue(availability.failed_fetch_rate)}`,
+    `- 5xx rate: ${percentValue(availability.status_5xx_rate)}`,
+    `- Content failure rate: ${percentValue(availability.content_fail_rate)}`,
+    `- p95 latency: ${availability.latency_ms?.p95 ?? 0} ms`,
     "",
     "## IndexNow Discovery",
     "",
@@ -621,6 +673,10 @@ function yesNo(value) {
   return value ? "yes" : "no";
 }
 
+function percentValue(value) {
+  return `${(numberValue(value) * 100).toFixed(2)}%`;
+}
+
 function utcDate(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -665,6 +721,7 @@ function skippedChecks() {
     args["skip-ga4"] ? "ga4" : "",
     args["skip-distribution"] ? "distribution" : "",
     args["skip-live-discovery"] ? "live_discovery" : "",
+    args["skip-static-availability"] ? "static_availability" : "",
     args["skip-indexnow"] ? "indexnow" : "",
   ].filter(Boolean);
 }

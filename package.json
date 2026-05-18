@@ -12,6 +12,7 @@
     "eval:live": "node scripts/run-live-evals.mjs",
     "check:distribution": "node scripts/check-mcp-distribution.mjs",
     "snapshot:funnel": "node scripts/build-mcp-funnel-snapshot.mjs",
+    "check:static-availability": "node scripts/check-static-availability.mjs",
     "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
     "refresh:llms-full": "node scripts/refresh-llms-full-priority.mjs",
     "purge:cache": "node scripts/purge-cloudflare-cache.mjs",

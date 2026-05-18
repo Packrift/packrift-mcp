@@ -191,6 +191,14 @@ npm run refresh:llms-full -- --publish-kv
 
 This updates the `static-override:llms-full.txt` KV key. The Worker serves that override after the current deploy, so future priority-SKU refreshes do not require deploying unrelated Worker source changes.
 
+Check crawler-facing `llms-full.txt` availability across six AI user agents:
+
+```sh
+npm run check:static-availability -- --samples-per-ua 200 --concurrency 30
+```
+
+This writes JSON and Markdown evidence under `outputs/static-availability/`. The funnel snapshot also runs this check and reports failure rate, 5xx rate, content validation, and p95 latency.
+
 ## Deployment
 
 The Cloudflare account is being created in a separate process. Once it's ready and `wrangler` is logged in (`wrangler login`), run these in order:
