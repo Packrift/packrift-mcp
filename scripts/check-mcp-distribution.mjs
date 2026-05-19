@@ -670,7 +670,7 @@ async function liveMcpCheck() {
       Array.isArray(usageSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R11" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R12" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
@@ -684,6 +684,8 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.counts?.post_install_sources_waiting_on_cart_landing === "number" &&
       typeof funnelSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === "number" &&
+      (funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === 0 ||
+        funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === true) &&
       typeof funnelSnapshot?.counts?.first_party_mcp_orders === "number" &&
       typeof funnelSnapshot?.counts?.first_party_mcp_order_revenue === "number" &&
       typeof funnelSnapshot?.proof_gate?.thousands_of_qualified_visitors === "boolean" &&

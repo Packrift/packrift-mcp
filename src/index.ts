@@ -2825,7 +2825,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R11";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R12";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3076,14 +3076,8 @@ function postInstallCartActivationBySource(events: Array<Record<string, unknown>
     .slice(0, 25);
 }
 
-function qualifiedFirstPartyCartLandingsFromSummary(summary: ReturnType<typeof summarizeAiSalesEvents>): number {
-  const rows = (summary.by_event_attribution ?? []).length ? summary.by_event_attribution : summary.by_event_source;
-  return (rows ?? []).reduce((total, row) => {
-    const text = safeEventText(row.key, 500).toLowerCase();
-    if (!text.startsWith("mcp_cart_landing|")) return total;
-    if (matchesPublicFunnelInternalSynthetic(text) || matchesPublicFunnelSelfGenerated(text)) return total;
-    return matchesPublicFunnelQualifiedDemand(text) ? total + Number(row.count || 0) : total;
-  }, 0);
+function countQualifiedFirstPartyCartLandings(events: Array<Record<string, unknown>>): number {
+  return events.filter((event) => String(event.event ?? "") === "mcp_cart_landing" && isQualifiedPublicFunnelEvent(event)).length;
 }
 
 function publicFunnelTrafficBuckets(summary: ReturnType<typeof summarizeAiSalesEvents>) {
@@ -3208,7 +3202,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const activationCartReady = byEvent.mcp_activation_cart_ready ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
-  const qualifiedCartLandings = qualifiedFirstPartyCartLandingsFromSummary(summary);
+  const qualifiedCartLandings = countQualifiedFirstPartyCartLandings(events);
   const orderSummary = await publicMcpOrderSummary(env, orderDays, orderLimit);
   const attributedOrderCount = Number(orderSummary.attributed_order_count || 0);
   const attributedRevenue = Number(orderSummary.attributed_revenue || 0);
