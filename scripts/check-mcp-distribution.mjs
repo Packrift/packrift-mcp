@@ -450,7 +450,7 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R09" &&
+      start?.release === "PACKRIFT-MCP-START-R10" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
@@ -458,6 +458,7 @@ async function liveMcpCheck() {
       start?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       start?.first_useful_run?.curl_script?.includes("curl -sS") &&
       start?.first_useful_run?.curl_script?.includes("create_cart_url") &&
+      start?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       start?.first_useful_run?.curl_commands?.length >= 5 &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
@@ -598,11 +599,12 @@ async function liveMcpCheck() {
       firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("Packrift MCP") &&
       firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       firstRunActions?.first_run?.shell_one_liner?.includes("format=sh") &&
-      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R06" &&
+      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R07" &&
       clientConfig?.canonical_endpoint === MCP_ENDPOINT &&
       clientConfig?.config?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       clientConfig?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       clientConfig?.first_useful_run?.curl_script?.includes("create_cart_url") &&
+      clientConfig?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       clientConfig?.required_post_install_verification?.required_final_tool === "create_cart_url" &&
       clientConfig?.required_post_install_verification?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       clientConfig?.aliases?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
@@ -776,7 +778,7 @@ async function liveMcpCheck() {
       directoryRefresh?.recrawl_request?.includes("/r/install/") &&
       directoryRefresh?.recrawl_request?.includes("execute=1") &&
       directoryRefresh?.recrawl_request?.includes("/r/activate/{source}?format=html") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R22" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R23" &&
       directorySubmitActions?.actions?.length >= 18 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
