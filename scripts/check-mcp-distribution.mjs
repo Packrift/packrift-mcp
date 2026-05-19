@@ -1072,7 +1072,7 @@ async function liveMcpCheck() {
       funnelSnapshot?.links?.tracked_run_generic === "https://mcp.packrift.com/r/run/generic/generic_streamable_http" &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/generic?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R12" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R13" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.links?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       sourceActivationQueue?.links?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
@@ -1088,7 +1088,11 @@ async function liveMcpCheck() {
       Array.isArray(sourceActivationQueue?.critical_actions) &&
       sourceActivationQueue?.critical_actions?.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not ")) &&
       sourceActivationQueue?.critical_actions?.some(
-        (row) => row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') && row.run_real_mcp_shell_url?.includes("format=sh")
+        (row) =>
+          row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+          row.run_real_mcp_shell_url?.includes("format=sh") &&
+          row.one_command_external_runner?.includes("curl -sS") &&
+          row.one_command_external_runner?.includes("| bash")
       ) &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
@@ -1107,6 +1111,9 @@ async function liveMcpCheck() {
           row.copy_ready_host_configs?.codex_command?.startsWith("codex mcp add packrift --url") &&
           row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
           row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
+          row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
+          row.external_activation_message?.includes("One-command external runner") &&
+          row.external_activation_message?.includes("does not place an order") &&
           row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
           row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
           row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
@@ -1135,7 +1142,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R05" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R12" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R13" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       typeof activationExperiments?.experiment_count === "number" &&

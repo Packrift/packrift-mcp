@@ -4055,6 +4055,10 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
+function sourceActivationShellCommand(url: string): string {
+  return `curl -sS ${shellQuote(url)} | bash`;
+}
+
 function sourceActivationCopyReadyHostConfigs(input: {
   source: string;
   preferredTarget: string;
@@ -4178,9 +4182,10 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Directory update card: ${urls.directory_update_card_json_url}`,
       cartUrl ? `Measured cart URL to review: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
+      `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       `Install/config handoff: ${urls.tracked_install_url}`,
       "",
-      "Please open the measured /r/cart URL from your review environment or MCP host so the source records a real qualified cart landing before Shopify checkout.",
+      "Please open the measured /r/cart URL from your review environment or MCP host so the source records a real qualified cart landing before Shopify checkout. The shell runner does not follow Shopify checkout and does not place an order.",
     ].join("\n");
   }
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
@@ -4194,8 +4199,9 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Machine-readable config: ${urls.tracked_install_json_url}`,
       `First-run prompt: ${urls.tracked_first_run_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
+      `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       "",
-      "Please install the hosted Streamable HTTP endpoint in the MCP host and run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
+      "Please install the hosted Streamable HTTP endpoint in the MCP host and run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066. The shell runner calls the real source-aware endpoint, opens the returned MCP /r/cart landing once, does not follow Shopify checkout, and does not place an order.",
     ].join("\n");
   }
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) {
@@ -4207,9 +4213,10 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Directory update card: ${urls.directory_update_card_json_url}`,
       `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
+      `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       `Install/config handoff: ${urls.tracked_install_url}`,
       "",
-      "Please run the sequence from an MCP host so the source records tools/list and tools/call events through the hosted endpoint.",
+      "Please run the sequence from an MCP host so the source records tools/list and tools/call events through the hosted endpoint. The shell runner also opens the returned MCP /r/cart landing once without placing an order.",
     ].join("\n");
   }
   return [
@@ -4221,8 +4228,9 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
     `Install/config handoff: ${urls.tracked_install_url}`,
     `First-run action: ${urls.tracked_first_run_url}`,
     `Shell activation script: ${urls.reviewer_activation_shell_url}`,
+    `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
     "",
-    "Use these links in the source, directory listing, reviewer flow, or MCP host instructions so new visitors stay attributed to the source.",
+    "Use these links in the source, directory listing, reviewer flow, or MCP host instructions so new visitors stay attributed to the source. The shell runner records a real MCP tool-call path and measured cart landing without placing an order.",
   ].join("\n");
 }
 
@@ -4287,6 +4295,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         reviewer_activation_url: urls.reviewer_activation_url,
         reviewer_activation_runner_url: urls.reviewer_activation_runner_url,
         reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
+        one_command_external_runner: sourceActivationShellCommand(urls.reviewer_activation_shell_url),
         directory_update_card_json_url: urls.directory_update_card_json_url,
         directory_update_card_markdown_url: urls.directory_update_card_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
@@ -4337,7 +4346,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R12",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R13",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -4381,6 +4390,7 @@ async function mcpSourceActivationQueuePayload(
         external_activation_message: row.external_activation_message,
         run_real_mcp_check_url: row.reviewer_activation_runner_url,
         run_real_mcp_shell_url: row.reviewer_activation_shell_url,
+        one_command_external_runner: row.one_command_external_runner,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
         directory_update_card_json_url: row.directory_update_card_json_url,
