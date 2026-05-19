@@ -310,7 +310,7 @@ function trackedConfigUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions reach create_cart_url after live price and inventory checks.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page and one-click live proof that reach create_cart_url after live price and inventory checks.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -321,6 +321,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const trackedInstallGeneric = trackedInstallUrl(action.id, "generic_streamable_http");
   const trackedInstallGenericMd = `${trackedInstallGeneric}&format=md`;
   const trackedRunGeneric = trackedRunUrl(action.id, "generic_streamable_http");
+  const trackedRunGenericHtml = `${trackedRunGeneric}&format=html`;
+  const trackedRunGenericExecute = `${trackedRunGeneric}&execute=1`;
   const trackedRunGenericSh = `${trackedRunGeneric}&format=sh`;
   return [
     `Subject: ${action.recrawl_subject}`,
@@ -343,8 +345,10 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Tracked generic install action: ${trackedInstallGeneric}`,
     `- Markdown install action with first-useful-run sequence: ${trackedInstallGenericMd}`,
     `- Tracked first-run action: ${trackedRunGeneric}`,
+    `- Browser first-run page: ${trackedRunGenericHtml}`,
+    `- One-click live proof: ${trackedRunGenericExecute}`,
     `- One-line first-run shell script: curl -sS '${trackedRunGenericSh}' | bash`,
-    `- First useful run: open ${trackedRunGeneric} or ${trackedInstallGenericMd} and run the first_useful_run JSON-RPC sequence from the source-aware endpoint; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
+    `- First useful run: open ${trackedRunGenericHtml}, click Run live proof, or run the first_useful_run JSON-RPC sequence from ${trackedInstallGenericMd}; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -388,6 +392,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     },
     tracked_run_urls: {
       generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
+      generic_streamable_http_browser: `${trackedRunUrl(action.id, "generic_streamable_http")}&format=html`,
+      generic_streamable_http_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
       claude_code: trackedRunUrl(action.id, "claude_code"),
       codex: trackedRunUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedRunUrl(action.id, "cursor_windsurf_vscode"),
@@ -401,6 +407,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       tracked_install_codex: trackedInstallUrl(action.id, "codex"),
       tracked_install_claude_code: trackedInstallUrl(action.id, "claude_code"),
       tracked_run_generic: trackedRunUrl(action.id, "generic_streamable_http"),
+      tracked_run_generic_browser: `${trackedRunUrl(action.id, "generic_streamable_http")}&format=html`,
+      tracked_run_generic_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
       tracked_run_codex: trackedRunUrl(action.id, "codex"),
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
@@ -424,7 +432,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R18",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R19",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -463,7 +471,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${action.tracked_run_urls.generic_streamable_http} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${action.tracked_run_urls.generic_streamable_http} | ${action.tracked_run_urls.generic_streamable_http_execute} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -488,8 +496,8 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     `Tracked install template: ${payload.tracked_install_template}`,
     `Tracked run template: ${payload.tracked_run_template}`,
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Live proof URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",

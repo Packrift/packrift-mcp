@@ -681,19 +681,25 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R10" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R11" &&
       directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directoryRefresh?.live_proof?.tracked_start_partner_demo === "https://mcp.packrift.com/r/start/partner_demo" &&
       directoryRefresh?.live_proof?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       directoryRefresh?.live_proof?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       directoryRefresh?.live_proof?.tracked_install_codex_generic?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
+      directoryRefresh?.live_proof?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      directoryRefresh?.live_proof?.tracked_run_generic_browser?.includes("format=html") &&
+      directoryRefresh?.live_proof?.tracked_run_generic_execute?.includes("execute=1") &&
+      directoryRefresh?.live_proof?.first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       directoryRefresh?.live_proof?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
       directoryRefresh?.live_proof?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       directoryRefresh?.live_proof?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directoryRefresh?.canonical_listing?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       directoryRefresh?.canonical_listing?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      directoryRefresh?.canonical_listing?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       directoryRefresh?.canonical_listing?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
+      directoryRefresh?.canonical_listing?.tracked_first_run_examples?.live_proof?.includes("execute=1") &&
       directoryRefresh?.canonical_listing?.client_config_url === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directoryRefresh?.canonical_listing?.tracked_start_source_policy?.partner_specific_sources_allowed === true &&
       directoryRefresh?.live_proof?.browserbase_browse_skill_pack === "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json" &&
@@ -702,8 +708,11 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "anthropic_connectors_directory") &&
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "browse_sh" && target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/browse_sh/codex")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
+      directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_run_urls?.generic_streamable_http_browser?.includes("format=html")) &&
+      directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_run_urls?.generic_streamable_http_execute?.includes("execute=1")) &&
       directoryRefresh?.recrawl_request?.includes("/r/install/") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R18" &&
+      directoryRefresh?.recrawl_request?.includes("execute=1") &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R19" &&
       directorySubmitActions?.actions?.length >= 18 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
@@ -721,12 +730,16 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.every((action) => action.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/")) &&
       directorySubmitActions?.actions?.every((action) => action.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directorySubmitActions?.actions?.every((action) => action.tracked_run_urls?.generic_streamable_http?.startsWith("https://mcp.packrift.com/r/run/")) &&
+      directorySubmitActions?.actions?.every((action) => action.tracked_run_urls?.generic_streamable_http_browser?.includes("format=html")) &&
+      directorySubmitActions?.actions?.every((action) => action.tracked_run_urls?.generic_streamable_http_execute?.includes("execute=1")) &&
       directorySubmitActions?.actions?.every((action) => action.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url")) &&
       directorySubmitActions?.actions?.every((action) => action.first_useful_run?.curl_script?.includes("create_cart_url")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_start?.startsWith("https://mcp.packrift.com/r/start/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_config?.startsWith("https://mcp.packrift.com/r/config/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_install_codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_run_generic?.startsWith("https://mcp.packrift.com/r/run/")) &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_run_generic_browser?.includes("format=html")) &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_run_generic_execute?.includes("execute=1")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
@@ -735,6 +748,8 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/start/")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/config/")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/install/")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("One-click live proof")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("execute=1")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("format=md")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
