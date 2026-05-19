@@ -135,6 +135,7 @@ async function main() {
   const duplicateSurfaceIds = Array.from(new Set(surfaceIdRows.filter((id, index) => surfaceIdRows.indexOf(id) !== index)));
   const requiredSurfaceIds = [
     "hosted_mcp_endpoint",
+    "mcp_start",
     "mcp_adoption_kit",
     "mcp_install_matrix",
     "mcp_usage_snapshot",
@@ -169,6 +170,7 @@ async function main() {
   const browseSurface = capture?.surfaces?.find((row) => row.id === "browserbase_browse_candidate");
   const mdNeedles = [
     "Packrift All-Agent Capture Matrix",
+    "start page",
     "adoption kit",
     "install matrix",
     "usage snapshot",
@@ -191,7 +193,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R01", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R02", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -206,6 +208,9 @@ async function main() {
     }),
     check("hosted MCP marked live", coreSurface?.status === "live" && coreSurface?.canonical_url === "https://mcp.packrift.com/mcp", {
       detail: coreSurface?.status,
+    }),
+    check("resources/list advertises MCP start", hasResourceUri(resourceUris, "/ai/mcp-start.json") && hasResourceUri(resourceUris, "/ai/mcp-start.md"), {
+      detail: `resources=${resources.length}`,
     }),
     check("Browserbase Browse remains candidate", browseSurface?.status === "candidate", {
       detail: browseSurface?.status,

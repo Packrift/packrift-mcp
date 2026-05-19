@@ -43,6 +43,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Keep tools/list, resources/list, prompts/list, health, and cart handoff smoke checks green.",
     }),
     surface({
+      id: "mcp_start",
+      name: "Packrift MCP start page",
+      agent_type: "developer_onboarding",
+      audience: "Agents, developers, directory reviewers, and AI-commerce operators who need one URL for install, first test, and measured cart handoff.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/start",
+      install_or_call:
+        "Open the start page or read /ai/mcp-start.json for remote MCP config, Claude/Codex install commands, first-flow JSON-RPC calls, buyer prompts, and proof URLs.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-start.json",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      next_action: "Use this as the shortest public install link in directory recrawls and external agent handoffs.",
+    }),
+    surface({
       id: "mcp_adoption_kit",
       name: "Packrift MCP adoption kit",
       agent_type: "developer_onboarding",
@@ -429,7 +444,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R01",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R02",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -437,6 +452,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
     hub_urls: {
       json: "https://mcp.packrift.com/ai/all-agent-capture.json",
       markdown: "https://mcp.packrift.com/ai/all-agent-capture.md",
+      start: "https://mcp.packrift.com/start",
+      start_json: "https://mcp.packrift.com/ai/mcp-start.json",
       agent_instructions: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
@@ -498,7 +515,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane.",
     "",
     "## Operating Rules",
     "",

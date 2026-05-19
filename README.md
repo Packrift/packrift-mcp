@@ -4,7 +4,7 @@ Production MCP (Model Context Protocol) server for Packrift exact-spec packaging
 
 - **Stack**: Cloudflare Workers, TypeScript (strict), Hono, Zod, Streamable HTTP transport
 - **Backing**: Shopify Admin GraphQL API (`2025-04`), store `packrift.myshopify.com`
-- **Endpoint**: `POST /mcp`, `GET /mcp` (SSE), `GET /` (health), `GET /.well-known/mcp/server-card.json`
+- **Endpoint**: `POST /mcp`, `GET /mcp` (SSE), `GET /` and `GET /start` (MCP start page), `GET /.well-known/mcp/server-card.json`
 - **Install guide**: see [`llms-install.md`](llms-install.md) for remote MCP client configuration.
 - **Discovery gate**: product lookup, reorder, quote, and cart handoff flows are constrained to AI-approved Packrift catalog records where SKU selection is involved.
 
@@ -14,6 +14,12 @@ The public Packrift endpoint is hosted at:
 
 ```text
 https://mcp.packrift.com/mcp
+```
+
+Fast start page for developers, agents, and directory reviewers:
+
+```text
+https://mcp.packrift.com/start
 ```
 
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
@@ -83,6 +89,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
+- MCP start pack: https://mcp.packrift.com/ai/mcp-start.json
+- MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json
 - MCP adoption kit Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json

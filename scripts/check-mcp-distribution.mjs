@@ -179,6 +179,7 @@ async function officialRegistryCheck() {
 async function liveMcpCheck() {
   const [
     healthResult,
+    startResult,
     cartResult,
     agentCaptureResult,
     adoptionKitResult,
@@ -197,6 +198,7 @@ async function liveMcpCheck() {
     promptsResult,
   ] = await Promise.all([
     fetchText("https://mcp.packrift.com/health"),
+    fetchText("https://mcp.packrift.com/ai/mcp-start.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
@@ -215,6 +217,7 @@ async function liveMcpCheck() {
     fetchMcp("prompts/list"),
   ]);
   const health = healthResult.ok ? JSON.parse(healthResult.text) : null;
+  const start = startResult.ok ? JSON.parse(startResult.text) : null;
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
@@ -248,8 +251,14 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R01" &&
-      agentCapture?.surfaces?.length >= 20 &&
+      start?.release === "PACKRIFT-MCP-START-R01" &&
+      start?.canonical_endpoint === MCP_ENDPOINT &&
+      start?.first_flow?.length >= 6 &&
+      start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
+      start?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R02" &&
+      agentCapture?.surfaces?.length >= 21 &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start") &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R02" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
       adoptionKit?.developer_examples?.length >= 4 &&
@@ -258,6 +267,7 @@ async function liveMcpCheck() {
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.smoke_tests?.length >= 5 &&
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R04" &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
@@ -285,12 +295,14 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R03" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R04" &&
+      directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.browserbase_browse_skill_pack === "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R04" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R05" &&
       directorySubmitActions?.actions?.length >= 7 &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-start.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-workflow-gallery.json")) &&
@@ -298,6 +310,9 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-start.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-start.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-start.html") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-install-matrix.json") &&
@@ -328,6 +343,8 @@ async function liveMcpCheck() {
       : "fail",
     {
       health,
+      start_release: start?.release ?? null,
+      start_flow_steps: start?.first_flow?.length ?? 0,
       cart_release: cart?.release ?? null,
       cart_items: cart?.items?.length ?? 0,
       agent_capture_release: agentCapture?.release ?? null,
@@ -362,6 +379,9 @@ async function liveMcpCheck() {
       directory_refresh_targets: directoryRefresh?.priority_refresh_targets?.length ?? 0,
       directory_submit_actions_release: directorySubmitActions?.release ?? null,
       directory_submit_actions_count: directorySubmitActions?.actions?.length ?? 0,
+      directory_submit_actions_start_messages: directorySubmitActions?.actions?.filter((action) =>
+        action.recrawl_message?.includes("mcp-start.json")
+      ).length ?? 0,
       directory_submit_actions_cart_activation_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("mcp-cart-activation.json")
       ).length ?? 0,

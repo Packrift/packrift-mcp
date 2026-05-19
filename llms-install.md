@@ -8,6 +8,14 @@ Packrift MCP Server is a hosted remote MCP endpoint for Packrift's packaging-sup
 https://mcp.packrift.com/mcp
 ```
 
+## Start Page
+
+Use this as the shortest public handoff for developers, agents, and directory reviewers. It includes install snippets, the first exact-SKU flow, buyer prompts, and proof URLs:
+
+- HTML: https://mcp.packrift.com/start
+- JSON: https://mcp.packrift.com/ai/mcp-start.json
+- Markdown: https://mcp.packrift.com/ai/mcp-start.md
+
 ## Hosted Adoption Kit
 
 Use this when you want a fast, copy-ready first test after installing Packrift MCP:

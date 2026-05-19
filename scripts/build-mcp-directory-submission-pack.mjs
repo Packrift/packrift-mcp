@@ -100,6 +100,7 @@ const TARGETS = [
 
 const LIVE_PROOF_URLS = {
   health: "https://mcp.packrift.com/health",
+  mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
   manifest: "https://mcp.packrift.com/manifest",
   server_card: "https://mcp.packrift.com/server-card.json",
   well_known_server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",

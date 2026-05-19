@@ -159,6 +159,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       },
       claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
       codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
+      start_page: "https://mcp.packrift.com/start",
+      start_pack: "https://mcp.packrift.com/ai/mcp-start.json",
       cursor_windsurf_vscode: {
         mcpServers: {
           packrift: {
@@ -258,6 +260,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
     demo_skus: DEMO_SKUS,
     proof_urls: {
       health: "https://mcp.packrift.com/health",
+      mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
       manifest: "https://mcp.packrift.com/manifest",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
@@ -333,6 +336,8 @@ export function mcpAdoptionKitMarkdown(runtime: AdoptionKitRuntime): string {
     `Claude Code: \`${payload.install.claude_code}\``,
     "",
     `Codex: \`${payload.install.codex}\``,
+    "",
+    `Start page: ${payload.install.start_page}`,
     "",
     `Glama connector: ${payload.install.glama_connector}`,
     "",

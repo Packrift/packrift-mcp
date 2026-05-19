@@ -242,6 +242,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
     ],
     proof_urls: {
       health: "https://mcp.packrift.com/health",
+      mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
       manifest: "https://mcp.packrift.com/manifest",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",

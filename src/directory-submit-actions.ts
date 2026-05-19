@@ -6,6 +6,8 @@ export interface DirectorySubmitActionsRuntime {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const MCP_START_URL = "https://mcp.packrift.com/start";
+const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const DIRECTORY_REFRESH_URL = "https://mcp.packrift.com/ai/mcp-directory-refresh.json";
 const INSTALL_MATRIX_URL = "https://mcp.packrift.com/ai/mcp-install-matrix.json";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
@@ -117,7 +119,7 @@ const ACTIONS = [
 ] as const;
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. First-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -137,10 +139,12 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Server name: io.github.Packrift/packrift-mcp",
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
+    `- Start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
     "- Description: Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
+    `- Start pack: ${MCP_START_JSON_URL}`,
     `- Install matrix: ${INSTALL_MATRIX_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
@@ -160,6 +164,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     ...action,
     proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
+      start_page: MCP_START_URL,
+      start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
       manifest: "https://mcp.packrift.com/manifest",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
@@ -176,7 +182,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R04",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R05",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

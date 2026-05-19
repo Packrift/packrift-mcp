@@ -78,7 +78,7 @@ function publicProofLine(pack) {
   const tools = proof.mcp_tools_list?.tools_count ?? pack.copy?.tools_count ?? 14;
   const resources = proof.mcp_resources_list?.resources_count ?? proof.health?.resources_count ?? 83;
   const prompts = proof.mcp_prompts_list?.prompts_count ?? 9;
-  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R03";
+  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R04";
   const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 7;
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
@@ -102,10 +102,12 @@ function recrawlMessage(pack, target) {
     "- Server name: io.github.Packrift/packrift-mcp",
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
+    "- Start page: https://mcp.packrift.com/start",
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
     "- Description: Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
+    "- Start pack: https://mcp.packrift.com/ai/mcp-start.json",
     "- Install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json",
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     "- First-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json",
