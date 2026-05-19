@@ -16,6 +16,7 @@ interface DirectoryRefreshRow {
   tracked_config_url?: string;
   tracked_run_url?: string;
   tracked_reviewer_activation_url?: string;
+  tracked_reviewer_activation_html_url?: string;
   stale_markers: readonly string[];
   next_action: string;
   recrawl_subject?: string;
@@ -30,6 +31,7 @@ const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
+const TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}?format=html";
 
 function genericMcpJson() {
   return {
@@ -50,11 +52,13 @@ function agentInstallSnippets() {
     generic_tracked_install_claude_code: trackedInstallUrl("generic", "claude_code"),
     generic_tracked_first_run: "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
     generic_tracked_reviewer_activation: "https://mcp.packrift.com/r/activate/generic",
+    generic_tracked_reviewer_activation_runner: "https://mcp.packrift.com/r/activate/generic?format=html",
     tracked_start_template: TRACKED_START_TEMPLATE,
     tracked_config_template: TRACKED_CONFIG_TEMPLATE,
     tracked_install_template: TRACKED_INSTALL_TEMPLATE,
     tracked_run_template: TRACKED_RUN_TEMPLATE,
     tracked_reviewer_activation_template: TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
+    tracked_reviewer_activation_html_template: TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
     generic_mcp_json: genericMcpJson(),
     claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
     codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
@@ -113,6 +117,7 @@ function trackedUrls(rows: DirectoryRefreshRow[], source: string) {
     tracked_start_url: row?.tracked_start_url ?? TRACKED_START_TEMPLATE.replace("{source}", source),
     tracked_config_url: row?.tracked_config_url ?? TRACKED_CONFIG_TEMPLATE.replace("{source}", source),
     tracked_reviewer_activation_url: row?.tracked_reviewer_activation_url ?? TRACKED_REVIEWER_ACTIVATION_TEMPLATE.replace("{source}", source),
+    tracked_reviewer_activation_html_url: row?.tracked_reviewer_activation_html_url ?? TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE.replace("{source}", source),
   };
 }
 
@@ -223,6 +228,7 @@ function evidenceLinks() {
     tracked_config_template: TRACKED_CONFIG_TEMPLATE,
     tracked_run_template: TRACKED_RUN_TEMPLATE,
     tracked_reviewer_activation_template: TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
+    tracked_reviewer_activation_html_template: TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
     all_agent_capture_json: CAPTURE_JSON_URL,
     all_agent_capture_markdown: CAPTURE_MARKDOWN_URL,
     agent_capture_outreach_json: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
@@ -232,6 +238,7 @@ function evidenceLinks() {
     mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
     mcp_first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
     mcp_reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+    mcp_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -278,6 +285,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
     tracked_config_url: action.tracked_config_url,
     tracked_run_url: action.tracked_run_urls?.generic_streamable_http,
     tracked_reviewer_activation_url: action.proof_urls?.tracked_reviewer_activation,
+    tracked_reviewer_activation_html_url: action.proof_urls?.tracked_reviewer_activation_html,
     stale_markers: "stale_markers" in action ? Array.from(action.stale_markers ?? []) : [],
     next_action: action.next_action,
     recrawl_subject: action.recrawl_subject,
@@ -290,7 +298,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R08",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R09",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -317,6 +325,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       tracked_config_template: submitActions.tracked_config_template,
       tracked_run_template: submitActions.tracked_run_template,
       tracked_reviewer_activation_template: submitActions.tracked_reviewer_activation_template,
+      tracked_reviewer_activation_html_template: submitActions.tracked_reviewer_activation_html_template,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
     },
@@ -330,7 +339,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       "Use the existing hosted MCP endpoint as the product surface: https://mcp.packrift.com/mcp.",
       "Use tracked /r/start/{source} and /r/config/{source} links in every directory, partner, and agent-host handoff.",
       "Use tracked /r/run/{source}/{target} links to move installed users into the first useful run and measure first-run intent.",
-      "Use tracked /r/activate/{source} links when proof clicks need to become real MCP client calls and create_cart_url output.",
+      "Use tracked /r/activate/{source}?format=html browser runners when proof clicks need to become real MCP client calls and create_cart_url output.",
       "Use the start page for first install, the install matrix for host-specific setup, and the workflow gallery for demo/eval flows.",
       "Route Browserbase Browse and other browser agents through read-first public resources, then confirm live commerce facts through MCP.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer interface.",
@@ -346,13 +355,13 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
   const priorityRows = payload.priority_queue
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${action.tracked_reviewer_activation_html_url ?? ""} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const directoryRows = payload.directory_refreshes
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${action.tracked_reviewer_activation_html_url ?? ""} |`
     )
     .join("\n");
   const messages = payload.directory_refreshes
@@ -380,14 +389,14 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
     "",
     "## Highest Priority Queue",
     "",
-    "| Surface | Action status | Directory status | Tracked start | Tracked config | Tracked first run | Activation handoff | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
-    priorityRows || "| none | pass | pass | | | | | |",
+    "| Surface | Action status | Directory status | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    priorityRows || "| none | pass | pass | | | | | | |",
     "",
     "## All Directory Refreshes",
     "",
-    "| Surface | Action status | Directory status | Priority | Tracked start | Tracked config | Tracked first run | Activation handoff |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Surface | Action status | Directory status | Priority | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     directoryRows,
     "",
     "## Browser-Assisted Submission Payloads",

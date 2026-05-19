@@ -2421,7 +2421,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + firstRunIntents + firstRunExecutions + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R15",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R16",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2525,6 +2525,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
+      tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
       mcp_start_click_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
@@ -2578,12 +2579,13 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      tracked_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
     next_actions: [
       "Push directory recrawls and partner installs toward /r/run/{source}/{target} first-run actions, not only tools/list and config fetches.",
-      "Use /r/activate/{source} after proof clicks to move reviewers into real MCP client calls and measured create_cart_url output.",
+      "Use /r/activate/{source}?format=html after proof clicks to move reviewers into real MCP client calls and measured create_cart_url output.",
       "Drive real workflows through get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url; the public post_install_cart_activation_by_source table shows which sources are stuck before cart URL creation.",
       "Do not call the adoption goal complete until material MCP tool usage, stamped cart landings, and MCP-attributed sales are visible.",
     ],
@@ -2652,6 +2654,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
     `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
     `Tracked reviewer activation template: \`${payload.source_attribution.tracked_reviewer_activation_template}\``,
+    `Tracked reviewer activation browser runner template: \`${payload.source_attribution.tracked_reviewer_activation_html_template}\``,
     "",
     "### MCP Start Click Sources",
     "",
@@ -2788,7 +2791,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R07";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R08";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3182,6 +3185,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
+      tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
       start_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
@@ -3218,11 +3222,12 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
       tracked_run_generic: "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
+      tracked_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     },
     next_actions: [
       "Use tracked install-action and first-run links in every stale directory refresh so starts, installs, and first useful runs stay source-attributed.",
-      "Use source-specific reviewer activation handoffs to convert proof clicks into real MCP client calls and create_cart_url output.",
+      "Use source-specific reviewer activation browser runners to convert proof clicks into real MCP client calls and create_cart_url output.",
       "Push external users from install intent into get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url; use post_install_cart_activation_by_source to see the exact stuck source.",
       "Do not call the MCP goal complete until qualified visitor volume, qualified cart landings, and MCP-attributed revenue are all visible.",
     ],
@@ -3280,6 +3285,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
     `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
     `Tracked reviewer activation template: \`${payload.source_attribution.tracked_reviewer_activation_template}\``,
+    `Tracked reviewer activation browser runner template: \`${payload.source_attribution.tracked_reviewer_activation_html_template}\``,
     "",
     "### Start Sources",
     "",
@@ -4616,6 +4622,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
   "https://mcp.packrift.com/ai/mcp-reviewer-activation.md",
   "https://mcp.packrift.com/r/activate/generic",
+  "https://mcp.packrift.com/r/activate/generic?format=html",
   "https://mcp.packrift.com/ai/claude-connector-submission.json",
   "https://mcp.packrift.com/ai/claude-connector-submission.md",
   "https://mcp.packrift.com/ai/agent-capture-outreach.json",
@@ -4736,7 +4743,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-directory-submit-actions.md": "Crawler-readable Packrift MCP directory submit-action queue for support teams, reviewers, and agent indexes.",
   "/ai/mcp-reviewer-activation.json": "Machine-readable Packrift MCP reviewer activation handoff for moving proof clicks into real MCP client calls and measured cart URLs.",
   "/ai/mcp-reviewer-activation.md": "Crawler-readable Packrift MCP reviewer activation handoff with source-specific install, proof, JSON-RPC, and cart URL acceptance rules.",
-  "/r/activate/generic": "Source-attributed Packrift MCP activation packet that converts review/proof interest into a real MCP client run.",
+  "/r/activate/generic": "Source-attributed Packrift MCP activation packet and browser runner that converts review/proof interest into a real MCP client run.",
   "/ai/claude-connector-submission.json": "Machine-readable Claude Connectors Directory submission packet for Packrift MCP with form fields, proof URLs, and safety rules.",
   "/ai/claude-connector-submission.md": "Crawler-readable Claude Connectors Directory submission packet for reviewers and Packrift operators.",
   "/ai/agent-capture-outreach.json": "Machine-readable Packrift MCP outreach packet combining install snippets, proof links, tracked directory URLs, recrawl messages, and browser-agent handoff rules.",
@@ -4861,13 +4868,17 @@ const AI_SALES_PRIORITY_SKU_RESOURCE_URLS = AI_SALES_PRIORITY_SKUS.flatMap((sku)
 ]);
 
 const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_URLS].map((uri) => {
-  const pathname = new URL(uri).pathname;
+  const parsed = new URL(uri);
+  const pathname = parsed.pathname;
+  const explicitFormat = parsed.searchParams.get("format")?.toLowerCase();
   const route = AI_CORPUS_ROUTES[pathname];
   const mimeType =
     pathname.match(/^\/ai\/sku\/[^/]+\.md$/)
       ? "text/markdown"
       : pathname.match(/^\/ai\/sku\/[^/]+\.json$/)
         ? "application/json"
+        : explicitFormat === "html"
+          ? "text/html"
         : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/") || pathname.startsWith("/r/install/") || pathname.startsWith("/r/run/") || pathname.startsWith("/r/activate/")
           ? "application/json"
         : pathname.endsWith(".jsonl")
@@ -4893,7 +4904,9 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
 });
 
 async function readResourceText(env: Env, uri: string): Promise<string> {
-  const pathname = new URL(uri).pathname;
+  const parsed = new URL(uri);
+  const pathname = parsed.pathname;
+  const explicitFormat = parsed.searchParams.get("format")?.toLowerCase();
   if (pathname === "/llms.txt") return llmsTxt;
   if (pathname === "/llms-full.txt") return llmsFullTxt;
   if (pathname === "/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
@@ -4921,7 +4934,11 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/r/config/generic") return JSON.stringify(sourceAwareMcpJson("generic"), null, 2);
   if (pathname === "/r/install/generic/codex") return JSON.stringify(mcpInstallActionPayload({ source: "generic", target: "codex" }), null, 2);
   if (pathname === "/r/run/generic/generic_streamable_http") return JSON.stringify(mcpFirstRunActionPayload({ source: "generic", target: "generic_streamable_http" }), null, 2);
-  if (pathname === "/r/activate/generic") return JSON.stringify(mcpReviewerActivationPayload(reviewerActivationRuntime(), "generic"), null, 2);
+  if (pathname === "/r/activate/generic") {
+    return explicitFormat === "html"
+      ? mcpReviewerActivationHtml(reviewerActivationRuntime(), "generic")
+      : JSON.stringify(mcpReviewerActivationPayload(reviewerActivationRuntime(), "generic"), null, 2);
+  }
   if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
@@ -5055,6 +5072,8 @@ function mcpManifestPayload() {
     mcp_reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
     tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
     tracked_reviewer_activation_generic: "https://mcp.packrift.com/r/activate/generic",
+    tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
+    tracked_reviewer_activation_html_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
     claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
     agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
   };
@@ -5085,6 +5104,8 @@ function mcpServerCardPayload() {
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
+      tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
+      tracked_reviewer_activation_html_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
@@ -5578,6 +5599,8 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       mcp_reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
+      tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
+      tracked_reviewer_activation_html_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },

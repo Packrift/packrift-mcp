@@ -167,7 +167,7 @@ function publicProofLine(pack) {
   const tools = proof.mcp_tools_list?.tools_count ?? pack.copy?.tools_count ?? 14;
   const resources = proof.mcp_resources_list?.resources_count ?? proof.health?.resources_count ?? 83;
   const prompts = proof.mcp_prompts_list?.prompts_count ?? 9;
-  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R12";
+  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R13";
   const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 17;
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
