@@ -286,6 +286,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       root_skill_md: "https://mcp.packrift.com/SKILL.md",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       product_corpus: "https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl",

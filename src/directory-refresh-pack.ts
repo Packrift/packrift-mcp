@@ -241,6 +241,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       canonical_browserbase_browse_skill_md: CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL,
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       docker_mcp_catalog_pr: "https://github.com/docker/mcp-registry/pull/3388",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",

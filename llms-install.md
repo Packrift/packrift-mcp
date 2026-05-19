@@ -62,6 +62,15 @@ Use this when submitting or reviewing Packrift for Claude connector discovery:
 
 The packet includes form-ready fields, no-auth endpoint proof, legal/support links, allowed redirect hosts, and buyer safety rules.
 
+## Agent Capture Outreach Packet
+
+Use this when a reviewer, partner, or agent host needs one combined distribution handoff:
+
+- JSON: https://mcp.packrift.com/ai/agent-capture-outreach.json
+- Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
+
+The outreach packet combines install snippets, proof links, tracked start/config URLs, directory recrawl messages, browser-assisted MCP.so and Claude submission payloads, and the Browserbase Browse candidate brief while keeping the runtime endpoint fixed at `https://mcp.packrift.com/mcp`.
+
 ## First-Run Proof
 
 Use this when a developer, agent platform, or directory reviewer wants the shortest live proof before installing or recrawling:

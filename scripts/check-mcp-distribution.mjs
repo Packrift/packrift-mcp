@@ -289,6 +289,7 @@ async function liveMcpCheck() {
     directoryRefreshResult,
     directorySubmitActionsResult,
     claudeConnectorSubmissionResult,
+    agentCaptureOutreachResult,
     trackedStartPartnerResult,
     trackedStartHtmlPartnerResult,
     invalidStartSourceResult,
@@ -318,6 +319,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
     fetchText("https://mcp.packrift.com/ai/claude-connector-submission.json"),
+    fetchText("https://mcp.packrift.com/ai/agent-capture-outreach.json"),
     fetchRedirect("https://mcp.packrift.com/r/start/partner_demo?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/start?utm_source=partner_demo&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/start/bad-source"),
@@ -347,6 +349,7 @@ async function liveMcpCheck() {
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
   const claudeConnectorSubmission = claudeConnectorSubmissionResult.ok ? JSON.parse(claudeConnectorSubmissionResult.text) : null;
+  const agentCaptureOutreach = agentCaptureOutreachResult.ok ? JSON.parse(agentCaptureOutreachResult.text) : null;
   const trackedStartTarget = parseUrlOrNull(trackedStartPartnerResult.location);
   const invalidStartSource = parseJsonOrNull(invalidStartSourceResult.text);
   const invalidConfigSource = parseJsonOrNull(invalidConfigSourceResult.text);
@@ -424,10 +427,11 @@ async function liveMcpCheck() {
       invalidConfigSource?.error === "invalid_mcp_config_source" &&
       invalidConfigSource?.valid_format === "^[a-z0-9_]{2,64}$" &&
       invalidConfigSource?.partner_specific_sources_allowed === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R04" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R05" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_client_config" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-client-config.json") &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "agent_capture_outreach_packet" && surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R02" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
       adoptionKit?.developer_examples?.length >= 4 &&
@@ -502,7 +506,7 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.length >= 17 &&
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "smithery") &&
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "anthropic_connectors_directory") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R09" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R10" &&
       directorySubmitActions?.actions?.length >= 17 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
@@ -527,6 +531,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-workflow-gallery.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("claude-connector-submission.json")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("agent-capture-outreach.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
       claudeConnectorSubmission?.release === "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R01" &&
       claudeConnectorSubmission?.status === "manual_submission_ready" &&
@@ -534,6 +539,12 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.server?.authentication === "none_required_for_hosted_endpoint" &&
       claudeConnectorSubmission?.claude_install?.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R02" &&
+      agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
+      agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
+      agentCaptureOutreach?.agent_install_snippets?.claude_code?.includes(MCP_ENDPOINT) &&
+      agentCaptureOutreach?.browser_assisted_submissions?.mcp_so?.submission_url === "https://mcp.so/submit" &&
+      agentCaptureOutreach?.directory_submit_actions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/start") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
@@ -572,6 +583,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/agent-capture-outreach.md") &&
       firstCartUrl.startsWith("https://mcp.packrift.com/r/cart/") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
       firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
@@ -690,6 +703,9 @@ async function liveMcpCheck() {
       directory_submit_actions_browserbase_browse_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("browserbase-browse-skill-pack.json")
       ).length ?? 0,
+      agent_capture_outreach_release: agentCaptureOutreach?.release ?? null,
+      agent_capture_outreach_priority_queue: agentCaptureOutreach?.priority_queue?.length ?? 0,
+      agent_capture_outreach_directory_refreshes: agentCaptureOutreach?.directory_refreshes?.length ?? 0,
       first_cart_url_candidate_type: cart?.items?.[0]?.cart_url_candidate_type ?? null,
       first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
       mcp_introspection: {

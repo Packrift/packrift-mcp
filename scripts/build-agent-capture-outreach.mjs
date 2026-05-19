@@ -11,6 +11,8 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
+const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
+const AGENT_CAPTURE_OUTREACH_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
 const DISTRIBUTION_LATEST = resolve(REPO_ROOT, "outputs/mcp-distribution-check/latest.json");
 const AGENT_CAPTURE_CHECK_LATEST = resolve(REPO_ROOT, "outputs/agent-capture-check/latest.json");
 const SERVER_JSON = JSON.parse(readFileSync(resolve(REPO_ROOT, "server.json"), "utf8"));
@@ -91,6 +93,8 @@ function evidenceLinks(capture) {
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     mcp_directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
+    claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
+    agent_capture_outreach: AGENT_CAPTURE_OUTREACH_URL,
     health: "https://mcp.packrift.com/health",
     manifest: "https://mcp.packrift.com/manifest",
     server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -201,6 +205,65 @@ function agentInstallSnippets() {
   };
 }
 
+function trackedUrls(rows, source) {
+  const row = rows.find((action) => action.id === source);
+  return {
+    tracked_start_url: row?.tracked_start_url ?? TRACKED_START_TEMPLATE.replace("{source}", source),
+    tracked_config_url: row?.tracked_config_url ?? TRACKED_CONFIG_TEMPLATE.replace("{source}", source),
+  };
+}
+
+function browserAssistedSubmissions(rows, capture) {
+  const mcpSo = trackedUrls(rows, "mcp_so");
+  const claude = trackedUrls(rows, "anthropic_connectors_directory");
+  const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${SERVER_JSON.version}, ${capture.runtime.tools_count} tools, ${capture.runtime.resources_count} resources.`;
+
+  return {
+    mcp_so: {
+      status: "browser_auth_required",
+      submission_url: "https://mcp.so/submit",
+      listing_url: "https://mcp.so/servers?keyword=Packrift",
+      auth_gate:
+        "MCP.so currently requires a signed-in user before submitting a server. Use this payload in the browser form after sign-in; do not direct-post without an authenticated owner session.",
+      inspected_submit_endpoint: "POST https://mcp.so/api/submit-project",
+      fields: {
+        name: "Packrift MCP",
+        type: "server",
+        url: "https://github.com/Packrift/packrift-mcp",
+        server_config: JSON.stringify(agentInstallSnippets().generic_mcp_json, null, 2),
+        is_innovation: false,
+        is_dxt: false,
+      },
+      supporting_copy: proofLine,
+      ...mcpSo,
+    },
+    claude_connectors_directory: {
+      status: "google_form_auth_required",
+      submission_url: "https://clau.de/mcp-directory-submission",
+      listing_url: "https://claude.com/connectors",
+      auth_gate:
+        "The Claude Connectors Directory submission redirects to a Google Forms sign-in gate before fields are visible. Use the live Claude packet as the source of truth after signing in.",
+      source_packet: CLAUDE_CONNECTOR_SUBMISSION_URL,
+      source_packet_markdown: "https://mcp.packrift.com/ai/claude-connector-submission.md",
+      fields_source:
+        "Use suggested_form_fields, allowed_redirect_hosts, live_proof_urls, buyer_safety_rules, and claude_install from the Claude connector submission packet.",
+      high_priority_fields: {
+        name: "Packrift MCP",
+        category: "Business",
+        server_url: MCP_ENDPOINT,
+        website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
+        repository_url: "https://github.com/Packrift/packrift-mcp",
+        support_url: "https://packrift.com/pages/contact",
+        privacy_policy_url: "https://packrift.com/policies/privacy-policy",
+        terms_of_service_url: "https://packrift.com/policies/terms-of-service",
+        description:
+          "Hosted no-auth remote MCP for exact-spec Packrift packaging search with live price, inventory, shipping, cart handoff, and no-match recovery.",
+      },
+      ...claude,
+    },
+  };
+}
+
 function markdown(payload) {
   const staleRows = payload.directory_refreshes
     .map((row) => `| ${row.label ?? row.name} | ${row.action_status} | ${row.directory_status} | ${row.priority ?? ""} | ${row.tracked_start_url ?? ""} | ${row.tracked_config_url ?? ""} | ${row.listing_url ?? row.url ?? ""} | ${row.submission_url ?? ""} |`)
@@ -240,6 +303,12 @@ function markdown(payload) {
     "## Copy-Ready Directory Messages",
     "",
     messages || "No stale directory messages needed.",
+    "",
+    "## Browser-Assisted Submission Payloads",
+    "",
+    "```json",
+    JSON.stringify(payload.browser_assisted_submissions, null, 2),
+    "```",
     "",
     "## Browserbase Browse Candidate Brief",
     "",
@@ -307,6 +376,7 @@ async function main() {
       actions_count: submitActions.actions?.length ?? 0,
     },
     directory_refreshes: rows,
+    browser_assisted_submissions: browserAssistedSubmissions(rows, capture),
     browserbase_browse_candidate: browseCandidateBrief(),
     agent_install_snippets: agentInstallSnippets(),
   };

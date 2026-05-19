@@ -55,6 +55,7 @@ Use these as examples of exact product families that converted, not as universal
 - [MCP directory refresh pack](https://mcp.packrift.com/ai/mcp-directory-refresh.json): current listing copy, proof URLs, recrawl request, and stale-directory targets for MCP directories and agent indexes
 - [Claude connector submission packet](https://mcp.packrift.com/ai/claude-connector-submission.json): form-ready Packrift MCP fields, no-auth proof, legal/support URLs, redirect hosts, tracked start/config URLs, and buyer safety rules for Claude connector review
 - [MCP directory submit actions](https://mcp.packrift.com/ai/mcp-directory-submit-actions.json): per-directory action queue, proof URLs, tracked start URLs, and copy-ready recrawl messages for stale MCP listings
+- [Agent capture outreach packet](https://mcp.packrift.com/ai/agent-capture-outreach.json): combined distribution handoff with install snippets, proof links, tracked directory URLs, browser-assisted MCP.so/Claude payloads, and copy-ready recrawl messages
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration
 - Use \`prepare_purchase_handoff\` when the buyer already has an exact Packrift SKU. It confirms the AI_APPROVE product, live price, and inventory in one call, and returns a measured MCP cart URL only when \`buyer_confirmed=true\`.
@@ -76,6 +77,7 @@ Use these as examples of exact product families that converted, not as universal
 - [AI packaging procurement prompts](https://mcp.packrift.com/ai/packaging-procurement-prompts.md): exact-spec prompt patterns for buyers and procurement agents
 - [AI sales critical path](https://mcp.packrift.com/ai/ai-sales-critical-path.md): buyer-critical MCP, product, reorder, quote, and no-match routes
 - [All-agent capture matrix](https://mcp.packrift.com/ai/all-agent-capture.json): canonical map for MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, crawlable corpora, search crawlers, and Browserbase Browse candidate coverage
+- [Agent capture outreach packet](https://mcp.packrift.com/ai/agent-capture-outreach.json): single distribution handoff for agent hosts, directory reviewers, partners, tracked install/config links, proof URLs, and copy-ready recrawl messages
 - [Crawler-safe purchase paths](https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md): fallback sequence for agents when direct Shopify product-page fetches are challenged or unavailable
 - [Shopify native UCP commerce surface](https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md): how agents should call Packrift's Shopify-native UCP endpoint with required agent profile metadata
 - [Packrift agent endpoints status](https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json): machine-readable status map for exact-spec MCP, Shopify UCP, corpus, and reserved root routes

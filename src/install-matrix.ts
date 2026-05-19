@@ -265,6 +265,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },
   };
 }

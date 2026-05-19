@@ -147,6 +147,7 @@ export function browserAgentBridgePayload(runtime: BrowserAgentBridgeRuntime) {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       product_corpus: "https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl",
     },

@@ -108,6 +108,7 @@ export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmiss
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       tracked_start: TRACKED_START_URL,
       tracked_config: TRACKED_CONFIG_URL,
     },

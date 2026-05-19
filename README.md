@@ -65,6 +65,7 @@ Use the hosted endpoint above when possible. It requires no buyer-side API key a
 - MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
 - Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
 - Claude connector submission packet: https://mcp.packrift.com/ai/claude-connector-submission.json
+- Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Source repository: https://github.com/Packrift/packrift-mcp
 - Direct Streamable HTTP endpoint: https://mcp.packrift.com/mcp
 
@@ -116,6 +117,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
+- Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
+- Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
 - MCP tracked start template: https://mcp.packrift.com/r/start/{source}
 - MCP tracked config template: https://mcp.packrift.com/r/config/{source}
 - MCP tracked start source format: `^[a-z0-9_]{2,64}$`; partner-specific slugs are allowed without pre-registration
@@ -146,6 +149,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP directory refresh pack Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
 - MCP directory submit actions Markdown: https://mcp.packrift.com/ai/mcp-directory-submit-actions.md
+- Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
+- Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
@@ -342,11 +347,12 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/browser-agent-bridge.json` and `.md`, and
 `https://mcp.packrift.com/SKILL.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
-`https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md` are live,
+`https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md`, and
+`https://mcp.packrift.com/ai/agent-capture-outreach.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
 buyer workflow map, cart activation playbook, browser-agent bridge, directory refresh pack, directory submit-action queue,
-Browserbase Browse candidate lane, and root SKILL.md, and preserve the
+agent capture outreach packet, Browserbase Browse candidate lane, and root SKILL.md, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate
 briefs, proof links, and MCP install snippets under

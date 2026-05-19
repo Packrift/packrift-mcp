@@ -442,6 +442,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
         "Use this to keep mcpservers.org, MCP.Directory, Claude Connectors Directory, Smithery, Cline MCP Marketplace, MCP.so, MCP Market, Cursor Directory, MCP Central, MCPfinder, Glama source listing, PulseMCP, MCPBench, Chiark, and Docker MCP Catalog moving with tracked start /r/start/{source} links and current proof.",
     }),
     surface({
+      id: "agent_capture_outreach_packet",
+      name: "Packrift agent capture outreach packet",
+      agent_type: "distribution_operations",
+      audience: "Agent hosts, directory reviewers, partners, support teams, and Packrift operators who need one combined packet for install snippets, proof links, tracked directory URLs, and copy-ready recrawl messages.",
+      status: "live",
+      priority: "high",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
+      install_or_call:
+        "Use the outreach packet as the single public distribution handoff: it combines all-agent capture, directory submit actions, tracked start/config URLs, Claude/Codex/Cursor install snippets, Browserbase Browse candidate guidance, and copy-ready recrawl messages.",
+      proof_url: "https://mcp.packrift.com/ai/agent-capture-outreach.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      next_action:
+        "Use this packet when pushing stale directories, agent platforms, partners, and Browse-style agents toward the canonical hosted MCP endpoint.",
+    }),
+    surface({
       id: "claude_connector_submission_packet",
       name: "Claude connector submission packet",
       agent_type: "mcp_directory_operations",
@@ -475,7 +491,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R04",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R05",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -499,6 +515,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       llms: "https://mcp.packrift.com/llms.txt",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
     },

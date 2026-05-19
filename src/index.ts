@@ -19,6 +19,7 @@ import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserba
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
 import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
 import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } from "./claude-connector-submission.js";
+import { agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
@@ -2084,6 +2085,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "browserbase_browse_skill_pack",
     "mcp_directory_refresh",
     "mcp_directory_submit_actions",
+    "claude_connector_submission",
+    "agent_capture_outreach",
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
@@ -3573,6 +3576,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
   "https://mcp.packrift.com/ai/claude-connector-submission.json",
   "https://mcp.packrift.com/ai/claude-connector-submission.md",
+  "https://mcp.packrift.com/ai/agent-capture-outreach.json",
+  "https://mcp.packrift.com/ai/agent-capture-outreach.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -3681,6 +3686,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-directory-submit-actions.md": "Crawler-readable Packrift MCP directory submit-action queue for support teams, reviewers, and agent indexes.",
   "/ai/claude-connector-submission.json": "Machine-readable Claude Connectors Directory submission packet for Packrift MCP with form fields, proof URLs, and safety rules.",
   "/ai/claude-connector-submission.md": "Crawler-readable Claude Connectors Directory submission packet for reviewers and Packrift operators.",
+  "/ai/agent-capture-outreach.json": "Machine-readable Packrift MCP outreach packet combining install snippets, proof links, tracked directory URLs, recrawl messages, and browser-agent handoff rules.",
+  "/ai/agent-capture-outreach.md": "Crawler-readable Packrift MCP outreach packet for directory reviewers, partners, agent hosts, and Packrift operators.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -3888,6 +3895,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-directory-submit-actions.md") return mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
   if (pathname === "/ai/claude-connector-submission.json") return JSON.stringify(claudeConnectorSubmissionPayload(claudeConnectorSubmissionRuntime()), null, 2);
   if (pathname === "/ai/claude-connector-submission.md") return claudeConnectorSubmissionMarkdown(claudeConnectorSubmissionRuntime());
+  if (pathname === "/ai/agent-capture-outreach.json") return JSON.stringify(agentCaptureOutreachPayload(agentCaptureOutreachRuntime()), null, 2);
+  if (pathname === "/ai/agent-capture-outreach.md") return agentCaptureOutreachMarkdown(agentCaptureOutreachRuntime());
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -3974,6 +3983,7 @@ function mcpManifestPayload() {
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
     claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
+    agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
   };
 }
 
@@ -4002,6 +4012,7 @@ function mcpServerCardPayload() {
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },
     client_config: {
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
@@ -4201,6 +4212,15 @@ function claudeConnectorSubmissionRuntime() {
   };
 }
 
+function agentCaptureOutreachRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
 function mcpMarketplaceDiscoveryPayload() {
   return {
     schema_version: "1",
@@ -4261,6 +4281,7 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },
     signals: {
       category: "Business Tools",
@@ -5468,6 +5489,21 @@ app.get("/ai/claude-connector-submission.json", async (c) => {
 app.get("/ai/claude-connector-submission.md", async (c) => {
   const body = claudeConnectorSubmissionMarkdown(claudeConnectorSubmissionRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/claude-connector-submission.md", "claude_connector_submission", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/agent-capture-outreach.json", async (c) => {
+  const payload = agentCaptureOutreachPayload(agentCaptureOutreachRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/agent-capture-outreach.json", "agent_capture_outreach", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/agent-capture-outreach.md", async (c) => {
+  const body = agentCaptureOutreachMarkdown(agentCaptureOutreachRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/agent-capture-outreach.md", "agent_capture_outreach", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

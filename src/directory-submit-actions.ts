@@ -17,6 +17,7 @@ const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
 const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
+const AGENT_CAPTURE_OUTREACH_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
 const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
 const WORKFLOW_GALLERY_URL = "https://mcp.packrift.com/ai/mcp-workflow-gallery.json";
@@ -285,7 +286,7 @@ function trackedConfigUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -322,6 +323,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Well-known MCP JSON config: ${WELL_KNOWN_MCP_JSON_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
+    `- Agent capture outreach packet: ${AGENT_CAPTURE_OUTREACH_URL}`,
     `- Claude connector submission packet: ${CLAUDE_CONNECTOR_SUBMISSION_URL}`,
     `- First-run proof: ${FIRST_RUN_PROOF_URL}`,
     `- Workflow gallery: ${WORKFLOW_GALLERY_URL}`,
@@ -354,6 +356,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       install_matrix: INSTALL_MATRIX_URL,
       directory_refresh: DIRECTORY_REFRESH_URL,
       directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
+      agent_capture_outreach: AGENT_CAPTURE_OUTREACH_URL,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
       cart_activation: CART_ACTIVATION_URL,
       first_run_proof: FIRST_RUN_PROOF_URL,
@@ -366,7 +369,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R09",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R10",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

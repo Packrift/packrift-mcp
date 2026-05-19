@@ -162,6 +162,7 @@ async function main() {
     "browserbase_browse_candidate",
     "mcp_directory_refreshes",
     "mcp_directory_submit_actions",
+    "agent_capture_outreach_packet",
     "claude_connector_submission_packet",
     "search_and_answer_crawlers",
   ];
@@ -185,6 +186,7 @@ async function main() {
     "browserbase-browse-skill-pack",
     "directory refresh",
     "directory submit actions",
+    "agent capture outreach",
     "Claude connector submission",
     "tracked start",
     "tracked config",
@@ -200,7 +202,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R04", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R05", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -268,6 +270,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises directory submit actions", hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises agent capture outreach", hasResourceUri(resourceUris, "/ai/agent-capture-outreach.json") && hasResourceUri(resourceUris, "/ai/agent-capture-outreach.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises Claude connector submission", hasResourceUri(resourceUris, "/ai/claude-connector-submission.json") && hasResourceUri(resourceUris, "/ai/claude-connector-submission.md"), {

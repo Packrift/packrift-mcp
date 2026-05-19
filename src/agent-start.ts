@@ -219,6 +219,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     },
     success_gate:
