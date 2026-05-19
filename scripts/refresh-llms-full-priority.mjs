@@ -20,6 +20,7 @@ const DEFAULT_VERIFY_TARGETS = [
 const args = parseArgs(process.argv.slice(2));
 loadEnvFile(GA4_ENV);
 loadEnvFile(join(REPO_ROOT, ".env.cloudflare.local"));
+loadEnvFile("/Users/farhan/Downloads/env-cloudflare.txt");
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const runDir = resolve(args["run-dir"] || join(REPO_ROOT, "outputs/llms-full-refresh", stamp));
