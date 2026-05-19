@@ -306,6 +306,7 @@ async function liveMcpCheck() {
     directorySubmitActionsResult,
     reviewerActivationResult,
     trackedReviewerActivationGenericResult,
+    trackedReviewerActivationHtmlResult,
     claudeConnectorSubmissionResult,
     agentCaptureOutreachResult,
     trackedStartPartnerResult,
@@ -349,7 +350,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-reviewer-activation.json"),
-    fetchText("https://mcp.packrift.com/r/activate/generic?utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/activate/generic?format=json&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/activate/generic?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/claude-connector-submission.json"),
     fetchText("https://mcp.packrift.com/ai/agent-capture-outreach.json"),
     fetchRedirect("https://mcp.packrift.com/r/start/partner_demo?utm_content=distribution_check"),
@@ -782,16 +784,22 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("claude-connector-submission.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("agent-capture-outreach.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
-      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R01" &&
+      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R02" &&
       reviewerActivation?.target_source?.id === "generic" &&
       reviewerActivation?.target_source?.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/generic") &&
       reviewerActivation?.target_source?.tracked_first_run_live_proof_url?.includes("execute=1") &&
       reviewerActivation?.real_mcp_client_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
+      reviewerActivation?.real_mcp_client_run?.browser_executable === true &&
+      reviewerActivation?.real_mcp_client_run?.browser_runner_url?.includes("format=html") &&
       reviewerActivation?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
-      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R01" &&
+      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R02" &&
       trackedReviewerActivationGeneric?.target_source?.id === "generic" &&
       trackedReviewerActivationGeneric?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.required_final_tool === "create_cart_url" &&
+      trackedReviewerActivationHtmlResult.ok &&
+      trackedReviewerActivationHtmlResult.text.includes("Run real MCP check") &&
+      trackedReviewerActivationHtmlResult.text.includes("activation.real_mcp_client_run.endpoint") &&
+      trackedReviewerActivationHtmlResult.text.includes("create_cart_url") &&
       claudeConnectorSubmission?.release === "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R01" &&
       claudeConnectorSubmission?.status === "manual_submission_ready" &&
       claudeConnectorSubmission?.server?.remote_endpoint === "https://mcp.packrift.com/mcp" &&
@@ -1035,6 +1043,8 @@ async function liveMcpCheck() {
       reviewer_activation_priority_sources: reviewerActivation?.priority_sources_waiting_on_real_mcp_run?.length ?? null,
       tracked_reviewer_activation_status: trackedReviewerActivationGenericResult.status,
       tracked_reviewer_activation_target: trackedReviewerActivationGeneric?.target_source?.id ?? null,
+      tracked_reviewer_activation_html_status: trackedReviewerActivationHtmlResult.status,
+      tracked_reviewer_activation_html_has_runner: trackedReviewerActivationHtmlResult.text.includes("Run real MCP check"),
       agent_capture_outreach_release: agentCaptureOutreach?.release ?? null,
       agent_capture_outreach_priority_queue: agentCaptureOutreach?.priority_queue?.length ?? 0,
       agent_capture_outreach_directory_refreshes: agentCaptureOutreach?.directory_refreshes?.length ?? 0,

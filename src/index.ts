@@ -36,7 +36,7 @@ import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser
 import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
 import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
-import { mcpReviewerActivationMarkdown, mcpReviewerActivationPayload, trackedReviewerActivationUrl } from "./reviewer-activation.js";
+import { mcpReviewerActivationHtml, mcpReviewerActivationMarkdown, mcpReviewerActivationPayload, trackedReviewerActivationUrl } from "./reviewer-activation.js";
 import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } from "./claude-connector-submission.js";
 import { agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
@@ -7431,6 +7431,8 @@ app.get("/r/activate/:source", async (c) => {
   }
 
   const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
+  const accept = c.req.header("Accept") ?? "";
+  const wantsHtml = format === "html" || (!format && accept.toLowerCase().includes("text/html") && !wantsJson(accept));
   if (format === "md" || format === "markdown") {
     const body = mcpReviewerActivationMarkdown(reviewerActivationRuntime(), source);
     await recordGeneratedAiResourceFetch(c, `/r/activate/${source}`, "mcp_reviewer_activation", jsonByteSize(body), {
@@ -7443,6 +7445,21 @@ app.get("/r/activate/:source", async (c) => {
     return c.body(body, 200, {
       "Content-Type": "text/markdown; charset=utf-8",
       ...RAW_HEADERS,
+    });
+  }
+  if (wantsHtml) {
+    const body = mcpReviewerActivationHtml(reviewerActivationRuntime(), source);
+    await recordGeneratedAiResourceFetch(c, `/r/activate/${source}`, "mcp_reviewer_activation", jsonByteSize(body), {
+      sourceSlug: source,
+      utmMedium: requestUrl.searchParams.get("utm_medium") || "reviewer_activation",
+      utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_activation",
+      utmContent: requestUrl.searchParams.get("utm_content") || "real_mcp_client_run",
+      mcpKeyPrefix: "activation",
+    });
+    return c.body(body, 200, {
+      "Content-Type": "text/html; charset=utf-8",
+      ...RAW_HEADERS,
+      Link: `<${trackedReviewerActivationUrl(source)}>; rel="canonical"`,
     });
   }
 

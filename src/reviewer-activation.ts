@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R01";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R02";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -46,6 +46,7 @@ function sourceSummary(action: ReturnType<typeof mcpDirectorySubmitActionsPayloa
     tracked_first_run_browser_url: `${trackedRunUrl(source, "generic_streamable_http")}&format=html`,
     tracked_first_run_live_proof_url: `${trackedRunUrl(source, "generic_streamable_http")}&execute=1`,
     tracked_reviewer_activation_url: trackedReviewerActivationUrl(source),
+    tracked_reviewer_activation_html_url: `${trackedReviewerActivationUrl(source)}&format=html`,
     next_action: action.next_action,
     missing_next_step:
       "Convert browser proof or install intent into a real MCP client call against https://mcp.packrift.com/mcp and a create_cart_url result.",
@@ -70,6 +71,7 @@ function genericSourceSummary(source: string) {
     tracked_first_run_browser_url: `${trackedRunUrl(sourceSlug, "generic_streamable_http")}&format=html`,
     tracked_first_run_live_proof_url: `${trackedRunUrl(sourceSlug, "generic_streamable_http")}&execute=1`,
     tracked_reviewer_activation_url: trackedReviewerActivationUrl(sourceSlug),
+    tracked_reviewer_activation_html_url: `${trackedReviewerActivationUrl(sourceSlug)}&format=html`,
     next_action: "Install Packrift MCP from the hosted endpoint, then run the real MCP sequence below.",
     missing_next_step:
       "Convert browser proof or install intent into a real MCP client call against https://mcp.packrift.com/mcp and a create_cart_url result.",
@@ -124,6 +126,8 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
       buyer_prompt: firstUsefulRun.buyer_prompt,
       run_rule: firstUsefulRun.run_rule,
       required_final_tool: "create_cart_url",
+      browser_executable: true,
+      browser_runner_url: target.tracked_reviewer_activation_html_url,
       sequence: firstUsefulRun.sequence,
       curl_script: firstUsefulRun.curl_script,
       success_signals: firstUsefulRun.success_signals,
@@ -151,6 +155,7 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
       reviewer_activation_json: MCP_REVIEWER_ACTIVATION_URL,
       reviewer_activation_markdown: MCP_REVIEWER_ACTIVATION_MD_URL,
       tracked_reviewer_activation: target.tracked_reviewer_activation_url,
+      tracked_reviewer_activation_html: target.tracked_reviewer_activation_html_url,
       tracked_first_run_live_proof: target.tracked_first_run_live_proof_url,
       tracked_first_run_browser: target.tracked_first_run_browser_url,
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
@@ -172,6 +177,19 @@ function fencedText(value: string): string {
 
 function escapeMarkdown(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
 }
 
 export function mcpReviewerActivationMarkdown(runtime: ReviewerActivationRuntime, source = "generic"): string {
@@ -201,6 +219,7 @@ export function mcpReviewerActivationMarkdown(runtime: ReviewerActivationRuntime
     `- Action status: ${target.action_status}`,
     `- Directory status: ${target.directory_status}`,
     `- Tracked activation handoff: ${target.tracked_reviewer_activation_url}`,
+    `- Browser runner: ${target.tracked_reviewer_activation_html_url}`,
     `- Tracked first-run proof: ${target.tracked_first_run_live_proof_url}`,
     `- Tracked config: ${target.tracked_config_url}`,
     "",
@@ -243,4 +262,120 @@ export function mcpReviewerActivationMarkdown(runtime: ReviewerActivationRuntime
     `Machine-readable version: ${payload.machine_readable_url}`,
     "",
   ].join("\n");
+}
+
+export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, source = "generic"): string {
+  const payload = mcpReviewerActivationPayload(runtime, source);
+  const target = payload.target_source;
+  const cartUrlPattern = "https://mcp.packrift.com/r/cart/";
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP Activation</title>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f6f3;color:#1b2533}
+    main{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+    h1{font-size:1.7rem;margin:0 0 8px}
+    h2{font-size:1rem;margin:22px 0 8px}
+    p{line-height:1.5;color:#4f5d6b}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+    a.button,button{display:inline-flex;align-items:center;border:1px solid #1b2533;border-radius:6px;background:#1b2533;color:#fff;padding:9px 12px;text-decoration:none;font:inherit;cursor:pointer}
+    a.secondary,button.secondary{background:#fff;color:#1b2533}
+    button:disabled{opacity:.56;cursor:wait}
+    .panel{background:#fff;border:1px solid #dfd9ce;border-radius:8px;padding:14px;margin:14px 0}
+    .pill{display:inline-block;border:1px solid #d4cec3;border-radius:999px;padding:4px 8px;margin:2px 4px 2px 0;font-size:.84rem;background:#fff}
+    pre{white-space:pre-wrap;word-break:break-word;background:#101820;color:#f4f8fb;border-radius:8px;padding:12px;overflow:auto}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .ok{border-left:4px solid #1f8f55}
+    .warn{border-left:4px solid #b86b00}
+    .muted{color:#657384}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Packrift MCP Activation</h1>
+    <p>${escapeHtml(payload.purpose)}</p>
+    <div>
+      <span class="pill">Source: ${escapeHtml(target.id)}</span>
+      <span class="pill">Endpoint: hosted MCP</span>
+      <span class="pill">Final tool: create_cart_url</span>
+      <span class="pill">No order created</span>
+    </div>
+    <div class="bar">
+      <button id="run">Run real MCP check</button>
+      <a class="button secondary" href="${escapeHtml(target.tracked_first_run_live_proof_url)}">Open live proof</a>
+      <a class="button secondary" href="${escapeHtml(payload.markdown_url)}?source=${escapeHtml(target.id)}">Markdown</a>
+      <a class="button secondary" href="${escapeHtml(payload.machine_readable_url)}?source=${escapeHtml(target.id)}">JSON</a>
+    </div>
+    <section class="panel">
+      <h2>Activation Gate</h2>
+      <p>Run the real MCP check to call <code>tools/list</code>, <code>get_cart_handoff_candidates</code>, <code>get_pricing</code>, <code>check_inventory</code>, and <code>create_cart_url</code> against the source-aware endpoint.</p>
+      <p class="muted">Success means the final result contains a measured <code>${cartUrlPattern}</code> URL.</p>
+    </section>
+    <section class="panel">
+      <h2>Source-Aware Endpoint</h2>
+      <pre>${escapeHtml(payload.real_mcp_client_run.endpoint)}</pre>
+    </section>
+    <section class="panel">
+      <h2>JSON-RPC Sequence</h2>
+      <pre>${escapeHtml(JSON.stringify(payload.real_mcp_client_run.sequence, null, 2))}</pre>
+    </section>
+    <section id="result" class="panel">
+      <h2>Result</h2>
+      <pre id="output">Not run yet.</pre>
+      <p id="cart"></p>
+    </section>
+  </main>
+  <script>
+    const activation = ${scriptJson(payload)};
+    const runButton = document.getElementById("run");
+    const output = document.getElementById("output");
+    const cart = document.getElementById("cart");
+    const resultPanel = document.getElementById("result");
+    function appendResult(results) {
+      output.textContent = JSON.stringify(results, null, 2);
+      const text = JSON.stringify(results);
+      const match = text.match(/https:\\/\\/mcp\\.packrift\\.com\\/r\\/cart\\/[^"\\s<>]+/);
+      if (match) {
+        resultPanel.className = "panel ok";
+        cart.innerHTML = '<a class="button" href="' + match[0] + '">Open measured cart URL</a>';
+      } else {
+        resultPanel.className = "panel warn";
+        cart.textContent = "No measured cart URL returned yet.";
+      }
+    }
+    async function runMcpSequence() {
+      runButton.disabled = true;
+      cart.textContent = "";
+      output.textContent = "Running real MCP calls...";
+      const sessionId = crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      const results = [];
+      for (const request of activation.real_mcp_client_run.sequence) {
+        const response = await fetch(activation.real_mcp_client_run.endpoint, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "Mcp-Session-Id": sessionId
+          },
+          body: JSON.stringify(request)
+        });
+        const body = await response.json().catch(() => ({ parse_error: "response_not_json" }));
+        results.push({ status: response.status, request, response: body });
+        appendResult(results);
+        if (!response.ok || body.error) break;
+      }
+      runButton.disabled = false;
+    }
+    runButton.addEventListener("click", () => {
+      runMcpSequence().catch((error) => {
+        resultPanel.className = "panel warn";
+        output.textContent = error && error.stack ? error.stack : String(error);
+        runButton.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>`;
 }
