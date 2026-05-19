@@ -1,3 +1,5 @@
+import { trackedInstallUrl } from "./install-action.js";
+
 export interface McpStartRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -12,6 +14,7 @@ const START_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-start.md";
 const START_HTML_RESOURCE_URL = "https://mcp.packrift.com/ai/mcp-start.html";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
+const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 const TRACKED_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
 const TRACKED_START_RECOMMENDED_SOURCES = [
   "official_registry",
@@ -174,7 +177,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R04",
+    release: "PACKRIFT-MCP-START-R05",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -187,9 +190,20 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       source_aware_html_template: "https://mcp.packrift.com/start?utm_source={source}",
       tracked_start_template: TRACKED_START_TEMPLATE,
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
+      tracked_install_template: TRACKED_INSTALL_TEMPLATE,
       source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedStartUrl(source)])),
       tracked_config_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
+      tracked_install_examples: Object.fromEntries(
+        TRACKED_START_RECOMMENDED_SOURCES.map((source) => [
+          source,
+          {
+            generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
+            claude_code: trackedInstallUrl(source, "claude_code"),
+            codex: trackedInstallUrl(source, "codex"),
+          },
+        ])
+      ),
     },
     runtime: {
       server_version: runtime.serverVersion,
@@ -210,6 +224,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       manifest: "https://mcp.packrift.com/manifest",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
@@ -230,7 +245,8 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use /r/start/{source} tracked start links for directories, partners, campaigns, and agent handoffs so start traffic can be attributed by source.",
       "Use /start?utm_source={source} when a handoff should render the same source-specific tracked config URL and copy controls on the start page.",
       "Use /r/config/{source} tracked config links when a directory, partner, campaign, or agent host needs a copy-ready MCP JSON config with source attribution.",
-      "Custom /r/start/{source} and /r/config/{source} slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
+      "Use /r/install/{source}/{target} tracked install-action links when a directory, partner, or agent host needs one target-specific install command or config plus install-intent attribution.",
+      "Custom /r/start/{source}, /r/config/{source}, and /r/install/{source}/{target} source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Use create_cart_url only after buyer confirmation so the returned /r/cart URL keeps MCP attribution measurable.",
@@ -273,6 +289,7 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     `Template: \`${payload.start_urls.tracked_start_template}\``,
     `Source-aware start page: \`${payload.start_urls.source_aware_html_template}\``,
     `Tracked config template: \`${payload.start_urls.tracked_config_template}\``,
+    `Tracked install template: \`${payload.start_urls.tracked_install_template}\``,
     `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
     `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
     `Custom examples: ${payload.start_urls.source_policy.custom_examples.map((source) => `\`${source}\``).join(", ")}`,
@@ -285,6 +302,12 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "",
     Object.entries(payload.start_urls.tracked_config_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+    "## Tracked Install Actions",
+    "",
+    Object.entries(payload.start_urls.tracked_install_examples)
+      .map(([key, value]) => `- ${key}: codex ${value.codex} | claude_code ${value.claude_code} | generic ${value.generic_streamable_http}`)
       .join("\n"),
     "",
     "## First Useful Flow",
@@ -346,6 +369,11 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   const sourceLabel = humanSourceLabel(source);
   const sourceStartUrl = trackedStartUrl(source);
   const sourceConfigUrl = trackedConfigUrl(source);
+  const sourceInstallUrls = {
+    generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
+    claude_code: trackedInstallUrl(source, "claude_code"),
+    codex: trackedInstallUrl(source, "codex"),
+  };
   const remoteConfig = JSON.stringify(payload.install.remote_mcp_json, null, 2);
   const flow = payload.first_flow
     .map(
@@ -511,6 +539,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         </div>
         <a class="button" href="${escapeHtml(sourceConfigUrl)}">Tracked config</a>
         ${copyButton(sourceConfigUrl, "Copy config URL", "tracked_config_url")}
+        <a class="button" href="${escapeHtml(sourceInstallUrls.codex)}">Tracked Codex install</a>
       </div>
     </header>
     <section>
@@ -539,6 +568,9 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
           <div class="proof">
             <a href="${escapeHtml(sourceStartUrl)}">start: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceConfigUrl)}">config: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceInstallUrls.generic_streamable_http)}">install json: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceInstallUrls.claude_code)}">install claude: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceInstallUrls.codex)}">install codex: ${escapeHtml(sourceLabel)}</a>
           </div>
         </div>
         <div>

@@ -34,7 +34,7 @@ The start page also renders source-specific copy controls when it receives a sou
 https://mcp.packrift.com/start?utm_source={source}
 ```
 
-Those handoffs record aggregate install-intent telemetry: `/r/config/{source}` fetches show up as `mcp_tracked_config_fetches`, and copy controls record `mcp_install_copy` by source and target so partner and directory handoffs can be evaluated before downstream cart events appear.
+Those handoffs record aggregate install-intent telemetry: `/r/config/{source}` fetches show up as `mcp_tracked_config_fetches`, `/r/install/{source}/{target}` opens show up as `mcp_install_intent`, and copy controls record `mcp_install_copy` by source and target so partner and directory handoffs can be evaluated before downstream cart events appear.
 
 Custom partner, campaign, directory, and agent-workflow slugs are allowed without code changes as long as they match `^[a-z0-9_]{2,64}$`. Examples: `mcpservers_org`, `agency_partner`, `browser_agent_demo`, `newsletter_mcp`.
 
@@ -45,6 +45,14 @@ https://mcp.packrift.com/r/config/{source}
 ```
 
 Tracked config fetches are exposed by source in `https://mcp.packrift.com/ai/mcp-usage-snapshot.json`.
+
+For a target-specific tracked install action, use:
+
+```text
+https://mcp.packrift.com/r/install/{source}/{target}
+```
+
+Common targets include `generic_streamable_http`, `claude_code`, `codex`, `claude_desktop`, and `cursor_windsurf_vscode`.
 
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
 

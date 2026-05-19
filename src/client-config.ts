@@ -1,3 +1,5 @@
+import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+
 export interface McpClientConfigRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -92,7 +94,7 @@ const FIRST_TESTS = [
 
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R02",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R03",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -117,6 +119,13 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_config_generic: trackedConfigUrl("generic"),
       tracked_config_examples: Object.fromEntries(TRACKED_CONFIG_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
+      tracked_install_template: TRACKED_INSTALL_TEMPLATE,
+      tracked_install_examples: {
+        generic_streamable_http: trackedInstallUrl("generic", "generic_streamable_http"),
+        claude_code: trackedInstallUrl("generic", "claude_code"),
+        codex: trackedInstallUrl("generic", "codex"),
+        cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+      },
     },
     install_commands: {
       claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
@@ -129,6 +138,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       "Do not ask buyers for Packrift API keys; the hosted endpoint requires no buyer-side auth.",
       "Use prepare_purchase_handoff for exact SKU prep, then create cart handoffs only after buyer confirmation.",
       "Use /r/config/{source} when sharing the config from a directory, partner, campaign, or agent workflow so config fetches can be attributed.",
+      "Use /r/install/{source}/{target} when sharing a target-specific command or config so install-intent can be attributed before tool calls arrive.",
     ],
     first_tests: FIRST_TESTS,
     proof_urls: {
@@ -169,6 +179,14 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     `Template: \`${payload.aliases.tracked_config_template}\``,
     "",
     Object.entries(payload.aliases.tracked_config_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+    "## Tracked Install Actions",
+    "",
+    `Template: \`${payload.aliases.tracked_install_template}\``,
+    "",
+    Object.entries(payload.aliases.tracked_install_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",

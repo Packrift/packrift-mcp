@@ -1,3 +1,5 @@
+import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+
 export interface InstallMatrixRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -214,7 +216,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R01",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R02",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -231,10 +233,18 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       "Do not ask buyers for Packrift API keys.",
       "Use browser agents only as read-first discovery bridges; confirm live commerce facts through MCP.",
       "Use /r/config/{source} when sharing copy-ready MCP JSON config from a directory, partner, campaign, or agent handoff so the fetch is measurable.",
+      "Use /r/install/{source}/{target} when a directory, partner, or agent handoff needs a target-specific install command or config and install-intent attribution.",
       "Use prepare_purchase_handoff for known exact SKUs when the host needs one compact live-confirmation and guarded cart-handoff tool call.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Route no-exact-match cases to quote recovery instead of forcing nearby substitutes.",
     ],
+    tracked_install_template: TRACKED_INSTALL_TEMPLATE,
+    tracked_install_examples: {
+      generic_streamable_http: trackedInstallUrl("generic", "generic_streamable_http"),
+      claude_code: trackedInstallUrl("generic", "claude_code"),
+      codex: trackedInstallUrl("generic", "codex"),
+      cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+    },
     hosts: HOSTS,
     smoke_tests: SMOKE_TESTS,
     conversion_path: [
@@ -251,6 +261,8 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
       manifest: "https://mcp.packrift.com/manifest",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+      tracked_install_template: TRACKED_INSTALL_TEMPLATE,
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
@@ -307,6 +319,14 @@ export function mcpInstallMatrixMarkdown(runtime: InstallMatrixRuntime): string 
     "## Copy-Ready Generic Config",
     "",
     fencedJson(remoteMcpJson()),
+    "",
+    "## Tracked Install Actions",
+    "",
+    `Template: \`${payload.tracked_install_template}\``,
+    "",
+    Object.entries(payload.tracked_install_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
     "",
     "## Host Matrix",
     "",

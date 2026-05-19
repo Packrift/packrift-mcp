@@ -9,6 +9,14 @@ import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture
 import { mcpStartHtml, mcpStartMarkdown, mcpStartPayload } from "./agent-start.js";
 import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js";
 import { mcpInstallMatrixMarkdown, mcpInstallMatrixPayload } from "./install-matrix.js";
+import {
+  MCP_INSTALL_ACTION_RELEASE,
+  mcpInstallActionMarkdown,
+  mcpInstallActionPayload,
+  mcpInstallActionsMarkdown,
+  mcpInstallActionsPayload,
+  normalizeInstallTarget,
+} from "./install-action.js";
 import { mcpClientConfigMarkdown, mcpClientConfigPayload } from "./client-config.js";
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-activation.js";
@@ -664,6 +672,7 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "mcp_resource_templates_list",
   "mcp_resource_read",
   "mcp_start_click",
+  "mcp_install_intent",
   "mcp_install_copy",
   "spec_search",
   "exact_match",
@@ -1541,6 +1550,48 @@ async function recordMcpStartRedirectTelemetry(
   });
 }
 
+async function recordMcpInstallIntentTelemetry(
+  env: Env,
+  request: Request,
+  requestUrl: URL,
+  source: string,
+  target: string,
+  resultSizeBytes: number
+): Promise<void> {
+  const userAgent = request.headers.get("User-Agent") ?? "";
+  if (!shouldRecordRouteLandingTelemetry(env, userAgent)) return;
+  const day = compactDate();
+  const id = `mcp_install_intent_${source}_${target}_${day}`;
+  const format = safeEventText(requestUrl.searchParams.get("format") || "json", 40);
+  await recordAiSalesEvent(env, {
+    event: "mcp_install_intent",
+    source: "mcp_install_action",
+    release: MCP_INSTALL_ACTION_RELEASE,
+    ok: true,
+    mcp_method: "http_get",
+    tool_name: safeEventText(target, 80),
+    resource_uri: `https://mcp.packrift.com/r/install/${source}/${target}`,
+    format,
+    result_count: 1,
+    result_size_bytes: resultSizeBytes,
+    transport: "http_get",
+    user_agent: safeEventText(userAgent, 240),
+    bot_family: classifyAgentFamily(userAgent),
+    packrift_ai_id: id,
+    ai_commerce_id: id,
+    mcp_key: `install_intent:${source}:${target}`,
+    mcp_journey: `mcp_install_action:${source}:open:${target}`,
+    mcp_result_set: `mcp_install_action_${day}`,
+    utm_source: source,
+    utm_medium: requestUrl.searchParams.get("utm_medium") || "install_action",
+    utm_campaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_install",
+    utm_content: requestUrl.searchParams.get("utm_content") || target,
+    source_url: `https://mcp.packrift.com/r/install/${source}/${target}`,
+    page_url: requestUrl.toString(),
+    referrer: request.headers.get("Referer") ?? "",
+  });
+}
+
 async function recordRouteRedirectTelemetry(
   env: Env,
   request: Request,
@@ -1891,6 +1942,8 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byEventAttribution: Record<string, number> = {};
   const byStartSource: Record<string, number> = {};
   const byTrackedConfigSource: Record<string, number> = {};
+  const byInstallIntentSource: Record<string, number> = {};
+  const byInstallIntentTarget: Record<string, number> = {};
   const byInstallCopySource: Record<string, number> = {};
   const byInstallCopyTarget: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
@@ -1939,6 +1992,12 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const trackedConfigSource = trackedConfigSourceFromEvent(event);
     if (trackedConfigSource) {
       byTrackedConfigSource[trackedConfigSource] = (byTrackedConfigSource[trackedConfigSource] ?? 0) + 1;
+    }
+    if (eventName === "mcp_install_intent") {
+      const installSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("install_intent:") ? mcpKey.split(":")[1] || "unknown" : "unknown";
+      const installTarget = toolName !== "unknown" ? toolName : utmContent !== "unknown" ? utmContent : "unknown";
+      byInstallIntentSource[installSource] = (byInstallIntentSource[installSource] ?? 0) + 1;
+      byInstallIntentTarget[installTarget] = (byInstallIntentTarget[installTarget] ?? 0) + 1;
     }
     if (eventName === "mcp_install_copy") {
       const installSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("install_copy:") ? mcpKey.split(":")[1] || "unknown" : "unknown";
@@ -2040,10 +2099,13 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_start_source: top(byStartSource),
     by_tracked_config_source: top(byTrackedConfigSource),
     tracked_config_fetches: Object.values(byTrackedConfigSource).reduce((sum, count) => sum + count, 0),
+    by_install_intent_source: top(byInstallIntentSource),
+    by_install_intent_target: top(byInstallIntentTarget),
     by_install_copy_source: top(byInstallCopySource),
     by_install_copy_target: top(byInstallCopyTarget),
     recent_start_clicks: recent("mcp_start_click"),
     recent_tracked_config_fetches: recent("mcp_resource_read", (event) => Boolean(trackedConfigSourceFromEvent(event))),
+    recent_install_intents: recent("mcp_install_intent"),
     recent_install_copies: recent("mcp_install_copy"),
     recent_tool_calls: recent("mcp_tool_call"),
     recent_prompt_gets: recent("mcp_prompt_get"),
@@ -2087,6 +2149,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
   const trackedConfigFetches = summary.tracked_config_fetches;
+  const installIntents = byEvent.mcp_install_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
@@ -2095,6 +2158,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "all_agent_capture",
     "mcp_adoption_kit",
     "mcp_install_matrix",
+    "mcp_install_actions",
     "mcp_client_config",
     "mcp_usage_snapshot",
     "mcp_buyer_use_cases",
@@ -2110,9 +2174,9 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + installCopies + directAgentResourceEvents;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R06",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R07",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2137,6 +2201,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_cart_landings: cartLandings,
       mcp_start_clicks: startClicks,
       mcp_tracked_config_fetches: trackedConfigFetches,
+      mcp_install_intent_events: installIntents,
       mcp_install_copy_events: installCopies,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
@@ -2145,6 +2210,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_start_resource_events: bySource.mcp_start ?? 0,
       adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
       install_matrix_resource_events: bySource.mcp_install_matrix ?? 0,
+      install_actions_resource_events: bySource.mcp_install_actions ?? 0,
       client_config_resource_events: bySource.mcp_client_config ?? 0,
       all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,
       buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
@@ -2162,6 +2228,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     proof_gate: {
       usage_exists: totalMcpSignals > 0,
       tracked_config_fetch_seen: trackedConfigFetches > 0,
+      install_intent_seen: installIntents > 0,
       install_copy_seen: installCopies > 0,
       create_cart_url_seen: createCartUrlCalls > 0,
       material_tool_usage_50_plus: mcpToolCalls >= 50,
@@ -2177,6 +2244,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       utm_sources: summary.by_utm_source,
       start_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
+      install_intent_sources: summary.by_install_intent_source,
+      install_intent_targets: summary.by_install_intent_target,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       mcp_keys: summary.by_mcp_key,
@@ -2188,8 +2257,11 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       mcp_start_click_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
+      install_intent_sources: summary.by_install_intent_source,
+      install_intent_targets: summary.by_install_intent_target,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       utm_sources: summary.by_utm_source,
@@ -2200,6 +2272,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       event_attribution: summary.by_event_attribution,
       recent_start_clicks: summary.recent_start_clicks,
       recent_tracked_config_fetches: summary.recent_tracked_config_fetches,
+      recent_install_intents: summary.recent_install_intents,
       recent_install_copies: summary.recent_install_copies,
       recent_tool_calls: summary.recent_tool_calls,
       recent_cart_landings: summary.recent_cart_landings,
@@ -2212,6 +2285,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+      tracked_install_generic_codex: "https://mcp.packrift.com/r/install/generic/codex",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
@@ -2261,6 +2336,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
+    `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
@@ -2268,6 +2344,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP start resource events: ${payload.counts.mcp_start_resource_events}`,
     `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
     `- Install matrix resource events: ${payload.counts.install_matrix_resource_events}`,
+    `- Install actions resource events: ${payload.counts.install_actions_resource_events}`,
     `- Client config resource events: ${payload.counts.client_config_resource_events}`,
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
@@ -2283,6 +2360,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "",
     `Tracked start template: \`${payload.source_attribution.tracked_start_template}\``,
     `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
+    `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
     "",
     "### MCP Start Click Sources",
     "",
@@ -2295,6 +2373,18 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| Source | Count |",
     "| --- | ---: |",
     table(payload.source_attribution.tracked_config_sources),
+    "",
+    "### MCP Install Intent Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.install_intent_sources),
+    "",
+    "### MCP Install Intent Targets",
+    "",
+    "| Target | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.install_intent_targets),
     "",
     "### MCP Install Copy Sources",
     "",
@@ -2330,6 +2420,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "",
     `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
     `- Tracked config fetch seen: ${payload.proof_gate.tracked_config_fetch_seen ? "yes" : "no"}`,
+    `- Install intent seen: ${payload.proof_gate.install_intent_seen ? "yes" : "no"}`,
     `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
     `- create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
     `- Material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
@@ -3545,6 +3636,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-start.md",
   "https://mcp.packrift.com/ai/mcp-start.html",
   "https://mcp.packrift.com/r/config/generic",
+  "https://mcp.packrift.com/r/install/generic/codex",
   "https://mcp.packrift.com/server-card.json",
   "https://mcp.packrift.com/.well-known/mcp.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -3586,6 +3678,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
   "https://mcp.packrift.com/ai/mcp-install-matrix.json",
   "https://mcp.packrift.com/ai/mcp-install-matrix.md",
+  "https://mcp.packrift.com/ai/mcp-install-actions.json",
+  "https://mcp.packrift.com/ai/mcp-install-actions.md",
   "https://mcp.packrift.com/ai/mcp-client-config.json",
   "https://mcp.packrift.com/ai/mcp-client-config.md",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -3655,6 +3749,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-start.md": "Markdown Packrift MCP start guide for humans, agents, and directory reviewers.",
   "/ai/mcp-start.html": "HTML Packrift MCP start page for developers and agent operators.",
   "/r/config/generic": "Source-attributed remote MCP client config fetch for generic directories and agent handoffs.",
+  "/r/install/generic/codex": "Source-attributed Codex install-action payload for Packrift MCP.",
   "/server-card.json": "Root Packrift MCP server discovery card.",
   "/.well-known/mcp.json": "Well-known copy-ready remote MCP client config for installing Packrift MCP.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
@@ -3696,6 +3791,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-adoption-kit.md": "Crawler-readable Packrift MCP adoption kit for developers, agents, marketplaces, and AI-commerce workflows with copy-paste hosted endpoint examples.",
   "/ai/mcp-install-matrix.json": "Machine-readable Packrift MCP install matrix for common agent hosts, copy-ready remote MCP config, smoke tests, and measured cart handoff rules.",
   "/ai/mcp-install-matrix.md": "Crawler-readable Packrift MCP install matrix for developers, directories, and agent hosts.",
+  "/ai/mcp-install-actions.json": "Machine-readable tracked Packrift MCP install-action URLs for common client targets and directory handoffs.",
+  "/ai/mcp-install-actions.md": "Crawler-readable tracked Packrift MCP install-action URLs for common client targets and directory handoffs.",
   "/ai/mcp-client-config.json": "Small copy-ready Packrift MCP client config bundle for IDEs, agent hosts, and directory reviewers.",
   "/ai/mcp-client-config.md": "Markdown Packrift MCP client config bundle with install commands and first tests.",
   "/ai/mcp-usage-snapshot.json": "Machine-readable public aggregate usage snapshot for Packrift MCP discovery, tool calls, cart handoff, and proof-gate iteration.",
@@ -3848,7 +3945,7 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
       ? "text/markdown"
       : pathname.match(/^\/ai\/sku\/[^/]+\.json$/)
         ? "application/json"
-        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/")
+        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/") || pathname.startsWith("/r/install/")
           ? "application/json"
         : pathname.endsWith(".jsonl")
           ? "application/x-ndjson"
@@ -3899,12 +3996,15 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-start.md") return mcpStartMarkdown(mcpStartRuntime());
   if (pathname === "/ai/mcp-start.html") return mcpStartHtml(mcpStartRuntime());
   if (pathname === "/r/config/generic") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
+  if (pathname === "/r/install/generic/codex") return JSON.stringify(mcpInstallActionPayload({ source: "generic", target: "codex" }), null, 2);
   if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
   if (pathname === "/ai/mcp-install-matrix.json") return JSON.stringify(mcpInstallMatrixPayload(installMatrixRuntime()), null, 2);
   if (pathname === "/ai/mcp-install-matrix.md") return mcpInstallMatrixMarkdown(installMatrixRuntime());
+  if (pathname === "/ai/mcp-install-actions.json") return JSON.stringify(mcpInstallActionsPayload(installActionRuntime()), null, 2);
+  if (pathname === "/ai/mcp-install-actions.md") return mcpInstallActionsMarkdown(installActionRuntime());
   if (pathname === "/ai/mcp-client-config.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()), null, 2);
   if (pathname === "/ai/mcp-client-config.md") return mcpClientConfigMarkdown(clientConfigRuntime());
   if (pathname === "/ai/mcp-usage-snapshot.json") return JSON.stringify(await mcpUsageSnapshotPayload(env), null, 2);
@@ -4002,6 +4102,9 @@ function mcpManifestPayload() {
     all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+    mcp_install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+    tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+    tracked_install_generic_codex: "https://mcp.packrift.com/r/install/generic/codex",
     mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
     root_mcp_json: "https://mcp.packrift.com/mcp.json",
     well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
@@ -4044,6 +4147,7 @@ function mcpServerCardPayload() {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },
@@ -4054,6 +4158,8 @@ function mcpServerCardPayload() {
       markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      tracked_install_codex_generic: "https://mcp.packrift.com/r/install/generic/codex",
     },
     static_server_card: {
       well_known_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -4091,6 +4197,15 @@ function adoptionKitRuntime() {
 }
 
 function installMatrixRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function installActionRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -5344,6 +5459,21 @@ app.get("/ai/mcp-install-matrix.md", async (c) => {
   });
 });
 
+app.get("/ai/mcp-install-actions.json", async (c) => {
+  const payload = mcpInstallActionsPayload(installActionRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-install-actions.json", "mcp_install_actions", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-install-actions.md", async (c) => {
+  const body = mcpInstallActionsMarkdown(installActionRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-install-actions.md", "mcp_install_actions", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
 app.get("/ai/mcp-client-config.json", async (c) => {
   const payload = mcpClientConfigPayload(clientConfigRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-client-config.json", "mcp_client_config", jsonByteSize(payload));
@@ -5903,6 +6033,78 @@ app.get("/r/config/:source", async (c) => {
   return c.json(config, 200, RAW_HEADERS);
 });
 
+app.get("/r/install/:source/:target", async (c) => {
+  const requestUrl = new URL(c.req.url);
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").trim();
+  const rawTarget = decodeURIComponent(c.req.param("target") ?? "").trim();
+  const source = rawSource.toLowerCase();
+  const target = normalizeInstallTarget(rawTarget);
+  if (!MCP_START_SOURCE_PATTERN.test(source)) {
+    return c.json(
+      {
+        error: "invalid_mcp_install_source",
+        message: "Use /r/install/{source}/{target} with a lowercase source slug containing only letters, numbers, and underscores.",
+        valid_format: MCP_START_SOURCE_POLICY.accepted_source_format,
+        partner_specific_sources_allowed: MCP_START_SOURCE_POLICY.partner_specific_sources_allowed,
+        recommended_sources: MCP_START_SOURCE_POLICY.recommended_sources,
+        custom_examples: MCP_START_SOURCE_POLICY.custom_examples,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+  if (!target) {
+    return c.json(
+      {
+        error: "invalid_mcp_install_target",
+        message: "Use a supported install target.",
+        valid_targets: mcpInstallActionsPayload(installActionRuntime()).targets.map((row) => row.id),
+        template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+
+  const payload = mcpInstallActionPayload({ source, target: target.id });
+  if (!payload) {
+    return c.json({ error: "invalid_mcp_install_target" }, 404, RAW_HEADERS);
+  }
+
+  const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
+  if (format === "text" || format === "txt") {
+    const body = `${payload.copy_text}\n`;
+    await recordMcpInstallIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target.id, jsonByteSize(body));
+    return c.body(body, 200, {
+      "Content-Type": "text/plain; charset=utf-8",
+      ...RAW_HEADERS,
+    });
+  }
+  if (format === "md" || format === "markdown") {
+    const body = mcpInstallActionMarkdown(payload);
+    await recordMcpInstallIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target.id, jsonByteSize(body));
+    return c.body(body, 200, {
+      "Content-Type": "text/markdown; charset=utf-8",
+      ...RAW_HEADERS,
+    });
+  }
+  await recordMcpInstallIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target.id, jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/r/install/:source", (c) =>
+  c.json(
+    {
+      error: "invalid_mcp_install_target",
+      message: "Use /r/install/{source}/{target}; target is required.",
+      valid_targets: mcpInstallActionsPayload(installActionRuntime()).targets.map((row) => row.id),
+      template: "https://mcp.packrift.com/r/install/{source}/{target}",
+    },
+    404,
+    RAW_HEADERS
+  )
+);
+
 app.get("/r/*", async (c) => {
   const requestUrl = new URL(c.req.url);
   const match = requestUrl.pathname.match(/^\/r\/(product|reorder|quote|cart)\/([^/]+)$/);
@@ -5910,7 +6112,7 @@ app.get("/r/*", async (c) => {
     return c.json(
       {
         error: "not_found",
-        message: "Use /r/product/{SKU}, /r/reorder/{SKU}, /r/quote/{SKU}, or /r/cart/{SKU}.",
+        message: "Use /r/product/{SKU}, /r/reorder/{SKU}, /r/quote/{SKU}, /r/cart/{SKU}, or /r/install/{source}/{target}.",
       },
       404,
       RAW_HEADERS

@@ -18,7 +18,7 @@ Use this as the shortest public handoff for developers, agents, and directory re
 - Markdown: https://mcp.packrift.com/ai/mcp-start.md
 
 The source-aware page shows the matching tracked config URL and copy-ready install controls for the supplied source slug.
-Source-attributed config fetches are counted as `mcp_tracked_config_fetches`, and copy interactions are counted as `mcp_install_copy` events, so a directory or partner source can be measured before real buyer workflows arrive.
+Source-attributed config fetches are counted as `mcp_tracked_config_fetches`, tracked install-action opens are counted as `mcp_install_intent`, and copy interactions are counted as `mcp_install_copy` events, so a directory or partner source can be measured before real buyer workflows arrive.
 
 ## Hosted Adoption Kit
 
@@ -50,6 +50,16 @@ Use this when a host, IDE, or directory reviewer wants the smallest copy-ready M
 - Generic source-attributed config: https://mcp.packrift.com/r/config/generic
 
 The root, well-known, and source-attributed aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`. Use `/r/config/{source}` for directories and partner handoffs that need install-intent attribution in the public usage snapshot.
+
+## Tracked Install Actions
+
+Use this when a directory, partner, or agent host needs one target-specific install command or config URL:
+
+```text
+https://mcp.packrift.com/r/install/{source}/{target}
+```
+
+Common targets are `generic_streamable_http`, `claude_code`, `codex`, `claude_desktop`, and `cursor_windsurf_vscode`. The install-action index is available at https://mcp.packrift.com/ai/mcp-install-actions.json.
 
 ## Claude Connector Submission
 

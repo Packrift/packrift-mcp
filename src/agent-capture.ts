@@ -88,6 +88,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the copy-ready setup layer when asking agent platforms, directories, and developers to try Packrift MCP.",
     }),
     surface({
+      id: "mcp_install_actions",
+      name: "Packrift MCP tracked install actions",
+      agent_type: "developer_onboarding",
+      audience: "Directories, partner handoffs, and agent hosts that need one target-specific install URL with source attribution.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+      install_or_call:
+        "Use /r/install/{source}/{target} for generic MCP JSON, Claude Code, Codex, Claude Desktop, IDE hosts, Glama, and marketplace install handoffs that count as install intent.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-install-actions.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      next_action: "Use tracked install actions when a directory or partner can link directly to a client-specific setup path.",
+    }),
+    surface({
       id: "mcp_client_config",
       name: "Packrift MCP client config",
       agent_type: "developer_onboarding",
@@ -491,7 +506,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R05",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R06",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -533,6 +548,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "When create_cart_url returns an MCP /r/cart landing URL, use that as the primary buyer handoff so cart progression is measurable before Shopify checkout.",
       "When an external directory is stale or blocked, refresh that directory with this matrix, server.json, health, resources/list, tools/list, and cart smoke evidence.",
       "Use /r/config/{source} for tracked config fetches when a directory or host accepts a direct MCP JSON config URL.",
+      "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
     ],
     counts: {
       total_surfaces: surfaces.length,

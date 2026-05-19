@@ -275,10 +275,12 @@ async function liveMcpCheck() {
     agentCaptureResult,
     adoptionKitResult,
     installMatrixResult,
+    installActionsResult,
     clientConfigResult,
     rootMcpJsonResult,
     wellKnownMcpJsonResult,
     trackedConfigGenericResult,
+    trackedInstallCodexResult,
     usageSnapshotResult,
     buyerUseCasesResult,
     cartActivationResult,
@@ -294,6 +296,8 @@ async function liveMcpCheck() {
     trackedStartHtmlPartnerResult,
     invalidStartSourceResult,
     invalidConfigSourceResult,
+    invalidInstallSourceResult,
+    invalidInstallTargetResult,
     toolsResult,
     resourcesResult,
     promptsResult,
@@ -305,10 +309,12 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-install-matrix.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-install-actions.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-client-config.json"),
     fetchText("https://mcp.packrift.com/mcp.json"),
     fetchText("https://mcp.packrift.com/.well-known/mcp.json"),
     fetchText("https://mcp.packrift.com/r/config/generic?utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/install/generic/codex?format=text&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
@@ -324,6 +330,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/start?utm_source=partner_demo&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/start/bad-source"),
     fetchText("https://mcp.packrift.com/r/config/bad-source"),
+    fetchText("https://mcp.packrift.com/r/install/bad-source/codex"),
+    fetchText("https://mcp.packrift.com/r/install/generic/not_a_real_target"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("prompts/list"),
@@ -335,6 +343,7 @@ async function liveMcpCheck() {
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
   const installMatrix = installMatrixResult.ok ? JSON.parse(installMatrixResult.text) : null;
+  const installActions = installActionsResult.ok ? JSON.parse(installActionsResult.text) : null;
   const clientConfig = clientConfigResult.ok ? JSON.parse(clientConfigResult.text) : null;
   const rootMcpJson = rootMcpJsonResult.ok ? JSON.parse(rootMcpJsonResult.text) : null;
   const wellKnownMcpJson = wellKnownMcpJsonResult.ok ? JSON.parse(wellKnownMcpJsonResult.text) : null;
@@ -353,6 +362,8 @@ async function liveMcpCheck() {
   const trackedStartTarget = parseUrlOrNull(trackedStartPartnerResult.location);
   const invalidStartSource = parseJsonOrNull(invalidStartSourceResult.text);
   const invalidConfigSource = parseJsonOrNull(invalidConfigSourceResult.text);
+  const invalidInstallSource = parseJsonOrNull(invalidInstallSourceResult.text);
+  const invalidInstallTarget = parseJsonOrNull(invalidInstallTargetResult.text);
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const firstFinalCartUrl = cart?.items?.[0]?.final_shopify_cart_url_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
@@ -389,13 +400,14 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R04" &&
+      start?.release === "PACKRIFT-MCP-START-R05" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
+      start?.start_urls?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       start?.start_urls?.source_policy?.partner_specific_sources_allowed === true &&
       start?.start_urls?.source_policy?.accepted_source_format === "^[a-z0-9_]{2,64}$" &&
       start?.start_urls?.tracked_examples?.mcpservers_org?.startsWith("https://mcp.packrift.com/r/start/mcpservers_org") &&
@@ -404,7 +416,9 @@ async function liveMcpCheck() {
       start?.start_urls?.tracked_examples?.mcpfinder?.startsWith("https://mcp.packrift.com/r/start/mcpfinder") &&
       start?.start_urls?.tracked_config_examples?.smithery?.startsWith("https://mcp.packrift.com/r/config/smithery") &&
       start?.start_urls?.tracked_config_examples?.mcpfinder?.startsWith("https://mcp.packrift.com/r/config/mcpfinder") &&
+      start?.start_urls?.tracked_install_examples?.mcpfinder?.codex?.startsWith("https://mcp.packrift.com/r/install/mcpfinder/codex") &&
       start?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
+      start?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
       start?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       trackedStartPartnerResult.status === 302 &&
       trackedStartTarget?.origin === PACKRIFT_ORIGIN &&
@@ -416,6 +430,7 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.ok &&
       trackedStartHtmlPartnerResult.text.includes("Tracked install source: partner demo") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/config/partner_demo") &&
+      trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/codex") &&
       trackedStartHtmlPartnerResult.text.includes("mcp_install_copy") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"tracked_config_url\"") &&
       trackedStartHtmlPartnerResult.text.includes("Copy config URL") &&
@@ -427,30 +442,45 @@ async function liveMcpCheck() {
       invalidConfigSource?.error === "invalid_mcp_config_source" &&
       invalidConfigSource?.valid_format === "^[a-z0-9_]{2,64}$" &&
       invalidConfigSource?.partner_specific_sources_allowed === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R05" &&
+      invalidInstallSourceResult.status === 404 &&
+      invalidInstallSource?.error === "invalid_mcp_install_source" &&
+      invalidInstallTargetResult.status === 404 &&
+      invalidInstallTarget?.error === "invalid_mcp_install_target" &&
+      trackedInstallCodexResult.ok &&
+      trackedInstallCodexResult.text.includes("codex mcp add packrift --url https://mcp.packrift.com/mcp") &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R06" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "mcp_install_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-install-actions.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_client_config" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-client-config.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "agent_capture_outreach_packet" && surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R02" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
       adoptionKit?.developer_examples?.length >= 4 &&
       adoptionKit?.expected_first_flow_outcomes?.some((outcome) => outcome.includes("https://mcp.packrift.com/r/cart/")) &&
-      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R01" &&
+      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R02" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.smoke_tests?.length >= 5 &&
+      installMatrix?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      installMatrix?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
       installMatrix?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
-      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R02" &&
+      installMatrix?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
+      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R01" &&
+      installActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/generic/codex")) &&
+      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R03" &&
       clientConfig?.canonical_endpoint === MCP_ENDPOINT &&
       clientConfig?.config?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       clientConfig?.aliases?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       clientConfig?.aliases?.tracked_config_generic?.startsWith("https://mcp.packrift.com/r/config/generic") &&
+      clientConfig?.aliases?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      clientConfig?.aliases?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
       clientConfig?.authentication?.required === false &&
       clientConfig?.first_tests?.some((test) => test.id === "tools-list") &&
       rootMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       wellKnownMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       trackedConfigGeneric?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R06" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R07" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -458,13 +488,18 @@ async function liveMcpCheck() {
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
       typeof usageSnapshot?.counts?.mcp_cart_landings === "number" &&
       typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
+      typeof usageSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
       typeof usageSnapshot?.proof_gate?.tracked_config_fetch_seen === "boolean" &&
+      typeof usageSnapshot?.proof_gate?.install_intent_seen === "boolean" &&
       usageSnapshot?.source_attribution?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       usageSnapshot?.source_attribution?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
+      usageSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       Array.isArray(usageSnapshot?.top?.event_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_start_click_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tracked_config_sources) &&
+      Array.isArray(usageSnapshot?.source_attribution?.install_intent_sources) &&
+      Array.isArray(usageSnapshot?.source_attribution?.install_intent_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
@@ -509,7 +544,7 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.length >= 17 &&
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "smithery") &&
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "anthropic_connectors_directory") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R10" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R11" &&
       directorySubmitActions?.actions?.length >= 17 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
@@ -520,16 +555,20 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.action_status === "manual_submission_ready") &&
       directorySubmitActions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directorySubmitActions?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
+      directorySubmitActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       directorySubmitActions?.actions?.every((action) => action.tracked_start_url?.startsWith("https://mcp.packrift.com/r/start/")) &&
       directorySubmitActions?.actions?.every((action) => action.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/")) &&
+      directorySubmitActions?.actions?.every((action) => action.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_start?.startsWith("https://mcp.packrift.com/r/start/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_config?.startsWith("https://mcp.packrift.com/r/config/")) &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_install_codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-start.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-client-config.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/start/")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/config/")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/install/")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-workflow-gallery.json")) &&
@@ -556,10 +595,13 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-start.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-start.html") &&
       resourceUris.has("https://mcp.packrift.com/r/config/generic") &&
+      resourceUris.has("https://mcp.packrift.com/r/install/generic/codex") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-install-matrix.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-install-matrix.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-install-actions.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-install-actions.md") &&
       resourceUris.has("https://mcp.packrift.com/mcp.json") &&
       resourceUris.has("https://mcp.packrift.com/.well-known/mcp.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-client-config.json") &&
@@ -580,6 +622,9 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse/SKILL.md") &&
+      resourceUris.has("https://mcp.packrift.com/r/install/generic/codex") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-install-actions.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-install-actions.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json") &&
@@ -613,6 +658,7 @@ async function liveMcpCheck() {
         root_mcp_json_status: rootMcpJsonResult.status,
         well_known_mcp_json_status: wellKnownMcpJsonResult.status,
         tracked_config_generic_status: trackedConfigGenericResult.status,
+        tracked_install_codex_status: trackedInstallCodexResult.status,
       },
       start_release: start?.release ?? null,
       start_tracked_template: start?.start_urls?.tracked_start_template ?? null,
@@ -627,6 +673,7 @@ async function liveMcpCheck() {
       tracked_start_html_partner_demo: {
         status: trackedStartHtmlPartnerResult.status,
         has_source_config: trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/config/partner_demo"),
+        has_source_install_action: trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/codex"),
         has_copy_action: trackedStartHtmlPartnerResult.text.includes("Copy config URL"),
         has_install_copy_telemetry: trackedStartHtmlPartnerResult.text.includes("mcp_install_copy"),
       },
@@ -640,6 +687,15 @@ async function liveMcpCheck() {
         valid_format: invalidConfigSource?.valid_format ?? null,
         partner_specific_sources_allowed: invalidConfigSource?.partner_specific_sources_allowed ?? null,
       },
+      invalid_install_source: {
+        status: invalidInstallSourceResult.status,
+        error: invalidInstallSource?.error ?? null,
+      },
+      invalid_install_target: {
+        status: invalidInstallTargetResult.status,
+        error: invalidInstallTarget?.error ?? null,
+        valid_targets: invalidInstallTarget?.valid_targets ?? [],
+      },
       start_flow_steps: start?.first_flow?.length ?? 0,
       cart_release: cart?.release ?? null,
       cart_items: cart?.items?.length ?? 0,
@@ -651,14 +707,20 @@ async function liveMcpCheck() {
       install_matrix_release: installMatrix?.release ?? null,
       install_matrix_hosts: installMatrix?.hosts?.length ?? 0,
       install_matrix_smoke_tests: installMatrix?.smoke_tests?.length ?? 0,
+      install_actions_release: installActions?.release ?? null,
+      install_actions_targets: installActions?.targets?.length ?? 0,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
+      usage_snapshot_tracked_install_template: usageSnapshot?.source_attribution?.tracked_install_template ?? null,
       usage_snapshot_cart_landings: usageSnapshot?.counts?.mcp_cart_landings ?? null,
       usage_snapshot_tracked_config_fetches: usageSnapshot?.counts?.mcp_tracked_config_fetches ?? null,
+      usage_snapshot_install_intent_events: usageSnapshot?.counts?.mcp_install_intent_events ?? null,
       usage_snapshot_install_copy_events: usageSnapshot?.counts?.mcp_install_copy_events ?? null,
       usage_snapshot_start_sources: usageSnapshot?.source_attribution?.mcp_start_click_sources ?? [],
       usage_snapshot_tracked_config_sources: usageSnapshot?.source_attribution?.tracked_config_sources ?? [],
+      usage_snapshot_install_intent_sources: usageSnapshot?.source_attribution?.install_intent_sources ?? [],
+      usage_snapshot_install_intent_targets: usageSnapshot?.source_attribution?.install_intent_targets ?? [],
       usage_snapshot_install_copy_sources: usageSnapshot?.source_attribution?.install_copy_sources ?? [],
       usage_snapshot_install_copy_targets: usageSnapshot?.source_attribution?.install_copy_targets ?? [],
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],
@@ -690,8 +752,14 @@ async function liveMcpCheck() {
       directory_submit_actions_tracked_config_urls: directorySubmitActions?.actions?.filter((action) =>
         action.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/")
       ).length ?? 0,
+      directory_submit_actions_tracked_install_urls: directorySubmitActions?.actions?.filter((action) =>
+        action.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")
+      ).length ?? 0,
       directory_submit_actions_tracked_start_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("/r/start/")
+      ).length ?? 0,
+      directory_submit_actions_tracked_install_messages: directorySubmitActions?.actions?.filter((action) =>
+        action.recrawl_message?.includes("/r/install/")
       ).length ?? 0,
       directory_submit_actions_start_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("mcp-start.json")

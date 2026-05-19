@@ -1,5 +1,6 @@
 import { allAgentCapturePayload, type AgentCaptureRuntime } from "./agent-capture.js";
 import { mcpDirectorySubmitActionsPayload, type DirectorySubmitActionsRuntime } from "./directory-submit-actions.js";
+import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
 
 export interface AgentCaptureOutreachRuntime extends AgentCaptureRuntime, DirectorySubmitActionsRuntime {}
 
@@ -41,8 +42,11 @@ function agentInstallSnippets() {
   return {
     generic_tracked_start: "https://mcp.packrift.com/r/start/generic",
     generic_tracked_config: "https://mcp.packrift.com/r/config/generic",
+    generic_tracked_install_codex: trackedInstallUrl("generic", "codex"),
+    generic_tracked_install_claude_code: trackedInstallUrl("generic", "claude_code"),
     tracked_start_template: TRACKED_START_TEMPLATE,
     tracked_config_template: TRACKED_CONFIG_TEMPLATE,
+    tracked_install_template: TRACKED_INSTALL_TEMPLATE,
     generic_mcp_json: genericMcpJson(),
     claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
     codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,

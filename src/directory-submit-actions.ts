@@ -1,3 +1,5 @@
+import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+
 export interface DirectorySubmitActionsRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -293,6 +295,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const staleMarkers = "stale_markers" in action && action.stale_markers?.length ? [`Current stale/missing markers: ${action.stale_markers.join(", ")}.`, ""] : [];
   const trackedStart = trackedStartUrl(action.id);
   const trackedConfig = trackedConfigUrl(action.id);
+  const trackedInstallCodex = trackedInstallUrl(action.id, "codex");
+  const trackedInstallGeneric = trackedInstallUrl(action.id, "generic_streamable_http");
   return [
     `Subject: ${action.recrawl_subject}`,
     "",
@@ -310,6 +314,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Remote endpoint: https://mcp.packrift.com/mcp",
     `- Tracked start page: ${trackedStart}`,
     `- Tracked MCP JSON config: ${trackedConfig}`,
+    `- Tracked Codex install action: ${trackedInstallCodex}`,
+    `- Tracked generic install action: ${trackedInstallGeneric}`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -319,6 +325,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Install matrix: ${INSTALL_MATRIX_URL}`,
     `- Client config: ${CLIENT_CONFIG_URL}`,
     `- Tracked config template: ${MCP_TRACKED_CONFIG_TEMPLATE}`,
+    `- Tracked install template: ${TRACKED_INSTALL_TEMPLATE}`,
     `- Root MCP JSON config: ${ROOT_MCP_JSON_URL}`,
     `- Well-known MCP JSON config: ${WELL_KNOWN_MCP_JSON_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -343,11 +350,19 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     ...action,
     tracked_start_url: trackedStartUrl(action.id),
     tracked_config_url: trackedConfigUrl(action.id),
+    tracked_install_urls: {
+      generic_streamable_http: trackedInstallUrl(action.id, "generic_streamable_http"),
+      claude_code: trackedInstallUrl(action.id, "claude_code"),
+      codex: trackedInstallUrl(action.id, "codex"),
+      cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
+    },
     proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
       start_page: MCP_START_URL,
       tracked_start: trackedStartUrl(action.id),
       tracked_config: trackedConfigUrl(action.id),
+      tracked_install_codex: trackedInstallUrl(action.id, "codex"),
+      tracked_install_claude_code: trackedInstallUrl(action.id, "claude_code"),
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
       manifest: "https://mcp.packrift.com/manifest",
@@ -369,13 +384,14 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R10",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R11",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
     canonical_endpoint: MCP_ENDPOINT,
     tracked_start_template: MCP_TRACKED_START_TEMPLATE,
     tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
+    tracked_install_template: TRACKED_INSTALL_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
     source_client_config: CLIENT_CONFIG_URL,
@@ -406,7 +422,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -428,9 +444,10 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     "",
     `Tracked start template: ${payload.tracked_start_template}`,
     `Tracked config template: ${payload.tracked_config_template}`,
+    `Tracked install template: ${payload.tracked_install_template}`,
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",
