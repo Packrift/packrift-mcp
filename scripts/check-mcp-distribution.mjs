@@ -268,11 +268,14 @@ async function liveMcpCheck() {
       installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R01" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.smoke_tests?.length >= 5 &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R04" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R05" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
+      usageSnapshot?.source_attribution?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
+      Array.isArray(usageSnapshot?.source_attribution?.mcp_start_click_sources) &&
+      Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
       cartActivation?.release === "PACKRIFT-MCP-CART-ACTIVATION-R01" &&
@@ -366,6 +369,8 @@ async function liveMcpCheck() {
       install_matrix_smoke_tests: installMatrix?.smoke_tests?.length ?? 0,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
+      usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
+      usage_snapshot_start_sources: usageSnapshot?.source_attribution?.mcp_start_click_sources ?? [],
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],
       buyer_use_cases_release: buyerUseCases?.release ?? null,
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,

@@ -1818,6 +1818,11 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byMcpKey: Record<string, number> = {};
   const byMcpJourney: Record<string, number> = {};
   const byToolMcpKey: Record<string, number> = {};
+  const byUtmSource: Record<string, number> = {};
+  const byUtmMedium: Record<string, number> = {};
+  const byUtmCampaign: Record<string, number> = {};
+  const byUtmContent: Record<string, number> = {};
+  const byStartSource: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
   for (const event of events) {
     const eventName = String(event.event ?? "unknown");
@@ -1831,9 +1836,21 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const packriftAiId = String(event.packrift_ai_id ?? event.ai_commerce_id ?? "") || "unknown";
     const mcpKey = String(event.mcp_key ?? "") || "unknown";
     const mcpJourney = String(event.mcp_journey ?? "") || "unknown";
+    const utmSource = String(event.utm_source ?? "") || "unknown";
+    const utmMedium = String(event.utm_medium ?? "") || "unknown";
+    const utmCampaign = String(event.utm_campaign ?? "") || "unknown";
+    const utmContent = String(event.utm_content ?? "") || "unknown";
     byEvent[eventName] = (byEvent[eventName] ?? 0) + 1;
     bySku[sku] = (bySku[sku] ?? 0) + 1;
     bySource[source] = (bySource[source] ?? 0) + 1;
+    byUtmSource[utmSource] = (byUtmSource[utmSource] ?? 0) + 1;
+    byUtmMedium[utmMedium] = (byUtmMedium[utmMedium] ?? 0) + 1;
+    byUtmCampaign[utmCampaign] = (byUtmCampaign[utmCampaign] ?? 0) + 1;
+    byUtmContent[utmContent] = (byUtmContent[utmContent] ?? 0) + 1;
+    if (eventName === "mcp_start_click") {
+      const startSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("start:") ? mcpKey.slice("start:".length) : "unknown";
+      byStartSource[startSource] = (byStartSource[startSource] ?? 0) + 1;
+    }
     if (eventName === "mcp_prompt_get") byPrompt[promptName] = (byPrompt[promptName] ?? 0) + 1;
     if (eventName === "mcp_resource_read") byResource[resourceUri] = (byResource[resourceUri] ?? 0) + 1;
     if (mcpMethod !== "unknown") byMcpMethod[mcpMethod] = (byMcpMethod[mcpMethod] ?? 0) + 1;
@@ -1919,6 +1936,12 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_mcp_key: top(byMcpKey),
     by_mcp_journey: top(byMcpJourney),
     by_tool_mcp_key: top(byToolMcpKey),
+    by_utm_source: top(byUtmSource),
+    by_utm_medium: top(byUtmMedium),
+    by_utm_campaign: top(byUtmCampaign),
+    by_utm_content: top(byUtmContent),
+    by_start_source: top(byStartSource),
+    recent_start_clicks: recent("mcp_start_click"),
     recent_tool_calls: recent("mcp_tool_call"),
     recent_prompt_gets: recent("mcp_prompt_get"),
     recent_resource_reads: recent("mcp_resource_read"),
@@ -1979,7 +2002,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + startClicks + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R04",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R05",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2035,6 +2058,22 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       skus: summary.by_sku,
       bot_families: summary.by_bot_family,
       mcp_methods: summary.by_mcp_method,
+      utm_sources: summary.by_utm_source,
+      start_sources: summary.by_start_source,
+      mcp_keys: summary.by_mcp_key,
+      mcp_journeys: summary.by_mcp_journey,
+      tool_mcp_keys: summary.by_tool_mcp_key,
+    },
+    source_attribution: {
+      tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      mcp_start_click_sources: summary.by_start_source,
+      utm_sources: summary.by_utm_source,
+      utm_campaigns: summary.by_utm_campaign,
+      mcp_keys: summary.by_mcp_key,
+      mcp_journeys: summary.by_mcp_journey,
+      tool_mcp_keys: summary.by_tool_mcp_key,
+      recent_start_clicks: summary.recent_start_clicks,
+      recent_tool_calls: summary.recent_tool_calls,
     },
     links: {
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -2102,6 +2141,34 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Cart activation resource events: ${payload.counts.cart_activation_resource_events}`,
     `- First-run proof resource events: ${payload.counts.first_run_proof_resource_events}`,
     `- Workflow gallery resource events: ${payload.counts.workflow_gallery_resource_events}`,
+    "",
+    "## Source Attribution",
+    "",
+    `Tracked start template: \`${payload.source_attribution.tracked_start_template}\``,
+    "",
+    "### MCP Start Click Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.mcp_start_click_sources),
+    "",
+    "### UTM Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.utm_sources),
+    "",
+    "### MCP Keys",
+    "",
+    "| MCP key | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.mcp_keys),
+    "",
+    "### Tool Calls By MCP Key",
+    "",
+    "| Tool and MCP key | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.tool_mcp_keys),
     "",
     "## Proof Gate",
     "",
