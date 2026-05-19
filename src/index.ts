@@ -7749,6 +7749,8 @@ function sourceActivationSitemapUrls(): string[] {
     `${trackedInstallUrl(source, target)}&format=json`,
     trackedRunUrl(source, target),
     `${trackedRunUrl(source, target)}&format=html`,
+    `${trackedRunUrl(source, target)}&format=sh`,
+    `${trackedRunUrl(source, target)}&format=md`,
     `https://mcp.packrift.com/r/activate/${source}`,
     `https://mcp.packrift.com/r/activate/${source}?format=html`,
     `https://mcp.packrift.com/r/activate/${source}?format=sh`,

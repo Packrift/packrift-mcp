@@ -749,7 +749,7 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.directory_update_card_template === "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json" &&
       mcpToolsDiscovery?.conversion_urls?.reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
       mcpToolsDiscovery?.source_activation?.source_count >= 30 &&
-      mcpToolsDiscovery?.source_activation?.sitemap_url_count >= 400 &&
+      mcpToolsDiscovery?.source_activation?.sitemap_url_count >= 500 &&
       specFinderToolsResult.ok &&
       specFinderToolsResult.text.includes("prepare_purchase_handoff") &&
       specFinderToolsResult.text.includes("compare_alternatives") &&
@@ -1839,10 +1839,15 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-directory-update/browse_sh.json") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=browse_sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/codex") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/codex?utm_source=browse_sh") &&
+      sourceActivationSitemapResult.text.includes("format=md") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?utm_source=cline_mcp_marketplace") &&
+      sourceActivationSitemapResult.text.includes("format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=html") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?utm_source=mcp_so") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-directory-update/mcplist_ai.json") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/mcplist_ai/generic_streamable_http") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-directory-update/mcpsolutions_dev.md") &&
