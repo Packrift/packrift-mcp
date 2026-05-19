@@ -7440,6 +7440,8 @@ function aiSitemapXml(): string {
 function sourceActivationSitemapUrls(): string[] {
   return MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
     ...MCP_DIRECTORY_UPDATE_CARD_URLS.filter((url) => url.includes(`/mcp-directory-update/${source}.`)),
+    `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${source}`,
+    `https://mcp.packrift.com/ai/mcp-eval-pack.md?source=${source}`,
     `https://mcp.packrift.com/r/start/${source}`,
     `https://mcp.packrift.com/start?utm_source=${source}`,
     `https://mcp.packrift.com/r/config/${source}`,

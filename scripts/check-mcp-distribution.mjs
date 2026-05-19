@@ -1080,6 +1080,8 @@ async function liveMcpCheck() {
       funnelSnapshot?.links?.tracked_run_generic === "https://mcp.packrift.com/r/run/generic/generic_streamable_http" &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/generic?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
       sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R14" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.links?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
@@ -1642,8 +1644,12 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.ok &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/start/cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-directory-update/mcp_so.md") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=mcp_so") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-directory-update/browse_sh.json") &&
+      sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=browse_sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/codex") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline") &&
@@ -1799,6 +1805,8 @@ async function liveMcpCheck() {
       funnel_snapshot_revenue: funnelSnapshot?.counts?.first_party_mcp_order_revenue ?? null,
       source_activation_sitemap_status: sourceActivationSitemapResult.status,
       source_activation_sitemap_url_count: (sourceActivationSitemapResult.text.match(/<url>/g) ?? []).length,
+      source_activation_sitemap_eval_pack_url_count:
+        (sourceActivationSitemapResult.text.match(/mcp-eval-pack\.(?:json|md)\?source=/g) ?? []).length,
       activation_experiments_release: activationExperiments?.release ?? null,
       activation_experiments_status: activationExperiments?.status ?? null,
       activation_experiments_count: activationExperiments?.experiment_count ?? null,

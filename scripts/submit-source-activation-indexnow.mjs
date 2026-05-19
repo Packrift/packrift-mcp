@@ -73,6 +73,9 @@ function decodeXml(value) {
 function sourceFromUrl(url) {
   const parsed = new URL(url);
   const parts = parsed.pathname.split("/").filter(Boolean);
+  if (parts[0] === "ai" && ["mcp-eval-pack.json", "mcp-eval-pack.md"].includes(parts[1])) {
+    return parsed.searchParams.get("source") || "source_activation_sitemap";
+  }
   if (parts[0] === "r" && ["start", "config", "activate"].includes(parts[1])) return parts[2] || "unknown";
   if (parts[0] === "r" && ["install", "run"].includes(parts[1])) return parts[2] || "unknown";
   return "source_activation_sitemap";
@@ -82,6 +85,8 @@ function urlType(url) {
   const parsed = new URL(url);
   const parts = parsed.pathname.split("/").filter(Boolean);
   if (parsed.pathname === "/start") return "source_start_page";
+  if (parts[0] === "ai" && parts[1] === "mcp-eval-pack.json") return "source_eval_pack_json";
+  if (parts[0] === "ai" && parts[1] === "mcp-eval-pack.md") return "source_eval_pack_markdown";
   if (parts[0] === "r") return `tracked_${parts[1] || "route"}`;
   if (parsed.pathname.endsWith(".xml")) return "sitemap";
   return "resource";

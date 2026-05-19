@@ -199,7 +199,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 
 ## Source Activation IndexNow
 
-Notify IndexNow about the existing source-specific MCP start, install, first-run, and activation URLs:
+Notify IndexNow about the existing source-specific MCP eval-pack, start, install, first-run, and activation URLs:
 
 ```bash
 npm run submit:source-activation-indexnow
