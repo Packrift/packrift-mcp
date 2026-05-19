@@ -334,13 +334,49 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     const output = document.getElementById("output");
     const cart = document.getElementById("cart");
     const resultPanel = document.getElementById("result");
+    function cleanCartUrl(value) {
+      if (typeof value !== "string" || !value.startsWith("${cartUrlPattern}")) return null;
+      try {
+        const url = new URL(value);
+        if (url.origin !== "https://mcp.packrift.com" || !url.pathname.startsWith("/r/cart/")) return null;
+        return url.toString();
+      } catch {
+        return null;
+      }
+    }
+    function extractMeasuredCartUrl(results) {
+      for (let i = results.length - 1; i >= 0; i -= 1) {
+        const result = results[i] && results[i].response && results[i].response.result;
+        const structuredUrl = cleanCartUrl(result && result.structuredContent && result.structuredContent.url);
+        if (structuredUrl) return structuredUrl;
+        const content = result && Array.isArray(result.content) ? result.content : [];
+        for (let j = content.length - 1; j >= 0; j -= 1) {
+          const text = content[j] && content[j].text;
+          if (typeof text !== "string") continue;
+          try {
+            const parsed = JSON.parse(text);
+            const parsedUrl = cleanCartUrl(parsed && parsed.url);
+            if (parsedUrl) return parsedUrl;
+          } catch {
+            const matches = Array.from(text.matchAll(/https:\\/\\/mcp\\.packrift\\.com\\/r\\/cart\\/[^"\\s<>\\\\]+/g))
+              .map((match) => cleanCartUrl(match[0]))
+              .filter(Boolean);
+            if (matches.length) return matches[matches.length - 1];
+          }
+        }
+      }
+      return null;
+    }
     function appendResult(results) {
       output.textContent = JSON.stringify(results, null, 2);
-      const text = JSON.stringify(results);
-      const match = text.match(/https:\\/\\/mcp\\.packrift\\.com\\/r\\/cart\\/[^"\\s<>]+/);
-      if (match) {
+      const measuredCartUrl = extractMeasuredCartUrl(results);
+      if (measuredCartUrl) {
         resultPanel.className = "panel ok";
-        cart.innerHTML = '<a class="button" href="' + match[0] + '">Open measured cart URL</a>';
+        const link = document.createElement("a");
+        link.className = "button";
+        link.href = measuredCartUrl;
+        link.textContent = "Open measured cart URL";
+        cart.replaceChildren(link);
       } else {
         resultPanel.className = "panel warn";
         cart.textContent = "No measured cart URL returned yet.";
@@ -350,7 +386,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
       runButton.disabled = true;
       cart.textContent = "";
       output.textContent = "Running real MCP calls...";
-      const sessionId = crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      const sessionId = globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now());
       const results = [];
       for (const request of activation.real_mcp_client_run.sequence) {
         const response = await fetch(activation.real_mcp_client_run.endpoint, {
