@@ -239,6 +239,8 @@ function main() {
       KV_KEY,
       "--binding",
       "CATALOG_CACHE",
+      "--preview",
+      "false",
       "--path",
       paths.latest_json,
     ]);
