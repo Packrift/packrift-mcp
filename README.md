@@ -161,6 +161,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP directory submit actions Markdown: https://mcp.packrift.com/ai/mcp-directory-submit-actions.md
 - MCP reviewer activation: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
 - MCP reviewer activation Markdown: https://mcp.packrift.com/ai/mcp-reviewer-activation.md
+- MCP activation command center: https://mcp.packrift.com/r/activate
+- MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
 - Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
@@ -366,12 +368,14 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-reviewer-activation.json` and `.md`, and
+the activation command center at `https://mcp.packrift.com/r/activate`,
+the source activation queue HTML at `https://mcp.packrift.com/ai/mcp-source-activation-queue.html`,
 the browser runner at `https://mcp.packrift.com/r/activate/generic?format=html`, and
 `https://mcp.packrift.com/ai/agent-capture-outreach.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
 buyer workflow map, cart activation playbook, browser-agent bridge, directory refresh pack, directory submit-action queue,
-reviewer activation handoff, agent capture outreach packet, Browserbase Browse candidate lane, and root SKILL.md, and preserve the
+source activation command center, reviewer activation handoff, agent capture outreach packet, Browserbase Browse candidate lane, and root SKILL.md, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate
 briefs, proof links, and MCP install snippets under
