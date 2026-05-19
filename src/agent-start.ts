@@ -48,6 +48,7 @@ const TRACKED_START_RECOMMENDED_SOURCES = [
   "theresamcpforthat",
   "mcpserverfinder",
   "mcpserver_cc",
+  "mcpserverspot",
   "docker_mcp_catalog",
   "generic",
 ] as const;

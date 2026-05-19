@@ -493,6 +493,22 @@ const ACTIONS = [
     submission_url: "https://mcpserver.cc/submit",
   },
   {
+    id: "mcpserverspot",
+    label: "MCP Server Spot",
+    action_status: "submitted_pending",
+    directory_status: "pending",
+    priority: "medium",
+    method: "Submitted through the public no-login MCP Server Spot form.",
+    evidence:
+      "MCP Server Spot returned the browser confirmation 'Server Submitted Successfully! Your server has been added to the directory.' after receiving Packrift MCP fields, hosted endpoint, GitHub repo, and live directory refresh proof.",
+    stale_markers: ["Packrift not yet visible in MCP Server Spot search"],
+    recrawl_subject: "Review Packrift MCP MCP Server Spot submission",
+    next_action:
+      "Monitor MCP Server Spot search for publication; use the source-specific update card if review asks for hosted endpoint proof.",
+    listing_url: "https://www.mcpserverspot.com/servers?q=packrift",
+    submission_url: "https://www.mcpserverspot.com/submit",
+  },
+  {
     id: "generic",
     label: "Generic MCP source",
     action_status: "source_template",
@@ -746,7 +762,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R32",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R33",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -797,7 +813,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R04",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R05",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",

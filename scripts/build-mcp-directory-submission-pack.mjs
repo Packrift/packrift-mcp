@@ -281,6 +281,15 @@ const TARGETS = [
     action: "Monitor the submitted API listing for publication and provide the source-specific update card if review asks for hosted endpoint proof.",
   },
   {
+    name: "mcpserverspot",
+    label: "MCP Server Spot",
+    listing_url: "https://www.mcpserverspot.com/servers?q=packrift",
+    submission_url: "https://www.mcpserverspot.com/submit",
+    category: "Business",
+    priority: "medium",
+    action: "Monitor the submitted public form listing for publication and provide the source-specific update card if review asks for hosted endpoint proof.",
+  },
+  {
     name: "docker_mcp_catalog",
     label: "Docker MCP Catalog",
     listing_url: "https://github.com/docker/mcp-registry/pull/3388",
@@ -726,7 +735,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R04",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R05",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {

@@ -878,6 +878,7 @@ const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "theresamcpforthat",
   "mcpserverfinder",
   "mcpserver_cc",
+  "mcpserverspot",
   "docker_mcp_catalog",
   "generic",
 ] as const;
@@ -6410,6 +6411,7 @@ const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "theresamcpforthat", target: "generic_streamable_http" },
   { source: "mcpserverfinder", target: "generic_streamable_http" },
   { source: "mcpserver_cc", target: "generic_streamable_http" },
+  { source: "mcpserverspot", target: "generic_streamable_http" },
   { source: "docker_mcp_catalog", target: "generic_streamable_http" },
   { source: "generic", target: "generic_streamable_http" },
 ] as const;

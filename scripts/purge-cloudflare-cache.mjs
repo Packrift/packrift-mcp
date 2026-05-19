@@ -183,6 +183,8 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/mcp-directory-update/mcpserverfinder.md",
       "https://mcp.packrift.com/ai/mcp-directory-update/mcpserver_cc.json",
       "https://mcp.packrift.com/ai/mcp-directory-update/mcpserver_cc.md",
+      "https://mcp.packrift.com/ai/mcp-directory-update/mcpserverspot.json",
+      "https://mcp.packrift.com/ai/mcp-directory-update/mcpserverspot.md",
       "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       "https://mcp.packrift.com/ai/mcp-reviewer-activation.md",
       "https://mcp.packrift.com/r/activate",

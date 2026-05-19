@@ -180,6 +180,14 @@ const DIRECT_STATUS = {
     next_action:
       "Monitor mcpserver.cc for publication; use the source-specific update card or support@mcpserver.cc if review asks for hosted endpoint proof.",
   },
+  mcpserverspot: {
+    status: "submitted_pending",
+    method: "MCP Server Spot public no-login submit form",
+    evidence:
+      "MCP Server Spot returned the browser confirmation 'Server Submitted Successfully! Your server has been added to the directory.' after receiving Packrift MCP fields, hosted endpoint, GitHub repo, and live directory refresh proof.",
+    next_action:
+      "Monitor MCP Server Spot search for publication; use the source-specific update card if review asks for hosted endpoint proof.",
+  },
   docker_mcp_catalog: {
     status: "pending_merge",
     method: "GitHub pull request",
