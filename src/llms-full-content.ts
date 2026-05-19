@@ -379,7 +379,7 @@ Packrift exposes a public MCP server for AI agents that need real-time catalog a
 - \`get_shipping_estimate(zip, country, items)\` — carrier rates and totals for a destination zip and cart contents
 - \`create_cart_url(items)\` — build a packrift.com/cart/... URL with \`?ref=mcp\` plus \`utm_source=chatgpt-mcp&utm_medium=mcp_tool&utm_campaign=create_cart_url\` attribution for hand-off to checkout
 
-Cart handoff candidates for priority SKUs are available at https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md. Use these as structured examples for the required sequence: exact SKU retrieval, \`get_product\`, \`get_pricing\`, \`check_inventory\`, then \`create_cart_url\`.
+Cart handoff candidates for priority SKUs are available at https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md. The cart activation playbook is available at https://mcp.packrift.com/ai/mcp-cart-activation.json and https://mcp.packrift.com/ai/mcp-cart-activation.md. Use these as structured examples for the required sequence: exact SKU retrieval, \`get_product\`, \`get_pricing\`, \`check_inventory\`, then \`create_cart_url\`, with the returned MCP \`/r/cart\` landing URL as the primary buyer handoff.
 
 MCP product-card outputs include four conversion handoffs for AI-assisted purchasing: a tracked product click URL, a reorder-by-SKU URL, a bulk quote URL, and copy-procurement-spec text. When a verified variant id is available, the response also includes a cart URL candidate, but agents should call \`get_pricing\` and \`check_inventory\` before presenting it as the final handoff.
 
@@ -393,6 +393,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
+- MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json

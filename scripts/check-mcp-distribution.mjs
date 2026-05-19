@@ -185,6 +185,7 @@ async function liveMcpCheck() {
     installMatrixResult,
     usageSnapshotResult,
     buyerUseCasesResult,
+    cartActivationResult,
     browserAgentBridgeResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
@@ -199,6 +200,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-install-matrix.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
@@ -213,6 +215,7 @@ async function liveMcpCheck() {
   const installMatrix = installMatrixResult.ok ? JSON.parse(installMatrixResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
+  const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
@@ -248,6 +251,9 @@ async function liveMcpCheck() {
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R01" &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
+      cartActivation?.release === "PACKRIFT-MCP-CART-ACTIVATION-R01" &&
+      cartActivation?.activation_paths?.length >= 4 &&
+      cartActivation?.primary_rule?.includes("https://mcp.packrift.com/r/cart/") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
       directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
@@ -265,6 +271,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.json") &&
@@ -293,6 +301,8 @@ async function liveMcpCheck() {
       usage_snapshot_status: usageSnapshot?.status ?? null,
       buyer_use_cases_release: buyerUseCases?.release ?? null,
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
+      cart_activation_release: cartActivation?.release ?? null,
+      cart_activation_paths: cartActivation?.activation_paths?.length ?? 0,
       browser_agent_bridge_release: browserAgentBridge?.release ?? null,
       browser_agent_bridge_workflows: browserAgentBridge?.workflows?.length ?? 0,
       directory_refresh_release: directoryRefresh?.release ?? null,

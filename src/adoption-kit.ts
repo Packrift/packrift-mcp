@@ -263,6 +263,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",

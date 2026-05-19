@@ -91,6 +91,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
+- MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
+- MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
@@ -147,7 +149,7 @@ Prompts:
 - `find_box_by_lwh`
 - `find_label_by_size_material_printer`
 
-Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, measured handoff directories with cart routes, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
+Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, MCP cart activation playbook, measured handoff directories with cart routes, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
 
 ## Exact-spec AI-commerce examples
 
@@ -288,12 +290,13 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/mcp-install-matrix.json` and `.md`,
 `https://mcp.packrift.com/ai/mcp-usage-snapshot.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-buyer-use-cases.json` and `.md`, and
+`https://mcp.packrift.com/ai/mcp-cart-activation.json` and `.md`, and
 `https://mcp.packrift.com/ai/browser-agent-bridge.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
-buyer workflow map, browser-agent bridge, directory refresh pack, directory submit-action queue,
+buyer workflow map, cart activation playbook, browser-agent bridge, directory refresh pack, directory submit-action queue,
 and Browserbase Browse candidate lane, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate

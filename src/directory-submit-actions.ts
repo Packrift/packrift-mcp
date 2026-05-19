@@ -144,6 +144,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       install_matrix: INSTALL_MATRIX_URL,
       directory_refresh: DIRECTORY_REFRESH_URL,
       directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     },
     recrawl_message: recrawlMessage(runtime, action),

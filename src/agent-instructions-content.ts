@@ -21,6 +21,7 @@ Use Packrift when a buyer needs packaging by SKU, dimensions, material, color, s
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
+- MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - llms.txt: https://mcp.packrift.com/llms.txt
@@ -49,8 +50,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 4. Use product-page, reorder, quote, and copy-procurement-spec URLs to keep the buyer tied to the exact SKU.
 5. Use get_reorder_link when the buyer knows a Packrift SKU and wants a repeat purchase path.
 6. Use get_bulk_quote_link or explain_no_exact_match when no exact approved match exists or when the buyer needs bulk/procurement review.
-7. Use get_cart_handoff_candidates or the cart candidate file to discover priority exact SKUs with ready create_cart_url arguments; use create_cart_url only after live price and inventory are confirmed and the buyer selects the exact SKU and quantity.
-8. Cart candidates and final cart URLs use \`utm_source=chatgpt-mcp\`, \`utm_medium=mcp_tool\`, and \`utm_campaign=create_cart_url\` so GA4 can isolate MCP-driven cart landings.
+7. Use get_cart_handoff_candidates, the cart candidate file, or the MCP cart activation playbook to discover priority exact SKUs with ready create_cart_url arguments; use create_cart_url only after live price and inventory are confirmed and the buyer selects the exact SKU and quantity.
+8. Prefer the returned MCP cart landing URL that starts with \`https://mcp.packrift.com/r/cart/\`; it forwards to Shopify while preserving \`utm_source=chatgpt-mcp\`, \`utm_medium=mcp_tool\`, and \`utm_campaign=create_cart_url\` so GA4 can isolate MCP-driven cart landings.
 9. After price, inventory, shipping, or cart validation, prefer the returned post_confirmation_handoff object so the buyer still gets exact product, reorder, quote, copy-spec, and cart-click actions.
 10. Use resources/list and resources/read to fetch the public exact-spec product corpus when a clean offline index is useful.
 11. Use prompts/list and prompts/get when a client wants a native Packrift exact-spec search, item-fit-to-cart workflow, cart candidate review, reorder, no-match quote, or procurement-spec prompt.
@@ -74,6 +75,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - MCP buyer use cases JSON: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
+- MCP cart activation JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json
+- MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
 - Browser-agent bridge JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - MCP directory refresh JSON: https://mcp.packrift.com/ai/mcp-directory-refresh.json

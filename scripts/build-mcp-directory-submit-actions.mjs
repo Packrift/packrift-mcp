@@ -105,6 +105,7 @@ function recrawlMessage(pack, target) {
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
     "- Install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json",
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+    "- Cart activation playbook: https://mcp.packrift.com/ai/mcp-cart-activation.json",
     "- Cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     "",
     "Thanks,",

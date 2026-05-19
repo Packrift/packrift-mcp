@@ -128,6 +128,7 @@ export function mcpBuyerUseCasesPayload(runtime: BuyerUseCasesRuntime) {
       mcp_endpoint: MCP_ENDPOINT,
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       conversion_route_catalog: "https://mcp.packrift.com/ai/conversion-route-catalog.json",

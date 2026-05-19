@@ -139,6 +139,7 @@ async function main() {
     "mcp_install_matrix",
     "mcp_usage_snapshot",
     "buyer_mcp_use_cases",
+    "mcp_cart_activation",
     "browser_agent_bridge",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
@@ -170,6 +171,7 @@ async function main() {
     "install matrix",
     "usage snapshot",
     "buyer use cases",
+    "cart activation",
     "browser-agent bridge",
     "directory refresh",
     "directory submit actions",
@@ -222,6 +224,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises buyer use cases", hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.json") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises cart activation", hasResourceUri(resourceUris, "/ai/mcp-cart-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-cart-activation.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {

@@ -26,6 +26,15 @@ Use this when an agent host, directory, or developer needs copy-ready setup path
 
 The install matrix keeps Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
 
+## Cart Activation
+
+Use this when an agent has exact buyer intent and needs the guarded sequence from live checks to a measured MCP cart landing:
+
+- JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json
+- Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
+
+The cart activation playbook gives buyer prompts, JSON-RPC sequences, and the rule to present the `https://mcp.packrift.com/r/cart/` landing URL before the forwarded Shopify cart URL.
+
 ## Browser-Agent Bridge
 
 Use this when an agent can read public URLs with a browser but cannot install MCP directly:

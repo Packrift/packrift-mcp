@@ -103,6 +103,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Keep this crawler-readable buyer workflow map aligned with MCP prompts, cart handoff candidates, and measured handoff URLs.",
     }),
     surface({
+      id: "mcp_cart_activation",
+      name: "Packrift MCP cart activation",
+      agent_type: "conversion_activation",
+      audience: "AI shopping agents, procurement copilots, and MCP directory reviewers that need the exact sequence from buyer intent to measured cart landing.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
+      install_or_call:
+        "Use the cart activation playbook when an agent has exact buyer intent and needs the JSON-RPC sequence that creates a measured /r/cart landing after live checks.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-cart-activation.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+      next_action:
+        "Keep activation paths aligned with get_cart_handoff_candidates, create_cart_url, measured handoffs, and GA4 qualified cart-landing proof.",
+    }),
+    surface({
       id: "chatgpt_openai_product_cards",
       name: "ChatGPT and OpenAI product-card commerce",
       agent_type: "chat_commerce",
@@ -395,6 +411,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       llms: "https://mcp.packrift.com/llms.txt",
@@ -411,6 +428,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Do not create a separate Packrift CLI or duplicate buyer interface unless it is only a thin wrapper around the hosted MCP endpoint.",
       "Use exact AI_APPROVE SKU/spec matching before product, reorder, quote, or cart handoff.",
       "Confirm live price, inventory, shipping, and cart eligibility through MCP tools before presenting a cart or checkout action.",
+      "When create_cart_url returns an MCP /r/cart landing URL, use that as the primary buyer handoff so cart progression is measurable before Shopify checkout.",
       "When an external directory is stale or blocked, refresh that directory with this matrix, server.json, health, resources/list, tools/list, and cart smoke evidence.",
     ],
     counts: {
@@ -448,7 +466,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane.",
+    "One current Packrift map for every agent surface we care about: MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, cart activation, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane.",
     "",
     "## Operating Rules",
     "",

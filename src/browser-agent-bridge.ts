@@ -16,6 +16,7 @@ const BROWSER_AGENT_WORKFLOWS = [
     start_urls: [
       "https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl",
       "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     ],
     required_mcp_sequence: ["tools/list", "search_products", "get_product", "get_pricing", "check_inventory"],
@@ -28,6 +29,7 @@ const BROWSER_AGENT_WORKFLOWS = [
     browser_agent_intent:
       "A buyer or agent has a Packrift SKU and wants a product, reorder path, or cart handoff.",
     start_urls: [
+      "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       "https://mcp.packrift.com/ai/sku/1066.json",
       "https://mcp.packrift.com/ai/sku/MFL1295.json",
       "https://mcp.packrift.com/ai/sku/LL251WR.json",
@@ -125,6 +127,7 @@ export function browserAgentBridgePayload(runtime: BrowserAgentBridgeRuntime) {
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",

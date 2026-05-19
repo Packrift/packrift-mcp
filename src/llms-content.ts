@@ -40,6 +40,7 @@ Use these as examples of exact product families that converted, not as universal
 - [MCP install matrix](https://mcp.packrift.com/ai/mcp-install-matrix.json): copy-ready remote MCP setup paths for common agent hosts, smoke tests, and measured cart handoff rules
 - [MCP usage snapshot](https://mcp.packrift.com/ai/mcp-usage-snapshot.json): public aggregate first-party usage proof for MCP discovery, tool calls, cart handoff, and proof-gate iteration
 - [MCP buyer use cases](https://mcp.packrift.com/ai/mcp-buyer-use-cases.json): buyer-facing exact SKU reorder, fit-by-dimensions, mailer selection, label procurement, no-match quote recovery, and procurement handoff workflows
+- [MCP cart activation](https://mcp.packrift.com/ai/mcp-cart-activation.json): exact buyer prompts, JSON-RPC sequences, and measured \`/r/cart\` landing rules for turning MCP discovery into qualified cart landings
 - [Browser-agent bridge](https://mcp.packrift.com/ai/browser-agent-bridge.json): read-first bridge for Browse-style, browser-use, Playwright, CUA, and other browser agents that must route live price, inventory, and cart handoff through MCP
 - [MCP directory refresh pack](https://mcp.packrift.com/ai/mcp-directory-refresh.json): current listing copy, proof URLs, recrawl request, and stale-directory targets for MCP directories and agent indexes
 - [MCP directory submit actions](https://mcp.packrift.com/ai/mcp-directory-submit-actions.json): per-directory action queue, proof URLs, and copy-ready recrawl messages for stale MCP listings
@@ -51,7 +52,7 @@ Use these as examples of exact product families that converted, not as universal
 - After \`get_pricing\`, \`check_inventory\`, \`get_shipping_estimate\`, or \`create_cart_url\`, use the returned \`post_confirmation_handoff\` object to keep the buyer moving with exact product, reorder, quote, copy-spec, and cart-click actions.
 - [AI-approved product corpus](https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl): JSONL product/spec index for exact-match procurement
 - [AI purchase paths JSONL](https://mcp.packrift.com/ai/purchase-paths.jsonl): top 1,000 AI-sales SKUs with crawler-safe SKU records, variant IDs, tracked product/reorder/quote links, and cart URL candidates that still require live MCP confirmation
-- [MCP cart handoff candidates](https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json): priority exact-spec SKUs with \`create_cart_url\` arguments and GA4-visible \`chatgpt-mcp / mcp_tool / create_cart_url\` cart candidates
+- [MCP cart handoff candidates](https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json): priority exact-spec SKUs with \`create_cart_url\` arguments, primary MCP \`/r/cart\` landing candidates, final Shopify cart fallback evidence, and GA4-visible \`chatgpt-mcp / mcp_tool / create_cart_url\` attribution
 - [Measured handoff directory](https://mcp.packrift.com/ai/measured-handoffs.json): compact MCP-controlled priority SKU directory with measured product, reorder, quote, cart, MCP SKU, and copy-procurement-spec routes
 - [Measured handoff directory Markdown](https://mcp.packrift.com/ai/measured-handoffs.md): crawler-readable priority exact-spec handoff table
 - [Top 1,000 AI-sales SKU index](https://mcp.packrift.com/ai/top-1000-ai-sales-skus.md): balanced revenue-priority AI_APPROVE product set for agentic shopping, reorder, and quote paths
