@@ -1,3 +1,5 @@
+import { isMcpCommerceHeldSku, MCP_COMMERCE_HOLD_REASON } from "./mcp-commerce-holds.js";
+
 interface ProductCardInput {
   sku?: string | null;
   handle: string;
@@ -165,6 +167,7 @@ export function addCartPermalinkAttribution(
 }
 
 export function buildConversionActions(input: ProductCardInput) {
+  const commerceHeld = isMcpCommerceHeldSku(input.sku);
   const tracking = buildTrackingContext({
     source: input.source,
     sku: input.sku,
@@ -182,7 +185,7 @@ export function buildConversionActions(input: ProductCardInput) {
   if (input.sku) quote.searchParams.set("sku", input.sku);
   quote.searchParams.set("spec", buildProcurementSpec(input));
   if (input.handle) quote.searchParams.set("handle", input.handle);
-  const cartUrl = input.variantId
+  const cartUrl = input.variantId && !commerceHeld
     ? trackedUrl(`https://packrift.com/cart/${input.variantId}:1`, {
         ...tracking,
         utm_source: "chatgpt-mcp",
@@ -210,10 +213,19 @@ export function buildConversionActions(input: ProductCardInput) {
       event: "mcp_cart_click",
       variant_id: input.variantId ?? null,
       url_candidate: cartUrl,
-      available_after_live_price_inventory_check: Boolean(input.variantId),
+      available_after_live_price_inventory_check: Boolean(input.variantId && !commerceHeld),
       required_before_presenting: ["get_pricing", "check_inventory"],
+      hold_policy: commerceHeld
+        ? {
+            status: "blocked_by_mcp_commerce_hold",
+            reason: MCP_COMMERCE_HOLD_REASON,
+            recovery_tool: "get_bulk_quote_link",
+          }
+        : null,
     },
-    cart_hint: input.variantId
+    cart_hint: commerceHeld
+      ? "MCP cart URL is held for this SKU; use quote recovery or request operator approval."
+      : input.variantId
       ? "Call create_cart_url after confirming live price and inventory."
       : "No cart URL available without a verified variant ID.",
     copy_procurement_spec: {

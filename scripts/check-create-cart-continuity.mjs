@@ -2,6 +2,7 @@
 
 import { approvalForSku } from "../dist/approval.js";
 import { createCartUrlHandler } from "../dist/tools/create_cart_url.js";
+import { MCP_COMMERCE_HELD_SKUS } from "../dist/mcp-commerce-holds.js";
 
 const sku1066 = approvalForSku("1066");
 const skuMfl1295 = approvalForSku("MFL1295");
@@ -52,6 +53,10 @@ async function expectBlock(name, args, text) {
 }
 
 const checks = [];
+
+assertCheck(MCP_COMMERCE_HELD_SKUS.includes("12104"), "MCP commerce hold list must include SKU 12104", {
+  held_skus: MCP_COMMERCE_HELD_SKUS,
+});
 
 checks.push(
   await expectPass("sku_shortcut_resolves_variant", { sku: "1066", quantity: 2 }, (result) => {
@@ -132,6 +137,41 @@ checks.push(
     "cart continuity blocked"
   )
 );
+
+for (const heldSku of MCP_COMMERCE_HELD_SKUS) {
+  checks.push(
+    await expectBlock(
+      `held_sku_${heldSku}_shortcut_blocks`,
+      { sku: heldSku, quantity: 1 },
+      `MCP commerce hold blocked ${heldSku}`
+    )
+  );
+
+  const heldItem = approvalForSku(heldSku);
+  if (!heldItem) continue;
+
+  checks.push(
+    await expectBlock(
+      `held_sku_${heldSku}_variant_blocks`,
+      { items: [{ variant_id: heldItem.variantId, qty: 1 }] },
+      `MCP commerce hold blocked ${heldSku}`
+    )
+  );
+  checks.push(
+    await expectBlock(
+      `held_sku_${heldSku}_selected_sku_blocks`,
+      { items: [{ variant_id: heldItem.variantId, qty: 1 }], selected_sku: heldItem.sku },
+      `MCP commerce hold blocked ${heldSku}`
+    )
+  );
+  checks.push(
+    await expectBlock(
+      `held_sku_${heldSku}_selected_handle_blocks`,
+      { items: [{ variant_id: heldItem.variantId, qty: 1 }], selected_handle: heldItem.handle },
+      `MCP commerce hold blocked ${heldSku}`
+    )
+  );
+}
 
 const output = {
   created_at: new Date().toISOString(),

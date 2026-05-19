@@ -89,7 +89,7 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   const { query, limit } = searchProductsZod.parse(raw);
   const suppressAnalytics = isSyntheticEval(raw);
 
-  const cacheKey = `search:ai-approve:v11:${limit}:${query}`;
+  const cacheKey = `search:ai-approve:v12:${limit}:${query}`;
   const cached = await env.CATALOG_CACHE.get(cacheKey, "json");
   if (cached) {
     if (!suppressAnalytics) {
@@ -497,9 +497,9 @@ function escapeRegExp(value: string): string {
 }
 
 function searchAllowsSensitive(value: string): boolean {
-  return /\bsku\s+[a-z0-9._-]+\b/i.test(value) || /\b(hazmat|haz\s*mat|hazardous|un\s*certified|certified|paint\s*can|dangerous\s*goods|anti[-\s]*static|vci|corrosion|food[-\s]*safe|medical)\b/i.test(value);
+  return /\bsku\s+[a-z0-9._-]+\b/i.test(value) || /\b(hazmat|haz\s*mat|hazardous|un\s*certified|certified|paint\s*can|dangerous\s*goods|anti[-\s]*static|vci|corrosion|fda|food[-\s]*(?:safe|grade)|medical)\b/i.test(value);
 }
 
 function isSensitiveProductText(value: string): boolean {
-  return /\b(hazmat|haz\s*mat|un\s*certified|fda|medical|food\s*safe|food[-\s]*safe|aircraft|anti[-\s]*static|vci|corrosion)\b/i.test(value);
+  return /\b(hazmat|haz\s*mat|un\s*certified|fda|medical|food[-\s]*(?:safe|grade)|aircraft|anti[-\s]*static|vci|corrosion)\b/i.test(value);
 }

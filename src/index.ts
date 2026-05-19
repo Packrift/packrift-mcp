@@ -51,6 +51,7 @@ import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } f
 import { agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
+import { isMcpCommerceHeldSku, MCP_COMMERCE_HELD_SKUS, MCP_COMMERCE_HOLD_REASON } from "./mcp-commerce-holds.js";
 
 import { searchProductsSchema, searchProductsHandler } from "./tools/search_products.js";
 import { getProductSchema, getProductHandler } from "./tools/get_product.js";
@@ -795,6 +796,7 @@ function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
   const limit = boundedInteger(args.limit, 10, 1, 50);
   const sku = String(args.sku ?? "").trim().toUpperCase();
   const family = normalizeCartHandoffFamily(args.family);
+  const heldSkuRequested = isMcpCommerceHeldSku(sku);
   if (family && !CART_HANDOFF_CANDIDATE_FAMILIES.includes(family as (typeof CART_HANDOFF_CANDIDATE_FAMILIES)[number])) {
     throw new Error(`Unsupported family filter: ${family}`);
   }
@@ -816,7 +818,9 @@ function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
     result_count: filtered.length,
     items: filtered,
     recommended_next_step:
-      filtered.length > 0
+      heldSkuRequested
+        ? "This SKU is held from MCP AI-commerce cart handoff. Do not call create_cart_url; use get_bulk_quote_link or request operator review."
+        : filtered.length > 0
         ? "For a selected item, call get_product, get_pricing, and check_inventory. After the buyer confirms exact SKU and quantity, call create_cart_url with create_cart_url_sku_arguments, or pass create_cart_url_arguments when your agent already needs explicit variant IDs."
         : "No priority cart handoff candidate matched this filter. Use search_products for the exact spec, or get_bulk_quote_link when no exact approved match exists.",
   };
@@ -8448,6 +8452,7 @@ function topAiSalesSkuItems(limit = AI_SALES_SKU_ROUTE_LIMIT): ApprovedCatalogIt
   for (const sku of PURCHASE_READY_SKUS) {
     if (selected.length >= limit) break;
     const normalizedSku = sku.toUpperCase();
+    if (isMcpCommerceHeldSku(normalizedSku)) continue;
     const item = APPROVED_CATALOG_BY_SKU.get(normalizedSku);
     if (item && !seen.has(item.sku.toUpperCase())) {
       selected.push(item);
@@ -8625,6 +8630,47 @@ function measuredCartLandingUrlForItem(item: ApprovedCatalogItem, quantity = 1, 
 
 function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
   const safeQuantity = Math.max(1, Math.floor(quantity));
+  if (isMcpCommerceHeldSku(item.sku)) {
+    const quoteUrl = routeRedirectUrlForItem(item, "quote");
+    return {
+      status: "blocked_by_mcp_commerce_hold",
+      purpose: "This SKU is intentionally excluded from MCP AI-commerce cart handoff until operator approval is recorded.",
+      mcp_endpoint: "https://mcp.packrift.com/mcp",
+      prompt_name: "prepare_cart_handoff",
+      discovery_tool: "get_cart_handoff_candidates",
+      create_cart_url_tool: "create_cart_url",
+      required_sequence: ["get_product", "get_pricing", "check_inventory", "get_bulk_quote_link"],
+      required_before_presenting_cart_url: ["explicit operator approval"],
+      create_cart_url_arguments: null,
+      create_cart_url_sku_arguments: null,
+      cart_url_candidate: null,
+      cart_url_candidate_type: "blocked_by_mcp_commerce_hold",
+      measured_cart_url: null,
+      final_shopify_cart_url_candidate: null,
+      measurement_rule:
+        "Do not present MCP cart URLs for held SKUs. Route buyer interest to quote recovery or operator review until the hold is lifted.",
+      attribution: {
+        utm_source: "chatgpt-mcp",
+        utm_medium: "mcp_tool",
+        utm_campaign: "quote_recovery",
+        utm_content: item.sku,
+        utm_term: item.sku,
+      },
+      held_sku_policy: {
+        status: "active",
+        reason: MCP_COMMERCE_HOLD_REASON,
+        recovery_tool: "get_bulk_quote_link",
+      },
+      measured_fallbacks: {
+        product: routeRedirectUrlForItem(item, "product"),
+        reorder: routeRedirectUrlForItem(item, "reorder"),
+        quote: quoteUrl,
+        cart: null,
+      },
+      no_match_rule:
+        "This SKU is held from MCP AI-commerce cart handoff; use quote recovery or request operator approval instead of creating a cart URL.",
+    };
+  }
   const measuredCartUrl = measuredCartLandingUrlForItem(item, safeQuantity);
   const finalShopifyCartUrl = cartUrlForItem(item, safeQuantity);
   return {
@@ -8697,6 +8743,7 @@ function skuRouteItem(sku: string): ApprovedCatalogItem | undefined {
 }
 
 function skuPagePayload(item: ApprovedCatalogItem) {
+  const commerceHeld = isMcpCommerceHeldSku(item.sku);
   const canonicalProductUrl = productUrlForItem(item);
   const tracking = skuPageTrackingForItem(item);
   const directTrackedProductUrl = trackedUrl(productHandoffUrlForItem(item), { ...tracking, utm_content: "product_click" });
@@ -8720,8 +8767,17 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     title: item.title,
     family: item.family || "other",
     status: "AI_APPROVE",
-    next_action: "For checkout handoff, use mcp_cart_handoff.required_sequence and create_cart_url_arguments after live price and inventory confirmation.",
+    next_action: commerceHeld
+      ? "This SKU is held from MCP cart handoff. Use measured quote recovery or request operator approval before any AI-commerce cart path."
+      : "For checkout handoff, use mcp_cart_handoff.required_sequence and create_cart_url_arguments after live price and inventory confirmation.",
     mcp_cart_handoff: mcpCartHandoff,
+    held_sku_policy: commerceHeld
+      ? {
+          status: "active",
+          reason: MCP_COMMERCE_HOLD_REASON,
+          recovery_tool: "get_bulk_quote_link",
+        }
+      : null,
     paid_chatgpt_family: paidChatgptSignal,
     ai_commerce_signal: paidChatgptSignal
       ? {
@@ -8751,15 +8807,17 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     direct_reorder_url: directReorderUrl,
     direct_quote_url: directQuoteUrl,
     direct_bulk_quote_url: directQuoteUrl,
-    cart_url_template: `https://packrift.com/cart/${item.variantId}:{quantity}`,
+    cart_url_template: commerceHeld ? null : `https://packrift.com/cart/${item.variantId}:{quantity}`,
     cart_url_qty_1_candidate: mcpCartHandoff.cart_url_candidate,
     measured_cart_url: mcpCartHandoff.measured_cart_url,
     final_shopify_cart_url_qty_1_candidate: mcpCartHandoff.final_shopify_cart_url_candidate,
     cart_confirmation_required: true,
     mcp_endpoint: "https://mcp.packrift.com/mcp",
-    recommended_mcp_sequence: ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
+    recommended_mcp_sequence: commerceHeld
+      ? ["search_products", "get_product", "get_pricing", "check_inventory", "get_bulk_quote_link"]
+      : ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
     no_match_policy: `No-match policy: ${exactMatchRule}`,
-    live_confirmation_required: ["price", "inventory", "shipping", "cart"],
+    live_confirmation_required: commerceHeld ? ["price", "inventory", "shipping", "operator approval before cart"] : ["price", "inventory", "shipping", "cart"],
     copy_procurement_spec: `SKU ${item.sku}: ${item.title}.`,
     updated_at: new Date().toISOString().slice(0, 10),
   };
@@ -8767,6 +8825,7 @@ function skuPagePayload(item: ApprovedCatalogItem) {
 
 function skuPageMarkdown(item: ApprovedCatalogItem): string {
   const payload = skuPagePayload(item);
+  const cartHandoffBlocked = payload.mcp_cart_handoff.status === "blocked_by_mcp_commerce_hold";
   return [
     `# Packrift SKU ${payload.sku}`,
     "",
@@ -8774,12 +8833,14 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     "",
     "## Fast Cart Handoff",
     "",
-    "For buyer checkout, first confirm the exact SKU, variant, live price, inventory, and buyer-selected quantity through MCP. Then use `create_cart_url` with the arguments below so the landing is stamped as `chatgpt-mcp / mcp_tool / create_cart_url` in GA4.",
+    cartHandoffBlocked
+      ? "This SKU is held from MCP AI-commerce cart handoff. Do not use `create_cart_url`; route buyer interest to quote recovery or operator review."
+      : "For buyer checkout, first confirm the exact SKU, variant, live price, inventory, and buyer-selected quantity through MCP. Then use `create_cart_url` with the arguments below so the landing is stamped as `chatgpt-mcp / mcp_tool / create_cart_url` in GA4.",
     "",
     `- Prompt: \`${payload.mcp_cart_handoff.prompt_name}\``,
     `- Required sequence: ${payload.mcp_cart_handoff.required_sequence.map((step: string) => `\`${step}\``).join(" -> ")}`,
-    `- create_cart_url arguments: \`${JSON.stringify(payload.mcp_cart_handoff.create_cart_url_arguments)}\``,
-    `- Cart URL candidate after confirmation: ${payload.mcp_cart_handoff.cart_url_candidate}`,
+    cartHandoffBlocked ? `- Hold reason: ${payload.mcp_cart_handoff.held_sku_policy?.reason ?? MCP_COMMERCE_HOLD_REASON}` : `- create_cart_url arguments: \`${JSON.stringify(payload.mcp_cart_handoff.create_cart_url_arguments)}\``,
+    cartHandoffBlocked ? "- Cart URL candidate after confirmation: blocked by MCP commerce hold" : `- Cart URL candidate after confirmation: ${payload.mcp_cart_handoff.cart_url_candidate}`,
     `- Quote fallback if specs differ: ${payload.mcp_cart_handoff.measured_fallbacks.quote}`,
     "",
     "| Field | Value |",
@@ -8798,8 +8859,8 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     `| Crawler-safe SKU URL | ${payload.retrieval_safe_url} |`,
     `| Measured reorder URL | ${payload.measured_reorder_url} |`,
     `| Measured bulk quote URL | ${payload.measured_quote_url} |`,
-    `| Cart URL candidate | ${payload.cart_url_qty_1_candidate} |`,
-    `| Final Shopify cart URL candidate | ${payload.final_shopify_cart_url_qty_1_candidate} |`,
+    `| Cart URL candidate | ${payload.cart_url_qty_1_candidate ?? "blocked by MCP commerce hold"} |`,
+    `| Final Shopify cart URL candidate | ${payload.final_shopify_cart_url_qty_1_candidate ?? "blocked by MCP commerce hold"} |`,
     `| Copy procurement spec | ${escapeMarkdown(payload.copy_procurement_spec)} |`,
     "",
     "## Agent Purchase Handoff",
@@ -8810,7 +8871,9 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     "2. Call `get_product` for product facts and variant IDs.",
     "3. Call `get_pricing` and `check_inventory` before cart handoff.",
     "4. Use the measured product, reorder, or quote URL for buyer handoff after live confirmation.",
-    "5. Use `create_cart_url` only after live price and inventory confirmation.",
+    cartHandoffBlocked
+      ? "5. Do not use `create_cart_url` for this held SKU; route to quote recovery or operator review."
+      : "5. Use `create_cart_url` only after live price and inventory confirmation.",
     "6. If a requested spec differs from this product, call `explain_no_exact_match` and route to the measured quote URL.",
     "",
     "## If The Shopify Product Page Is Challenged",
@@ -9045,7 +9108,7 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
 
 function cartHandoffCandidatesPayload(limit = 50) {
   return {
-    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03",
+    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R04",
     generated_at: new Date().toISOString(),
     source: "mcp_cart_handoff_candidates",
     purpose:
@@ -9054,6 +9117,13 @@ function cartHandoffCandidatesPayload(limit = 50) {
       "Cart candidates point to the MCP cart landing shim first, then forward to Shopify with utm_source=chatgpt-mcp, utm_medium=mcp_tool, and utm_campaign=create_cart_url so GA4 can isolate MCP-driven cart landings.",
     safety_rule:
       "Do not present a cart handoff until get_product, get_pricing, and check_inventory confirm the exact SKU, variant, live price, and inventory. If any requested spec differs, use the measured quote URL instead.",
+    held_sku_policy: {
+      status: "active",
+      held_skus: MCP_COMMERCE_HELD_SKUS,
+      reason: MCP_COMMERCE_HOLD_REASON,
+      rule: "Held SKUs are excluded from MCP cart candidates, purchase-path handoff feeds, and create_cart_url output until explicit operator approval is recorded.",
+      recovery_tool: "get_bulk_quote_link",
+    },
     mcp_sequence: ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
     items: topAiSalesSkuItems(limit).map((item) => cartHandoffCandidateItem(item, 1)),
   };

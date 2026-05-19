@@ -2,6 +2,11 @@ import { z } from "zod";
 import { Env, variantIdToNumeric } from "../shopify.js";
 import { approvalForHandle, approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
 import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
+import {
+  assertMcpCommerceSkuAllowed,
+  isMcpCommerceHeldItem,
+  mcpCommerceHoldErrorMessage,
+} from "../mcp-commerce-holds.js";
 
 type CreateCartUrlContext = {
   sessionId?: string | null;
@@ -133,6 +138,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
   const input = createCartUrlZod.parse(raw);
   const requestedSku = normalizedSku(input.sku);
   const selectedSkuInput = normalizedSku(input.selected_sku);
+  assertMcpCommerceSkuAllowed(requestedSku);
+  assertMcpCommerceSkuAllowed(selectedSkuInput);
   if (requestedSku && selectedSkuInput && requestedSku !== selectedSkuInput) {
     cartContinuityError(`sku ${requestedSku} does not match selected_sku ${selectedSkuInput}`);
   }
@@ -150,6 +157,12 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
 
   const items = input.items?.length ? input.items : [{ variant_id: approvedSkuItem!.variantId, qty: input.quantity ?? 1 }];
   assertApprovedVariantIds(items.map((it) => it.variant_id));
+  for (const item of items) {
+    const variantItem = approvalForVariantId(item.variant_id);
+    if (isMcpCommerceHeldItem(variantItem)) {
+      throw new Error(mcpCommerceHoldErrorMessage(variantItem?.sku));
+    }
+  }
 
   const firstItem = items[0] ?? null;
   const inferredVariantItem = items.length === 1 && firstItem ? approvalForVariantId(firstItem.variant_id) : null;
@@ -164,6 +177,9 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
 
   const selectedHandleInput = normalizedHandle(input.selected_handle);
   const selectedHandleItem = selectedHandleInput ? approvalForHandle(selectedHandleInput) : null;
+  if (isMcpCommerceHeldItem(selectedHandleItem)) {
+    throw new Error(mcpCommerceHoldErrorMessage(selectedHandleItem?.sku));
+  }
   if (selectedHandleInput && !selectedHandleItem) {
     throw new Error(
       `AI_APPROVE gate blocked selected_handle: ${input.selected_handle}. Use search_products or get_product to choose approved Packrift handles.`

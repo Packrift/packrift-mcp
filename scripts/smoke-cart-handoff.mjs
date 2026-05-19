@@ -7,6 +7,7 @@ const DEFAULT_ENDPOINT = "https://mcp.packrift.com/mcp";
 const DEFAULT_SKU = "1066";
 const DEFAULT_QTY = 1;
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-cart-handoff-smoke");
+const HELD_SKUS = ["12104", "CRR40W", "FWUPS116S24P"];
 
 const args = parseArgs(process.argv.slice(2));
 const endpoint = stringArg("endpoint") ?? process.env.MCP_ENDPOINT ?? DEFAULT_ENDPOINT;
@@ -161,6 +162,23 @@ async function main() {
         source_context: "smoke_test",
       })
     : null;
+  const heldSkuResults = await Promise.all(
+    HELD_SKUS.map(async (heldSku) => {
+      const heldCandidates = await callTool("get_cart_handoff_candidates", { sku: heldSku, limit: 1 });
+      const heldPrepare = await callTool("prepare_purchase_handoff", {
+        sku: heldSku,
+        quantity: 1,
+        buyer_confirmed: true,
+        source_context: "smoke_cart_handoff",
+      });
+      const heldCart = await callTool("create_cart_url", {
+        sku: heldSku,
+        quantity: 1,
+        source_context: "smoke_cart_handoff",
+      });
+      return { sku: heldSku, candidates: heldCandidates, prepare: heldPrepare, cart: heldCart };
+    })
+  );
 
   const cartUrl = cart?.structured?.url ?? null;
   const finalCartUrl = cart?.structured?.final_cart_url ?? null;
@@ -257,6 +275,35 @@ async function main() {
       cart_continuity: cart?.structured?.cart_continuity ?? null,
     }),
     check("cart_landing_ok", Boolean(cartLandingHead?.ok && cartLandingHead.cartLandingShim), cartLandingHead ?? {}),
+    ...heldSkuResults.flatMap((held) => [
+      check(
+        `held_${held.sku}_candidate_blocked`,
+        Boolean(held.candidates?.ok && !held.candidates.isToolError && held.candidates.structured?.result_count === 0),
+        {
+          status: held.candidates?.status ?? null,
+          result_count: held.candidates?.structured?.result_count ?? null,
+          items: held.candidates?.structured?.items ?? null,
+        }
+      ),
+      check(
+        `held_${held.sku}_prepare_blocks_cart`,
+        Boolean(held.prepare?.ok && !held.prepare.isToolError && held.prepare.structured?.status === "blocked_by_mcp_commerce_hold" && held.prepare.structured?.cart === null),
+        {
+          status: held.prepare?.status ?? null,
+          handoff_status: held.prepare?.structured?.status ?? null,
+          cart_present: Boolean(held.prepare?.structured?.cart),
+        }
+      ),
+      check(
+        `held_${held.sku}_create_cart_blocks`,
+        Boolean(held.cart?.ok && held.cart.isToolError && held.cart.toolErrorText.includes(`MCP commerce hold blocked ${held.sku}`)),
+        {
+          status: held.cart?.status ?? null,
+          is_tool_error: held.cart?.isToolError ?? null,
+          error_text: held.cart?.toolErrorText ?? null,
+        }
+      ),
+    ]),
   ];
   if (verifyFinalCart) {
     checks.push(check("final_cart_redirect_ok", Boolean(finalCartHead?.ok && finalCartHead.location), finalCartHead ?? {}));

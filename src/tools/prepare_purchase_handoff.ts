@@ -6,6 +6,7 @@ import { createCartUrlHandler } from "./create_cart_url.js";
 import { getPricingHandler } from "./get_pricing.js";
 import { getProductHandler } from "./get_product.js";
 import { getBulkQuoteLinkHandler, getReorderLinkHandler } from "./procurement_links.js";
+import { isMcpCommerceHeldSku, MCP_COMMERCE_HOLD_REASON } from "../mcp-commerce-holds.js";
 
 type PreparePurchaseHandoffContext = {
   sessionId?: string | null;
@@ -86,11 +87,35 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, cont
   const input = preparePurchaseHandoffZod.parse(raw);
   const sku = input.sku.trim().toUpperCase();
   const quantity = input.quantity;
-  const item = approvalForSku(sku);
   const syntheticContext = {
     suppress_analytics: true,
     analytics_context: { ...(input.analytics_context ?? {}), synthetic: true, source: "prepare_purchase_handoff_internal" },
   };
+
+  if (isMcpCommerceHeldSku(sku)) {
+    const quote = await getBulkQuoteLinkHandler(env, {
+      requested_spec: `Packrift SKU ${sku}`,
+      quantity: String(quantity),
+      reason: MCP_COMMERCE_HOLD_REASON,
+      ...syntheticContext,
+    });
+    return {
+      tool_name: "prepare_purchase_handoff",
+      status: "blocked_by_mcp_commerce_hold",
+      buyer_confirmed: input.buyer_confirmed,
+      sku,
+      quantity,
+      cart: null,
+      hold_policy: {
+        reason: MCP_COMMERCE_HOLD_REASON,
+        operator_approval_required: true,
+      },
+      quote_recovery: quote,
+      next_action: "Do not create a cart URL for this SKU. Route to quote recovery or request explicit operator approval before MCP AI-commerce handoff.",
+    };
+  }
+
+  const item = approvalForSku(sku);
 
   if (!item) {
     const quote = await getBulkQuoteLinkHandler(env, {

@@ -10,6 +10,7 @@ const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JS
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
+const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
 const execFileAsync = promisify(execFile);
 
 const SURFACE_GUIDANCE = {
@@ -354,6 +355,12 @@ async function liveMcpCheck() {
     serverCardResult,
     startResult,
     cartResult,
+    measuredHandoffsResult,
+    purchasePathsResult,
+    heldSku12104JsonResult,
+    heldSku12104MarkdownResult,
+    heldSkuFwupsJsonResult,
+    heldSkuFwupsMarkdownResult,
     mcpToolsDiscoveryResult,
     specFinderToolsResult,
     agentCaptureResult,
@@ -428,6 +435,12 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/.well-known/mcp/server-card.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-start.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
+    fetchText("https://mcp.packrift.com/ai/measured-handoffs.json"),
+    fetchText("https://mcp.packrift.com/ai/purchase-paths.jsonl"),
+    fetchText("https://mcp.packrift.com/ai/sku/12104.json"),
+    fetchText("https://mcp.packrift.com/ai/sku/12104.md"),
+    fetchText("https://mcp.packrift.com/ai/sku/FWUPS116S24P.json"),
+    fetchText("https://mcp.packrift.com/ai/sku/FWUPS116S24P.md"),
     fetchText("https://mcp.packrift.com/ai/mcp-tools.json"),
     fetchText("https://mcp.packrift.com/ai/spec-finder-tools.md"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
@@ -502,6 +515,7 @@ async function liveMcpCheck() {
   const serverCard = serverCardResult.ok ? JSON.parse(serverCardResult.text) : null;
   const start = startResult.ok ? JSON.parse(startResult.text) : null;
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
+  const measuredHandoffs = measuredHandoffsResult.ok ? JSON.parse(measuredHandoffsResult.text) : null;
   const mcpToolsDiscovery = mcpToolsDiscoveryResult.ok ? JSON.parse(mcpToolsDiscoveryResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
@@ -551,8 +565,34 @@ async function liveMcpCheck() {
   const invalidFirstRunTarget = parseJsonOrNull(invalidFirstRunTargetResult.text);
   const invalidReviewerActivationSource = parseJsonOrNull(invalidReviewerActivationSourceResult.text);
   const trackedInstallClineJson = parseJsonOrNull(trackedInstallClineJsonResult.text);
-  const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
-  const firstFinalCartUrl = cart?.items?.[0]?.final_shopify_cart_url_candidate ?? "";
+  const cartItems = Array.isArray(cart?.items) ? cart.items : [];
+  const measuredHandoffItems = Array.isArray(measuredHandoffs?.items) ? measuredHandoffs.items : [];
+  const firstCartUrl = cartItems[0]?.cart_url_qty_1_candidate ?? "";
+  const firstFinalCartUrl = cartItems[0]?.final_shopify_cart_url_candidate ?? "";
+  const heldSkuPolicySkus = Array.isArray(cart?.held_sku_policy?.held_skus)
+    ? cart.held_sku_policy.held_skus.map((sku) => String(sku).toUpperCase())
+    : [];
+  const cartHandoffHeldSkus = cartItems
+    .map((item) => String(item?.sku ?? "").toUpperCase())
+    .filter((sku) => MCP_COMMERCE_HELD_SKUS.has(sku));
+  const measuredHandoffHeldSkus = measuredHandoffItems
+    .map((item) => String(item?.sku ?? "").toUpperCase())
+    .filter((sku) => MCP_COMMERCE_HELD_SKUS.has(sku));
+  const purchasePathsHeldSkus = [...MCP_COMMERCE_HELD_SKUS].filter((sku) => purchasePathsResult.text.includes(`"sku":"${sku}"`));
+  const heldSkuPageCartLeakText = [
+    heldSku12104JsonResult.text,
+    heldSku12104MarkdownResult.text,
+    heldSkuFwupsJsonResult.text,
+    heldSkuFwupsMarkdownResult.text,
+  ].join("\n");
+  const heldSkuPagesAvoidCartUrls =
+    !heldSkuPageCartLeakText.includes("https://packrift.com/cart/") &&
+    !heldSkuPageCartLeakText.includes("https://mcp.packrift.com/r/cart/12104") &&
+    !heldSkuPageCartLeakText.includes("https://mcp.packrift.com/r/cart/FWUPS116S24P");
+  const cartHandoffExcludesHeldSkus = cartHandoffHeldSkus.length === 0;
+  const measuredHandoffsExcludeHeldSkus = measuredHandoffHeldSkus.length === 0;
+  const purchasePathsExcludeHeldSkus = purchasePathsHeldSkus.length === 0;
+  const cartHandoffHoldPolicyOk = ["12104", "CRR40W", "FWUPS116S24P"].every((sku) => heldSkuPolicySkus.includes(sku));
   const mcpToolsDiscoveryToolNames = (mcpToolsDiscovery?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
@@ -614,7 +654,7 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.md") &&
       promptsCount >= 7 &&
-      cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
+      cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R04" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
       start?.release === "PACKRIFT-MCP-START-R13" &&
@@ -1759,6 +1799,11 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/agent-capture-outreach.md") &&
+      cartHandoffExcludesHeldSkus &&
+      measuredHandoffsExcludeHeldSkus &&
+      purchasePathsExcludeHeldSkus &&
+      heldSkuPagesAvoidCartUrls &&
+      cartHandoffHoldPolicyOk &&
       firstCartUrl.startsWith("https://mcp.packrift.com/r/cart/") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
       firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
@@ -1999,7 +2044,15 @@ async function liveMcpCheck() {
       agent_capture_outreach_release: agentCaptureOutreach?.release ?? null,
       agent_capture_outreach_priority_queue: agentCaptureOutreach?.priority_queue?.length ?? 0,
       agent_capture_outreach_directory_refreshes: agentCaptureOutreach?.directory_refreshes?.length ?? 0,
-      first_cart_url_candidate_type: cart?.items?.[0]?.cart_url_candidate_type ?? null,
+      commerce_hold_guard: {
+        cart_handoff_policy_ok: cartHandoffHoldPolicyOk,
+        cart_handoff_held_skus_present: cartHandoffHeldSkus,
+        measured_handoffs_held_skus_present: measuredHandoffHeldSkus,
+        purchase_paths_held_skus_present: purchasePathsHeldSkus,
+        held_sku_pages_avoid_cart_urls: heldSkuPagesAvoidCartUrls,
+        policy: cart?.held_sku_policy ?? null,
+      },
+      first_cart_url_candidate_type: cartItems[0]?.cart_url_candidate_type ?? null,
       first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
