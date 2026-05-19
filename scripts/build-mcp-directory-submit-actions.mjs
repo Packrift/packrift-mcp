@@ -36,8 +36,9 @@ const DIRECT_STATUS = {
   cline_mcp_marketplace: {
     status: "submitted_pending",
     method: "GitHub issue submission",
-    evidence: "Cline MCP Marketplace issue #1610 is open for Packrift MCP.",
-    next_action: "Keep the issue current and respond to maintainer questions with the directory refresh pack.",
+    evidence:
+      "Cline MCP Marketplace issue #1610 is open for Packrift MCP; refreshed hosted-endpoint, tracked-config, and cart-handoff proof was added in issue comment https://github.com/cline/mcp-marketplace/issues/1610#issuecomment-4484204915.",
+    next_action: "Monitor for maintainer response and publication; respond with the directory refresh pack only if they ask for more evidence.",
   },
   mcp_so: {
     status: "manual_submission_ready",
@@ -108,8 +109,9 @@ const DIRECT_STATUS = {
   docker_mcp_catalog: {
     status: "pending_merge",
     method: "GitHub pull request",
-    evidence: "Docker MCP Catalog PR #3388 is open and mergeable in the latest distribution proof.",
-    next_action: "Keep the PR mergeable and respond if Docker review requests changes.",
+    evidence:
+      "Docker MCP Catalog PR #3388 is open and mergeable in the latest distribution proof; refreshed hosted-endpoint, tracked-config, and remote-only server.json proof was added in PR comment https://github.com/docker/mcp-registry/pull/3388#issuecomment-4484205544.",
+    next_action: "Monitor for Docker review and publication; respond only if Docker requests changes.",
   },
 };
 

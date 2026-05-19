@@ -43,6 +43,20 @@ const TRACKED_START_SOURCE_POLICY = {
   recommended_sources: TRACKED_START_RECOMMENDED_SOURCES,
   custom_examples: ["agency_partner", "browser_agent_demo", "newsletter_mcp"],
 } as const;
+const DEFAULT_TRACKED_SOURCE = "generic";
+
+export interface McpStartHtmlOptions {
+  source?: string | null;
+}
+
+function normalizedTrackedSource(value: string | null | undefined): string {
+  const source = (value ?? DEFAULT_TRACKED_SOURCE).trim().toLowerCase();
+  return /^[a-z0-9_]{2,64}$/.test(source) ? source : DEFAULT_TRACKED_SOURCE;
+}
+
+function humanSourceLabel(source: string): string {
+  return source.replace(/_/g, " ");
+}
 
 function remoteMcpJson() {
   return {
@@ -160,7 +174,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R03",
+    release: "PACKRIFT-MCP-START-R04",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -170,6 +184,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       json: START_JSON_URL,
       markdown: START_MARKDOWN_URL,
       html_resource: START_HTML_RESOURCE_URL,
+      source_aware_html_template: "https://mcp.packrift.com/start?utm_source={source}",
       tracked_start_template: TRACKED_START_TEMPLATE,
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       source_policy: TRACKED_START_SOURCE_POLICY,
@@ -212,6 +227,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use https://mcp.packrift.com/mcp as the canonical endpoint.",
       "Use prepare_purchase_handoff when an agent already has an exact Packrift SKU and needs the fastest safe product, live price, inventory, and cart-handoff prep.",
       "Use /r/start/{source} tracked start links for directories, partners, campaigns, and agent handoffs so start traffic can be attributed by source.",
+      "Use /start?utm_source={source} when a handoff should render the same source-specific tracked config URL and copy controls on the start page.",
       "Use /r/config/{source} tracked config links when a directory, partner, campaign, or agent host needs a copy-ready MCP JSON config with source attribution.",
       "Custom /r/start/{source} and /r/config/{source} slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
@@ -254,6 +270,7 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "## Tracked Start Links",
     "",
     `Template: \`${payload.start_urls.tracked_start_template}\``,
+    `Source-aware start page: \`${payload.start_urls.source_aware_html_template}\``,
     `Tracked config template: \`${payload.start_urls.tracked_config_template}\``,
     `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
     `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
@@ -318,8 +335,17 @@ function codeBlock(value: unknown): string {
   return escapeHtml(typeof value === "string" ? value : JSON.stringify(value, null, 2));
 }
 
-export function mcpStartHtml(runtime: McpStartRuntime): string {
+function copyButton(value: string, label = "Copy"): string {
+  return `<button class="copy" type="button" data-label="${escapeHtml(label)}" data-copy="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
+}
+
+export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOptions = {}): string {
   const payload = mcpStartPayload(runtime);
+  const source = normalizedTrackedSource(options.source);
+  const sourceLabel = humanSourceLabel(source);
+  const sourceStartUrl = trackedStartUrl(source);
+  const sourceConfigUrl = trackedConfigUrl(source);
+  const remoteConfig = JSON.stringify(payload.install.remote_mcp_json, null, 2);
   const flow = payload.first_flow
     .map(
       (step) => `<li>
@@ -333,6 +359,9 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
     .join("");
   const prompts = payload.buyer_prompts.map((prompt) => `<li>${escapeHtml(prompt)}</li>`).join("");
   const trackedStarts = Object.entries(payload.start_urls.tracked_examples)
+    .map(([key, value]) => `<a href="${escapeHtml(value)}">${escapeHtml(key.replace(/_/g, " "))}</a>`)
+    .join("");
+  const trackedConfigs = Object.entries(payload.start_urls.tracked_config_examples)
     .map(([key, value]) => `<a href="${escapeHtml(value)}">${escapeHtml(key.replace(/_/g, " "))}</a>`)
     .join("");
   const proofLinks = Object.entries(payload.proof_urls)
@@ -369,6 +398,7 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
     header { display: grid; gap: 18px; padding: 24px 0 20px; border-bottom: 1px solid var(--line); }
     h1 { margin: 0; font-size: clamp(2rem, 5vw, 4.4rem); line-height: .95; letter-spacing: 0; }
     h2 { margin: 0 0 12px; font-size: 1.2rem; letter-spacing: 0; }
+    h3 { margin: 0 0 8px; font-size: 1rem; letter-spacing: 0; }
     p { margin: 0; color: var(--muted); max-width: 760px; }
     a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
     .status { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -396,12 +426,44 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
     .button.primary { color: white; background: var(--green); border-color: var(--green); }
     section { padding: 28px 0; border-bottom: 1px solid var(--line); }
     .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .link-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 14px; }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 16px;
     }
+    .source-banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #eef5f0;
+    }
+    .source-banner div { flex: 1 1 320px; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .copy {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #eef5f0;
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-size: .86rem;
+      font-weight: 650;
+      padding: 6px 9px;
+      white-space: nowrap;
+    }
+    .copy:focus-visible, .button:focus-visible { outline: 3px solid rgba(36, 95, 155, .24); outline-offset: 2px; }
     pre {
       overflow: auto;
       margin: 12px 0 0;
@@ -441,28 +503,52 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
         <a class="button" href="${escapeHtml(START_JSON_URL)}">JSON start pack</a>
         <a class="button" href="${escapeHtml(payload.proof_urls.workflow_gallery)}">Workflow gallery</a>
       </div>
+      <div class="source-banner">
+        <div>
+          <strong>Tracked install source: ${escapeHtml(sourceLabel)}</strong>
+          <p>Use this config URL when a directory, partner, campaign, or agent host can fetch MCP JSON directly.</p>
+        </div>
+        <a class="button" href="${escapeHtml(sourceConfigUrl)}">Tracked config</a>
+        ${copyButton(sourceConfigUrl, "Copy config URL")}
+      </div>
     </header>
     <section>
       <h2>Install</h2>
       <div class="grid">
         <div class="panel">
-          <strong>Remote MCP config</strong>
+          <div class="panel-head"><strong>Remote MCP config</strong>${copyButton(remoteConfig)}</div>
           <pre>${codeBlock(payload.install.remote_mcp_json)}</pre>
         </div>
         <div class="panel">
-          <strong>Claude Code</strong>
+          <div class="panel-head"><strong>Claude Code</strong>${copyButton(payload.install.claude_code)}</div>
           <pre>${codeBlock(payload.install.claude_code)}</pre>
         </div>
         <div class="panel">
-          <strong>Codex</strong>
+          <div class="panel-head"><strong>Codex</strong>${copyButton(payload.install.codex)}</div>
           <pre>${codeBlock(payload.install.codex)}</pre>
         </div>
       </div>
     </section>
     <section>
-      <h2>Tracked Start Links</h2>
-      <p>Use source-specific start links in directories, partner handoffs, campaigns, and agent workflows so MCP start traffic is measurable by source. Custom lowercase slugs are allowed when they match ${escapeHtml(payload.start_urls.source_policy.accepted_source_format)}.</p>
-      <div class="proof">${trackedStarts}</div>
+      <h2>Tracked Links</h2>
+      <p>Use source-specific start links and config links in directories, partner handoffs, campaigns, and agent workflows so MCP install traffic is measurable by source. Custom lowercase slugs are allowed when they match ${escapeHtml(payload.start_urls.source_policy.accepted_source_format)}.</p>
+      <div class="link-grid">
+        <div>
+          <h3>Current Source</h3>
+          <div class="proof">
+            <a href="${escapeHtml(sourceStartUrl)}">start: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceConfigUrl)}">config: ${escapeHtml(sourceLabel)}</a>
+          </div>
+        </div>
+        <div>
+          <h3>Start Examples</h3>
+          <div class="proof">${trackedStarts}</div>
+        </div>
+        <div>
+          <h3>Config Examples</h3>
+          <div class="proof">${trackedConfigs}</div>
+        </div>
+      </div>
     </section>
     <section>
       <h2>First Useful Flow</h2>
@@ -481,6 +567,23 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
       <div>${escapeHtml(payload.success_gate)}</div>
     </footer>
   </main>
+  <script>
+    document.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-copy]");
+      if (!button) return;
+      const original = button.getAttribute("data-label") || "Copy";
+      const value = button.getAttribute("data-copy") || "";
+      try {
+        await navigator.clipboard.writeText(value);
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Select text";
+      }
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1400);
+    });
+  </script>
 </body>
 </html>
 `;

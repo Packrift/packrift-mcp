@@ -289,6 +289,7 @@ async function liveMcpCheck() {
     directoryRefreshResult,
     directorySubmitActionsResult,
     trackedStartPartnerResult,
+    trackedStartHtmlPartnerResult,
     invalidStartSourceResult,
     invalidConfigSourceResult,
     toolsResult,
@@ -316,6 +317,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
     fetchRedirect("https://mcp.packrift.com/r/start/partner_demo?utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/start?utm_source=partner_demo&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/start/bad-source"),
     fetchText("https://mcp.packrift.com/r/config/bad-source"),
     fetchMcp("tools/list"),
@@ -381,11 +383,12 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R03" &&
+      start?.release === "PACKRIFT-MCP-START-R04" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
+      start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       start?.start_urls?.source_policy?.partner_specific_sources_allowed === true &&
       start?.start_urls?.source_policy?.accepted_source_format === "^[a-z0-9_]{2,64}$" &&
@@ -404,6 +407,10 @@ async function liveMcpCheck() {
       trackedStartTarget?.searchParams?.get("utm_content") === "distribution_check" &&
       trackedStartTarget?.searchParams?.get("mcp_key") === "start:partner_demo" &&
       trackedStartTarget?.searchParams?.get("mcp_journey") === "directory_recrawl:partner_demo:start" &&
+      trackedStartHtmlPartnerResult.ok &&
+      trackedStartHtmlPartnerResult.text.includes("Tracked install source: partner demo") &&
+      trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/config/partner_demo") &&
+      trackedStartHtmlPartnerResult.text.includes("Copy config URL") &&
       invalidStartSourceResult.status === 404 &&
       invalidStartSource?.error === "invalid_mcp_start_source" &&
       invalidStartSource?.valid_format === "^[a-z0-9_]{2,64}$" &&
@@ -576,12 +583,18 @@ async function liveMcpCheck() {
       },
       start_release: start?.release ?? null,
       start_tracked_template: start?.start_urls?.tracked_start_template ?? null,
+      start_source_aware_html_template: start?.start_urls?.source_aware_html_template ?? null,
       start_source_policy: start?.start_urls?.source_policy ?? null,
       tracked_start_partner_demo: {
         status: trackedStartPartnerResult.status,
         location: trackedStartPartnerResult.location,
         target_utm_source: trackedStartTarget?.searchParams?.get("utm_source") ?? null,
         target_mcp_key: trackedStartTarget?.searchParams?.get("mcp_key") ?? null,
+      },
+      tracked_start_html_partner_demo: {
+        status: trackedStartHtmlPartnerResult.status,
+        has_source_config: trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/config/partner_demo"),
+        has_copy_action: trackedStartHtmlPartnerResult.text.includes("Copy config URL"),
       },
       invalid_start_source: {
         status: invalidStartSourceResult.status,

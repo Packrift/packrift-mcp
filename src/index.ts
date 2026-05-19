@@ -560,7 +560,10 @@ function wantsJson(acceptHeader: string | undefined): boolean {
 }
 
 async function mcpStartHtmlResponse(c: AppContext): Promise<Response> {
-  const body = mcpStartHtml(mcpStartRuntime());
+  const url = new URL(c.req.url);
+  const body = mcpStartHtml(mcpStartRuntime(), {
+    source: url.searchParams.get("utm_source") || url.searchParams.get("source"),
+  });
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-start.html", "mcp_start", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",

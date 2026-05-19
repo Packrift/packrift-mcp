@@ -13,8 +13,11 @@ https://mcp.packrift.com/mcp
 Use this as the shortest public handoff for developers, agents, and directory reviewers. It includes install snippets, the first exact-SKU flow, buyer prompts, and proof URLs:
 
 - HTML: https://mcp.packrift.com/start
+- Source-aware HTML template: https://mcp.packrift.com/start?utm_source={source}
 - JSON: https://mcp.packrift.com/ai/mcp-start.json
 - Markdown: https://mcp.packrift.com/ai/mcp-start.md
+
+The source-aware page shows the matching tracked config URL and copy-ready install controls for the supplied source slug.
 
 ## Hosted Adoption Kit
 

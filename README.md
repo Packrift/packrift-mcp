@@ -28,6 +28,12 @@ Directory and partner handoffs can use tracked start links without changing the 
 https://mcp.packrift.com/r/start/{source}
 ```
 
+The start page also renders source-specific copy controls when it receives a source:
+
+```text
+https://mcp.packrift.com/start?utm_source={source}
+```
+
 Custom partner, campaign, directory, and agent-workflow slugs are allowed without code changes as long as they match `^[a-z0-9_]{2,64}$`. Examples: `mcpservers_org`, `agency_partner`, `browser_agent_demo`, `newsletter_mcp`.
 
 When a directory or agent host wants a source-attributed config file instead of an HTML start page, use:
