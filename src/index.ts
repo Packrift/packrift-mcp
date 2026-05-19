@@ -3810,8 +3810,17 @@ function cartUrlForItem(item: ApprovedCatalogItem, quantity = 1): string {
   });
 }
 
+function measuredCartLandingUrlForItem(item: ApprovedCatalogItem, quantity = 1, source = "mcp_cart_handoff_candidates"): string {
+  const safeQuantity = Math.max(1, Math.floor(quantity));
+  const url = new URL(routeRedirectUrlForItem(item, "cart", source));
+  url.searchParams.set("qty", String(safeQuantity));
+  return url.toString();
+}
+
 function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
   const safeQuantity = Math.max(1, Math.floor(quantity));
+  const measuredCartUrl = measuredCartLandingUrlForItem(item, safeQuantity);
+  const finalShopifyCartUrl = cartUrlForItem(item, safeQuantity);
   return {
     status: "candidate_requires_live_confirmation",
     purpose: "Turn this exact AI_APPROVE SKU into a GA4-visible MCP cart handoff after live price and inventory checks.",
@@ -3831,7 +3840,12 @@ function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
       result_set_id: "mcp_cart_handoff_candidates",
       utm_term: item.sku,
     },
-    cart_url_candidate: cartUrlForItem(item, safeQuantity),
+    cart_url_candidate: measuredCartUrl,
+    cart_url_candidate_type: "mcp_cart_landing_redirect",
+    measured_cart_url: measuredCartUrl,
+    final_shopify_cart_url_candidate: finalShopifyCartUrl,
+    measurement_rule:
+      "Present the MCP cart landing URL first. It records the mcp_cart_landing event, then forwards to the final Shopify cart URL with the same MCP attribution and cart attributes.",
     attribution: {
       utm_source: "chatgpt-mcp",
       utm_medium: "mcp_tool",
@@ -3843,7 +3857,7 @@ function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
       product: routeRedirectUrlForItem(item, "product"),
       reorder: routeRedirectUrlForItem(item, "reorder"),
       quote: routeRedirectUrlForItem(item, "quote"),
-      cart: routeRedirectUrlForItem(item, "cart"),
+      cart: measuredCartUrl,
     },
     no_match_rule:
       "If the buyer-requested dimensions, material, color, count, SKU, closure, adhesive, printer type, or product family differ, do not create a cart URL; explain no exact match and route to quote recovery.",
@@ -3879,6 +3893,7 @@ function skuPagePayload(item: ApprovedCatalogItem) {
   const retrievalSafeJsonUrl = `https://mcp.packrift.com/ai/sku/${encodeURIComponent(item.sku)}.json`;
   const paidChatgptSignal = PAID_CHATGPT_SKU_SIGNALS[item.sku.toUpperCase()] ?? null;
   const exactMatchRule = "Exact-spec procurement only: do not substitute nearby dimensions, material, color, count, or product family unless the buyer explicitly accepts a substitute. Do not present a nearby product as exact.";
+  const mcpCartHandoff = cartHandoffForItem(item, 1);
   return {
     packrift_ai_id: tracking.packrift_ai_id,
     ai_commerce_id: tracking.ai_commerce_id,
@@ -3890,7 +3905,7 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     family: item.family || "other",
     status: "AI_APPROVE",
     next_action: "For checkout handoff, use mcp_cart_handoff.required_sequence and create_cart_url_arguments after live price and inventory confirmation.",
-    mcp_cart_handoff: cartHandoffForItem(item, 1),
+    mcp_cart_handoff: mcpCartHandoff,
     paid_chatgpt_family: paidChatgptSignal,
     ai_commerce_signal: paidChatgptSignal
       ? {
@@ -3921,7 +3936,9 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     direct_quote_url: directQuoteUrl,
     direct_bulk_quote_url: directQuoteUrl,
     cart_url_template: `https://packrift.com/cart/${item.variantId}:{quantity}`,
-    cart_url_qty_1_candidate: cartUrlForItem(item, 1),
+    cart_url_qty_1_candidate: mcpCartHandoff.cart_url_candidate,
+    measured_cart_url: mcpCartHandoff.measured_cart_url,
+    final_shopify_cart_url_qty_1_candidate: mcpCartHandoff.final_shopify_cart_url_candidate,
     cart_confirmation_required: true,
     mcp_endpoint: "https://mcp.packrift.com/mcp",
     recommended_mcp_sequence: ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
@@ -3966,6 +3983,7 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     `| Measured reorder URL | ${payload.measured_reorder_url} |`,
     `| Measured bulk quote URL | ${payload.measured_quote_url} |`,
     `| Cart URL candidate | ${payload.cart_url_qty_1_candidate} |`,
+    `| Final Shopify cart URL candidate | ${payload.final_shopify_cart_url_qty_1_candidate} |`,
     `| Copy procurement spec | ${escapeMarkdown(payload.copy_procurement_spec)} |`,
     "",
     "## Agent Purchase Handoff",
@@ -4038,6 +4056,8 @@ function purchasePathPayload(item: ApprovedCatalogItem) {
     direct_quote_url: payload.direct_quote_url,
     cart_url_template: payload.cart_url_template,
     cart_url_qty_1_candidate: payload.cart_url_qty_1_candidate,
+    measured_cart_url: payload.measured_cart_url,
+    final_shopify_cart_url_qty_1_candidate: payload.final_shopify_cart_url_qty_1_candidate,
     cart_confirmation_required: payload.cart_confirmation_required,
     live_confirmation_required: payload.live_confirmation_required,
     mcp_endpoint: payload.mcp_endpoint,
@@ -4067,6 +4087,7 @@ function measuredHandoffItem(item: ApprovedCatalogItem) {
     measured_reorder_url: routeRedirectUrlForItem(item, "reorder", "measured_handoff_directory"),
     measured_quote_url: routeRedirectUrlForItem(item, "quote", "measured_handoff_directory"),
     measured_cart_url: routeRedirectUrlForItem(item, "cart", "measured_handoff_directory"),
+    final_shopify_cart_url_candidate: payload.final_shopify_cart_url_qty_1_candidate,
     cart_confirmation_required: true,
     live_confirmation_required: payload.live_confirmation_required,
     copy_procurement_spec: payload.copy_procurement_spec,
@@ -4151,6 +4172,7 @@ function measuredHandoffDirectoryCsv(limit = 250): string {
       item.measured_reorder_url,
       item.measured_quote_url,
       item.measured_cart_url,
+      item.final_shopify_cart_url_candidate,
       item.copy_procurement_spec,
     ].map(csvField).join(",")
   );
@@ -4167,6 +4189,7 @@ function measuredHandoffDirectoryCsv(limit = 250): string {
       "measured_reorder_url",
       "measured_quote_url",
       "measured_cart_url",
+      "final_shopify_cart_url_candidate",
       "copy_procurement_spec",
     ].join(","),
     ...rows,
@@ -4191,6 +4214,8 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
     create_cart_url_tool: payload.mcp_cart_handoff.create_cart_url_tool,
     create_cart_url_arguments: payload.mcp_cart_handoff.create_cart_url_arguments,
     cart_url_qty_1_candidate: payload.mcp_cart_handoff.cart_url_candidate,
+    cart_url_candidate_type: payload.mcp_cart_handoff.cart_url_candidate_type,
+    final_shopify_cart_url_candidate: payload.mcp_cart_handoff.final_shopify_cart_url_candidate,
     mcp_sku_md: payload.retrieval_safe_url,
     mcp_sku_json: payload.retrieval_safe_json_url,
     measured_product_url: payload.measured_product_url,
@@ -4203,13 +4228,13 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
 
 function cartHandoffCandidatesPayload(limit = 50) {
   return {
-    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R02",
+    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03",
     generated_at: new Date().toISOString(),
     source: "mcp_cart_handoff_candidates",
     purpose:
       "Give AI agents a compact exact-spec path from MCP product retrieval to a GA4-visible cart handoff while preserving live price and inventory confirmation.",
     attribution_rule:
-      "Cart candidates and create_cart_url calls use utm_source=chatgpt-mcp, utm_medium=mcp_tool, and utm_campaign=create_cart_url so GA4 can isolate MCP-driven cart landings.",
+      "Cart candidates point to the MCP cart landing shim first, then forward to Shopify with utm_source=chatgpt-mcp, utm_medium=mcp_tool, and utm_campaign=create_cart_url so GA4 can isolate MCP-driven cart landings.",
     safety_rule:
       "Do not present a cart handoff until get_product, get_pricing, and check_inventory confirm the exact SKU, variant, live price, and inventory. If any requested spec differs, use the measured quote URL instead.",
     mcp_sequence: ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
@@ -4222,7 +4247,7 @@ function cartHandoffCandidatesMarkdown(limit = 25): string {
   const rows = payload.items
     .map(
       (item) =>
-        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.measured_cart_url} | ${item.cart_url_qty_1_candidate} |`
+        `| ${escapeMarkdown(item.sku)} | ${escapeMarkdown(item.title)} | ${escapeMarkdown(item.family)} | ${item.mcp_sku_md} | ${item.cart_url_qty_1_candidate} | ${item.final_shopify_cart_url_candidate} |`
     )
     .join("\n");
   return [
@@ -4248,7 +4273,7 @@ function cartHandoffCandidatesMarkdown(limit = 25): string {
     "",
     "## Priority Cart Candidates",
     "",
-    "| SKU | Product | Family | MCP SKU record | Measured cart redirect | UTM-stamped cart candidate |",
+    "| SKU | Product | Family | MCP SKU record | MCP cart landing candidate | Final Shopify cart URL |",
     "| --- | --- | --- | --- | --- | --- |",
     rows,
     "",

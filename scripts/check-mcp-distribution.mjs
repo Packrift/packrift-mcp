@@ -217,6 +217,7 @@ async function liveMcpCheck() {
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
+  const firstFinalCartUrl = cart?.items?.[0]?.final_shopify_cart_url_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
   const resourcesCount = resources.length;
@@ -232,7 +233,9 @@ async function liveMcpCheck() {
       toolNames.includes("get_cart_handoff_candidates") &&
       resourcesCount >= 65 &&
       promptsCount >= 7 &&
+      cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
+      cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R01" &&
       agentCapture?.surfaces?.length >= 20 &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R01" &&
@@ -266,7 +269,10 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.md") &&
-      hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
+      firstCartUrl.startsWith("https://mcp.packrift.com/r/cart/") &&
+      hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
+      firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
+      hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
       ? "pass"
       : "fail",
     {
@@ -290,6 +296,8 @@ async function liveMcpCheck() {
       directory_refresh_targets: directoryRefresh?.priority_refresh_targets?.length ?? 0,
       directory_submit_actions_release: directorySubmitActions?.release ?? null,
       directory_submit_actions_count: directorySubmitActions?.actions?.length ?? 0,
+      first_cart_url_candidate_type: cart?.items?.[0]?.cart_url_candidate_type ?? null,
+      first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
         tools_count: toolNames.length,
@@ -305,6 +313,7 @@ async function liveMcpCheck() {
         "utm_medium=mcp_tool",
         "utm_campaign=create_cart_url",
       ]),
+      first_cart_url_is_mcp_landing: firstCartUrl.startsWith("https://mcp.packrift.com/r/cart/"),
     }
   );
 }
