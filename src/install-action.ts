@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R08";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R08";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R09";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R09";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -432,11 +432,47 @@ function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
   }
 }
 
+function hostInstallSteps(target: InstallTarget, source: string, endpoint: string): string[] {
+  if (target.id === "cline") {
+    return [
+      "Open Cline's MCP Servers settings or the Cline MCP Marketplace review flow.",
+      "Add or edit the Packrift server entry with the copied streamableHttp JSON config.",
+      `Confirm the Packrift server is enabled for source ${source} and points to ${endpoint}.`,
+      "Paste the agent prompt from this page into Cline and let Cline call the Packrift MCP tools directly.",
+      "Count the source as activated only after Cline reaches create_cart_url and returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ];
+  }
+  if (target.format === "json") {
+    return [
+      "Open the MCP host's server configuration screen.",
+      "Paste the copied Packrift MCP JSON config.",
+      `Save or reload the MCP host so Packrift tools are visible from ${endpoint}.`,
+      "Run the first useful run prompt from this page through the source-aware endpoint.",
+      "Count activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ];
+  }
+  if (target.format === "command") {
+    return [
+      "Run the copied command in the target host environment.",
+      "Reload the host if Packrift tools are not immediately visible.",
+      "Run the first useful run prompt from this page through the source-aware endpoint.",
+      "Count activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ];
+  }
+  return [
+    "Open the target install URL.",
+    "Install or connect the hosted Packrift MCP endpoint.",
+    "Run the first useful run prompt from this page.",
+    "Count activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+  ];
+}
+
 export function mcpInstallActionPayload(input: { source: string; target: string }) {
   const target = normalizeInstallTarget(input.target);
   if (!target) return null;
   const sourceAware = sourceAwareInstallForTarget(target, input.source);
   const firstUsefulRun = mcpFirstUsefulRun(input.source, target.id);
+  const installSteps = hostInstallSteps(target, input.source, sourceAware.endpoint);
   return {
     release: MCP_INSTALL_ACTION_RELEASE,
     generated_at: new Date().toISOString(),
@@ -450,6 +486,17 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
     canonical_endpoint: MCP_ENDPOINT,
     source_aware_endpoint: sourceAware.endpoint,
     source_aware_config: sourceAware.config,
+    host_install_steps: installSteps,
+    activation_acceptance_gate: {
+      real_host_required: true,
+      browser_proof_is_not_enough: true,
+      required_host_target: target.id,
+      required_source: input.source,
+      required_endpoint: sourceAware.endpoint,
+      required_final_tool: "create_cart_url",
+      required_cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
+      measurement: "A valid activation produces source-attributed MCP tool-call telemetry from the host plus a measured /r/cart URL. Browser proof alone remains review evidence, not source activation.",
+    },
     tracked_install_url: trackedInstallUrl(input.source, target.id),
     tracked_install_html_url: `${trackedInstallUrl(input.source, target.id)}&format=html`,
     tracked_config_url: trackedConfigUrl(input.source),
@@ -508,6 +555,7 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       tracked_install_url: trackedInstallUrl(source, target.id),
       tracked_install_html_url: `${trackedInstallUrl(source, target.id)}&format=html`,
       source_aware_endpoint: sourceAwareMcpEndpoint(source, target.id),
+      host_install_steps: hostInstallSteps(target, source, sourceAwareMcpEndpoint(source, target.id)),
       aliases: target.aliases,
       first_tests: target.firstTests,
       first_useful_run_endpoint: sourceAwareMcpEndpoint(source, target.id),
@@ -578,6 +626,10 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
     "## First Tests",
     "",
     payload.first_tests.map((test) => `- ${test}`).join("\n"),
+    "",
+    "## Host Install Steps",
+    "",
+    payload.host_install_steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
     "",
     "## Required Post-Install Verification",
     "",
@@ -664,6 +716,12 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
       <pre>${escapeHtml(copyBlock)}</pre>
     </section>
     <section class="panel">
+      <h2>Host Install Steps</h2>
+      <ol>
+        ${payload.host_install_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+      </ol>
+    </section>
+    <section class="panel">
       <h2>Source-Aware Endpoint</h2>
       <div class="bar">
         <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_endpoint`)}" data-copy="${escapeHtml(payload.source_aware_endpoint)}">Copy endpoint</button>
@@ -687,6 +745,7 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
     <section class="panel">
       <h2>Rule</h2>
       <p>${escapeHtml(payload.operating_rule)}</p>
+      <p>Activation requires real host-side MCP tool calls from this source and a measured <code>${escapeHtml(payload.activation_acceptance_gate.required_cart_url_prefix)}</code> URL. Browser proof alone is review evidence, not source activation.</p>
     </section>
   </main>
   <script>

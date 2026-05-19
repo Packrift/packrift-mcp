@@ -70,7 +70,7 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 Cline users should use the tracked Cline target, which returns Cline-native `streamableHttp` config:
 
 ```text
-https://mcp.packrift.com/r/install/generic/cline?format=json
+https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=json
 ```
 
 ## Hosted connector and directory listings

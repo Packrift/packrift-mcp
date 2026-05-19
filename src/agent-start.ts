@@ -180,7 +180,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R11",
+    release: "PACKRIFT-MCP-START-R12",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -210,6 +210,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
             generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
             claude_code: trackedInstallUrl(source, "claude_code"),
             codex: trackedInstallUrl(source, "codex"),
+            cline: trackedInstallUrl(source, "cline"),
           },
         ])
       ),
@@ -420,6 +421,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
     generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
     claude_code: trackedInstallUrl(source, "claude_code"),
     codex: trackedInstallUrl(source, "codex"),
+    cline: trackedInstallUrl(source, "cline"),
   };
   const sourceRunUrl = trackedRunUrl(source, "generic_streamable_http");
   const sourceActivationUrl = `https://mcp.packrift.com/r/activate/${source}`;
@@ -595,6 +597,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <a class="button" href="${escapeHtml(sourceConfigUrl)}">Tracked config</a>
         ${copyButton(sourceConfigUrl, "Copy config URL", "tracked_config_url")}
         <a class="button" href="${escapeHtml(sourceInstallUrls.codex)}">Tracked Codex install</a>
+        <a class="button" href="${escapeHtml(sourceInstallUrls.cline)}">Tracked Cline install</a>
         <a class="button" href="${escapeHtml(sourceRunUrl)}">Tracked first run</a>
         <a class="button" href="${escapeHtml(sourceActivationRunnerUrl)}">Activation runner</a>
       </div>
@@ -628,6 +631,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
             <a href="${escapeHtml(sourceInstallUrls.generic_streamable_http)}">install json: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceInstallUrls.claude_code)}">install claude: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceInstallUrls.codex)}">install codex: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceInstallUrls.cline)}">install cline: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceActivationUrl)}">activation handoff: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceActivationRunnerUrl)}">activation runner: ${escapeHtml(sourceLabel)}</a>
           </div>
