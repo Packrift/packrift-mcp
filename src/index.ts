@@ -3475,23 +3475,25 @@ async function shopifyMcpOrderAttributionPayload(env: Env, days: number, limit: 
 
 async function readAiSalesEvents(env: Env, date: string, limit: number): Promise<Array<Record<string, unknown>>> {
   const prefix = `${AI_SALES_EVENT_PREFIX}/${date}/`;
-  const events: Array<Record<string, unknown>> = [];
+  const allKeys: Array<{ name: string }> = [];
   let cursor: string | undefined;
-  while (events.length < limit) {
-    const listed = await env.CATALOG_CACHE.list({ prefix, cursor, limit: Math.min(1000, limit - events.length) });
-    const keys = listed.keys.slice(0, limit - events.length);
-    for (let index = 0; index < keys.length && events.length < limit; index += AI_SALES_EVENT_READ_CONCURRENCY) {
-      const chunk = keys.slice(index, index + AI_SALES_EVENT_READ_CONCURRENCY);
-      const bodies = await Promise.all(chunk.map((key) => env.CATALOG_CACHE.get(key.name, "json").catch(() => null)));
-      for (const body of bodies) {
-        if (body && typeof body === "object") events.push(body as Record<string, unknown>);
-        if (events.length >= limit) break;
-      }
+  do {
+    const listed = await env.CATALOG_CACHE.list({ prefix, cursor, limit: 1000 });
+    allKeys.push(...listed.keys.map((key) => ({ name: key.name })));
+    cursor = listed.list_complete ? undefined : listed.cursor;
+  } while (cursor);
+
+  const keys = allKeys.slice(-Math.max(1, limit));
+  const events: Array<Record<string, unknown>> = [];
+  for (let index = 0; index < keys.length && events.length < limit; index += AI_SALES_EVENT_READ_CONCURRENCY) {
+    const chunk = keys.slice(index, index + AI_SALES_EVENT_READ_CONCURRENCY);
+    const bodies = await Promise.all(chunk.map((key) => env.CATALOG_CACHE.get(key.name, "json").catch(() => null)));
+    for (const body of bodies) {
+      if (body && typeof body === "object") events.push(body as Record<string, unknown>);
+      if (events.length >= limit) break;
     }
-    if (listed.list_complete || !listed.cursor || events.length >= limit) break;
-    cursor = listed.cursor;
   }
-  return events;
+  return events.sort((a, b) => String(b.received_at ?? "").localeCompare(String(a.received_at ?? ""))).slice(0, limit);
 }
 
 function aiSalesDashboardHtml(date: string): string {
