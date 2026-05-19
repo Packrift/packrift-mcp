@@ -354,6 +354,8 @@ async function liveMcpCheck() {
     serverCardResult,
     startResult,
     cartResult,
+    mcpToolsDiscoveryResult,
+    specFinderToolsResult,
     agentCaptureResult,
     adoptionKitResult,
     installMatrixResult,
@@ -426,6 +428,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/.well-known/mcp/server-card.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-start.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-tools.json"),
+    fetchText("https://mcp.packrift.com/ai/spec-finder-tools.md"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-install-matrix.json"),
@@ -498,6 +502,7 @@ async function liveMcpCheck() {
   const serverCard = serverCardResult.ok ? JSON.parse(serverCardResult.text) : null;
   const start = startResult.ok ? JSON.parse(startResult.text) : null;
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
+  const mcpToolsDiscovery = mcpToolsDiscoveryResult.ok ? JSON.parse(mcpToolsDiscoveryResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
   const installMatrix = installMatrixResult.ok ? JSON.parse(installMatrixResult.text) : null;
@@ -548,6 +553,7 @@ async function liveMcpCheck() {
   const trackedInstallClineJson = parseJsonOrNull(trackedInstallClineJsonResult.text);
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const firstFinalCartUrl = cart?.items?.[0]?.final_shopify_cart_url_candidate ?? "";
+  const mcpToolsDiscoveryToolNames = (mcpToolsDiscovery?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
   const resourcesCount = resources.length;
@@ -620,6 +626,35 @@ async function liveMcpCheck() {
       marketplaceManifest?.signals?.tool_count >= 15 &&
       marketplaceManifest?.signals?.tool_names?.includes("prepare_purchase_handoff") &&
       marketplaceManifest?.signals?.required_current_tools?.length >= 15 &&
+      mcpToolsDiscoveryResult.ok &&
+      mcpToolsDiscovery?.release === "PACKRIFT-MCP-TOOL-DISCOVERY-R01" &&
+      mcpToolsDiscovery?.generated_from === "live_worker_tools_registry" &&
+      mcpToolsDiscovery?.endpoint === MCP_ENDPOINT &&
+      mcpToolsDiscovery?.auth_required === false &&
+      mcpToolsDiscovery?.tool_count >= 15 &&
+      mcpToolsDiscoveryToolNames.length >= 15 &&
+      mcpToolsDiscoveryToolNames.includes("prepare_purchase_handoff") &&
+      mcpToolsDiscoveryToolNames.includes("compare_alternatives") &&
+      mcpToolsDiscoveryToolNames.includes("pack_calculator") &&
+      mcpToolsDiscoveryToolNames.includes("inventory_status") &&
+      mcpToolsDiscoveryToolNames.includes("create_cart_url") &&
+      mcpToolsDiscovery?.conversion_urls?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
+      mcpToolsDiscovery?.conversion_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      mcpToolsDiscovery?.conversion_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
+      mcpToolsDiscovery?.conversion_urls?.eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
+      mcpToolsDiscovery?.conversion_urls?.directory_update_card_template === "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json" &&
+      mcpToolsDiscovery?.conversion_urls?.reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
+      mcpToolsDiscovery?.source_activation?.source_count >= 30 &&
+      mcpToolsDiscovery?.source_activation?.sitemap_url_count >= 400 &&
+      specFinderToolsResult.ok &&
+      specFinderToolsResult.text.includes("prepare_purchase_handoff") &&
+      specFinderToolsResult.text.includes("compare_alternatives") &&
+      specFinderToolsResult.text.includes("pack_calculator") &&
+      specFinderToolsResult.text.includes("inventory_status") &&
+      specFinderToolsResult.text.includes("create_cart_url") &&
+      specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
+      specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-queue.json") &&
+      specFinderToolsResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 35 &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
@@ -1764,6 +1799,31 @@ async function liveMcpCheck() {
       start_flow_steps: start?.first_flow?.length ?? 0,
       cart_release: cart?.release ?? null,
       cart_items: cart?.items?.length ?? 0,
+      mcp_tools_discovery: {
+        status: mcpToolsDiscoveryResult.status,
+        release: mcpToolsDiscovery?.release ?? null,
+        generated_from: mcpToolsDiscovery?.generated_from ?? null,
+        tool_count: mcpToolsDiscovery?.tool_count ?? null,
+        tool_names: mcpToolsDiscoveryToolNames,
+        has_prepare_purchase_handoff: mcpToolsDiscoveryToolNames.includes("prepare_purchase_handoff"),
+        has_compare_alternatives: mcpToolsDiscoveryToolNames.includes("compare_alternatives"),
+        has_pack_calculator: mcpToolsDiscoveryToolNames.includes("pack_calculator"),
+        has_inventory_status: mcpToolsDiscoveryToolNames.includes("inventory_status"),
+        eval_pack: mcpToolsDiscovery?.conversion_urls?.eval_pack ?? null,
+        source_activation_sitemap: mcpToolsDiscovery?.conversion_urls?.source_activation_sitemap ?? null,
+        source_activation_queue: mcpToolsDiscovery?.conversion_urls?.source_activation_queue ?? null,
+        source_count: mcpToolsDiscovery?.source_activation?.source_count ?? null,
+        sitemap_url_count: mcpToolsDiscovery?.source_activation?.sitemap_url_count ?? null,
+      },
+      spec_finder_tools: {
+        status: specFinderToolsResult.status,
+        has_prepare_purchase_handoff: specFinderToolsResult.text.includes("prepare_purchase_handoff"),
+        has_compare_alternatives: specFinderToolsResult.text.includes("compare_alternatives"),
+        has_pack_calculator: specFinderToolsResult.text.includes("pack_calculator"),
+        has_inventory_status: specFinderToolsResult.text.includes("inventory_status"),
+        has_eval_pack: specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json"),
+        has_source_activation_queue: specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-queue.json"),
+      },
       agent_capture_release: agentCapture?.release ?? null,
       agent_capture_surfaces: agentCapture?.surfaces?.length ?? 0,
       adoption_kit_release: adoptionKit?.release ?? null,

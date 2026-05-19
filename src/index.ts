@@ -6871,6 +6871,7 @@ function aiCorpusBodyIsLoaded(route: { key: string }, body: string | null): bool
 
 const AI_SALES_PRIORITY_SKUS = ["1066", "LL251WR", "MFL1295"] as const;
 const AI_SALES_SKU_ROUTE_LIMIT = 1000;
+const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
@@ -7366,6 +7367,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/agents.md") return agentInstructionsMd;
   if (pathname === "/ai/packrift-ai-agent-instructions.md") return agentInstructionsMd;
   if (pathname === "/ai/crawler-safe-purchase-paths.md") return crawlerSafePurchasePathsMarkdown();
+  if (pathname === "/ai/spec-finder-tools.md") return mcpToolDiscoveryMarkdown();
+  if (pathname === "/ai/mcp-tools.json") return JSON.stringify(mcpToolDiscoveryPayload(), null, 2);
   if (pathname === "/ai/mcp-start.json") return JSON.stringify(mcpStartPayload(mcpStartRuntime()), null, 2);
   if (pathname === "/ai/mcp-start.md") return mcpStartMarkdown(mcpStartRuntime());
   if (pathname === "/ai/mcp-start.html") return mcpStartHtml(mcpStartRuntime());
@@ -7499,6 +7502,167 @@ function sourceActivationSitemapXml(): string {
     .map((url) => `  <url><loc>${escapeXml(url)}</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq></url>`)
     .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
+function mcpToolDiscoveryPayload() {
+  const sourceActivationSources = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.map((row) => row.source);
+  const tools = TOOLS.map((tool) => ({
+    name: tool.schema.name,
+    description: tool.schema.description,
+    input_schema: tool.schema.inputSchema,
+    json_rpc_call: {
+      method: "tools/call",
+      params: {
+        name: tool.schema.name,
+        arguments: {},
+      },
+    },
+  }));
+  return {
+    release: MCP_TOOL_DISCOVERY_RELEASE,
+    schema: "packrift.mcp_tools.v2",
+    generated_from: "live_worker_tools_registry",
+    server: "Packrift MCP",
+    server_version: serverCard.version,
+    endpoint: "https://mcp.packrift.com/mcp",
+    transport: "streamable_http",
+    auth_required: false,
+    tool_count: tools.length,
+    tools,
+    required_current_tools: tools.map((tool) => tool.name),
+    recommended_call_sequence: [
+      "search_products",
+      "get_product",
+      "get_pricing",
+      "check_inventory",
+      "get_cart_handoff_candidates",
+      "create_cart_url",
+    ],
+    buyer_flows: [
+      {
+        id: "exact_spec_search",
+        tools: ["search_products", "get_product", "get_pricing", "check_inventory"],
+        outcome: "Return an exact AI_APPROVE product only when dimensions and required attributes match.",
+      },
+      {
+        id: "fit_then_buy",
+        tools: ["find_packaging_for_item", "pack_calculator", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
+        outcome: "Find a packaging fit, confirm live facts, then hand off a measured cart URL after buyer selection.",
+      },
+      {
+        id: "alternatives_comparison",
+        tools: ["compare_alternatives", "inventory_status", "get_bulk_quote_link"],
+        outcome: "Compare exact eligible Packrift options and route unresolved specs to quote recovery.",
+      },
+      {
+        id: "purchase_handoff",
+        tools: ["get_cart_handoff_candidates", "prepare_purchase_handoff", "create_cart_url"],
+        outcome: "Create a Packrift MCP /r/cart URL with source, journey, and UTM attribution; no order is placed by the tool.",
+      },
+    ],
+    guardrails: [
+      "Use only AI_APPROVE Packrift catalog items for exact product recommendations.",
+      "Do not present nearby dimensions, material, color, closure, printer type, adhesive, pack count, or SKU as an exact match.",
+      "Confirm live price and live inventory before cart handoff.",
+      "Use create_cart_url only after the buyer selects the exact SKU and quantity.",
+      "If no exact safe match exists, call explain_no_exact_match or get_bulk_quote_link instead of forcing a substitute.",
+    ],
+    conversion_urls: {
+      start: "https://mcp.packrift.com/start",
+      manifest: "https://mcp.packrift.com/manifest",
+      resources: "https://mcp.packrift.com/resources",
+      server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
+      eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
+      directory_update_card_template: "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json",
+      tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
+      tracked_run_generic: trackedRunUrl("generic", "generic_streamable_http"),
+      reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
+      reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
+      reviewer_activation_shell_template: "https://mcp.packrift.com/r/activate/{source}?format=sh",
+      reviewer_activation_shell_generic: "https://mcp.packrift.com/r/activate/generic?format=sh",
+      cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+      measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
+      usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+    },
+    source_activation: {
+      source_count: sourceActivationSources.length,
+      sources: sourceActivationSources,
+      source_aware_endpoint_template:
+        "https://mcp.packrift.com/mcp?packrift_mcp_source={source}&packrift_mcp_target={target}",
+      generic_source_aware_endpoint: sourceAwareMcpEndpoint("generic", "generic_streamable_http"),
+      sitemap_url_count: sourceActivationSitemapUrls().length,
+    },
+    tracked_events: [
+      "mcp_tool_call",
+      "mcp_cart_landing",
+      "mcp_start_click",
+      "mcp_install_intent",
+      "mcp_first_run_intent",
+      "mcp_first_run_execution",
+      "ai_corpus_click",
+      "purchase",
+    ],
+  };
+}
+
+function mcpToolDiscoveryMarkdown(): string {
+  const payload = mcpToolDiscoveryPayload();
+  const toolRows = payload.tools
+    .map((tool) => `| \`${tool.name}\` | ${tool.description.replace(/\|/g, "\\|")} |`)
+    .join("\n");
+  const flowRows = payload.buyer_flows
+    .map((flow) => `| ${flow.id} | ${flow.tools.map((tool) => `\`${tool}\``).join(", ")} | ${flow.outcome} |`)
+    .join("\n");
+  return [
+    "# Packrift MCP Tool Discovery",
+    "",
+    `Endpoint: \`${payload.endpoint}\``,
+    `Transport: \`${payload.transport}\``,
+    `Auth required: \`${payload.auth_required}\``,
+    `Tool count: \`${payload.tool_count}\``,
+    "",
+    "## Tools",
+    "",
+    "| Tool | Use |",
+    "| --- | --- |",
+    toolRows,
+    "",
+    "## Buyer Flows",
+    "",
+    "| Flow | Tools | Outcome |",
+    "| --- | --- | --- |",
+    flowRows,
+    "",
+    "## Source Activation",
+    "",
+    `- Source activation sitemap: ${payload.conversion_urls.source_activation_sitemap}`,
+    `- Source activation queue: ${payload.conversion_urls.source_activation_queue}`,
+    `- Eval pack: ${payload.conversion_urls.eval_pack}`,
+    `- Eval pack template: ${payload.conversion_urls.eval_pack_template}`,
+    `- Directory update card template: ${payload.conversion_urls.directory_update_card_template}`,
+    `- Reviewer activation shell template: ${payload.conversion_urls.reviewer_activation_shell_template}`,
+    `- Generic one-command runner: ${payload.conversion_urls.reviewer_activation_shell_generic}`,
+    "",
+    "## Guardrails",
+    "",
+    ...payload.guardrails.map((rule) => `- ${rule}`),
+    "",
+    "## Measurement",
+    "",
+    `- Usage snapshot: ${payload.conversion_urls.usage_snapshot}`,
+    `- Funnel snapshot: ${payload.conversion_urls.funnel_snapshot}`,
+    `- GA4 proof: ${payload.conversion_urls.ga4_funnel_proof}`,
+    "",
+  ].join("\n");
 }
 
 async function mcpHealthPayload(env: Env) {
@@ -9146,6 +9310,21 @@ app.get("/ai/crawler-safe-purchase-paths.md", (c) =>
     ...RAW_HEADERS,
   })
 );
+
+app.get("/ai/mcp-tools.json", async (c) => {
+  const payload = mcpToolDiscoveryPayload();
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-tools.json", "mcp_tool_discovery", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/spec-finder-tools.md", async (c) => {
+  const body = mcpToolDiscoveryMarkdown();
+  await recordGeneratedAiResourceFetch(c, "/ai/spec-finder-tools.md", "mcp_tool_discovery", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
 
 app.get("/ai/mcp-start.json", async (c) => {
   const payload = mcpStartPayload(mcpStartRuntime());
