@@ -175,13 +175,26 @@ const HOSTS = [
   },
   {
     id: "cursor_windsurf_vscode",
-    name: "Cursor, Windsurf, VS Code, Cline, and Roo-style MCP hosts",
+    name: "Cursor, Windsurf, VS Code, and Roo-style MCP hosts",
     audience: "IDE agents that accept MCP JSON config or remote server URLs.",
     status: "ready",
     preferred: true,
     install: remoteMcpJson(),
     first_test_ids: ["tools-list", "prompts-list", "candidate-1066", "cart-1066"],
     notes: ["Use only the hosted HTTP endpoint unless doing local Packrift MCP development.", "If the IDE asks for transport, choose HTTP or Streamable HTTP."],
+  },
+  {
+    id: "cline",
+    name: "Cline",
+    audience: "Cline users and Cline MCP Marketplace reviewers who need a direct remote MCP config.",
+    status: "ready",
+    preferred: true,
+    install: remoteMcpJson(),
+    first_test_ids: ["tools-list", "candidate-1066", "price-1066", "inventory-1066", "cart-1066"],
+    notes: [
+      "Use the Cline-specific target for Cline Marketplace activation and recrawl proof.",
+      "This is a hosted remote MCP config only; do not create a Packrift CLI.",
+    ],
   },
   {
     id: "glama_connector",
@@ -245,7 +258,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R04",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R05",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -274,6 +287,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       claude_code: trackedInstallUrl("generic", "claude_code"),
       codex: trackedInstallUrl("generic", "codex"),
       cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+      cline: trackedInstallUrl("generic", "cline"),
     },
     hosts: HOSTS,
     smoke_tests: SMOKE_TESTS,

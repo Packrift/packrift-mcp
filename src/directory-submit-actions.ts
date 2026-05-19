@@ -404,6 +404,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       claude_code: trackedInstallUrl(action.id, "claude_code"),
       codex: trackedInstallUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
+      cline: trackedInstallUrl(action.id, "cline"),
     },
     tracked_run_urls: {
       generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
@@ -412,6 +413,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       claude_code: trackedRunUrl(action.id, "claude_code"),
       codex: trackedRunUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedRunUrl(action.id, "cursor_windsurf_vscode"),
+      cline: trackedRunUrl(action.id, "cline"),
     },
     first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
     proof_urls: {
@@ -421,6 +423,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       tracked_config: trackedConfigUrl(action.id),
       tracked_install_codex: trackedInstallUrl(action.id, "codex"),
       tracked_install_claude_code: trackedInstallUrl(action.id, "claude_code"),
+      tracked_install_cline: trackedInstallUrl(action.id, "cline"),
       tracked_run_generic: trackedRunUrl(action.id, "generic_streamable_http"),
       tracked_run_generic_browser: `${trackedRunUrl(action.id, "generic_streamable_http")}&format=html`,
       tracked_run_generic_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
@@ -451,7 +454,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R25",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R26",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

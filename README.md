@@ -52,7 +52,7 @@ For a target-specific tracked install action, use:
 https://mcp.packrift.com/r/install/{source}/{target}
 ```
 
-Common targets include `generic_streamable_http`, `claude_code`, `codex`, `claude_desktop`, and `cursor_windsurf_vscode`.
+Common targets include `generic_streamable_http`, `claude_code`, `codex`, `claude_desktop`, `cursor_windsurf_vscode`, and `cline`.
 
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
 

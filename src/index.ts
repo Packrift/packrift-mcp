@@ -2403,8 +2403,107 @@ function countEventsByStringField(events: Array<Record<string, unknown>>, field:
   return counts;
 }
 
+const MONTHLY_QUALIFIED_VISITOR_LOOKBACK_DAYS = 30;
+const MONTHLY_QUALIFIED_VISITOR_THRESHOLD = 1000;
+const MONTHLY_QUALIFIED_VISITOR_EVENT_READ_LIMIT = 10000;
+const MCP_QUALIFIED_VISITOR_SIGNAL_EVENTS = new Set([
+  "mcp_start_click",
+  "mcp_install_intent",
+  "mcp_first_run_intent",
+  "mcp_first_run_execution",
+  "mcp_install_copy",
+  "mcp_activation_cart_ready",
+  "mcp_tool_call",
+  "cart_click",
+  "mcp_cart_landing",
+]);
+
+function dateStringsEndingAt(endDate: string, days: number): string[] {
+  const parts = endDate.split("-").map((part) => Number.parseInt(part, 10));
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+  const end = year !== undefined && month !== undefined && day !== undefined && Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+    ? new Date(Date.UTC(year, month - 1, day))
+    : new Date();
+  return Array.from({ length: Math.max(1, days) }, (_, index) => {
+    const date = new Date(end);
+    date.setUTCDate(end.getUTCDate() - index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+async function readAiSalesEventsRange(env: Env, endDate: string, days: number, totalLimit: number): Promise<Array<Record<string, unknown>>> {
+  const dates = dateStringsEndingAt(endDate, days);
+  const boundedTotalLimit = Math.max(1, totalLimit);
+  const perDayLimit = Math.max(1, Math.ceil(boundedTotalLimit / dates.length));
+  const eventGroups = await Promise.all(dates.map((date) => readAiSalesEvents(env, date, perDayLimit).catch(() => [])));
+  return eventGroups
+    .flat()
+    .sort((a, b) => String(b.received_at ?? "").localeCompare(String(a.received_at ?? "")))
+    .slice(0, boundedTotalLimit);
+}
+
+function isQualifiedMcpVisitorSignal(event: Record<string, unknown>): boolean {
+  const eventName = String(event.event ?? "");
+  return MCP_QUALIFIED_VISITOR_SIGNAL_EVENTS.has(eventName) && isQualifiedPublicFunnelEvent(event);
+}
+
+function topVisitorProofRows(events: Array<Record<string, unknown>>, field: "event" | "source" | "utm_source" | "mcp_source_context") {
+  const counts: Record<string, number> = {};
+  for (const event of events) {
+    const key = safeEventText(event[field], 120) || "unknown";
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10)
+    .map(([key, count]) => ({ key, count }));
+}
+
+function monthlyQualifiedVisitorProof(events: Array<Record<string, unknown>>, lookbackDays: number, threshold: number, readLimit: number) {
+  const qualifiedEvents = events.filter(isQualifiedMcpVisitorSignal);
+  const qualifiedSignals = qualifiedEvents.length;
+  return {
+    gate_name: "thousands_of_qualified_visitors",
+    status: qualifiedSignals >= threshold ? "threshold_met_by_first_party_proxy" : "below_threshold",
+    basis: "first_party_qualified_mcp_event_signals_proxy",
+    canonical_note:
+      "This public Worker proof uses qualified first-party MCP event signals. GA4 session_start remains the stronger canonical visitor proof when the local full funnel artifact is built.",
+    lookback_days: lookbackDays,
+    threshold,
+    qualified_external_mcp_event_signals: qualifiedSignals,
+    remaining_to_threshold: Math.max(0, threshold - qualifiedSignals),
+    progress_pct: Number(Math.min(100, (qualifiedSignals / threshold) * 100).toFixed(1)),
+    events_scanned: events.length,
+    read_limit: readLimit,
+    truncated_by_read_limit: events.length >= readLimit,
+    included_event_names: [...MCP_QUALIFIED_VISITOR_SIGNAL_EVENTS],
+    top_events: topVisitorProofRows(qualifiedEvents, "event"),
+    top_sources: topVisitorProofRows(qualifiedEvents, "source"),
+    top_utm_sources: topVisitorProofRows(qualifiedEvents, "utm_source"),
+    top_runtime_sources: topVisitorProofRows(qualifiedEvents, "mcp_source_context"),
+  };
+}
+
+async function monthlyQualifiedVisitorProofForDate(env: Env, date: string) {
+  const events = await readAiSalesEventsRange(
+    env,
+    date,
+    MONTHLY_QUALIFIED_VISITOR_LOOKBACK_DAYS,
+    MONTHLY_QUALIFIED_VISITOR_EVENT_READ_LIMIT
+  );
+  return monthlyQualifiedVisitorProof(
+    events,
+    MONTHLY_QUALIFIED_VISITOR_LOOKBACK_DAYS,
+    MONTHLY_QUALIFIED_VISITOR_THRESHOLD,
+    MONTHLY_QUALIFIED_VISITOR_EVENT_READ_LIMIT
+  );
+}
+
 async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000) {
   const events = await readAiSalesEvents(env, date, limit);
+  const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
   const summary = summarizeAiSalesEvents(events);
   const byEvent = countEventsByStringField(events, "event");
   const bySource = countEventsByStringField(events, "source");
@@ -2472,7 +2571,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     activationCartReady +
     directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R20",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R21",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2515,6 +2614,12 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       ).length,
       source_activation_priority_sources: sourceActivationPriorityQueue.length,
       source_activation_priority_critical: sourceActivationPriorityQueue.filter((row) => row.priority === "critical").length,
+      monthly_qualified_visitor_signals: monthlyVisitorProof.qualified_external_mcp_event_signals,
+      monthly_qualified_visitor_threshold: monthlyVisitorProof.threshold,
+      monthly_qualified_visitor_remaining: monthlyVisitorProof.remaining_to_threshold,
+      monthly_qualified_visitor_lookback_days: monthlyVisitorProof.lookback_days,
+      monthly_qualified_visitor_events_scanned: monthlyVisitorProof.events_scanned,
+      monthly_qualified_visitor_read_limit: monthlyVisitorProof.read_limit,
       direct_agent_resource_events: directAgentResourceEvents,
       direct_agent_resource_sources: directAgentResourceSources,
       mcp_start_resource_events: bySource.mcp_start ?? 0,
@@ -2550,9 +2655,10 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
       create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
       material_tool_usage_50_plus: qualifiedMcpToolCalls >= 50,
-      thousands_of_qualified_visitors: false,
+      thousands_of_qualified_visitors: monthlyVisitorProof.qualified_external_mcp_event_signals >= monthlyVisitorProof.threshold,
       measurable_mcp_sales: false,
     },
+    monthly_qualified_visitor_proof: monthlyVisitorProof,
     top: {
       events: summary.by_event,
       tools: summary.by_tool,
@@ -2686,6 +2792,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Post-install sources waiting on cart landing: ${payload.counts.post_install_sources_waiting_on_cart_landing}`,
     `- Source activation priority sources: ${payload.counts.source_activation_priority_sources}`,
     `- Critical source activation priorities: ${payload.counts.source_activation_priority_critical}`,
+    `- Monthly qualified visitor signals: ${payload.counts.monthly_qualified_visitor_signals} / ${payload.counts.monthly_qualified_visitor_threshold}`,
+    `- Monthly qualified visitor gap: ${payload.counts.monthly_qualified_visitor_remaining}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
@@ -2843,6 +2951,20 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Thousands of qualified visitors: ${payload.proof_gate.thousands_of_qualified_visitors ? "yes" : "no"}`,
     `- Measurable MCP sales: ${payload.proof_gate.measurable_mcp_sales ? "yes" : "no"}`,
     "",
+    "## Monthly Qualified Visitor Proof",
+    "",
+    `- Status: ${payload.monthly_qualified_visitor_proof.status}`,
+    `- Basis: ${payload.monthly_qualified_visitor_proof.basis}`,
+    `- Lookback days: ${payload.monthly_qualified_visitor_proof.lookback_days}`,
+    `- Qualified external MCP event signals: ${payload.monthly_qualified_visitor_proof.qualified_external_mcp_event_signals}`,
+    `- Threshold: ${payload.monthly_qualified_visitor_proof.threshold}`,
+    `- Remaining to threshold: ${payload.monthly_qualified_visitor_proof.remaining_to_threshold}`,
+    `- Progress: ${payload.monthly_qualified_visitor_proof.progress_pct}%`,
+    `- Events scanned: ${payload.monthly_qualified_visitor_proof.events_scanned}`,
+    `- Read limit: ${payload.monthly_qualified_visitor_proof.read_limit}`,
+    `- Truncated by read limit: ${payload.monthly_qualified_visitor_proof.truncated_by_read_limit ? "yes" : "no"}`,
+    `- Note: ${payload.monthly_qualified_visitor_proof.canonical_note}`,
+    "",
     "## Top Events",
     "",
     "| Event | Count |",
@@ -2874,7 +2996,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R13";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R14";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3214,13 +3336,21 @@ function sourceActivationRowsWithSeeds(rows: PostInstallActivationRow[]): PostIn
   return [...bySource.values()];
 }
 
+function sourcePreferredActivationTarget(source: string): string {
+  if (source === "cline_mcp_marketplace") return "cline";
+  return "generic_streamable_http";
+}
+
 function sourceActivationUrls(source: string) {
   const slug = encodeURIComponent(source);
-  const trackedRun = `https://mcp.packrift.com/r/run/${slug}/generic_streamable_http`;
+  const target = sourcePreferredActivationTarget(source);
+  const encodedTarget = encodeURIComponent(target);
+  const trackedRun = `https://mcp.packrift.com/r/run/${slug}/${encodedTarget}`;
   return {
+    preferred_target: target,
     tracked_start_url: `https://mcp.packrift.com/r/start/${slug}`,
     tracked_config_url: `https://mcp.packrift.com/r/config/${slug}`,
-    tracked_install_url: `https://mcp.packrift.com/r/install/${slug}/generic_streamable_http?format=html`,
+    tracked_install_url: `https://mcp.packrift.com/r/install/${slug}/${encodedTarget}?format=html`,
     tracked_first_run_url: `${trackedRun}?format=html`,
     tracked_first_run_execute_url: `${trackedRun}?execute=1`,
     reviewer_activation_url: `https://mcp.packrift.com/r/activate/${slug}`,
@@ -3318,6 +3448,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         target_event_to_watch: sourceActivationTargetEvent(row),
         recommended_action: sourceActivationRecommendedAction(row),
         primary_action_url: sourceActivationPrimaryUrl(row, urls),
+        preferred_target: urls.preferred_target,
         cart_landing_action_url: row.recent_measured_cart_urls[0] ?? null,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
         directory_status: SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] ?? "source-attributed MCP activity visible; keep progressing toward real tool calls, measured carts, and orders",
@@ -3342,6 +3473,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
           install_intents: row.install_intents,
           first_run_actions: row.first_run_actions,
           first_run_executions: row.first_run_executions,
+          preferred_target: urls.preferred_target,
           mcp_tool_calls: row.mcp_tool_calls,
           create_cart_url_calls: row.create_cart_url_calls,
           external_qualified_create_cart_url_calls: row.external_qualified_create_cart_url_calls,
@@ -3361,7 +3493,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R02",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R03",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3376,7 +3508,11 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
       qualified_first_party_mcp_cart_landings: funnel.counts.qualified_first_party_mcp_cart_landings,
       first_party_mcp_orders: funnel.counts.first_party_mcp_orders,
       first_party_mcp_order_revenue: funnel.counts.first_party_mcp_order_revenue,
+      monthly_qualified_visitor_signals: funnel.counts.monthly_qualified_visitor_signals,
+      monthly_qualified_visitor_threshold: funnel.counts.monthly_qualified_visitor_threshold,
+      monthly_qualified_visitor_remaining: funnel.counts.monthly_qualified_visitor_remaining,
       traffic_quality: funnel.traffic_quality,
+      monthly_qualified_visitor_proof: funnel.monthly_qualified_visitor_proof,
     },
     queue_count: funnel.source_activation_priority_queue.length,
     critical_count: funnel.source_activation_priority_queue.filter((row) => row.priority === "critical").length,
@@ -3429,6 +3565,8 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Funnel status: ${payload.source_snapshot.funnel_status}`,
     `- External-qualified MCP tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}`,
     `- Qualified MCP cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}`,
+    `- Monthly qualified visitor signals: ${payload.source_snapshot.monthly_qualified_visitor_signals} / ${payload.source_snapshot.monthly_qualified_visitor_threshold}`,
+    `- Monthly qualified visitor gap: ${payload.source_snapshot.monthly_qualified_visitor_remaining}`,
     `- First-party MCP orders: ${payload.source_snapshot.first_party_mcp_orders}`,
     `- First-party MCP revenue: ${payload.source_snapshot.first_party_mcp_order_revenue}`,
     `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
@@ -3554,6 +3692,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <span>Critical: ${payload.critical_count}</span>
         <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
         <span>Cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}</span>
+        <span>Qualified visitors: ${payload.source_snapshot.monthly_qualified_visitor_signals}/${payload.source_snapshot.monthly_qualified_visitor_threshold}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
       </div>
       <div class="blocking">${blocking}</div>
@@ -3668,6 +3807,7 @@ async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
 
 async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 5000, orderDays = 90, orderLimit = 250) {
   const events = await readAiSalesEvents(env, date, limit);
+  const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
   const summary = summarizeAiSalesEvents(events);
   const byEvent = topRowsToRecord(summary.by_event);
   const mcpDiscoveryEvents =
@@ -3709,7 +3849,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     qualified_first_party_cart_landing_seen: qualifiedCartLandings > 0,
     first_party_mcp_order_seen: attributedOrderCount > 0,
     measurable_mcp_revenue_seen: attributedRevenue > 0,
-    thousands_of_qualified_visitors: false,
+    thousands_of_qualified_visitors: monthlyVisitorProof.qualified_external_mcp_event_signals >= monthlyVisitorProof.threshold,
   };
   const status =
     proofGate.thousands_of_qualified_visitors &&
@@ -3733,7 +3873,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     privacy:
       "Aggregated counts only. Raw event bodies, buyer identifiers, order rows, and private admin tokens are not exposed.",
     scope_note:
-      "This public snapshot uses first-party MCP telemetry plus aggregate Shopify order attribution. GA4 visitor/session proof remains in the local full funnel artifact.",
+      "This public snapshot uses first-party MCP telemetry plus aggregate Shopify order attribution. Monthly qualified visitor proof is a first-party MCP signal proxy; GA4 visitor/session proof remains stronger in the local full funnel artifact.",
     runtime: {
       server_version: serverCard.version,
       tools_count: TOOLS.length,
@@ -3763,6 +3903,12 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       ).length,
       source_activation_priority_sources: sourceActivationPriorityQueue.length,
       source_activation_priority_critical: sourceActivationPriorityQueue.filter((row) => row.priority === "critical").length,
+      monthly_qualified_visitor_signals: monthlyVisitorProof.qualified_external_mcp_event_signals,
+      monthly_qualified_visitor_threshold: monthlyVisitorProof.threshold,
+      monthly_qualified_visitor_remaining: monthlyVisitorProof.remaining_to_threshold,
+      monthly_qualified_visitor_lookback_days: monthlyVisitorProof.lookback_days,
+      monthly_qualified_visitor_events_scanned: monthlyVisitorProof.events_scanned,
+      monthly_qualified_visitor_read_limit: monthlyVisitorProof.read_limit,
       mcp_cart_clicks: cartClicks,
       raw_first_party_mcp_cart_landings: cartLandings,
       qualified_first_party_mcp_cart_landings: qualifiedCartLandings,
@@ -3772,6 +3918,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     },
     proof_gate: proofGate,
     traffic_quality: publicFunnelTrafficBuckets(summary),
+    monthly_qualified_visitor_proof: monthlyVisitorProof,
     source_activation_priority_queue: sourceActivationPriorityQueue,
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
@@ -3869,6 +4016,8 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
     `- Source activation priority sources: ${payload.counts.source_activation_priority_sources}`,
     `- Critical source activation priorities: ${payload.counts.source_activation_priority_critical}`,
+    `- Monthly qualified visitor signals: ${payload.counts.monthly_qualified_visitor_signals} / ${payload.counts.monthly_qualified_visitor_threshold}`,
+    `- Monthly qualified visitor gap: ${payload.counts.monthly_qualified_visitor_remaining}`,
     `- Post-install sources waiting on cart landing: ${payload.counts.post_install_sources_waiting_on_cart_landing}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- Raw first-party MCP cart landings: ${payload.counts.raw_first_party_mcp_cart_landings}`,
@@ -3881,6 +4030,20 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     "| Gate | Proven |",
     "| --- | --- |",
     gateRows,
+    "",
+    "## Monthly Qualified Visitor Proof",
+    "",
+    `- Status: ${payload.monthly_qualified_visitor_proof.status}`,
+    `- Basis: ${payload.monthly_qualified_visitor_proof.basis}`,
+    `- Lookback days: ${payload.monthly_qualified_visitor_proof.lookback_days}`,
+    `- Qualified external MCP event signals: ${payload.monthly_qualified_visitor_proof.qualified_external_mcp_event_signals}`,
+    `- Threshold: ${payload.monthly_qualified_visitor_proof.threshold}`,
+    `- Remaining to threshold: ${payload.monthly_qualified_visitor_proof.remaining_to_threshold}`,
+    `- Progress: ${payload.monthly_qualified_visitor_proof.progress_pct}%`,
+    `- Events scanned: ${payload.monthly_qualified_visitor_proof.events_scanned}`,
+    `- Read limit: ${payload.monthly_qualified_visitor_proof.read_limit}`,
+    `- Truncated by read limit: ${payload.monthly_qualified_visitor_proof.truncated_by_read_limit ? "yes" : "no"}`,
+    `- Note: ${payload.monthly_qualified_visitor_proof.canonical_note}`,
     "",
     "## Source Attribution",
     "",

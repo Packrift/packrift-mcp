@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R06";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R06";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R07";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R07";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -104,14 +104,28 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
   },
   {
     id: "cursor_windsurf_vscode",
-    aliases: ["cursor", "windsurf", "vscode", "cline", "roo", "ide"],
+    aliases: ["cursor", "windsurf", "vscode", "roo", "ide"],
     label: "IDE MCP config",
-    audience: "Cursor, Windsurf, VS Code, Cline, Roo, and other IDE agent hosts.",
+    audience: "Cursor, Windsurf, VS Code, Roo, and other IDE agent hosts.",
     format: "json",
     copyText: JSON.stringify(remoteMcpJson(), null, 2),
     install: remoteMcpJson(),
     firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["If the IDE asks for transport, choose HTTP or Streamable HTTP.", "Confirm live price and inventory through MCP before cart handoff."],
+  },
+  {
+    id: "cline",
+    aliases: ["cline_mcp", "cline_marketplace", "cline_mcp_marketplace"],
+    label: "Cline MCP config",
+    audience: "Cline users and Cline MCP Marketplace reviewers who need a copy-ready remote MCP config.",
+    format: "json",
+    copyText: JSON.stringify(remoteMcpJson(), null, 2),
+    install: remoteMcpJson(),
+    firstTests: ["tools/list", "get_cart_handoff_candidates", "get_pricing", "check_inventory", 'create_cart_url({ sku:"1066", quantity:1 })'],
+    notes: [
+      "Use this Cline-specific target for the Cline MCP Marketplace activation row.",
+      "This remains a thin remote MCP config for the hosted endpoint, not a separate Packrift CLI.",
+    ],
   },
   {
     id: "glama_connector",
@@ -345,6 +359,7 @@ function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
     case "generic_streamable_http":
     case "claude_desktop":
     case "cursor_windsurf_vscode":
+    case "cline":
       return {
         endpoint,
         config,
@@ -495,7 +510,7 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       success_signal: "create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL",
     },
     first_useful_run: firstUsefulRun,
-    recommended_directory_targets: ["generic_streamable_http", "claude_code", "codex", "cursor_windsurf_vscode"],
+    recommended_directory_targets: ["generic_streamable_http", "claude_code", "codex", "cursor_windsurf_vscode", "cline"],
     proof_urls: {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",

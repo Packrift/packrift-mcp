@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R05";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R06";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -16,6 +16,10 @@ function normalizeSource(value: string, fallback = "generic"): string {
     .replace(/^_+|_+$/g, "")
     .slice(0, 64);
   return slug.length >= 2 ? slug : fallback;
+}
+
+function preferredActivationTarget(source: string): string {
+  return source === "cline_mcp_marketplace" ? "cline" : "generic_streamable_http";
 }
 
 export function trackedReviewerActivationUrl(source: string): string {
@@ -30,9 +34,11 @@ export function trackedReviewerActivationUrl(source: string): string {
 
 function sourceSummary(action: ReturnType<typeof mcpDirectorySubmitActionsPayload>["actions"][number]) {
   const source = normalizeSource(action.id);
+  const preferredTarget = preferredActivationTarget(source);
   return {
     id: source,
     label: action.label,
+    preferred_target: preferredTarget,
     priority: action.priority,
     action_status: action.action_status,
     directory_status: action.directory_status,
@@ -42,9 +48,11 @@ function sourceSummary(action: ReturnType<typeof mcpDirectorySubmitActionsPayloa
     tracked_config_url: action.tracked_config_url,
     tracked_install_codex_url: trackedInstallUrl(source, "codex"),
     tracked_install_generic_url: trackedInstallUrl(source, "generic_streamable_http"),
-    tracked_first_run_url: trackedRunUrl(source, "generic_streamable_http"),
-    tracked_first_run_browser_url: `${trackedRunUrl(source, "generic_streamable_http")}&format=html`,
-    tracked_first_run_live_proof_url: `${trackedRunUrl(source, "generic_streamable_http")}&execute=1`,
+    tracked_install_cline_url: trackedInstallUrl(source, "cline"),
+    tracked_preferred_install_url: trackedInstallUrl(source, preferredTarget),
+    tracked_first_run_url: trackedRunUrl(source, preferredTarget),
+    tracked_first_run_browser_url: `${trackedRunUrl(source, preferredTarget)}&format=html`,
+    tracked_first_run_live_proof_url: `${trackedRunUrl(source, preferredTarget)}&execute=1`,
     tracked_reviewer_activation_url: trackedReviewerActivationUrl(source),
     tracked_reviewer_activation_html_url: `${trackedReviewerActivationUrl(source)}&format=html`,
     next_action: action.next_action,
@@ -55,9 +63,11 @@ function sourceSummary(action: ReturnType<typeof mcpDirectorySubmitActionsPayloa
 
 function genericSourceSummary(source: string) {
   const sourceSlug = normalizeSource(source);
+  const preferredTarget = preferredActivationTarget(sourceSlug);
   return {
     id: sourceSlug,
     label: sourceSlug,
+    preferred_target: preferredTarget,
     priority: "medium",
     action_status: "source_specific_activation_ready",
     directory_status: "unknown",
@@ -67,9 +77,11 @@ function genericSourceSummary(source: string) {
     tracked_config_url: trackedConfigUrl(sourceSlug),
     tracked_install_codex_url: trackedInstallUrl(sourceSlug, "codex"),
     tracked_install_generic_url: trackedInstallUrl(sourceSlug, "generic_streamable_http"),
-    tracked_first_run_url: trackedRunUrl(sourceSlug, "generic_streamable_http"),
-    tracked_first_run_browser_url: `${trackedRunUrl(sourceSlug, "generic_streamable_http")}&format=html`,
-    tracked_first_run_live_proof_url: `${trackedRunUrl(sourceSlug, "generic_streamable_http")}&execute=1`,
+    tracked_install_cline_url: trackedInstallUrl(sourceSlug, "cline"),
+    tracked_preferred_install_url: trackedInstallUrl(sourceSlug, preferredTarget),
+    tracked_first_run_url: trackedRunUrl(sourceSlug, preferredTarget),
+    tracked_first_run_browser_url: `${trackedRunUrl(sourceSlug, preferredTarget)}&format=html`,
+    tracked_first_run_live_proof_url: `${trackedRunUrl(sourceSlug, preferredTarget)}&execute=1`,
     tracked_reviewer_activation_url: trackedReviewerActivationUrl(sourceSlug),
     tracked_reviewer_activation_html_url: `${trackedReviewerActivationUrl(sourceSlug)}&format=html`,
     next_action: "Install Packrift MCP from the hosted endpoint, then run the real MCP sequence below.",
@@ -102,7 +114,7 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
   const directory = mcpDirectorySubmitActionsPayload(runtime);
   const actions = directory.actions.map(sourceSummary);
   const target = actions.find((row) => row.id === sourceSlug) ?? genericSourceSummary(sourceSlug);
-  const firstUsefulRun = mcpFirstUsefulRun(sourceSlug, "generic_streamable_http");
+  const firstUsefulRun = mcpFirstUsefulRun(sourceSlug, target.preferred_target);
   const sourceAwareEndpoint = firstUsefulRun.endpoint;
   return {
     release: MCP_REVIEWER_ACTIVATION_RELEASE,

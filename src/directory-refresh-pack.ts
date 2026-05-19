@@ -194,7 +194,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R16",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R17",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -221,6 +221,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         claude_code: trackedInstallUrl("generic", "claude_code"),
         codex: trackedInstallUrl("generic", "codex"),
         cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+        cline: trackedInstallUrl("generic", "cline"),
       },
       tracked_first_run_examples: {
         generic_streamable_http: trackedRunUrl("generic", "generic_streamable_http"),
@@ -332,6 +333,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         claude_code: trackedInstallUrl(target.id, "claude_code"),
         codex: trackedInstallUrl(target.id, "codex"),
         cursor_windsurf_vscode: trackedInstallUrl(target.id, "cursor_windsurf_vscode"),
+        cline: trackedInstallUrl(target.id, "cline"),
       },
       tracked_run_urls: {
         generic_streamable_http: trackedRunUrl(target.id, "generic_streamable_http"),

@@ -70,6 +70,9 @@ function agentInstallSnippets() {
     codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
     claude_desktop_config: genericMcpJson(),
     cursor_windsurf_vscode_config: genericMcpJson(),
+    cline_config: genericMcpJson(),
+    cline_tracked_install: "https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=html",
+    cline_tracked_first_run: "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=html",
     client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
     root_mcp_json: "https://mcp.packrift.com/mcp.json",
     well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
@@ -320,7 +323,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R12",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R13",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

@@ -129,7 +129,7 @@ print(rpc("candidate-1066", "tools/call", {
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R04",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R05",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -163,6 +163,14 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       start_pack: "https://mcp.packrift.com/ai/mcp-start.json",
       reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       cursor_windsurf_vscode: {
+        mcpServers: {
+          packrift: {
+            type: "http",
+            url: MCP_ENDPOINT,
+          },
+        },
+      },
+      cline: {
         mcpServers: {
           packrift: {
             type: "http",

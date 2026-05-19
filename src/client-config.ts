@@ -115,7 +115,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R07",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R08",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -146,6 +146,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
         claude_code: trackedInstallUrl("generic", "claude_code"),
         codex: trackedInstallUrl("generic", "codex"),
         cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+        cline: trackedInstallUrl("generic", "cline"),
       },
       tracked_run_template: TRACKED_RUN_TEMPLATE,
       tracked_run_examples: {
@@ -153,6 +154,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
         claude_code: trackedRunUrl("generic", "claude_code"),
         codex: trackedRunUrl("generic", "codex"),
         cursor_windsurf_vscode: trackedRunUrl("generic", "cursor_windsurf_vscode"),
+        cline: trackedRunUrl("generic", "cline"),
       },
     },
     install_commands: {
@@ -161,7 +163,8 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       endpoint_only: MCP_ENDPOINT,
     },
     host_notes: [
-      "For Cursor, Windsurf, VS Code, Cline, Roo-style hosts, Claude Desktop, and generic MCP clients, use the config.mcpServers.packrift object.",
+      "For Cursor, Windsurf, VS Code, Roo-style hosts, Claude Desktop, and generic MCP clients, use the config.mcpServers.packrift object.",
+      "For Cline and the Cline MCP Marketplace review path, prefer the tracked Cline target at /r/install/{source}/cline and /r/run/{source}/cline.",
       "If a host asks for transport, choose HTTP or Streamable HTTP.",
       "Do not ask buyers for Packrift API keys; the hosted endpoint requires no buyer-side auth.",
       "After install, run the required post-install verification sequence for SKU 1066; it returns a measured cart URL only and does not place an order.",
