@@ -21,6 +21,30 @@ const DIRECT_STATUS = {
     evidence: "Previous API response returned 409 Conflict: repository already submitted and awaiting review.",
     next_action: "Use the refreshed proof message to request review, claim, or update access.",
   },
+  anthropic_connectors_directory: {
+    status: "manual_submission_ready",
+    method: "Manual Claude connector directory submission",
+    evidence: "Claude connector submission is form-based and requires manual review.",
+    next_action: "Submit the hosted endpoint, no-auth policy, first-run proof, and directory refresh pack through the Claude form.",
+  },
+  smithery: {
+    status: "api_key_required",
+    method: "Smithery publish flow or CLI publish",
+    evidence: "Smithery publishing is gated by an API key; the public server card exposes schema-friendly fields for static ingestion.",
+    next_action: "Authenticate with Smithery, publish the hosted endpoint, then monitor search visibility and installs.",
+  },
+  cline_mcp_marketplace: {
+    status: "submitted_pending",
+    method: "GitHub issue submission",
+    evidence: "Cline MCP Marketplace issue #1610 is open for Packrift MCP.",
+    next_action: "Keep the issue current and respond to maintainer questions with the directory refresh pack.",
+  },
+  mcp_so: {
+    status: "manual_submission_ready",
+    method: "Manual MCP.so submit form",
+    evidence: "The submit form is reachable, but Packrift is not confirmed as a listed server.",
+    next_action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
+  },
   glama_server_listing: {
     status: "manual_support_refresh_needed",
     method: "Support/email/manual recrawl request",
@@ -32,6 +56,30 @@ const DIRECT_STATUS = {
     method: "Support/email/manual recrawl request",
     evidence: "Automated checker is Cloudflare-blocked; use official registry plus server.json and public proof URLs as the recrawl source.",
     next_action: "Send or update the PulseMCP support request with official-registry and public proof.",
+  },
+  mcpmarket_com: {
+    status: "manual_update_needed",
+    method: "Manual listing claim/update",
+    evidence: "Automated checks hit a Vercel checkpoint; use browser-side verification and the update flow.",
+    next_action: "Open the MCP Market listing/update flow in the browser and align it to the hosted endpoint and current server card.",
+  },
+  cursor_directory: {
+    status: "auth_gated_manual",
+    method: "Auth-gated manual submit flow",
+    evidence: "Automated checks hit a Vercel checkpoint before reaching the plugin submission flow.",
+    next_action: "Use the Cursor Directory plugin submit flow after browser auth, with hosted endpoint and tracked start URL.",
+  },
+  mcpcentral: {
+    status: "auth_gated_manual",
+    method: "Browser-side submit flow",
+    evidence: "Automated checks hit a Cloudflare challenge.",
+    next_action: "Use the browser-side MCP Central submit flow or request review access if auth is required.",
+  },
+  mcpfinder: {
+    status: "manual_submission_ready",
+    method: "Manual MCPfinder submit form",
+    evidence: "The submit page is reachable, but Packrift is not visible in the browsable index.",
+    next_action: "Submit Packrift MCP through MCPfinder with hosted endpoint proof and tracked start URL.",
   },
   mcpskills: {
     status: "submitted_pending",
@@ -99,8 +147,8 @@ function publicProofLine(pack) {
   const tools = proof.mcp_tools_list?.tools_count ?? pack.copy?.tools_count ?? 14;
   const resources = proof.mcp_resources_list?.resources_count ?? proof.health?.resources_count ?? 83;
   const prompts = proof.mcp_prompts_list?.prompts_count ?? 9;
-  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R07";
-  const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 7;
+  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R08";
+  const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 17;
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02";

@@ -389,7 +389,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 **Discovery surfaces:**
 
 - MCP start page: https://mcp.packrift.com/start
-- Tracked MCP start template: https://mcp.packrift.com/r/start/{source} (use lowercase source slugs such as mcpservers_org, glama_connector, mcp_directory, pulsemcp_packrift, mcpskills, agentndx, mcpbench, chiark, docker_mcp_catalog, or partner-specific slugs; custom slugs are allowed without pre-registration when they match ^[a-z0-9_]{2,64}$)
+- Tracked MCP start template: https://mcp.packrift.com/r/start/{source} (use lowercase source slugs such as mcpservers_org, glama_connector, mcp_directory, anthropic_connectors_directory, smithery, cline_mcp_marketplace, mcp_so, mcpmarket_com, cursor_directory, mcpcentral, mcpfinder, pulsemcp_packrift, mcpskills, agentndx, mcpbench, chiark, docker_mcp_catalog, or partner-specific slugs; custom slugs are allowed without pre-registration when they match ^[a-z0-9_]{2,64}$)
 - MCP start pack JSON: https://mcp.packrift.com/ai/mcp-start.json
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - llms.txt: https://mcp.packrift.com/llms.txt

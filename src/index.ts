@@ -672,6 +672,14 @@ const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "glama_connector",
   "glama_server_listing",
   "mcp_directory",
+  "anthropic_connectors_directory",
+  "smithery",
+  "cline_mcp_marketplace",
+  "mcp_so",
+  "mcpmarket_com",
+  "cursor_directory",
+  "mcpcentral",
+  "mcpfinder",
   "pulsemcp_packrift",
   "mcpskills",
   "agentndx",
@@ -3723,8 +3731,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/manifest") return JSON.stringify(mcpManifestPayload(), null, 2);
   if (pathname === "/resources") return JSON.stringify(mcpResourcesPayload(MCP_RESOURCES.length, 0), null, 2);
   if (pathname === "/health") return JSON.stringify(await mcpHealthPayload(env), null, 2);
-  if (pathname === "/server-card.json") return JSON.stringify(serverCard, null, 2);
-  if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(serverCard, null, 2);
+  if (pathname === "/server-card.json") return JSON.stringify(mcpServerCardPayload(), null, 2);
+  if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(mcpServerCardPayload(), null, 2);
   if (pathname === "/.well-known/glama.json") return JSON.stringify(glamaConnectorClaim(), null, 2);
   if (pathname === "/.well-known/mcp-marketplace.json") return JSON.stringify(mcpMarketplaceDiscoveryPayload(), null, 2);
   if (pathname === "/agents.md") return agentInstructionsMd;
@@ -3838,6 +3846,39 @@ function mcpManifestPayload() {
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+  };
+}
+
+function mcpServerCardPayload() {
+  return {
+    ...serverCard,
+    serverInfo: {
+      name: serverCard.name,
+      version: serverCard.version,
+    },
+    authentication: {
+      required: false,
+      schemes: [],
+    },
+    endpoint_url: "https://mcp.packrift.com/mcp",
+    transport_url: "https://mcp.packrift.com/mcp",
+    resource_links: serverCard.resources,
+    tool_names: serverCard.tools,
+    prompt_names: serverCard.prompts,
+    tools: TOOLS.map((tool) => tool.schema),
+    prompts: PROMPTS.map(promptListItem),
+    resources: MCP_RESOURCES,
+    resource_templates: MCP_RESOURCE_TEMPLATES,
+    registry_distribution: {
+      directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+    },
+    static_server_card: {
+      well_known_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      root_url: "https://mcp.packrift.com/server-card.json",
+      compatible_fields: ["serverInfo", "authentication", "tools", "resources", "prompts"],
+    },
   };
 }
 
@@ -4865,7 +4906,7 @@ app.get("/.well-known/mcp/server-card.json", (c) =>
   cachedStaticTextResponse(
     c,
     "server-card.json",
-    JSON.stringify(serverCard, null, 2),
+    JSON.stringify(mcpServerCardPayload(), null, 2),
     "application/json; charset=utf-8"
   )
 );
@@ -4917,7 +4958,7 @@ app.get("/server-card.json", (c) =>
   cachedStaticTextResponse(
     c,
     "server-card.json",
-    JSON.stringify(serverCard, null, 2),
+    JSON.stringify(mcpServerCardPayload(), null, 2),
     "application/json; charset=utf-8"
   )
 );

@@ -1071,7 +1071,9 @@ function findLatestIndexNowManifest() {
 }
 
 function stringArray(value) {
-  return Array.isArray(value) ? value.map((item) => String(item)) : [];
+  return Array.isArray(value)
+    ? value.map((item) => (typeof item === "string" ? item : item?.name)).filter(Boolean).map((item) => String(item))
+    : [];
 }
 
 function objectFromTopRows(rows = []) {

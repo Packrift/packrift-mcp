@@ -424,7 +424,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       proof_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       next_action:
-        "Use this to keep mcpservers.org, MCP.Directory, Glama source listing, PulseMCP, MCPBench, Chiark, and Docker MCP Catalog moving with tracked start /r/start/{source} links and current proof.",
+        "Use this to keep mcpservers.org, MCP.Directory, Claude Connectors Directory, Smithery, Cline MCP Marketplace, MCP.so, MCP Market, Cursor Directory, MCP Central, MCPfinder, Glama source listing, PulseMCP, MCPBench, Chiark, and Docker MCP Catalog moving with tracked start /r/start/{source} links and current proof.",
     }),
     surface({
       id: "search_and_answer_crawlers",
