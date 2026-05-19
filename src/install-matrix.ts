@@ -183,7 +183,9 @@ const HOSTS = [
     status: "bridge",
     preferred: false,
     install: {
+      skill_md: "https://mcp.packrift.com/SKILL.md",
       start_url: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+      canonical_skill_md: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
       confirmation_endpoint: MCP_ENDPOINT,
     },
     first_test_ids: ["candidate-1066", "price-1066", "inventory-1066"],

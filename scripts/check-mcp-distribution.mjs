@@ -359,8 +359,10 @@ async function liveMcpCheck() {
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
-      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R01" &&
+      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02" &&
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
+      browserbaseBrowseSkillPack?.browse_skill_candidate?.skill_md_url === "https://mcp.packrift.com/SKILL.md" &&
+      browserbaseBrowseSkillPack?.skill_md?.canonical_url === "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md" &&
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
@@ -406,8 +408,10 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
+      resourceUris.has("https://mcp.packrift.com/SKILL.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse/SKILL.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json") &&

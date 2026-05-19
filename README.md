@@ -117,8 +117,10 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
+- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
 - Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
 - Browserbase Browse skill pack Markdown: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md
+- Canonical Browserbase/Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory refresh pack Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
@@ -317,12 +319,13 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/mcp-buyer-use-cases.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-cart-activation.json` and `.md`, and
 `https://mcp.packrift.com/ai/browser-agent-bridge.json` and `.md`, and
+`https://mcp.packrift.com/SKILL.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
 buyer workflow map, cart activation playbook, browser-agent bridge, directory refresh pack, directory submit-action queue,
-and Browserbase Browse candidate lane, and preserve the
+Browserbase Browse candidate lane, and root SKILL.md, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate
 briefs, proof links, and MCP install snippets under

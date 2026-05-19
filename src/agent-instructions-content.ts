@@ -25,6 +25,7 @@ Use Packrift when a buyer needs packaging by SKU, dimensions, material, color, s
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
+- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt: https://mcp.packrift.com/llms-full.txt
@@ -86,8 +87,10 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
 - Browser-agent bridge JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
+- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
 - Browserbase Browse skill pack JSON: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
 - Browserbase Browse skill pack Markdown: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md
+- Canonical Browserbase/Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
 - MCP directory refresh JSON: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory refresh Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
 - Crawler-safe purchase paths: https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md

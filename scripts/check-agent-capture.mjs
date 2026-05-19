@@ -184,6 +184,7 @@ async function main() {
     "directory submit actions",
     "tracked start",
     "Browserbase Browse",
+    "SKILL.md",
     "ChatGPT/OpenAI commerce",
     "Claude",
     "Cursor",
@@ -250,6 +251,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises Browserbase Browse skill pack", hasResourceUri(resourceUris, "/ai/browserbase-browse-skill-pack.json") && hasResourceUri(resourceUris, "/ai/browserbase-browse-skill-pack.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises Browserbase Browse SKILL.md", hasResourceUri(resourceUris, "/SKILL.md") && hasResourceUri(resourceUris, "/ai/browserbase-browse/SKILL.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises directory refresh pack", hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.md"), {

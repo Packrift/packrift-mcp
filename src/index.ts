@@ -14,7 +14,7 @@ import { mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-acti
 import { mcpFirstRunProofMarkdown, mcpFirstRunProofPayload, type FirstRunProofDemo } from "./first-run-proof.js";
 import { mcpWorkflowGalleryMarkdown, mcpWorkflowGalleryPayload } from "./workflow-gallery.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
-import { browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
+import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
 import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
@@ -3389,6 +3389,7 @@ const FIRST20_EXACT_SPEC_VIEW_SKUS = [
 
 const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/start",
+  "https://mcp.packrift.com/SKILL.md",
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
   "https://mcp.packrift.com/manifest",
@@ -3451,6 +3452,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/browser-agent-bridge.md",
   "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
   "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md",
+  "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
@@ -3489,6 +3491,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/robots.txt": "MCP subdomain crawler policy and sitemap references.",
   "/sitemap.xml": "MCP discovery sitemap for machine-readable Packrift resources.",
   "/ai/sitemap.xml": "AI corpus sitemap for exact-spec Packrift product data files.",
+  "/SKILL.md": "Canonical Browse/browser-agent SKILL.md that installs Packrift as a thin wrapper around the hosted MCP endpoint.",
   "/start": "Packrift MCP start page for developers, agents, directory reviewers, install snippets, and measured cart handoff.",
   "/manifest": "REST discovery manifest for Packrift MCP tools, prompts, resources, and health endpoints.",
   "/resources": "Paginated REST resource adapter listing Packrift MCP and AI-commerce discovery resources.",
@@ -3550,6 +3553,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/browser-agent-bridge.md": "Crawler-readable browser-agent bridge that keeps Browse-style workflows routed through the canonical Packrift MCP endpoint.",
   "/ai/browserbase-browse-skill-pack.json": "Machine-readable Browse/browser-skill starter pack that wraps public Packrift reads around the canonical MCP endpoint without creating a duplicate CLI or buyer surface.",
   "/ai/browserbase-browse-skill-pack.md": "Crawler-readable Browse/browser-skill starter pack with copy-ready rules, URLs, prompts, and JSON-RPC calls for MCP-confirmed Packrift workflows.",
+  "/ai/browserbase-browse/SKILL.md": "Canonical Browse/browser-agent SKILL.md mirror with YAML frontmatter, install snippets, JSON-RPC examples, and MCP-only purchase-handoff rules.",
   "/ai/mcp-directory-refresh.json": "Machine-readable Packrift MCP directory recrawl pack with listing copy, proof URLs, stale directory targets, and recrawl request text.",
   "/ai/mcp-directory-refresh.md": "Crawler-readable Packrift MCP directory recrawl pack for MCP directories, marketplaces, and agent indexes.",
   "/ai/mcp-directory-submit-actions.json": "Machine-readable Packrift MCP directory action queue with stale-surface statuses, proof URLs, and copy-ready recrawl messages.",
@@ -3714,6 +3718,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/top-1000-ai-sales-sitemap.xml") return topAiSalesSkuSitemapXml();
   if (pathname === "/ai/all-ai-approved-sku-sitemap.xml") return allAiApprovedSkuSitemapXml();
   if (pathname === "/ai/conversion-route-redirect-sitemap.xml") return routeRedirectSitemapXml();
+  if (pathname === "/SKILL.md") return browserbaseBrowseSkillMd(browserbaseBrowseSkillPackRuntime());
   if (pathname === "/start") return mcpStartHtml(mcpStartRuntime());
   if (pathname === "/manifest") return JSON.stringify(mcpManifestPayload(), null, 2);
   if (pathname === "/resources") return JSON.stringify(mcpResourcesPayload(MCP_RESOURCES.length, 0), null, 2);
@@ -3748,6 +3753,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/browser-agent-bridge.md") return browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
   if (pathname === "/ai/browserbase-browse-skill-pack.json") return JSON.stringify(browserbaseBrowseSkillPackPayload(browserbaseBrowseSkillPackRuntime()), null, 2);
   if (pathname === "/ai/browserbase-browse-skill-pack.md") return browserbaseBrowseSkillPackMarkdown(browserbaseBrowseSkillPackRuntime());
+  if (pathname === "/ai/browserbase-browse/SKILL.md") return browserbaseBrowseSkillMd(browserbaseBrowseSkillPackRuntime());
   if (pathname === "/ai/mcp-directory-refresh.json") return JSON.stringify(mcpDirectoryRefreshPayload(directoryRefreshRuntime()), null, 2);
   if (pathname === "/ai/mcp-directory-refresh.md") return mcpDirectoryRefreshMarkdown(directoryRefreshRuntime());
   if (pathname === "/ai/mcp-directory-submit-actions.json") return JSON.stringify(mcpDirectorySubmitActionsPayload(directorySubmitActionsRuntime()), null, 2);
@@ -4989,6 +4995,15 @@ app.get("/ai/mcp-start.md", async (c) => {
 
 app.get("/ai/mcp-start.html", async (c) => mcpStartHtmlResponse(c));
 
+app.get("/SKILL.md", async (c) => {
+  const body = browserbaseBrowseSkillMd(browserbaseBrowseSkillPackRuntime());
+  await recordGeneratedAiResourceFetch(c, "/SKILL.md", "browserbase_browse_skill_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
 app.get("/ai/all-agent-capture.json", async (c) => {
   const payload = allAgentCapturePayload(agentCaptureRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/all-agent-capture.json", "all_agent_capture", jsonByteSize(payload));
@@ -5143,6 +5158,15 @@ app.get("/ai/browserbase-browse-skill-pack.json", async (c) => {
 app.get("/ai/browserbase-browse-skill-pack.md", async (c) => {
   const body = browserbaseBrowseSkillPackMarkdown(browserbaseBrowseSkillPackRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/browserbase-browse-skill-pack.md", "browserbase_browse_skill_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/browserbase-browse/SKILL.md", async (c) => {
+  const body = browserbaseBrowseSkillMd(browserbaseBrowseSkillPackRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/browserbase-browse/SKILL.md", "browserbase_browse_skill_pack", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

@@ -7,6 +7,8 @@ export interface BrowserbaseBrowseSkillPackRuntime {
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const BRIDGE_URL = "https://mcp.packrift.com/ai/browser-agent-bridge.json";
+const ROOT_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
+const BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
 
 function toolCall(id: string, name: string, args: Record<string, unknown>) {
   return {
@@ -105,11 +107,11 @@ const DEMO_SEQUENCE = [
 
 export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkillPackRuntime) {
   return {
-    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R01",
+    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
-      "A thin Browse/browser-skill starter pack for Packrift. It lets Browserbase Browse-style agents read public Packrift resources, then route all live price, inventory, shipping, and cart handoff through the canonical hosted MCP endpoint.",
+      "A thin Browse/browser-skill starter pack for Packrift. It gives agents a canonical SKILL.md playbook for public discovery, then routes all live price, inventory, shipping, and cart handoff through the canonical hosted MCP endpoint.",
     runtime: {
       server_version: runtime.serverVersion,
       tools_count: runtime.toolsCount,
@@ -121,6 +123,8 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       short_description:
         "Find exact Packrift packaging SKUs, confirm live price and inventory through MCP, and return measured cart or quote handoffs.",
       start_url: BRIDGE_URL,
+      skill_md_url: ROOT_BROWSE_SKILL_MD_URL,
+      canonical_skill_md_url: BROWSE_SKILL_MD_URL,
       canonical_endpoint: MCP_ENDPOINT,
       status: "candidate_pack_ready",
       duplicate_surface_guard:
@@ -138,7 +142,21 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
         "no_match_reason",
       ],
     },
+    skill_md: {
+      root_url: ROOT_BROWSE_SKILL_MD_URL,
+      canonical_url: BROWSE_SKILL_MD_URL,
+      format: "Markdown SKILL.md with YAML frontmatter, install snippets, JSON-RPC examples, exact-match rules, and MCP-only commercial fact checks.",
+      submission_note:
+        "Use this as the Browse/browser-agent submission artifact or as the direct instruction file for any agent that accepts open-web skills. It does not replace the hosted MCP endpoint.",
+      frontmatter: {
+        name: "packrift-mcp",
+        description:
+          "Exact-spec packaging procurement through the hosted Packrift MCP endpoint: product search, live price, live inventory, no-match recovery, and measured cart handoff.",
+        compatibility: "Browserbase Browse-style agents, browser-use, Playwright, CUA, Claude, Codex, Cursor, Windsurf, VS Code MCP clients, and any agent that can call a remote Streamable HTTP MCP endpoint.",
+      },
+    },
     browser_agent_rules: [
+      "Read https://mcp.packrift.com/SKILL.md first when a browser-skill host asks for a single Packrift skill file.",
       "Use public URLs for read-first discovery, not for final commercial facts.",
       "Call Packrift MCP for get_product, get_pricing, check_inventory, shipping estimates, no-match handling, and create_cart_url.",
       "Use prepare_purchase_handoff when the browser agent already has an exact SKU and needs a compact live-confirmed handoff path.",
@@ -147,6 +165,8 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       "When no exact AI_APPROVE item exists, route to explain_no_exact_match and get_bulk_quote_link instead of forcing a cart.",
     ],
     start_urls: [
+      ROOT_BROWSE_SKILL_MD_URL,
+      BROWSE_SKILL_MD_URL,
       BRIDGE_URL,
       "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -163,6 +183,8 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       "Find 2 5/8 x 1 weather-resistant polyester laser labels and confirm the exact case count before handoff.",
     ],
     proof_urls: {
+      root_skill_md: ROOT_BROWSE_SKILL_MD_URL,
+      canonical_skill_md: BROWSE_SKILL_MD_URL,
       browse_skill_pack_json: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
       browse_skill_pack_markdown: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md",
       browser_agent_bridge: BRIDGE_URL,
@@ -175,6 +197,7 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
     },
     success_metrics: [
       "browserbase_browse_skill_pack resource reads",
+      "root SKILL.md and browserbase-browse SKILL.md resource reads",
       "MCP tools/list and resources/list after browser-skill discovery",
       "get_cart_handoff_candidates calls with source context browserbase_browse",
       "prepare_purchase_handoff calls with source_context browserbase_browse",
@@ -210,8 +233,17 @@ export function browserbaseBrowseSkillPackMarkdown(runtime: BrowserbaseBrowseSki
     `Name: ${payload.browse_skill_candidate.name}`,
     `Status: ${payload.browse_skill_candidate.status}`,
     `Start URL: ${payload.browse_skill_candidate.start_url}`,
+    `Root SKILL.md: ${payload.browse_skill_candidate.skill_md_url}`,
+    `Canonical SKILL.md: ${payload.browse_skill_candidate.canonical_skill_md_url}`,
     "",
     payload.browse_skill_candidate.duplicate_surface_guard,
+    "",
+    "## SKILL.md",
+    "",
+    `Root URL: ${payload.skill_md.root_url}`,
+    `Canonical URL: ${payload.skill_md.canonical_url}`,
+    "",
+    payload.skill_md.submission_note,
     "",
     "## Browser-Agent Rules",
     "",
@@ -238,6 +270,104 @@ export function browserbaseBrowseSkillPackMarkdown(runtime: BrowserbaseBrowseSki
       .join("\n"),
     "",
     "Machine-readable version: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
+    "",
+  ].join("\n");
+}
+
+export function browserbaseBrowseSkillMd(runtime: BrowserbaseBrowseSkillPackRuntime): string {
+  const payload = browserbaseBrowseSkillPackPayload(runtime);
+  return [
+    "---",
+    "name: packrift-mcp",
+    "description: Exact-spec packaging procurement through Packrift MCP. Use when a buyer or agent needs packaging by SKU, dimensions, material, color, grade, closure, adhesive, printer type, pack count, case count, live price, inventory, no-match recovery, or measured cart handoff.",
+    "compatibility: Browserbase Browse-style agents, browser-use, Playwright, CUA, Claude, Codex, Cursor, Windsurf, VS Code MCP clients, and any agent that can call a remote Streamable HTTP MCP endpoint.",
+    "canonical_endpoint: https://mcp.packrift.com/mcp",
+    "no_buyer_api_key_required: true",
+    "---",
+    "",
+    "# Packrift MCP",
+    "",
+    "Use this skill to find exact Packrift packaging products and route live commercial checks through the hosted Packrift MCP endpoint.",
+    "",
+    "Do not build or invoke a separate Packrift CLI, checkout, scraper, or buyer surface. This skill is a thin open-web instruction file around `https://mcp.packrift.com/mcp`.",
+    "",
+    "## When To Use",
+    "",
+    "- A buyer has a Packrift SKU and wants reorder, live price, inventory, or cart handoff.",
+    "- A buyer gives exact packaging dimensions, material, grade, color, closure, adhesive, printer type, pack count, or case count.",
+    "- A browser agent can read public pages but needs MCP for live price, inventory, shipping, product detail, no-match, or cart handoff.",
+    "- A directory reviewer or agent host needs one direct instruction file for testing Packrift MCP.",
+    "",
+    "## Canonical Endpoint",
+    "",
+    "- MCP endpoint: `https://mcp.packrift.com/mcp`",
+    "- Start page: `https://mcp.packrift.com/start`",
+    "- Browser-agent bridge: `https://mcp.packrift.com/ai/browser-agent-bridge.json`",
+    "- Workflow gallery: `https://mcp.packrift.com/ai/mcp-workflow-gallery.json`",
+    "- First-run proof: `https://mcp.packrift.com/ai/mcp-first-run-proof.json`",
+    "- Install matrix: `https://mcp.packrift.com/ai/mcp-install-matrix.json`",
+    "- Skill pack JSON: `https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json`",
+    "",
+    "## Install",
+    "",
+    "Use remote MCP config when the host supports MCP JSON:",
+    "",
+    "```json",
+    JSON.stringify({ mcpServers: { packrift: { type: "http", url: MCP_ENDPOINT } } }, null, 2),
+    "```",
+    "",
+    "Claude Code:",
+    "",
+    "```sh",
+    "claude mcp add --transport http packrift https://mcp.packrift.com/mcp",
+    "```",
+    "",
+    "Codex:",
+    "",
+    "```sh",
+    "codex mcp add packrift --url https://mcp.packrift.com/mcp",
+    "```",
+    "",
+    "## First Useful Flow",
+    "",
+    "For a known SKU, use the compact guarded handoff path first:",
+    "",
+    "```json",
+    JSON.stringify(
+      toolCall("prepare-1066", "prepare_purchase_handoff", {
+        sku: "1066",
+        quantity: 1,
+        buyer_confirmed: false,
+        source_context: "browserbase_browse",
+      }),
+      null,
+      2
+    ),
+    "```",
+    "",
+    "Expected result: live product, price, and inventory are confirmed, but `cart` is `null` until the buyer explicitly confirms exact SKU and quantity.",
+    "",
+    "After the buyer confirms, call the same tool with `buyer_confirmed: true` or call `create_cart_url` with validated SKU continuity. Return the MCP `/r/cart/...` URL as the primary handoff.",
+    "",
+    "## Browser-Agent Rules",
+    "",
+    ...payload.browser_agent_rules.map((rule) => `- ${rule}`),
+    "",
+    "## Exact-Match Rule",
+    "",
+    "Only use exact matches for purchase handoff. If size, material, color, strength, closure, adhesive, printer type, pack count, case count, or SKU differs, do not present the product as an exact substitute. Use `explain_no_exact_match` or `get_bulk_quote_link` instead.",
+    "",
+    "## Good Test Prompts",
+    "",
+    ...payload.buyer_prompts.map((prompt) => `- ${prompt}`),
+    "",
+    "## Proof And Monitoring",
+    "",
+    `- Release: ${payload.release}`,
+    `- Runtime: ${payload.runtime.tools_count} tools, ${payload.runtime.resources_count} resources, ${payload.runtime.prompts_count} prompts`,
+    "- Health: `https://mcp.packrift.com/health`",
+    "- Usage snapshot: `https://mcp.packrift.com/ai/mcp-usage-snapshot.json`",
+    "- All-agent capture matrix: `https://mcp.packrift.com/ai/all-agent-capture.json`",
     "",
   ].join("\n");
 }

@@ -135,6 +135,9 @@ function browseCandidateBrief() {
     catalog_url: "https://browse.sh/",
     product_positioning:
       "Packrift should be a read-first packaging procurement skill if Browse adds a retailer/domain submission lane. The skill should not replace MCP; it should route exact SKU/spec lookup and measured handoff through the hosted MCP endpoint.",
+    skill_md_url: "https://mcp.packrift.com/SKILL.md",
+    canonical_skill_md_url: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
+    skill_pack_url: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
     candidate_skills: [
       {
         name: "search-packaging",
@@ -205,7 +208,7 @@ function markdown(payload) {
     "- Give partners or agent platforms a single evidence bundle.",
     "- Point developers to the install matrix for copy-ready setup and smoke tests.",
     "- Use the live browser-agent bridge for Browse-style agents without creating a duplicate Packrift CLI.",
-    "- Keep Browserbase Browse as a candidate browser-skill lane until a real Packrift skill is published.",
+    "- Keep Browserbase Browse as a candidate browser-skill lane with a root SKILL.md until a real Packrift skill is published.",
     "- Share install snippets for Claude, Codex, Cursor, Windsurf, and other MCP clients.",
     "",
     "## Proof Links",

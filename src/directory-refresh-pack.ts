@@ -9,7 +9,9 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_START_URL = "https://mcp.packrift.com/start";
 const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
+const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
 const MCP_TRACKED_START_SOURCE_POLICY = {
   accepted_source_format: "^[a-z0-9_]{2,64}$",
   partner_specific_sources_allowed: true,
@@ -93,7 +95,7 @@ const DIRECTORY_TARGETS = [
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
     release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R07",
     generated_at: new Date().toISOString(),
@@ -147,7 +149,9 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+      root_browserbase_browse_skill_md: ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL,
       browserbase_browse_skill_pack: BROWSERBASE_BROWSE_SKILL_PACK_URL,
+      canonical_browserbase_browse_skill_md: CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL,
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       docker_mcp_catalog_pr: "https://github.com/docker/mcp-registry/pull/3388",

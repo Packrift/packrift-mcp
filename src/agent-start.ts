@@ -191,6 +191,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      root_skill_md: "https://mcp.packrift.com/SKILL.md",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",

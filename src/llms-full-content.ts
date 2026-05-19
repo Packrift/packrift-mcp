@@ -402,7 +402,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
+- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
 - Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
+- Canonical Browserbase/Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
 - AI-approved product corpus: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
@@ -419,6 +421,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Shopify native UCP commerce surface: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
 - Agent endpoints status: https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
+- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
 - Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
 - First-20 exact-spec routes JSON: https://mcp.packrift.com/ai/first20-exact-spec-routes.json
 - First-20 exact-spec routes Markdown: https://mcp.packrift.com/ai/first20-exact-spec-routes.md
