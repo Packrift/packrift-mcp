@@ -132,14 +132,16 @@ const ACTIONS = [
   {
     id: "anthropic_connectors_directory",
     label: "Claude Connectors Directory",
-    action_status: "manual_submission_ready",
+    action_status: "auth_gated_manual",
     directory_status: "unlisted",
     priority: "high",
-    method: "Manual directory submission form.",
-    evidence: "Submission docs and form are public, but listing review is manual.",
+    method: "Manual Google Forms submission after sign-in.",
+    evidence:
+      "The Claude connector directory submission URL redirects to a Google Forms sign-in page; the Packrift submission packet is ready, but the form needs an authenticated browser session.",
     stale_markers: ["Packrift not yet visible in Claude connector discovery"],
     recrawl_subject: "Submit Packrift MCP to the Claude Connectors Directory",
-    next_action: "Use the Claude connector submission packet plus the manual form with hosted endpoint, no-auth policy, legal/support links, first-run proof, and tracked start/config URLs.",
+    next_action:
+      "Submit through an authenticated Google Forms session using the Claude connector submission packet with hosted endpoint, no-auth policy, legal/support links, first-run proof, and tracked start/config URLs.",
     listing_url: "https://claude.com/connectors",
     submission_url: "https://clau.de/mcp-directory-submission",
   },
@@ -367,26 +369,29 @@ const ACTIONS = [
   {
     id: "mcphubz",
     label: "MCPHubz",
-    action_status: "manual_submission_ready",
+    action_status: "login_required_contact_broken",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Manual submit form.",
-    evidence: "MCPHubz exposes a public MCP server directory and submit page; Packrift search returned zero matching results.",
+    method: "Login-gated submit page; public contact form endpoint is broken.",
+    evidence:
+      "MCPHubz /submit redirects to login, unauthenticated /api/servers returns 401, and its public Formspree contact action returned FORM_NOT_FOUND when used for a listing request.",
     stale_markers: ["Packrift not visible in MCPHubz"],
     recrawl_subject: "Submit Packrift MCP to MCPHubz",
-    next_action: "Submit Packrift with the hosted no-auth endpoint, tracked start URL, and directory update card so MCPHubz can verify the cart-handoff sequence.",
+    next_action:
+      "Use an authenticated MCPHubz session or a working owner contact path before retrying; do not treat the public contact page as a valid submission route.",
     listing_url: "https://mcphubz.com/",
     submission_url: "https://mcphubz.com/submit",
   },
   {
     id: "mcp_blue",
     label: "MCP Blue",
-    action_status: "domain_expired_blocked",
+    action_status: "parked_domain_blocked",
     directory_status: "blocked",
     priority: "medium",
-    method: "Live submit check blocked by expired domain.",
-    evidence: "On 2026-05-19, https://www.mcp.blue/submit redirected to an expired-domain parking page at ww17.mcp.blue.",
-    stale_markers: ["MCP Blue domain expired or parked", "Packrift not visible in MCP Blue"],
+    method: "Live submit check blocked by parked/fingerprint-gated domain.",
+    evidence:
+      "https://www.mcp.blue/submit returns 200 but behaves like a parked/fingerprint gate, sets a __tad cookie, and following the gate reaches ww17.mcp.blue/submit with 'Error. Page cannot be displayed.'",
+    stale_markers: ["MCP Blue domain parked or dead", "Packrift not visible in MCP Blue"],
     recrawl_subject: "Recheck MCP Blue domain before submitting Packrift MCP",
     next_action: "Do not spend time submitting until the directory domain is live again; monitor only.",
     listing_url: "https://www.mcp.blue/",
@@ -395,14 +400,15 @@ const ACTIONS = [
   {
     id: "findmcp_dev",
     label: "FindMCP",
-    action_status: "submit_form_unavailable",
+    action_status: "submit_cta_broken",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Submit route currently renders the directory landing page without a working form.",
-    evidence: "On 2026-05-19, https://findmcp.dev/submit loaded the FindMCP landing page; List Your Server was an in-page anchor and no submit form or fields were exposed.",
+    method: "Submit route renders the directory landing page and the submit CTA is broken.",
+    evidence:
+      "https://findmcp.dev/submit renders the homepage instead of a form; the visible List Your Server CTA triggers the frontend error openWaitlist is not defined.",
     stale_markers: ["Packrift not visible in FindMCP"],
     recrawl_subject: "Submit Packrift MCP to FindMCP",
-    next_action: "Find a real contact, repository, or working submit endpoint before attempting another submission.",
+    next_action: "Find a real contact, repository, or fixed submit endpoint before attempting another submission.",
     listing_url: "https://findmcp.dev/",
     submission_url: "https://findmcp.dev/submit",
   },
@@ -762,7 +768,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R33",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R34",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -813,7 +819,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R05",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R06",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",

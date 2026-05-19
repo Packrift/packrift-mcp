@@ -50,6 +50,44 @@ function genericMcpJson() {
   };
 }
 
+function sourceAwareMcpJson(source: string, target: string) {
+  return {
+    mcpServers: {
+      packrift: {
+        type: "http",
+        url: `${MCP_ENDPOINT}?packrift_mcp_source=${source}&packrift_mcp_target=${target}`,
+      },
+    },
+  };
+}
+
+function agentPromptSupport(source: string, target: string) {
+  const firstUsefulRun = mcpFirstUsefulRun(source, target);
+  return {
+    source,
+    target,
+    source_aware_endpoint: firstUsefulRun.endpoint,
+    copy_ready_agent_prompt: firstUsefulRun.agent_prompt,
+    agent_prompt_page: `https://mcp.packrift.com/r/run/${source}/${target}?format=html`,
+    reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${source}?format=html`,
+    generic_mcp_json: sourceAwareMcpJson(source, target),
+    claude_code_command: `claude mcp add --transport http packrift "${firstUsefulRun.endpoint}"`,
+    codex_command: `codex mcp add packrift --url "${firstUsefulRun.endpoint}"`,
+    success_gate:
+      "Run tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url in the real MCP host; require the returned cart URL to start with https://mcp.packrift.com/r/cart/1066.",
+    source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+    source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
+    activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+    usage_snapshot: USAGE_SNAPSHOT_URL,
+    funnel_snapshot: FUNNEL_SNAPSHOT_URL,
+    ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
+    acceptance_rule:
+      "Paste the source-aware prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before calling the source activated.",
+    suppression_rule:
+      "Do not count browser-only proof, Packrift self-checks, or duplicate public issue comments as completed source activation.",
+  };
+}
+
 function agentInstallSnippets() {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   return {
@@ -143,22 +181,9 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
   const claude = trackedUrls(rows, "anthropic_connectors_directory");
   const browse = trackedUrls(rows, "browse_sh");
   const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${runtime.serverVersion}, ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources.`;
-  const firstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
-  const agentPromptSupport = {
-    copy_ready_agent_prompt: firstUsefulRun.agent_prompt,
-    agent_prompt_page: "https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html",
-    reviewer_activation_runner: "https://mcp.packrift.com/r/activate/generic?format=html",
-    source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
-    source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
-    activation_experiments: ACTIVATION_EXPERIMENTS_URL,
-    usage_snapshot: USAGE_SNAPSHOT_URL,
-    funnel_snapshot: FUNNEL_SNAPSHOT_URL,
-    ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
-    acceptance_rule:
-      "Paste the prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before calling the source activated.",
-    suppression_rule:
-      "Do not count browser-only proof, Packrift self-checks, or duplicate public issue comments as completed source activation.",
-  };
+  const mcpSoPromptSupport = agentPromptSupport("mcp_so", "generic_streamable_http");
+  const claudePromptSupport = agentPromptSupport("anthropic_connectors_directory", "claude_code");
+  const browsePromptSupport = agentPromptSupport("browse_sh", "codex");
 
   return {
     mcp_so: {
@@ -177,7 +202,7 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
         is_dxt: false,
       },
       supporting_copy: proofLine,
-      agent_prompt_support: agentPromptSupport,
+      agent_prompt_support: mcpSoPromptSupport,
       ...mcpSo,
     },
     claude_connectors_directory: {
@@ -202,13 +227,16 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
         description:
           "Hosted no-auth remote MCP for exact-spec Packrift packaging search with live price, inventory, shipping, cart handoff, and no-match recovery.",
       },
-      agent_prompt_support: agentPromptSupport,
+      agent_prompt_support: claudePromptSupport,
       activation_packet: {
         tracked_claude_code_install: "https://mcp.packrift.com/r/install/anthropic_connectors_directory/claude_code?format=html",
         tracked_claude_desktop_install: "https://mcp.packrift.com/r/install/anthropic_connectors_directory/claude_desktop?format=html",
         tracked_claude_code_first_run: "https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_code?format=html",
         tracked_claude_desktop_first_run: "https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_desktop?format=html",
         reviewer_activation_runner: "https://mcp.packrift.com/r/activate/anthropic_connectors_directory?format=html",
+        source_aware_claude_code_command: claudePromptSupport.claude_code_command,
+        source_aware_mcp_json: claudePromptSupport.generic_mcp_json,
+        copy_ready_agent_prompt: claudePromptSupport.copy_ready_agent_prompt,
         acceptance_gate:
           "Review is complete only after a Claude MCP host can install the existing hosted endpoint and reach create_cart_url with source attribution.",
       },
@@ -258,7 +286,7 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
         safe_operation: "Read-only discovery until the agent calls Packrift MCP for live price, inventory, shipping, and cart handoff.",
       },
       supporting_copy: proofLine,
-      agent_prompt_support: agentPromptSupport,
+      agent_prompt_support: browsePromptSupport,
       ...browse,
     },
   };
@@ -349,7 +377,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R15",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R16",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

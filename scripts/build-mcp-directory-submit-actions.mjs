@@ -25,10 +25,12 @@ const DIRECT_STATUS = {
     next_action: "Use the refreshed proof message to request review, claim, or update access.",
   },
   anthropic_connectors_directory: {
-    status: "manual_submission_ready",
-    method: "Manual Claude connector directory submission",
-    evidence: "Claude connector submission is form-based and requires manual review; use the Packrift Claude submission packet for form-ready fields and proof.",
-    next_action: "Submit the hosted endpoint, no-auth policy, legal/support links, first-run proof, tracked start/config URLs, and directory refresh pack through the Claude form.",
+    status: "auth_gated_manual",
+    method: "Manual Google Forms submission after sign-in",
+    evidence:
+      "The Claude connector directory submission URL redirects to a Google Forms sign-in page; the Packrift Claude submission packet is ready for authenticated submission.",
+    next_action:
+      "Submit the hosted endpoint, no-auth policy, legal/support links, first-run proof, tracked start/config URLs, and directory refresh pack through an authenticated Google Forms session.",
   },
   smithery: {
     status: "api_key_required",
@@ -125,22 +127,26 @@ const DIRECT_STATUS = {
     next_action: "Find the current MCPLIST submission form or repository path, then submit the hosted endpoint and source-specific update card.",
   },
   mcphubz: {
-    status: "manual_submission_ready",
-    method: "Manual MCPHubz submit form",
-    evidence: "MCPHubz exposes a public submit page and search returned no Packrift result.",
-    next_action: "Submit Packrift MCP to MCPHubz with the hosted endpoint, tracked start URL, and first-useful-run proof.",
+    status: "login_required_contact_broken",
+    method: "Login-gated submit page; public contact form endpoint is broken",
+    evidence:
+      "MCPHubz /submit redirects to login, unauthenticated /api/servers returns 401, and the public contact Formspree action returned FORM_NOT_FOUND for the Packrift listing request.",
+    next_action:
+      "Use an authenticated MCPHubz session or a working owner contact path before retrying; do not treat the public contact page as a valid submission route.",
   },
   mcp_blue: {
-    status: "domain_expired_blocked",
-    method: "Live submit check blocked by expired domain",
-    evidence: "On 2026-05-19, https://www.mcp.blue/submit redirected to an expired-domain parking page at ww17.mcp.blue.",
+    status: "parked_domain_blocked",
+    method: "Live submit check blocked by parked/fingerprint-gated domain",
+    evidence:
+      "https://www.mcp.blue/submit returns 200 but behaves like a parked/fingerprint gate, sets a __tad cookie, and following the gate reaches ww17.mcp.blue/submit with 'Error. Page cannot be displayed.'",
     next_action: "Do not spend time submitting until the directory domain is live again; monitor only.",
   },
   findmcp_dev: {
-    status: "submit_form_unavailable",
-    method: "Submit route currently renders the directory landing page without a working form",
-    evidence: "On 2026-05-19, https://findmcp.dev/submit loaded the FindMCP landing page; List Your Server was an in-page anchor and no submit form or fields were exposed.",
-    next_action: "Find a real contact, repository, or working submit endpoint before attempting another submission.",
+    status: "submit_cta_broken",
+    method: "Submit route renders the directory landing page and the submit CTA is broken",
+    evidence:
+      "https://findmcp.dev/submit renders the homepage instead of a form; the visible List Your Server CTA triggers the frontend error openWaitlist is not defined.",
+    next_action: "Find a real contact, repository, or fixed submit endpoint before attempting another submission.",
   },
   mcplane: {
     status: "validator_rejected_public_repo",

@@ -60,7 +60,7 @@ const TARGETS = [
     submission_url: "https://clau.de/mcp-directory-submission",
     category: "Business",
     priority: "high",
-    action: "Submit Packrift MCP for Claude connector review with hosted endpoint, no-auth policy, and first-run proof.",
+    action: "Submit Packrift MCP through an authenticated Google Forms session with hosted endpoint, no-auth policy, and first-run proof.",
   },
   {
     name: "smithery",
@@ -206,7 +206,7 @@ const TARGETS = [
     submission_url: "https://mcphubz.com/submit",
     category: "Business",
     priority: "medium",
-    action: "Submit Packrift MCP to MCPHubz with the hosted endpoint, tracked start URL, and first-useful-run proof.",
+    action: "Use an authenticated MCPHubz session or working owner contact path before retrying; the public contact Formspree endpoint returned FORM_NOT_FOUND.",
   },
   {
     name: "mcp_blue",
@@ -215,7 +215,7 @@ const TARGETS = [
     submission_url: "https://www.mcp.blue/submit",
     category: "Business",
     priority: "medium",
-    action: "Do not spend time submitting until MCP Blue is live again; the submit URL redirected to an expired-domain parking page on 2026-05-19.",
+    action: "Do not spend time submitting until MCP Blue is live again; the submit URL behaves like a parked/fingerprint-gated domain and the gate leads to an error page.",
   },
   {
     name: "findmcp_dev",
@@ -224,7 +224,7 @@ const TARGETS = [
     submission_url: "https://findmcp.dev/submit",
     category: "Business",
     priority: "medium",
-    action: "Find a real contact, repository, or working submit endpoint; /submit rendered the landing page without a form on 2026-05-19.",
+    action: "Find a real contact, repository, or fixed submit endpoint; /submit renders the landing page and the visible submit CTA errors.",
   },
   {
     name: "mcplane",
@@ -735,7 +735,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R05",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R06",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {

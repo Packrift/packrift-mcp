@@ -59,7 +59,7 @@ const DIRECTORY_TARGETS = [
     refresh_url: "https://clau.de/mcp-directory-submission",
     priority: "high",
     requested_action:
-      "Submit Packrift MCP for Claude Connectors Directory review with the hosted endpoint, no-auth policy, and first-run cart-handoff proof.",
+      "Submit through an authenticated Google Forms session with the hosted endpoint, no-auth policy, and first-run cart-handoff proof.",
   },
   {
     id: "smithery",
@@ -163,7 +163,7 @@ const DIRECTORY_TARGETS = [
     refresh_url: "https://mcphubz.com/submit",
     priority: "medium",
     requested_action:
-      "Submit Packrift MCP to MCPHubz with the hosted endpoint, tracked start URL, and first-useful-run proof.",
+      "Use an authenticated MCPHubz session or working owner contact path before retrying; the public contact Formspree endpoint returned FORM_NOT_FOUND.",
   },
   {
     id: "mcp_blue",
@@ -172,7 +172,7 @@ const DIRECTORY_TARGETS = [
     refresh_url: "https://www.mcp.blue/submit",
     priority: "medium",
     requested_action:
-      "Do not spend time submitting until MCP Blue is live again; the submit URL redirected to an expired-domain parking page on 2026-05-19.",
+      "Do not spend time submitting until MCP Blue is live again; the submit URL behaves like a parked/fingerprint-gated domain and the gate leads to an error page.",
   },
   {
     id: "findmcp_dev",
@@ -181,7 +181,7 @@ const DIRECTORY_TARGETS = [
     refresh_url: "https://findmcp.dev/submit",
     priority: "medium",
     requested_action:
-      "Find a real contact, repository, or working submit endpoint; /submit rendered the landing page without a form on 2026-05-19.",
+      "Find a real contact, repository, or fixed submit endpoint; /submit renders the landing page and the visible submit CTA errors.",
   },
   {
     id: "mcplane",
@@ -304,7 +304,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R23",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R24",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",

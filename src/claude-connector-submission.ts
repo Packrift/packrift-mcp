@@ -1,3 +1,5 @@
+import { mcpFirstUsefulRun } from "./install-action.js";
+
 export interface ClaudeConnectorSubmissionRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -39,8 +41,30 @@ function checklistRow(status: "pass" | "ready" | "manual_review", item: string, 
 
 export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmissionRuntime) {
   const summary = proofSummary(runtime);
+  const firstUsefulRun = mcpFirstUsefulRun(SOURCE, "claude_code");
+  const sourceAwareMcpJsonConfig = {
+    mcpServers: {
+      packrift: {
+        type: "http",
+        url: firstUsefulRun.endpoint,
+      },
+    },
+  };
+  const copyReadyReviewRequest = [
+    "Packrift MCP Claude connector activation request",
+    "",
+    `Endpoint: ${MCP_ENDPOINT}`,
+    `Source-aware endpoint: ${firstUsefulRun.endpoint}`,
+    `Claude Code install: claude mcp add --transport http packrift "${firstUsefulRun.endpoint}"`,
+    `Tracked install: ${TRACKED_INSTALL_CLAUDE_CODE_URL}`,
+    `Tracked first run: ${TRACKED_FIRST_RUN_CLAUDE_CODE_URL}`,
+    `Reviewer runner: ${REVIEWER_ACTIVATION_URL}`,
+    "",
+    "Please install the hosted Streamable HTTP endpoint in a real Claude MCP host, run tools/list, then run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
+    "Success requires create_cart_url to return a measured https://mcp.packrift.com/r/cart/1066 URL. Do not place an order.",
+  ].join("\n");
   return {
-    release: "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R03",
+    release: "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R04",
     generated_at: new Date().toISOString(),
     status: "manual_submission_ready",
     purpose:
@@ -78,8 +102,10 @@ export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmiss
           },
         },
       },
+      source_aware_mcp_json_config: sourceAwareMcpJsonConfig,
       claude_code_command: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
-      source_aware_claude_code_command: `claude mcp add --transport http packrift "${MCP_ENDPOINT}?packrift_mcp_source=${SOURCE}&packrift_mcp_target=claude_code"`,
+      source_aware_claude_code_command: `claude mcp add --transport http packrift "${firstUsefulRun.endpoint}"`,
+      source_aware_endpoint: firstUsefulRun.endpoint,
       tracked_config_url: TRACKED_CONFIG_URL,
       tracked_start_url: TRACKED_START_URL,
       tracked_install_claude_code_url: TRACKED_INSTALL_CLAUDE_CODE_URL,
@@ -87,6 +113,9 @@ export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmiss
       tracked_first_run_claude_code_url: TRACKED_FIRST_RUN_CLAUDE_CODE_URL,
       tracked_first_run_claude_desktop_url: TRACKED_FIRST_RUN_CLAUDE_DESKTOP_URL,
       reviewer_activation_runner_url: REVIEWER_ACTIVATION_URL,
+      copy_ready_first_run_prompt: firstUsefulRun.agent_prompt,
+      copy_ready_curl_script: firstUsefulRun.curl_script,
+      copy_ready_review_request: copyReadyReviewRequest,
       canonical_start_url: START_URL,
     },
     suggested_form_fields: {
@@ -149,7 +178,11 @@ export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmiss
     },
     activation_readiness: {
       source: SOURCE,
-      source_aware_endpoint: `${MCP_ENDPOINT}?packrift_mcp_source=${SOURCE}&packrift_mcp_target=claude_code`,
+      source_aware_endpoint: firstUsefulRun.endpoint,
+      copy_ready_first_run_prompt: firstUsefulRun.agent_prompt,
+      copy_ready_review_request: copyReadyReviewRequest,
+      tracked_first_run_prompt_url: TRACKED_FIRST_RUN_CLAUDE_CODE_URL,
+      reviewer_activation_runner_url: REVIEWER_ACTIVATION_URL,
       required_first_run_tools: ["get_cart_handoff_candidates", "get_pricing", "check_inventory", "create_cart_url"],
       success_signal:
         "A non-suppressed Claude connector review or Claude MCP host run should produce source-attributed first-run/tool-call events and a measured https://mcp.packrift.com/r/cart/1066 URL after live price and inventory confirmation.",
@@ -226,6 +259,12 @@ export function claudeConnectorSubmissionMarkdown(runtime: ClaudeConnectorSubmis
     JSON.stringify(payload.claude_install.mcp_json_config, null, 2),
     "```",
     "",
+    "### Source-Aware Claude Review Config",
+    "",
+    "```json",
+    JSON.stringify(payload.claude_install.source_aware_mcp_json_config, null, 2),
+    "```",
+    "",
     `Claude Code command: \`${payload.claude_install.claude_code_command}\``,
     `Source-aware Claude Code command: \`${payload.claude_install.source_aware_claude_code_command}\``,
     `Tracked Claude Code install: ${payload.claude_install.tracked_install_claude_code_url}`,
@@ -233,6 +272,18 @@ export function claudeConnectorSubmissionMarkdown(runtime: ClaudeConnectorSubmis
     `Tracked Claude Code first run: ${payload.claude_install.tracked_first_run_claude_code_url}`,
     `Tracked Claude Desktop first run: ${payload.claude_install.tracked_first_run_claude_desktop_url}`,
     `Reviewer activation runner: ${payload.claude_install.reviewer_activation_runner_url}`,
+    "",
+    "### Copy-Ready Review Request",
+    "",
+    "```text",
+    payload.claude_install.copy_ready_review_request,
+    "```",
+    "",
+    "### Copy-Ready First Run Prompt",
+    "",
+    "```text",
+    payload.claude_install.copy_ready_first_run_prompt,
+    "```",
     "",
     "## Activation Readiness",
     "",
