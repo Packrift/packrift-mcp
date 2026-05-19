@@ -1,5 +1,5 @@
 // Generated from /Users/farhan/Downloads/packrift-ai-commerce-factory/outputs/2026-05-18/sku_purchase_readiness_dashboard/verified_purchase_ready_skus.csv. Do not edit by hand.
-// Generated at 2026-05-19T03:15:31+00:00.
+// Generated at 2026-05-19T03:18:06+00:00.
 export const PURCHASE_READY_SKUS = [
   "1066",
   "LL251WR",
@@ -992,10 +992,14 @@ export const PURCHASE_READY_SKUS = [
   "DL610A",
   "PB1420",
   "T906313",
+  "G11092D",
   "KP2030",
   "20106",
   "BGH124K",
+  "DL610L",
+  "PB1426",
   "T90653",
+  "G11092F",
   "KP2050",
 ] as const;
 
