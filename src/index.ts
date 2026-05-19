@@ -7125,6 +7125,7 @@ function sourceActivationSitemapUrls(): string[] {
     `${trackedRunUrl(source, target)}&format=html`,
     `https://mcp.packrift.com/r/activate/${source}`,
     `https://mcp.packrift.com/r/activate/${source}?format=html`,
+    `https://mcp.packrift.com/r/activate/${source}?format=sh`,
   ]);
 }
 
