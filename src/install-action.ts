@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R04";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R04";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R05";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R05";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -163,6 +163,17 @@ export function trackedInstallUrl(source: string, target: string): string {
   url.searchParams.set("utm_medium", "install_action");
   url.searchParams.set("utm_campaign", "packrift_mcp_install");
   url.searchParams.set("utm_content", target);
+  return url.toString();
+}
+
+function trackedRunUrlForInstall(source: string, target = "generic_streamable_http"): string {
+  const sourceSlug = normalizeRuntimeSlug(source, "generic");
+  const targetSlug = normalizeRuntimeSlug(target, "generic_streamable_http");
+  const url = new URL(`https://mcp.packrift.com/r/run/${sourceSlug}/${targetSlug}`);
+  url.searchParams.set("utm_source", sourceSlug);
+  url.searchParams.set("utm_medium", "first_run_action");
+  url.searchParams.set("utm_campaign", "packrift_mcp_activation");
+  url.searchParams.set("utm_content", targetSlug);
   return url.toString();
 }
 
@@ -368,7 +379,12 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
     source_aware_endpoint: sourceAware.endpoint,
     source_aware_config: sourceAware.config,
     tracked_install_url: trackedInstallUrl(input.source, target.id),
+    tracked_install_html_url: `${trackedInstallUrl(input.source, target.id)}&format=html`,
     tracked_config_url: trackedConfigUrl(input.source),
+    tracked_run_url: trackedRunUrlForInstall(input.source, target.id),
+    tracked_run_html_url: `${trackedRunUrlForInstall(input.source, target.id)}&format=html`,
+    tracked_run_execute_url: `${trackedRunUrlForInstall(input.source, target.id)}&execute=1`,
+    tracked_reviewer_activation_html_url: `https://mcp.packrift.com/r/activate/${input.source}?format=html`,
     copy_text: sourceAware.copyText,
     install: sourceAware.install,
     first_tests: target.firstTests,
@@ -418,10 +434,12 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       audience: target.audience,
       format: target.format,
       tracked_install_url: trackedInstallUrl(source, target.id),
+      tracked_install_html_url: `${trackedInstallUrl(source, target.id)}&format=html`,
       source_aware_endpoint: sourceAwareMcpEndpoint(source, target.id),
       aliases: target.aliases,
       first_tests: target.firstTests,
       first_useful_run_endpoint: sourceAwareMcpEndpoint(source, target.id),
+      tracked_run_html_url: `${trackedRunUrlForInstall(source, target.id)}&format=html`,
       required_post_install_final_tool: "create_cart_url",
     })),
     required_post_install_verification: {
@@ -452,6 +470,19 @@ function fencedShell(value: string): string {
   return ["```sh", value, "```"].join("\n");
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+}
+
 export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof mcpInstallActionPayload>>): string {
   return [
     "# Packrift MCP Install Action",
@@ -477,6 +508,8 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
     `${payload.required_post_install_verification.run}`,
     "",
     `Required final tool: \`${payload.required_post_install_verification.required_final_tool}\``,
+    `Tracked browser run: ${payload.tracked_run_html_url}`,
+    `Reviewer activation runner: ${payload.tracked_reviewer_activation_html_url}`,
     "",
     "## First Useful Run",
     "",
@@ -501,6 +534,133 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
       .join("\n"),
     "",
   ].join("\n");
+}
+
+export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpInstallActionPayload>>): string {
+  const copyBlock = payload.target.format === "json" ? JSON.stringify(payload.install, null, 2) : payload.copy_text;
+  const firstRunSequence = JSON.stringify(payload.first_useful_run.sequence, null, 2);
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP Install</title>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f8f5;color:#17211d}
+    main{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+    h1{font-size:1.8rem;margin:0 0 8px;letter-spacing:0}
+    h2{font-size:1rem;margin:22px 0 8px;letter-spacing:0}
+    p{line-height:1.5;color:#5f6f68}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+    .button,button{display:inline-flex;align-items:center;border:1px solid #17211d;border-radius:6px;background:#17211d;color:#fff;padding:9px 12px;text-decoration:none;font:inherit;cursor:pointer}
+    .secondary{background:#fff;color:#17211d}
+    button.copied{background:#0f6b4f;border-color:#0f6b4f}
+    .panel{background:#fff;border:1px solid #d7ded8;border-radius:8px;padding:14px;margin:14px 0}
+    .pill{display:inline-block;border:1px solid #d7ded8;border-radius:999px;padding:4px 8px;margin:2px 4px 2px 0;font-size:.84rem;background:#fff;color:#5f6f68}
+    pre{white-space:pre-wrap;word-break:break-word;background:#101714;color:#e9f2ed;border-radius:8px;padding:12px;overflow:auto}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    @media (max-width:640px){.button,button{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Packrift MCP Install</h1>
+    <p>Copy the source-aware install for the existing hosted Packrift MCP endpoint, then run the first useful check to confirm live price, inventory, and measured cart handoff.</p>
+    <div>
+      <span class="pill">Source: ${escapeHtml(payload.source)}</span>
+      <span class="pill">Target: ${escapeHtml(payload.target.label)}</span>
+      <span class="pill">No buyer key</span>
+      <span class="pill">No order created</span>
+    </div>
+    <div class="bar">
+      <button data-copy-target="${escapeHtml(payload.target.id)}" data-copy="${escapeHtml(copyBlock)}">Copy install</button>
+      <a class="button secondary" href="${escapeHtml(payload.tracked_run_html_url)}">Open first run</a>
+      <a class="button secondary" href="${escapeHtml(payload.tracked_reviewer_activation_html_url)}">Run real MCP check</a>
+      <a class="button secondary" href="${escapeHtml(payload.tracked_config_url)}">Config JSON</a>
+    </div>
+    <section class="panel">
+      <h2>Install Copy</h2>
+      <pre>${escapeHtml(copyBlock)}</pre>
+    </section>
+    <section class="panel">
+      <h2>Source-Aware Endpoint</h2>
+      <div class="bar">
+        <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_endpoint`)}" data-copy="${escapeHtml(payload.source_aware_endpoint)}">Copy endpoint</button>
+      </div>
+      <pre>${escapeHtml(payload.source_aware_endpoint)}</pre>
+    </section>
+    <section class="panel">
+      <h2>First Useful Run</h2>
+      <p>After install, run this through the source-aware endpoint. The final tool should return a measured <code>https://mcp.packrift.com/r/cart/1066</code> URL.</p>
+      <div class="bar">
+        <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_first_run_curl`)}" data-copy="${escapeHtml(payload.first_useful_run.curl_script)}">Copy curl script</button>
+        <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_first_run_json`)}" data-copy="${escapeHtml(firstRunSequence)}">Copy JSON-RPC</button>
+      </div>
+      <pre>${escapeHtml(payload.first_useful_run.curl_script)}</pre>
+    </section>
+    <section class="panel">
+      <h2>Rule</h2>
+      <p>${escapeHtml(payload.operating_rule)}</p>
+    </section>
+  </main>
+  <script>
+    const installAction = ${scriptJson({
+      release: payload.release,
+      source: payload.source,
+      target: payload.target.id,
+    })};
+    function recordInstallCopy(target) {
+      const safeTarget = String(target || installAction.target || "unknown").replace(/[^a-z0-9_:-]/gi, "_").slice(0, 80);
+      const stamp = Date.now();
+      const body = JSON.stringify({
+        event: "mcp_install_copy",
+        source: "mcp_install_action_copy",
+        tool_name: safeTarget,
+        release: installAction.release,
+        packrift_ai_id: "mcp_install_copy_" + installAction.source + "_" + safeTarget + "_" + stamp,
+        ai_commerce_id: "mcp_install_copy_" + installAction.source + "_" + safeTarget + "_" + stamp,
+        mcp_key: "install_copy:" + installAction.source + ":" + safeTarget,
+        mcp_journey: "mcp_install_action:" + installAction.source + ":copy:" + safeTarget,
+        mcp_result_set: "mcp_install_action_copy",
+        utm_source: installAction.source,
+        utm_medium: "install_copy",
+        utm_campaign: "packrift_mcp_install",
+        utm_content: safeTarget,
+        mcp_install_target: installAction.target,
+        page_url: window.location.href,
+        source_url: window.location.href,
+        referrer: document.referrer
+      });
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon && navigator.sendBeacon("/events/ai-sales", blob)) return;
+      fetch("/events/ai-sales", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+        keepalive: true
+      }).catch(() => {});
+    }
+    document.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-copy]");
+      if (!button) return;
+      const value = button.getAttribute("data-copy") || "";
+      const target = button.getAttribute("data-copy-target") || installAction.target;
+      recordInstallCopy(target);
+      try {
+        await navigator.clipboard.writeText(value);
+        button.textContent = "Copied";
+        button.classList.add("copied");
+      } catch {
+        button.textContent = "Select text";
+      }
+      window.setTimeout(() => {
+        button.textContent = target.includes("endpoint") ? "Copy endpoint" : target.includes("curl") ? "Copy curl script" : target.includes("json") ? "Copy JSON-RPC" : "Copy install";
+        button.classList.remove("copied");
+      }, 1400);
+    });
+  </script>
+</body>
+</html>`;
 }
 
 export function mcpInstallActionsMarkdown(runtime: McpInstallActionRuntime): string {

@@ -13,6 +13,7 @@ import {
   MCP_INSTALL_ACTION_RELEASE,
   MCP_SOURCE_QUERY_PARAM,
   MCP_TARGET_QUERY_PARAM,
+  mcpInstallActionHtml,
   mcpInstallActionMarkdown,
   mcpInstallActionPayload,
   mcpInstallActionsMarkdown,
@@ -7284,6 +7285,16 @@ app.get("/r/install/:source/:target", async (c) => {
   }
 
   const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
+  const accept = c.req.header("Accept") ?? "";
+  const wantsHtml = format === "html" || (!format && accept.toLowerCase().includes("text/html") && !wantsJson(accept));
+  if (wantsHtml) {
+    const body = mcpInstallActionHtml(payload);
+    await recordMcpInstallIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target.id, jsonByteSize(body));
+    return c.body(body, 200, {
+      "Content-Type": "text/html; charset=utf-8",
+      ...RAW_HEADERS,
+    });
+  }
   if (format === "text" || format === "txt") {
     const body = `${payload.copy_text}\n`;
     await recordMcpInstallIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target.id, jsonByteSize(body));

@@ -291,6 +291,7 @@ async function liveMcpCheck() {
     wellKnownMcpJsonResult,
     trackedConfigGenericResult,
     trackedInstallCodexResult,
+    trackedInstallCodexHtmlResult,
     trackedFirstRunGenericResult,
     trackedFirstRunHtmlResult,
     trackedFirstRunExecuteResult,
@@ -336,6 +337,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/.well-known/mcp.json"),
     fetchText("https://mcp.packrift.com/r/config/generic?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=text&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/install/generic/codex?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=sh&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?execute=1&format=json&utm_content=distribution_check"),
@@ -553,14 +555,22 @@ async function liveMcpCheck() {
       installMatrix?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
       installMatrix?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       installMatrix?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
-      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R04" &&
+      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R05" &&
       installActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/generic/codex")) &&
+      installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_html_url?.includes("format=html")) &&
+      installActions?.targets?.some((target) => target.id === "codex" && target.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/codex")) &&
       installActions?.targets?.some((target) => target.id === "codex" && target.source_aware_endpoint?.includes("packrift_mcp_source=generic")) &&
       installActions?.targets?.every((target) => target.required_post_install_final_tool === "create_cart_url") &&
       installActions?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       installActions?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       installActions?.required_post_install_verification?.required_final_tool === "create_cart_url" &&
+      trackedInstallCodexHtmlResult.ok &&
+      trackedInstallCodexHtmlResult.text.includes("Packrift MCP Install") &&
+      trackedInstallCodexHtmlResult.text.includes("Copy install") &&
+      trackedInstallCodexHtmlResult.text.includes("mcp_install_copy") &&
+      trackedInstallCodexHtmlResult.text.includes("Open first run") &&
+      trackedInstallCodexHtmlResult.text.includes("Run real MCP check") &&
       firstRunActions?.release === "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R02" &&
       firstRunActions?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       firstRunActions?.targets?.length >= 7 &&
@@ -947,6 +957,8 @@ async function liveMcpCheck() {
       install_matrix_smoke_tests: installMatrix?.smoke_tests?.length ?? 0,
       install_actions_release: installActions?.release ?? null,
       install_actions_targets: installActions?.targets?.length ?? 0,
+      tracked_install_codex_html_status: trackedInstallCodexHtmlResult.status,
+      tracked_install_codex_html_has_copy: trackedInstallCodexHtmlResult.text.includes("Copy install"),
       first_run_actions_release: firstRunActions?.release ?? null,
       first_run_actions_targets: firstRunActions?.targets?.length ?? 0,
       tracked_first_run_generic_status: trackedFirstRunGenericResult.status,
