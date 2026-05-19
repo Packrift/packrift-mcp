@@ -938,10 +938,12 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
       case "resources/read": {
         const startedAt = Date.now();
         const uri = (params?.["uri"] as string) ?? "";
-        const pathname = new URL(uri).pathname;
+        const parsedUri = new URL(uri);
+        const pathname = parsedUri.pathname;
         const skuResourceMatch = pathname.match(/^\/ai\/sku\/[^/]+\.(md|json)$/);
+        const dynamicResource = dynamicMcpRuntimeResource(parsedUri);
         const resource = MCP_RESOURCES.find((item) => item.uri === uri);
-        if (!resource && !skuResourceMatch) {
+        if (!resource && !skuResourceMatch && !dynamicResource) {
           await recordMcpDiscoveryEvent(env, "mcp_resource_read", {
             mcpMethod: method,
             resourceUri: uri,
@@ -955,11 +957,11 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           return rpcError(id, -32602, `Unknown resource: ${uri}`);
         }
         const text = await readResourceText(env, uri);
-        const mimeType = resource?.mimeType ?? (skuResourceMatch?.[1] === "json" ? "application/json" : "text/markdown");
+        const mimeType = resource?.mimeType ?? dynamicResource?.mimeType ?? (skuResourceMatch?.[1] === "json" ? "application/json" : "text/markdown");
         await recordMcpDiscoveryEvent(env, "mcp_resource_read", {
           mcpMethod: method,
           resourceUri: uri,
-          format: skuResourceMatch?.[1] ?? mimeType,
+          format: dynamicResource?.format ?? skuResourceMatch?.[1] ?? mimeType,
           latencyMs: Date.now() - startedAt,
           resultSizeBytes: jsonByteSize(text),
           ...telemetryContext,
@@ -4155,8 +4157,12 @@ function sourceActivationCopyReadyHostConfigs(input: {
   };
 }
 
+function sourceActivationHasToolAndCartProof(row: PostInstallActivationRow): boolean {
+  return row.qualified_cart_landings > 0 && row.mcp_tool_calls > 0;
+}
+
 function sourceActivationStage(row: PostInstallActivationRow): string {
-  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls > 0) return "qualified cart landing and MCP tool calls visible";
+  if (sourceActivationHasToolAndCartProof(row)) return "qualified cart landing and MCP tool calls visible; order and revenue missing";
   if (row.qualified_cart_landings > 0) return "qualified cart landing visible but real MCP tool calls missing";
   if (row.external_qualified_create_cart_url_calls > 0) return "external-qualified cart URL created but /r/cart landing missing";
   if (row.create_cart_url_calls > 0) return "cart URL created from unqualified or internal source";
@@ -4172,6 +4178,7 @@ function sourceActivationStage(row: PostInstallActivationRow): string {
 }
 
 function sourceActivationTargetEvent(row: PostInstallActivationRow): string {
+  if (sourceActivationHasToolAndCartProof(row)) return "mcp_attributed_order";
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return "mcp_cart_landing";
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return "mcp_tool_call";
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return "mcp_tool_call";
@@ -4185,6 +4192,9 @@ function sourceActivationTargetEvent(row: PostInstallActivationRow): string {
 }
 
 function sourceActivationRecommendedAction(row: PostInstallActivationRow): string {
+  if (sourceActivationHasToolAndCartProof(row)) {
+    return "Stop looping on first-run proof. Use the source-aware measured cart handoff in a real buyer or reviewer procurement flow and watch Shopify/GA4 for an MCP-attributed order or revenue event.";
+  }
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return "Send the returned measured /r/cart URL to the source reviewer or a real MCP-host user and count the blocker as resolved only when they open it from their side.";
   }
@@ -4207,6 +4217,7 @@ function sourceActivationRecommendedAction(row: PostInstallActivationRow): strin
 
 function sourceActivationExternalActivationRequired(row: PostInstallActivationRow): boolean {
   return (
+    sourceActivationHasToolAndCartProof(row) ||
     (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) ||
     (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) ||
     (row.first_run_executions > 0 && row.mcp_tool_calls === 0) ||
@@ -4215,6 +4226,9 @@ function sourceActivationExternalActivationRequired(row: PostInstallActivationRo
 }
 
 function sourceActivationOperatorSafetyRule(row: PostInstallActivationRow): string {
+  if (sourceActivationHasToolAndCartProof(row)) {
+    return "Do not count another first-run action or Packrift self-opened cart as completion proof. This row now needs a real buyer, reviewer, or directory-side procurement flow that produces an MCP-attributed order or revenue signal.";
+  }
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return "Do not self-open this cart URL as completion proof. Share it with the source reviewer, directory operator, or a real MCP-host user; the row is complete only after an external source-side cart landing appears.";
   }
@@ -4229,6 +4243,22 @@ function sourceActivationOperatorSafetyRule(row: PostInstallActivationRow): stri
 
 function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
   const cartUrl = row.recent_measured_cart_urls[0] ?? "";
+  if (sourceActivationHasToolAndCartProof(row)) {
+    return [
+      "Packrift MCP has source-attributed MCP tool calls and qualified cart landing proof for this source.",
+      "",
+      `Source: ${row.source}`,
+      "Endpoint: https://mcp.packrift.com/mcp",
+      `Directory update card: ${urls.directory_update_card_json_url}`,
+      cartUrl ? `Measured cart URL already seen: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      `Shell activation script: ${urls.reviewer_activation_shell_url}`,
+      `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
+      ...sourceActivationEvalPackLines(urls),
+      `Install/config handoff: ${urls.tracked_install_url}`,
+      "",
+      "Please run a real buyer or reviewer procurement flow through the MCP host and continue into Shopify checkout only when the buyer confirms. The next proof gate is an MCP-attributed order or revenue event, not another first-run proof click.",
+    ].join("\n");
+  }
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return [
       "Packrift MCP produced a measured cart handoff for this source.",
@@ -4295,6 +4325,9 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
 }
 
 function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
+  if (sourceActivationHasToolAndCartProof(row)) {
+    return row.recent_measured_cart_urls[0] ?? urls.reviewer_activation_runner_url;
+  }
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return row.recent_measured_cart_urls[0] ?? urls.reviewer_activation_runner_url;
   }
@@ -4313,6 +4346,7 @@ function sourceActivationPriorityScore(row: PostInstallActivationRow): number {
     Math.min(20, row.mcp_tool_calls * 2) +
     Math.min(20, row.qualified_cart_landings * 5);
   if (SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] && signalScore === 0) return sourcePreferredActivationTarget(row.source) === "cline" ? 112 : 96;
+  if (sourceActivationHasToolAndCartProof(row)) return 130 + signalScore;
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return 120 + signalScore;
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return 110 + signalScore;
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return 100 + signalScore;
@@ -4331,12 +4365,13 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
       const score = sourceActivationPriorityScore(row);
       const priority = score >= 110 ? "critical" : score >= 80 ? "high" : score >= 50 ? "medium" : "watch";
       const firstUsefulRun = mcpFirstUsefulRun(row.source, urls.preferred_target);
+      const targetEvent = sourceActivationTargetEvent(row);
       return {
         source: row.source,
         priority,
         priority_score: score,
         current_stage: sourceActivationStage(row),
-        target_event_to_watch: sourceActivationTargetEvent(row),
+        target_event_to_watch: targetEvent,
         recommended_action: sourceActivationRecommendedAction(row),
         external_activation_required: sourceActivationExternalActivationRequired(row),
         operator_safety_rule: sourceActivationOperatorSafetyRule(row),
@@ -4377,7 +4412,9 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
           `The reviewer or host can run the source-specific eval pack at ${urls.eval_pack_json_url}.`,
           "The workflow calls get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
           "The returned measured https://mcp.packrift.com/r/cart/1066 URL is opened by an external reviewer, MCP host user, or buyer before any Shopify cart handoff.",
-          "The funnel source row moves closer to material MCP tool calls, qualified cart landings, and attributed orders.",
+          targetEvent === "mcp_attributed_order"
+            ? "A real buyer or reviewer completes checkout from an MCP-attributed handoff, producing first_party_mcp_orders > 0 or measurable MCP revenue in the GA4 funnel proof."
+            : "The funnel source row moves closer to material MCP tool calls, qualified cart landings, and attributed orders.",
         ],
         current_counts: {
           starts: row.starts,
@@ -4411,7 +4448,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R16",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17",
     generated_at: new Date().toISOString(),
     date,
     event_read_limit: limit,
@@ -4792,6 +4829,9 @@ interface SourceActivationExperimentQueueRow {
 }
 
 function sourceActivationExperimentHypothesis(row: SourceActivationExperimentQueueRow): string {
+  if (row.target_event_to_watch === "mcp_attributed_order") {
+    return "This source already has MCP tool-call and qualified cart-landing proof; the missing gate is a real buyer-side checkout that creates attributed order or revenue proof.";
+  }
   if (row.target_event_to_watch === "mcp_cart_landing") {
     return "A measured cart URL already exists for this source; getting it opened by a real source-side reviewer or MCP host should lift qualified first-party cart landings without inflating tool-call proof.";
   }
@@ -4812,6 +4852,14 @@ function sourceActivationExperimentHypothesis(row: SourceActivationExperimentQue
 
 function sourceActivationExpectedSnapshotDelta(row: SourceActivationExperimentQueueRow) {
   const target = row.target_event_to_watch;
+  if (target === "mcp_attributed_order") {
+    return {
+      source_activation_queue: `Source ${row.source} should remain critical until real MCP-attributed order or revenue proof appears.`,
+      usage_snapshot: "Tool-call and cart-landing counts may stay flat; do not manufacture another first-run action for a mature source.",
+      funnel_snapshot: "first_party_mcp_orders or first_party_mcp_order_revenue should move above zero before this gate is treated as proven.",
+      ga4_funnel_proof: "Visitor proof remains separate; order/revenue proof must come from buyer-side Shopify or GA4 purchase evidence.",
+    };
+  }
   if (target === "mcp_cart_landing") {
     return {
       source_activation_queue: `Source ${row.source} should move past ${target} once an external /r/cart landing appears.`,
@@ -7254,9 +7302,90 @@ function resourceName(pathname: string): string {
   return pathname.replace(/^\/+/, "").replace(/[-_/]/g, " ").replace(/\.\w+$/, "");
 }
 
+type DynamicMcpRuntimeResource = {
+  kind: "config" | "install" | "run" | "activate";
+  source: string;
+  target?: NonNullable<ReturnType<typeof normalizeInstallTarget>>;
+  format: "json" | "html" | "md" | "sh" | "text";
+  mimeType: string;
+  execute: boolean;
+};
+
+function normalizeDynamicResourceFormat(value: string | null): DynamicMcpRuntimeResource["format"] {
+  const raw = (value ?? "").trim().toLowerCase();
+  if (raw === "markdown") return "md";
+  if (raw === "shell") return "sh";
+  if (raw === "txt") return "text";
+  if (raw === "html") return "html";
+  if (raw === "md") return "md";
+  if (raw === "sh") return "sh";
+  if (raw === "text") return "text";
+  return "json";
+}
+
+function dynamicResourceMimeType(format: DynamicMcpRuntimeResource["format"]): string {
+  if (format === "html") return "text/html";
+  if (format === "md") return "text/markdown";
+  if (format === "sh") return "text/x-shellscript";
+  if (format === "text") return "text/plain";
+  return "application/json";
+}
+
+function normalizeDynamicResourceSource(value: string): string {
+  try {
+    const source = decodeURIComponent(value).trim().toLowerCase();
+    return MCP_START_SOURCE_PATTERN.test(source) ? source : "";
+  } catch {
+    return "";
+  }
+}
+
+function dynamicMcpRuntimeResource(parsed: URL): DynamicMcpRuntimeResource | null {
+  const format = normalizeDynamicResourceFormat(parsed.searchParams.get("format"));
+  const execute = parsed.searchParams.get("execute") === "1";
+  const configMatch = parsed.pathname.match(/^\/r\/config\/([^/]+)$/);
+  if (configMatch) {
+    const source = normalizeDynamicResourceSource(configMatch[1] ?? "");
+    return source ? { kind: "config", source, format: "json", mimeType: "application/json", execute: false } : null;
+  }
+
+  const installMatch = parsed.pathname.match(/^\/r\/install\/([^/]+)\/([^/]+)$/);
+  if (installMatch) {
+    const source = normalizeDynamicResourceSource(installMatch[1] ?? "");
+    const target = normalizeInstallTarget(decodeURIComponent(installMatch[2] ?? ""));
+    return source && target ? { kind: "install", source, target, format, mimeType: dynamicResourceMimeType(format), execute: false } : null;
+  }
+
+  const runMatch = parsed.pathname.match(/^\/r\/run\/([^/]+)\/([^/]+)$/);
+  if (runMatch) {
+    const source = normalizeDynamicResourceSource(runMatch[1] ?? "");
+    const target = normalizeInstallTarget(decodeURIComponent(runMatch[2] ?? ""));
+    return source && target ? { kind: "run", source, target, format, mimeType: dynamicResourceMimeType(format), execute } : null;
+  }
+
+  const activateMatch = parsed.pathname.match(/^\/r\/activate\/([^/]+)$/);
+  if (activateMatch) {
+    const source = normalizeDynamicResourceSource(activateMatch[1] ?? "");
+    return source ? { kind: "activate", source, format, mimeType: dynamicResourceMimeType(format), execute: false } : null;
+  }
+  return null;
+}
+
 function resourceDescription(pathname: string): string {
   if (pathname.match(/^\/ai\/mcp-directory-update\/[a-z0-9_]{2,64}\.(json|md)$/)) {
     return "Source-specific Packrift MCP directory update card with canonical listing data, tracked install URLs, first-run proof, and acceptance gate.";
+  }
+  if (pathname.match(/^\/r\/config\/[a-z0-9_]{2,64}$/)) {
+    return "Source-specific Packrift MCP config resource preserving attribution for installs and first useful runs.";
+  }
+  if (pathname.match(/^\/r\/install\/[a-z0-9_]{2,64}\/[a-z0-9_]+$/)) {
+    return "Source-specific Packrift MCP install-action resource for a target MCP host.";
+  }
+  if (pathname.match(/^\/r\/run\/[a-z0-9_]{2,64}\/[a-z0-9_]+$/)) {
+    return "Source-specific Packrift MCP first-run resource ending at create_cart_url with no order created.";
+  }
+  if (pathname.match(/^\/r\/activate\/[a-z0-9_]{2,64}$/)) {
+    return "Source-specific Packrift MCP reviewer activation resource for moving directory proof into a real MCP client run.";
   }
   return RESOURCE_DESCRIPTIONS[pathname] ?? "Packrift MCP discovery resource.";
 }
@@ -7341,6 +7470,48 @@ const MCP_RESOURCE_TEMPLATES = [
       "Machine-readable exact-spec product record for one Packrift AI_APPROVE SKU, including product, reorder, quote, MCP handoff, and no-match policy.",
     mimeType: "application/json",
   },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/config/{source}",
+    name: "Packrift source-aware MCP config",
+    description:
+      "Source-specific remote MCP client config that preserves directory, marketplace, or partner attribution for Packrift MCP installs.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/install/{source}/{target}",
+    name: "Packrift source-aware MCP install action",
+    description:
+      "Source-specific install-action payload for a target MCP host, including source-aware endpoint, install steps, and first useful run.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/run/{source}/{target}",
+    name: "Packrift source-aware MCP first run",
+    description:
+      "Source-specific first useful run payload that calls live Packrift MCP tools and ends at create_cart_url without creating an order.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/run/{source}/{target}?format=sh",
+    name: "Packrift source-aware MCP first-run shell script",
+    description:
+      "Source-specific shell runner for the first useful Packrift MCP tool sequence, ending at a measured cart URL without placing an order.",
+    mimeType: "text/x-shellscript",
+  },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/run/{source}/{target}?execute=1&format=json",
+    name: "Packrift source-aware MCP first-run execution URL",
+    description:
+      "Source-specific browser-executable first-run proof endpoint. MCP resource reads return the safe action payload; direct HTTP opens execute the proof run.",
+    mimeType: "application/json",
+  },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/activate/{source}?format=sh",
+    name: "Packrift source-aware MCP reviewer activation shell script",
+    description:
+      "Source-specific reviewer activation shell runner that moves directory or marketplace proof into real MCP client calls and cart handoff.",
+    mimeType: "text/x-shellscript",
+  },
 ];
 
 const AI_SALES_PRIORITY_SKU_RESOURCE_URLS = AI_SALES_PRIORITY_SKUS.flatMap((sku) => [
@@ -7390,6 +7561,39 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   const parsed = new URL(uri);
   const pathname = parsed.pathname;
   const explicitFormat = parsed.searchParams.get("format")?.toLowerCase();
+  const dynamicResource = dynamicMcpRuntimeResource(parsed);
+  if (dynamicResource) {
+    if (dynamicResource.kind === "config") {
+      return JSON.stringify(sourceAwareMcpJson(dynamicResource.source), null, 2);
+    }
+    if (dynamicResource.kind === "install") {
+      const targetId = dynamicResource.target?.id;
+      if (!targetId) throw new Error(`Unsupported install target for resource: ${uri}`);
+      const payload = mcpInstallActionPayload({ source: dynamicResource.source, target: targetId });
+      if (!payload) throw new Error(`Unsupported install target for resource: ${uri}`);
+      if (dynamicResource.format === "html") return mcpInstallActionHtml(payload);
+      if (dynamicResource.format === "text") return `${payload.copy_text}\n`;
+      if (dynamicResource.format === "md") return mcpInstallActionMarkdown(payload);
+      return JSON.stringify(payload, null, 2);
+    }
+    if (dynamicResource.kind === "run") {
+      const targetId = dynamicResource.target?.id;
+      if (!targetId) throw new Error(`Unsupported first-run target for resource: ${uri}`);
+      const payload = mcpFirstRunActionPayload({ source: dynamicResource.source, target: targetId });
+      if (dynamicResource.format === "html") return mcpFirstRunActionHtml(payload);
+      if (dynamicResource.format === "sh") return `${payload.first_useful_run.curl_script}\n`;
+      if (dynamicResource.format === "md") return mcpFirstRunActionMarkdown(payload);
+      return JSON.stringify(payload, null, 2);
+    }
+    if (dynamicResource.kind === "activate") {
+      if (dynamicResource.format === "html") return mcpReviewerActivationHtml(reviewerActivationRuntime(), dynamicResource.source);
+      if (dynamicResource.format === "sh") {
+        return `${mcpReviewerActivationPayload(reviewerActivationRuntime(), dynamicResource.source).real_mcp_client_run.curl_script}\n`;
+      }
+      if (dynamicResource.format === "md") return mcpReviewerActivationMarkdown(reviewerActivationRuntime(), dynamicResource.source);
+      return JSON.stringify(mcpReviewerActivationPayload(reviewerActivationRuntime(), dynamicResource.source), null, 2);
+    }
+  }
   if (pathname === "/llms.txt") return llmsTxt;
   if (pathname === "/llms-full.txt") return llmsFullTxt;
   if (pathname === "/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);

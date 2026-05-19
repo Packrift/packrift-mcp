@@ -452,8 +452,12 @@ async function liveMcpCheck() {
     invalidFirstRunSourceResult,
     invalidFirstRunTargetResult,
     invalidReviewerActivationSourceResult,
+    sourceRunResourceShellResult,
+    sourceRunResourceMarkdownResult,
+    sourceActivateResourceShellResult,
     toolsResult,
     resourcesResult,
+    resourceTemplatesResult,
     promptsResult,
   ] = await Promise.all([
     fetchText("https://mcp.packrift.com/health"),
@@ -532,8 +536,12 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/r/run/bad-source/generic_streamable_http"),
     fetchText("https://mcp.packrift.com/r/run/generic/not_a_real_target"),
     fetchText("https://mcp.packrift.com/r/activate/bad-source"),
+    fetchMcp("resources/read", { uri: "https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh" }),
+    fetchMcp("resources/read", { uri: "https://mcp.packrift.com/r/run/browse_sh/codex?format=md" }),
+    fetchMcp("resources/read", { uri: "https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh" }),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
+    fetchMcp("resources/templates/list"),
     fetchMcp("prompts/list"),
   ]);
   const health = healthResult.ok ? JSON.parse(healthResult.text) : null;
@@ -623,6 +631,11 @@ async function liveMcpCheck() {
   const resources = resourcesResult.value?.result?.resources ?? [];
   const resourcesCount = resources.length;
   const resourceUris = new Set(resources.map((resource) => resource.uri));
+  const resourceTemplates = resourceTemplatesResult.value?.result?.resourceTemplates ?? [];
+  const resourceTemplateUris = new Set(resourceTemplates.map((resource) => resource.uriTemplate));
+  const sourceRunResourceShellText = sourceRunResourceShellResult.value?.result?.contents?.[0]?.text ?? "";
+  const sourceRunResourceMarkdownText = sourceRunResourceMarkdownResult.value?.result?.contents?.[0]?.text ?? "";
+  const sourceActivateResourceShellText = sourceActivateResourceShellResult.value?.result?.contents?.[0]?.text ?? "";
   const promptsCount = promptsResult.value?.result?.prompts?.length ?? 0;
   return check(
     "live_mcp_surface",
@@ -668,6 +681,20 @@ async function liveMcpCheck() {
       toolNames.includes("get_cart_handoff_candidates") &&
       toolNames.includes("prepare_purchase_handoff") &&
       resourcesCount >= 68 &&
+      resourceTemplatesResult.ok &&
+      resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}") &&
+      resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?format=sh") &&
+      resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?execute=1&format=json") &&
+      resourceTemplateUris.has("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      sourceRunResourceShellResult.ok &&
+      sourceRunResourceShellText.includes("mcp_so") &&
+      sourceRunResourceShellText.includes("create_cart_url") &&
+      sourceRunResourceMarkdownResult.ok &&
+      sourceRunResourceMarkdownText.includes("browse_sh") &&
+      sourceRunResourceMarkdownText.includes("codex") &&
+      sourceActivateResourceShellResult.ok &&
+      sourceActivateResourceShellText.includes("cline_mcp_marketplace") &&
+      sourceActivateResourceShellText.includes("create_cart_url") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-funnel-snapshot.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json") &&
@@ -1199,7 +1226,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R16" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 5000 &&
       sourceActivationQueue?.source_context_normalization?.release === "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01" &&
@@ -1242,10 +1269,13 @@ async function liveMcpCheck() {
         (row) =>
           row.source === "cline_mcp_marketplace" &&
           row.preferred_target === "cline" &&
+          row.target_event_to_watch === "mcp_attributed_order" &&
+          row.current_stage?.includes("order and revenue missing") &&
           row.external_activation_required === true &&
           (row.operator_safety_rule?.includes("real MCP host") ||
             row.operator_safety_rule?.includes("real MCP client run") ||
-            row.operator_safety_rule?.includes("source-aware links")) &&
+            row.operator_safety_rule?.includes("source-aware links") ||
+            row.operator_safety_rule?.includes("MCP-attributed order")) &&
           row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
           row.eval_pack_json_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace" &&
           row.eval_pack_markdown_url === "https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace" &&
@@ -1257,7 +1287,8 @@ async function liveMcpCheck() {
           row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
           row.external_activation_message?.includes("One-command external runner") &&
           (row.external_activation_message?.includes("does not place an order") ||
-            row.external_activation_message?.includes("without placing an order")) &&
+            row.external_activation_message?.includes("without placing an order") ||
+            row.external_activation_message?.includes("MCP-attributed order")) &&
           row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
           row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
           row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
@@ -1265,7 +1296,9 @@ async function liveMcpCheck() {
           row.reviewer_activation_shell_url?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
           (row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
             row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") ||
-            row.primary_action_url?.includes("/r/run/cline_mcp_marketplace/cline?format=html")) &&
+            row.primary_action_url?.includes("/r/run/cline_mcp_marketplace/cline?format=html") ||
+            row.primary_action_url?.includes("/r/cart/1066")) &&
+          row.acceptance_criteria?.some((rule) => rule.includes("first_party_mcp_orders")) &&
           row.tracked_install_json_url?.includes("/r/install/cline_mcp_marketplace/cline?format=json") &&
           row.tracked_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline")
       ) &&
@@ -1288,7 +1321,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R07" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R16" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       typeof activationExperiments?.experiment_count === "number" &&

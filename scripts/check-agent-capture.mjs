@@ -122,11 +122,12 @@ function markdownReport(payload) {
 async function main() {
   const jsonUrl = `${BASE_URL}/ai/all-agent-capture.json`;
   const mdUrl = `${BASE_URL}/ai/all-agent-capture.md`;
-  const [jsonResult, mdResult, healthResult, resourcesResult] = await Promise.all([
+  const [jsonResult, mdResult, healthResult, resourcesResult, resourceTemplatesResult] = await Promise.all([
     fetchJson(jsonUrl),
     fetchText(mdUrl),
     fetchJson(`${BASE_URL}/health`),
     fetchMcp("resources/list"),
+    fetchMcp("resources/templates/list"),
   ]);
 
   const capture = jsonResult.value;
@@ -177,6 +178,8 @@ async function main() {
   const missingSurfaceIds = requiredSurfaceIds.filter((id) => !surfaceIds.has(id));
   const resources = resourcesResult.value?.result?.resources ?? [];
   const resourceUris = new Set(resources.map((row) => row.uri));
+  const resourceTemplates = resourceTemplatesResult.value?.result?.resourceTemplates ?? [];
+  const resourceTemplateUris = new Set(resourceTemplates.map((row) => row.uriTemplate));
   const coreSurface = capture?.surfaces?.find((row) => row.id === "hosted_mcp_endpoint");
   const browseSurface = capture?.surfaces?.find((row) => row.id === "browserbase_browse_candidate");
   const mdNeedles = [
@@ -276,6 +279,14 @@ async function main() {
     check("resources/list advertises tracked first-run actions", hasResourceUri(resourceUris, "/ai/mcp-first-run-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-first-run-actions.md") && hasResourceUri(resourceUris, "/r/run/generic/generic_streamable_http"), {
       detail: `resources=${resources.length}`,
     }),
+    check(
+      "resources/templates advertises source-specific activation runners",
+      resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}") &&
+        resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?format=sh") &&
+        resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?execute=1&format=json") &&
+        resourceTemplateUris.has("https://mcp.packrift.com/r/activate/{source}?format=sh"),
+      { detail: `templates=${resourceTemplates.length}` }
+    ),
     check("resources/list advertises reviewer activation", hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.md") && hasResourceUri(resourceUris, "/r/activate/generic") && hasResourceUri(resourceUris, "/r/activate/generic?format=html") && hasResourceUri(resourceUris, "/r/activate/generic?format=sh"), {
       detail: `resources=${resources.length}`,
     }),
