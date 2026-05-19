@@ -814,7 +814,7 @@ async function liveMcpCheck() {
       funnelSnapshot?.links?.cart_activation === "https://mcp.packrift.com/ai/mcp-cart-activation.json" &&
       funnelSnapshot?.links?.first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       funnelSnapshot?.links?.tracked_run_generic === "https://mcp.packrift.com/r/run/generic/generic_streamable_http" &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R05" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R06" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.links?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       sourceActivationQueue?.links?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
@@ -823,6 +823,7 @@ async function liveMcpCheck() {
       sourceActivationQueue?.links?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
       sourceActivationQueue?.source_snapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       Array.isArray(sourceActivationQueue?.critical_actions) &&
+      sourceActivationQueue?.critical_actions?.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not self-open")) &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
       Array.isArray(sourceActivationQueue?.blocking_goal_gates) &&
@@ -832,6 +833,8 @@ async function liveMcpCheck() {
         (row) =>
           row.source === "cline_mcp_marketplace" &&
           row.preferred_target === "cline" &&
+          row.external_activation_required === true &&
+          row.operator_safety_rule?.includes("real MCP host") &&
           row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
           row.agent_prompt?.includes("target=cline") &&
           row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline") &&
@@ -840,6 +843,8 @@ async function liveMcpCheck() {
       ) &&
       sourceActivationQueueHtmlResult.ok &&
       sourceActivationQueueHtmlResult.text.includes("Packrift MCP Activation Command Center") &&
+      sourceActivationQueueHtmlResult.text.includes("External activation message") &&
+      sourceActivationQueueHtmlResult.text.includes("Do not self-open") &&
       sourceActivationQueueHtmlResult.text.includes("Source-aware endpoint") &&
       sourceActivationQueueHtmlResult.text.includes("Source-specific agent prompt") &&
       sourceActivationQueueHtmlResult.text.includes("Run real MCP check") &&

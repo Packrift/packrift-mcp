@@ -3508,7 +3508,7 @@ function sourceActivationTargetEvent(row: PostInstallActivationRow): string {
 
 function sourceActivationRecommendedAction(row: PostInstallActivationRow): string {
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
-    return "Run the source-specific reviewer activation flow, copy the returned measured cart URL, and open that /r/cart URL so the source records a qualified cart landing.";
+    return "Send the returned measured /r/cart URL to the source reviewer or a real MCP-host user and count the blocker as resolved only when they open it from their side.";
   }
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
     if (sourcePreferredActivationTarget(row.source) === "cline") {
@@ -3520,11 +3520,83 @@ function sourceActivationRecommendedAction(row: PostInstallActivationRow): strin
     return "Convert browser first-run proof into a real MCP client run using the source-specific reviewer activation runner.";
   }
   if (row.create_cart_url_calls === 0 && row.mcp_tool_calls > 0) {
-    return "Complete the purchase-ready MCP sequence for SKU 1066 through create_cart_url, then open the returned measured cart URL.";
+    return "Complete the purchase-ready MCP sequence for SKU 1066 through create_cart_url, then hand the returned measured cart URL to a real reviewer or buyer.";
   }
   if (row.first_run_actions > 0) return "Run the source-specific first-run page and require the live proof to finish with create_cart_url.";
   if (row.install_intents + row.tracked_config_fetches > 0) return "Open the source-specific first-run action after install/config so the source progresses beyond setup intent.";
   return "Use the source-specific tracked install page and agent prompt to create an attributed first useful run.";
+}
+
+function sourceActivationExternalActivationRequired(row: PostInstallActivationRow): boolean {
+  return (
+    (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) ||
+    (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) ||
+    (row.first_run_executions > 0 && row.mcp_tool_calls === 0)
+  );
+}
+
+function sourceActivationOperatorSafetyRule(row: PostInstallActivationRow): string {
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
+    return "Do not self-open this cart URL as completion proof. Share it with the source reviewer, directory operator, or a real MCP-host user; the row is complete only after an external source-side cart landing appears.";
+  }
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
+    return "Do not count browser proof as source activation. The missing proof is a real MCP host calling the hosted endpoint with the source-aware config.";
+  }
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) {
+    return "Do not treat browser first-run execution as source activation. Convert it into a real MCP client run before counting the source as activated.";
+  }
+  return "Use source-aware links and only count proof created by a real external reviewer, MCP host, buyer, or directory surface.";
+}
+
+function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
+  const cartUrl = row.recent_measured_cart_urls[0] ?? "";
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
+    return [
+      "Packrift MCP produced a measured cart handoff for this source.",
+      "",
+      `Source: ${row.source}`,
+      "Endpoint: https://mcp.packrift.com/mcp",
+      cartUrl ? `Measured cart URL to review: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      `Install/config handoff: ${urls.tracked_install_url}`,
+      "",
+      "Please open the measured /r/cart URL from your review environment or MCP host so the source records a real qualified cart landing before Shopify checkout.",
+    ].join("\n");
+  }
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
+    return [
+      "Packrift MCP has source-attributed cart proof, but it still needs real MCP host tool calls.",
+      "",
+      `Source: ${row.source}`,
+      "Endpoint: https://mcp.packrift.com/mcp",
+      `Install/config handoff: ${urls.tracked_install_url}`,
+      `Machine-readable config: ${urls.tracked_install_json_url}`,
+      `First-run prompt: ${urls.tracked_first_run_url}`,
+      "",
+      "Please install the hosted Streamable HTTP endpoint in the MCP host and run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
+    ].join("\n");
+  }
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) {
+    return [
+      "Packrift MCP browser proof is visible for this source, but the activation gate needs a real MCP client run.",
+      "",
+      `Source: ${row.source}`,
+      "Endpoint: https://mcp.packrift.com/mcp",
+      `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      `Install/config handoff: ${urls.tracked_install_url}`,
+      "",
+      "Please run the sequence from an MCP host so the source records tools/list and tools/call events through the hosted endpoint.",
+    ].join("\n");
+  }
+  return [
+    "Packrift MCP is ready for source-aware activation.",
+    "",
+    `Source: ${row.source}`,
+    "Endpoint: https://mcp.packrift.com/mcp",
+    `Install/config handoff: ${urls.tracked_install_url}`,
+    `First-run action: ${urls.tracked_first_run_url}`,
+    "",
+    "Use these links in the source, directory listing, reviewer flow, or MCP host instructions so new visitors stay attributed to the source.",
+  ].join("\n");
 }
 
 function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
@@ -3571,6 +3643,9 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         current_stage: sourceActivationStage(row),
         target_event_to_watch: sourceActivationTargetEvent(row),
         recommended_action: sourceActivationRecommendedAction(row),
+        external_activation_required: sourceActivationExternalActivationRequired(row),
+        operator_safety_rule: sourceActivationOperatorSafetyRule(row),
+        external_activation_message: sourceActivationExternalMessage(row, urls),
         primary_action_url: sourceActivationPrimaryUrl(row, urls),
         preferred_target: urls.preferred_target,
         cart_landing_action_url: row.recent_measured_cart_urls[0] ?? null,
@@ -3590,7 +3665,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
           `Source remains attributed as ${row.source}.`,
           `The agent host calls tools/list against ${firstUsefulRun.endpoint}.`,
           "The workflow calls get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
-          "The returned measured https://mcp.packrift.com/r/cart/1066 URL is opened before any Shopify cart handoff.",
+          "The returned measured https://mcp.packrift.com/r/cart/1066 URL is opened by an external reviewer, MCP host user, or buyer before any Shopify cart handoff.",
           "The funnel source row moves closer to material MCP tool calls, qualified cart landings, and attributed orders.",
         ],
         current_counts: {
@@ -3619,7 +3694,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R05",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R06",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3654,6 +3729,9 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
         current_stage: row.current_stage,
         target_event_to_watch: row.target_event_to_watch,
         recommended_action: row.recommended_action,
+        external_activation_required: row.external_activation_required,
+        operator_safety_rule: row.operator_safety_rule,
+        external_activation_message: row.external_activation_message,
         run_real_mcp_check_url: row.reviewer_activation_runner_url,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
@@ -3740,7 +3818,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
       const cartLandingActionUrl = row.cart_landing_action_url || "";
       const needsHostToolCall = row.target_event_to_watch.startsWith("mcp_tool_call") && counts.mcp_tool_calls === 0;
       const primaryLabel = cartLandingActionUrl
-        ? "Open returned cart URL"
+        ? "Share returned cart URL"
         : needsHostToolCall && row.preferred_target === "cline"
           ? "Install in Cline"
           : needsHostToolCall
@@ -3759,6 +3837,13 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
       const recentCartUrls = firstRecentCartUrl
         ? `<p class="cart-url">Returned cart URL: <a href="${escapeHtml(firstRecentCartUrl)}">${escapeHtml(firstRecentCartUrl)}</a></p>`
         : "";
+      const safetyRule = row.operator_safety_rule ? `<p class="safety">${escapeHtml(row.operator_safety_rule)}</p>` : "";
+      const externalMessage = row.external_activation_message
+        ? `<details class="activation-message" open>
+          <summary>External activation message</summary>
+          <pre>${escapeHtml(row.external_activation_message)}</pre>
+        </details>`
+        : "";
       return `<article class="row ${escapeHtml(row.priority)}">
         <div class="row-head">
           <div>
@@ -3769,6 +3854,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         </div>
         <p class="stage">${escapeHtml(row.current_stage)}</p>
         <p>${escapeHtml(row.recommended_action)}</p>
+        ${safetyRule}
         <p class="endpoint">Source-aware endpoint: <code>${escapeHtml(row.source_aware_endpoint)}</code></p>
         ${recentCartUrls}
         <div class="metrics">
@@ -3785,6 +3871,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install path</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_execute_url)}">Live proof</a>
         </div>
+        ${externalMessage}
         <details>
           <summary>Acceptance criteria</summary>
           <ul>${row.acceptance_criteria.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
@@ -3825,6 +3912,8 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
     .target{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:.86rem;color:var(--green);white-space:nowrap}
     .stage{font-weight:650;color:var(--ink);margin:10px 0 4px}
     .cart-url{margin-top:8px;overflow-wrap:anywhere}
+    .safety{margin-top:8px;color:var(--red);font-weight:650}
+    .activation-message{margin-top:12px}
     .endpoint{margin-top:8px;overflow-wrap:anywhere}
     code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
