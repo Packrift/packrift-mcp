@@ -19,6 +19,7 @@ The server is designed for buyers and AI agents that need packaging supplies by 
 - Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
 - MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
 - Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
+- MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - Source repository: https://github.com/Packrift/packrift-mcp
 
 ## Category
@@ -33,6 +34,7 @@ Business Tools
 - Compare alternatives when an exact packaging spec is unavailable.
 - Generate Packrift cart handoff URLs with MCP attribution for measurement.
 - Discover purchase-ready cart candidates for priority AI-approved SKUs.
+- Provide copy-ready remote MCP install paths and smoke tests for common agent hosts.
 - Map buyer use cases into exact MCP tool paths for qualified AI-commerce demand.
 - Provide structured JSON plus agent-readable summaries for buyer workflows.
 - Expose public REST discovery surfaces for tools, resources, server cards, and health checks.
@@ -42,6 +44,7 @@ Business Tools
 - "Compare Packrift alternatives for a 12 x 9 x 5 shipping box."
 - "Create a tracked cart URL for SKU 1066."
 - "Show priority Packrift cart handoff candidates for AI procurement agents."
+- "Show the Packrift MCP install matrix for Claude, Codex, IDE agents, Glama, and browser agents."
 - "Show buyer use cases for Packrift MCP and the best tool flow for each."
 - Tool: `search_products` — Find matching Packrift packaging products from natural-language specs.
 - Tool: `get_product` — Retrieve full detail for a specific AI-approved SKU or handle.

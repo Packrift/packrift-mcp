@@ -136,6 +136,7 @@ async function main() {
   const requiredSurfaceIds = [
     "hosted_mcp_endpoint",
     "mcp_adoption_kit",
+    "mcp_install_matrix",
     "mcp_usage_snapshot",
     "buyer_mcp_use_cases",
     "browser_agent_bridge",
@@ -166,6 +167,7 @@ async function main() {
   const mdNeedles = [
     "Packrift All-Agent Capture Matrix",
     "adoption kit",
+    "install matrix",
     "usage snapshot",
     "buyer use cases",
     "browser-agent bridge",
@@ -211,6 +213,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises adoption kit", hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.json") && hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises install matrix", hasResourceUri(resourceUris, "/ai/mcp-install-matrix.json") && hasResourceUri(resourceUris, "/ai/mcp-install-matrix.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises usage snapshot", hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.md"), {

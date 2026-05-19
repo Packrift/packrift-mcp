@@ -41,6 +41,7 @@ function evidenceLinks(capture) {
     all_agent_capture_json: CAPTURE_URL,
     all_agent_capture_markdown: CAPTURE_MD_URL,
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+    mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
@@ -134,6 +135,7 @@ function agentInstallSnippets() {
     },
     claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
     codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
+    install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     docker_optional_only: "docker pull ghcr.io/packrift/packrift-mcp:latest",
   };
 }
@@ -156,6 +158,7 @@ function markdown(payload) {
     "",
     "- Refresh stale MCP directories with copy-ready proof.",
     "- Give partners or agent platforms a single evidence bundle.",
+    "- Point developers to the install matrix for copy-ready setup and smoke tests.",
     "- Use the live browser-agent bridge for Browse-style agents without creating a duplicate Packrift CLI.",
     "- Keep Browserbase Browse as a candidate browser-skill lane until a real Packrift skill is published.",
     "- Share install snippets for Claude, Codex, Cursor, Windsurf, and other MCP clients.",

@@ -17,6 +17,15 @@ Use this when you want a fast, copy-ready first test after installing Packrift M
 
 The adoption kit includes remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.
 
+## Install Matrix
+
+Use this when an agent host, directory, or developer needs copy-ready setup paths for common MCP clients plus smoke-test requests:
+
+- JSON: https://mcp.packrift.com/ai/mcp-install-matrix.json
+- Markdown: https://mcp.packrift.com/ai/mcp-install-matrix.md
+
+The install matrix keeps Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
+
 ## Browser-Agent Bridge
 
 Use this when an agent can read public URLs with a browser but cannot install MCP directly:

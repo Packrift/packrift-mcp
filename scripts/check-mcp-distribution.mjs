@@ -182,6 +182,7 @@ async function liveMcpCheck() {
     cartResult,
     agentCaptureResult,
     adoptionKitResult,
+    installMatrixResult,
     usageSnapshotResult,
     buyerUseCasesResult,
     browserAgentBridgeResult,
@@ -195,6 +196,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-install-matrix.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
@@ -208,6 +210,7 @@ async function liveMcpCheck() {
   const cart = cartResult.ok ? JSON.parse(cartResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
+  const installMatrix = installMatrixResult.ok ? JSON.parse(installMatrixResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
@@ -234,6 +237,9 @@ async function liveMcpCheck() {
       agentCapture?.surfaces?.length >= 20 &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R01" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
+      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R01" &&
+      installMatrix?.hosts?.length >= 8 &&
+      installMatrix?.smoke_tests?.length >= 5 &&
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R01" &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
@@ -247,6 +253,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-install-matrix.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-install-matrix.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
@@ -268,6 +276,9 @@ async function liveMcpCheck() {
       agent_capture_surfaces: agentCapture?.surfaces?.length ?? 0,
       adoption_kit_release: adoptionKit?.release ?? null,
       adoption_kit_steps: adoptionKit?.first_five_minutes?.length ?? 0,
+      install_matrix_release: installMatrix?.release ?? null,
+      install_matrix_hosts: installMatrix?.hosts?.length ?? 0,
+      install_matrix_smoke_tests: installMatrix?.smoke_tests?.length ?? 0,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
       buyer_use_cases_release: buyerUseCases?.release ?? null,

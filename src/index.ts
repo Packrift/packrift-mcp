@@ -7,6 +7,7 @@ import { llmsFullTxt } from "./llms-full-content.js";
 import { agentInstructionsMd } from "./agent-instructions-content.js";
 import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture.js";
 import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js";
+import { mcpInstallMatrixMarkdown, mcpInstallMatrixPayload } from "./install-matrix.js";
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
@@ -1771,6 +1772,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents =
     (bySource.all_agent_capture ?? 0) +
     (bySource.mcp_adoption_kit ?? 0) +
+    (bySource.mcp_install_matrix ?? 0) +
     (bySource.mcp_usage_snapshot ?? 0) +
     (bySource.mcp_buyer_use_cases ?? 0) +
     (bySource.browser_agent_bridge ?? 0) +
@@ -1805,6 +1807,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       no_match_events: noMatches,
       direct_agent_resource_events: directAgentResourceEvents,
       adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
+      install_matrix_resource_events: bySource.mcp_install_matrix ?? 0,
       all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,
       buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
       browser_agent_bridge_resource_events: bySource.browser_agent_bridge ?? 0,
@@ -1834,6 +1837,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       live_summary_api: `https://mcp.packrift.com/events/ai-sales/summary?date=${date}&limit=${limit}`,
       dashboard: `https://mcp.packrift.com/events/ai-sales/dashboard?date=${date}`,
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
@@ -1877,6 +1881,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- No-match events: ${payload.counts.no_match_events}`,
     `- Direct agent resource events: ${payload.counts.direct_agent_resource_events}`,
     `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
+    `- Install matrix resource events: ${payload.counts.install_matrix_resource_events}`,
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
     `- Directory refresh resource events: ${payload.counts.directory_refresh_resource_events}`,
@@ -3131,6 +3136,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/all-agent-capture.md",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
+  "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+  "https://mcp.packrift.com/ai/mcp-install-matrix.md",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
@@ -3216,6 +3223,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/all-agent-capture.md": "Crawler-readable Packrift all-agent capture matrix and operating rules.",
   "/ai/mcp-adoption-kit.json": "Machine-readable Packrift MCP adoption kit with install snippets, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.",
   "/ai/mcp-adoption-kit.md": "Crawler-readable Packrift MCP adoption kit for developers, agents, marketplaces, and AI-commerce workflows.",
+  "/ai/mcp-install-matrix.json": "Machine-readable Packrift MCP install matrix for common agent hosts, copy-ready remote MCP config, smoke tests, and measured cart handoff rules.",
+  "/ai/mcp-install-matrix.md": "Crawler-readable Packrift MCP install matrix for developers, directories, and agent hosts.",
   "/ai/mcp-usage-snapshot.json": "Machine-readable public aggregate usage snapshot for Packrift MCP discovery, tool calls, cart handoff, and proof-gate iteration.",
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
@@ -3389,6 +3398,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
+  if (pathname === "/ai/mcp-install-matrix.json") return JSON.stringify(mcpInstallMatrixPayload(installMatrixRuntime()), null, 2);
+  if (pathname === "/ai/mcp-install-matrix.md") return mcpInstallMatrixMarkdown(installMatrixRuntime());
   if (pathname === "/ai/mcp-usage-snapshot.json") return JSON.stringify(await mcpUsageSnapshotPayload(env), null, 2);
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
@@ -3467,6 +3478,7 @@ function mcpManifestPayload() {
     prompts: PROMPTS.map((prompt) => prompt.name),
     all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+    mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
@@ -3485,6 +3497,15 @@ function agentCaptureRuntime() {
 }
 
 function adoptionKitRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function installMatrixRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -3571,6 +3592,7 @@ function mcpMarketplaceDiscoveryPayload() {
       robots: "https://mcp.packrift.com/robots.txt",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
@@ -4481,6 +4503,21 @@ app.get("/ai/mcp-adoption-kit.json", async (c) => {
 app.get("/ai/mcp-adoption-kit.md", async (c) => {
   const body = mcpAdoptionKitMarkdown(adoptionKitRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-adoption-kit.md", "mcp_adoption_kit", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-install-matrix.json", async (c) => {
+  const payload = mcpInstallMatrixPayload(installMatrixRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-install-matrix.json", "mcp_install_matrix", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-install-matrix.md", async (c) => {
+  const body = mcpInstallMatrixMarkdown(installMatrixRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-install-matrix.md", "mcp_install_matrix", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

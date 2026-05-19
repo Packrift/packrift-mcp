@@ -103,6 +103,7 @@ function recrawlMessage(pack, target) {
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
     "- Description: Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
+    "- Install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json",
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     "- Cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     "",

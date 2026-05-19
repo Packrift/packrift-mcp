@@ -41,6 +41,8 @@ export const serverCard = {
     allAgentCaptureMarkdown: "https://mcp.packrift.com/ai/all-agent-capture.md",
     mcpAdoptionKitJson: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcpAdoptionKitMarkdown: "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
+    mcpInstallMatrixJson: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+    mcpInstallMatrixMarkdown: "https://mcp.packrift.com/ai/mcp-install-matrix.md",
     mcpUsageSnapshotJson: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcpUsageSnapshotMarkdown: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
     mcpBuyerUseCasesJson: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",

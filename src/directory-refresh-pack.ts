@@ -68,7 +68,7 @@ const DIRECTORY_TARGETS = [
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public server card, official registry entry, browser-agent bridge, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public server card, official registry entry, install matrix, browser-agent bridge, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
     release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R02",
     generated_at: new Date().toISOString(),
@@ -109,6 +109,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       prompts_list: `${MCP_ENDPOINT} via JSON-RPC prompts/list`,
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",

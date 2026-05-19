@@ -123,6 +123,7 @@ export function browserAgentBridgePayload(runtime: BrowserAgentBridgeRuntime) {
       bridge_markdown: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
       mcp_endpoint: MCP_ENDPOINT,
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
+      install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",

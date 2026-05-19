@@ -390,6 +390,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
+- MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
