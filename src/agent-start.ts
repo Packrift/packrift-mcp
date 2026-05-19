@@ -47,6 +47,7 @@ const TRACKED_START_RECOMMENDED_SOURCES = [
   "gpmcp",
   "theresamcpforthat",
   "mcpserverfinder",
+  "mcpserver_cc",
   "docker_mcp_catalog",
   "generic",
 ] as const;

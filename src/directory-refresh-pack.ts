@@ -229,6 +229,15 @@ const DIRECTORY_TARGETS = [
       "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
   },
   {
+    id: "mcpserver_cc",
+    name: "mcpserver.cc",
+    listing_url: "https://mcpserver.cc/",
+    refresh_url: "https://mcpserver.cc/submit",
+    priority: "medium",
+    requested_action:
+      "Monitor the submitted API listing for publication and provide the source-specific update card if review asks for hosted endpoint proof.",
+  },
+  {
     id: "cursor_directory",
     name: "Cursor Directory",
     listing_url: "https://cursor.directory/",
@@ -253,7 +262,7 @@ const DIRECTORY_TARGETS = [
     refresh_url: "https://www.mcpfinder.org/submit",
     priority: "medium",
     requested_action:
-      "Submit Packrift MCP to MCPfinder with hosted endpoint proof and tracked start URL.",
+      "MCPfinder reports the Packrift MCP repository is already submitted and under review; monitor approval and provide endpoint proof if review asks.",
   },
   {
     id: "mcpskills",
@@ -286,7 +295,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R21",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R22",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",

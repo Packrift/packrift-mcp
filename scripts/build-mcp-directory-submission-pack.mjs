@@ -142,7 +142,8 @@ const TARGETS = [
     submission_url: "https://www.mcpfinder.org/submit",
     category: "Business",
     priority: "medium",
-    action: "Submit Packrift MCP to MCPfinder with hosted endpoint proof and tracked start URL.",
+    action:
+      "MCPfinder reports the Packrift MCP repository is already submitted and under review; monitor approval and provide endpoint proof if review asks.",
   },
   {
     name: "mcpskills",
@@ -269,6 +270,15 @@ const TARGETS = [
     category: "Business",
     priority: "medium",
     action: "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+  },
+  {
+    name: "mcpserver_cc",
+    label: "mcpserver.cc",
+    listing_url: "https://mcpserver.cc/",
+    submission_url: "https://mcpserver.cc/submit",
+    category: "Business",
+    priority: "medium",
+    action: "Monitor the submitted API listing for publication and provide the source-specific update card if review asks for hosted endpoint proof.",
   },
   {
     name: "docker_mcp_catalog",
@@ -716,7 +726,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R03",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R04",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {

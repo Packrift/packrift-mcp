@@ -285,9 +285,10 @@ const ACTIONS = [
     directory_status: "pending",
     priority: "medium",
     method: "Manual submit form.",
-    evidence: "Free listing form POST returned 200 OK; Packrift is not visible in the browsable index yet.",
+    evidence:
+      "On 2026-05-19, the MCPfinder submit form reported that https://github.com/Packrift/packrift-mcp has already been submitted and is under review; Packrift is not visible in the browsable index yet.",
     stale_markers: ["Packrift not visible in MCPfinder"],
-    recrawl_subject: "Submit Packrift MCP to MCPfinder",
+    recrawl_subject: "Monitor MCPfinder Packrift MCP submission",
     next_action: "Monitor for listing approval and provide endpoint proof if MCPfinder asks for more detail.",
     listing_url: "https://www.mcpfinder.org/",
     submission_url: "https://www.mcpfinder.org/submit",
@@ -474,6 +475,22 @@ const ACTIONS = [
     next_action: "Email the source-specific update card and hosted endpoint proof to the public submit contact.",
     listing_url: "https://www.mcpserverfinder.com/?q=packrift",
     submission_url: "mailto:info@mcpserverfinder.com",
+  },
+  {
+    id: "mcpserver_cc",
+    label: "mcpserver.cc",
+    action_status: "submitted_pending",
+    directory_status: "pending",
+    priority: "medium",
+    method: "Submitted through the public submit API.",
+    evidence:
+      "mcpserver.cc /api/submit-server returned ok with uuid a33d70b5-aafd-4961-b8c2-29a70c664e76 after receiving the Packrift MCP GitHub repository.",
+    stale_markers: ["Packrift not yet visible in mcpserver.cc"],
+    recrawl_subject: "Review Packrift MCP mcpserver.cc submission",
+    next_action:
+      "Monitor mcpserver.cc for publication; use the source-specific update card or support@mcpserver.cc if review asks for hosted endpoint proof.",
+    listing_url: "https://mcpserver.cc/",
+    submission_url: "https://mcpserver.cc/submit",
   },
   {
     id: "generic",
@@ -729,7 +746,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R31",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R32",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -780,7 +797,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R03",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R04",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",

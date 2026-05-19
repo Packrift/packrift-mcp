@@ -877,6 +877,7 @@ const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "gpmcp",
   "theresamcpforthat",
   "mcpserverfinder",
+  "mcpserver_cc",
   "docker_mcp_catalog",
   "generic",
 ] as const;
@@ -3622,6 +3623,7 @@ const SOURCE_ACTIVATION_DIRECTORY_STATUS: Record<string, string> = {
   docker_mcp_catalog: "remote-server PR open; needs review and post-merge activation",
   anthropic_connectors_directory: "manual connector submission still needed",
   smithery: "publish or claim blocked on authentication",
+  mcpfinder: "submitted and under review; needs listing approval and post-review first-run activation",
   browse_sh: "catalog live and installable; monitor installs and drive MCP-first runs",
 };
 
@@ -3677,6 +3679,50 @@ function sourceActivationUrls(source: string) {
     reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${slug}?format=html`,
     directory_update_card_json_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.json`,
     directory_update_card_markdown_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.md`,
+  };
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function sourceActivationCopyReadyHostConfigs(input: {
+  source: string;
+  preferredTarget: string;
+  sourceAwareEndpoint: string;
+  agentPrompt: string;
+  curlScript: string;
+}) {
+  const genericConfig = {
+    mcpServers: {
+      packrift: {
+        type: "http",
+        url: input.sourceAwareEndpoint,
+      },
+    },
+  };
+  const clineConfig = {
+    mcpServers: {
+      packrift: {
+        type: "streamableHttp",
+        url: input.sourceAwareEndpoint,
+        disabled: false,
+        timeout: 60,
+      },
+    },
+  };
+  return {
+    source: input.source,
+    preferred_target: input.preferredTarget,
+    source_aware_endpoint: input.sourceAwareEndpoint,
+    generic_mcp_json: JSON.stringify(genericConfig, null, 2),
+    cline_mcp_json: JSON.stringify(clineConfig, null, 2),
+    claude_code_command: `claude mcp add --transport http packrift ${shellQuote(input.sourceAwareEndpoint)}`,
+    codex_command: `codex mcp add packrift --url ${shellQuote(input.sourceAwareEndpoint)}`,
+    agent_prompt: input.agentPrompt,
+    curl_script: input.curlScript,
+    success_gate:
+      "After install, run the agent prompt in the real MCP host and require create_cart_url to return a measured https://mcp.packrift.com/r/cart/1066 URL.",
   };
 }
 
@@ -3870,6 +3916,13 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         directory_update_card_markdown_url: urls.directory_update_card_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
+        copy_ready_host_configs: sourceActivationCopyReadyHostConfigs({
+          source: row.source,
+          preferredTarget: urls.preferred_target,
+          sourceAwareEndpoint: firstUsefulRun.endpoint,
+          agentPrompt: firstUsefulRun.agent_prompt,
+          curlScript: firstUsefulRun.curl_script,
+        }),
         acceptance_criteria: [
           `Source remains attributed as ${row.source}.`,
           `The agent host calls tools/list against ${firstUsefulRun.endpoint}.`,
@@ -3903,7 +3956,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R09",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R10",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3951,6 +4004,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
         directory_update_card_json_url: row.directory_update_card_json_url,
         directory_update_card_markdown_url: row.directory_update_card_markdown_url,
         source_aware_endpoint: row.source_aware_endpoint,
+        copy_ready_host_configs: row.copy_ready_host_configs,
         cart_landing_action_url: row.cart_landing_action_url,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
         primary_action_url: row.primary_action_url,
@@ -4057,6 +4111,23 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           : "";
       const firstRecentCartUrl = row.recent_measured_cart_urls[0] ?? "";
       const agentPrompt = row.agent_prompt || "";
+      const hostConfigs = row.copy_ready_host_configs;
+      const hostConfigBlocks = hostConfigs
+        ? `<details class="host-configs">
+          <summary>Copy-ready host configs</summary>
+          <p class="endpoint">Use these exact blocks in the target MCP host; they point at the existing hosted endpoint with source attribution preserved.</p>
+          <h3>Claude Code</h3>
+          <pre>${escapeHtml(hostConfigs.claude_code_command)}</pre>
+          <h3>Codex</h3>
+          <pre>${escapeHtml(hostConfigs.codex_command)}</pre>
+          <h3>Generic MCP JSON</h3>
+          <pre>${escapeHtml(hostConfigs.generic_mcp_json)}</pre>
+          <h3>Cline MCP JSON</h3>
+          <pre>${escapeHtml(hostConfigs.cline_mcp_json)}</pre>
+          <h3>Pasteable curl script</h3>
+          <pre>${escapeHtml(hostConfigs.curl_script)}</pre>
+        </details>`
+        : "";
       const recentCartUrls = firstRecentCartUrl
         ? `<p class="cart-url">Returned cart URL: <a href="${escapeHtml(firstRecentCartUrl)}">${escapeHtml(firstRecentCartUrl)}</a></p>`
         : "";
@@ -4104,6 +4175,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           <summary>Source-specific agent prompt</summary>
           <pre>${escapeHtml(agentPrompt)}</pre>
         </details>
+        ${hostConfigBlocks}
       </article>`;
     })
     .join("");
@@ -4141,6 +4213,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
     .endpoint{margin-top:8px;overflow-wrap:anywhere}
     code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
+    h3{font-size:.95rem;margin:12px 0 6px;letter-spacing:0}
     .metrics{margin:12px 0}
     .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
@@ -4207,6 +4280,7 @@ interface SourceActivationExperimentQueueRow {
   directory_update_card_json_url: string;
   directory_update_card_markdown_url: string;
   source_aware_endpoint: string;
+  copy_ready_host_configs: ReturnType<typeof sourceActivationCopyReadyHostConfigs>;
   agent_prompt: string;
   acceptance_criteria: string[];
   current_counts: {
@@ -4296,7 +4370,17 @@ function sourceActivationSuppressionRules(row: SourceActivationExperimentQueueRo
 }
 
 function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRow): string {
-  if (row.external_activation_message.trim()) return row.external_activation_message;
+  const hostConfigLines = [
+    "Copy-ready host configs:",
+    `Claude Code: ${row.copy_ready_host_configs.claude_code_command}`,
+    `Codex: ${row.copy_ready_host_configs.codex_command}`,
+    "Generic MCP JSON:",
+    row.copy_ready_host_configs.generic_mcp_json,
+    "Cline MCP JSON:",
+    row.copy_ready_host_configs.cline_mcp_json,
+    `Success gate: ${row.copy_ready_host_configs.success_gate}`,
+  ];
+  if (row.external_activation_message.trim()) return [row.external_activation_message.trim(), "", ...hostConfigLines].join("\n");
   return [
     "Packrift MCP source activation request",
     "",
@@ -4305,6 +4389,8 @@ function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRo
     `Directory update card: ${row.directory_update_card_json_url}`,
     `Install/config handoff: ${row.tracked_install_url}`,
     `Machine-readable config: ${row.tracked_install_json_url}`,
+    `Claude Code: ${row.copy_ready_host_configs.claude_code_command}`,
+    `Codex: ${row.copy_ready_host_configs.codex_command}`,
     `First-run action: ${row.tracked_first_run_url}`,
     `Activation runner: ${row.reviewer_activation_runner_url}`,
     "",
@@ -4343,6 +4429,7 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       cart_landing_action_url: row.cart_landing_action_url,
       recent_measured_cart_urls: row.recent_measured_cart_urls,
       source_aware_endpoint: row.source_aware_endpoint,
+      copy_ready_host_configs: row.copy_ready_host_configs,
       agent_prompt: row.agent_prompt,
       expected_snapshot_delta: sourceActivationExpectedSnapshotDelta(row),
       suppression_rules: sourceActivationSuppressionRules(row),
@@ -4369,7 +4456,7 @@ async function mcpActivationExperimentsPayload(env: Env, date = todayUtc(), limi
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R02",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R03",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -4457,6 +4544,7 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
     .map((row) => {
       const counts = row.current_counts;
       const rules = row.suppression_rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("");
+      const hostConfigs = row.copy_ready_host_configs;
       return `<article class="experiment ${escapeHtml(row.priority)}">
         <div class="head">
           <div>
@@ -4499,6 +4587,17 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
           <pre>${escapeHtml(row.copy_ready_activation_request)}</pre>
         </details>
         <details>
+          <summary>Copy-ready host configs</summary>
+          <h3>Claude Code</h3>
+          <pre>${escapeHtml(hostConfigs.claude_code_command)}</pre>
+          <h3>Codex</h3>
+          <pre>${escapeHtml(hostConfigs.codex_command)}</pre>
+          <h3>Generic MCP JSON</h3>
+          <pre>${escapeHtml(hostConfigs.generic_mcp_json)}</pre>
+          <h3>Cline MCP JSON</h3>
+          <pre>${escapeHtml(hostConfigs.cline_mcp_json)}</pre>
+        </details>
+        <details>
           <summary>Source-specific agent prompt</summary>
           <pre>${escapeHtml(row.agent_prompt)}</pre>
         </details>
@@ -4539,6 +4638,7 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
     code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
+    h3{font-size:.95rem;margin:12px 0 6px;letter-spacing:0}
     details{margin-top:12px}
     summary{cursor:pointer;font-weight:650}
     li{margin:5px 0;color:var(--muted)}
@@ -6309,6 +6409,7 @@ const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "gpmcp", target: "generic_streamable_http" },
   { source: "theresamcpforthat", target: "generic_streamable_http" },
   { source: "mcpserverfinder", target: "generic_streamable_http" },
+  { source: "mcpserver_cc", target: "generic_streamable_http" },
   { source: "docker_mcp_catalog", target: "generic_streamable_http" },
   { source: "generic", target: "generic_streamable_http" },
 ] as const;

@@ -90,7 +90,8 @@ const DIRECT_STATUS = {
   mcpfinder: {
     status: "submitted_pending",
     method: "Manual MCPfinder submit form",
-    evidence: "Free listing form POST returned 200 OK; Packrift is not visible in the browsable index yet.",
+    evidence:
+      "On 2026-05-19, the MCPfinder submit form reported that https://github.com/Packrift/packrift-mcp has already been submitted and is under review; Packrift is not visible in the browsable index yet.",
     next_action: "Monitor for listing approval and provide endpoint proof if MCPfinder asks for more detail.",
   },
   mcpskills: {
@@ -170,6 +171,14 @@ const DIRECT_STATUS = {
     method: "Public submit email",
     evidence: "MCP Server Finder exposes a Submit mailto link and search returned no Packrift result.",
     next_action: "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+  },
+  mcpserver_cc: {
+    status: "submitted_pending",
+    method: "Submitted through mcpserver.cc public submit API",
+    evidence:
+      "mcpserver.cc /api/submit-server returned ok with uuid a33d70b5-aafd-4961-b8c2-29a70c664e76 after receiving the Packrift MCP GitHub repository.",
+    next_action:
+      "Monitor mcpserver.cc for publication; use the source-specific update card or support@mcpserver.cc if review asks for hosted endpoint proof.",
   },
   docker_mcp_catalog: {
     status: "pending_merge",
