@@ -299,6 +299,258 @@ type InferredMcpRuntimeSource = {
   sourceInference: string;
 };
 
+type McpRuntimeSourceInferenceRule = {
+  source_slug: string;
+  install_target: string;
+  source_inference: string;
+  user_agent_substrings: readonly string[];
+  user_agent_regex?: readonly string[];
+};
+
+const MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES: readonly McpRuntimeSourceInferenceRule[] = [
+  {
+    source_slug: "cline_mcp_marketplace",
+    install_target: "cline",
+    source_inference: "user_agent_cline",
+    user_agent_substrings: ["cline"],
+  },
+  {
+    source_slug: "cursor_directory",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_cursor",
+    user_agent_substrings: ["cursor"],
+  },
+  {
+    source_slug: "windsurf_direct",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_windsurf",
+    user_agent_substrings: ["windsurf"],
+  },
+  {
+    source_slug: "roo_direct",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_roo",
+    user_agent_substrings: ["roo"],
+  },
+  {
+    source_slug: "continue_direct",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_continue",
+    user_agent_substrings: ["continue"],
+  },
+  {
+    source_slug: "vscode_direct",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_vscode",
+    user_agent_substrings: ["vscode", "vs code"],
+  },
+  {
+    source_slug: "zed_direct",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_zed",
+    user_agent_substrings: ["zed"],
+  },
+  {
+    source_slug: "codex_remote_mcp",
+    install_target: "codex",
+    source_inference: "user_agent_codex",
+    user_agent_substrings: ["codex"],
+  },
+  {
+    source_slug: "claude_remote_mcp",
+    install_target: "claude_code",
+    source_inference: "user_agent_claude",
+    user_agent_substrings: ["claude"],
+  },
+  {
+    source_slug: "anthropic_remote_mcp",
+    install_target: "claude_code",
+    source_inference: "user_agent_anthropic",
+    user_agent_substrings: ["anthropic"],
+  },
+  {
+    source_slug: "openai_chatgpt",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_openai_chatgpt",
+    user_agent_substrings: ["chatgpt", "openai", "oai-"],
+  },
+  {
+    source_slug: "github_copilot",
+    install_target: "cursor_windsurf_vscode",
+    source_inference: "user_agent_copilot",
+    user_agent_substrings: ["github-copilot", "copilot"],
+  },
+  {
+    source_slug: "gemini_remote_mcp",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_gemini",
+    user_agent_substrings: ["gemini", "google-ai"],
+  },
+  {
+    source_slug: "glama_connector",
+    install_target: "glama_connector",
+    source_inference: "user_agent_glama",
+    user_agent_substrings: ["glama"],
+  },
+  {
+    source_slug: "smithery",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_smithery",
+    user_agent_substrings: ["smithery"],
+  },
+  {
+    source_slug: "browser_agent_bridge",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_browser_agent",
+    user_agent_substrings: ["browser-use", "playwright", "computer-use"],
+  },
+  {
+    source_slug: "browse_sh",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_browserbase_browse",
+    user_agent_substrings: ["browserbase", "browse.sh", "browse"],
+  },
+  {
+    source_slug: "vercel_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_vercel",
+    user_agent_substrings: ["vercel", "v0"],
+  },
+  {
+    source_slug: "langchain_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_langchain",
+    user_agent_substrings: ["langchain"],
+  },
+  {
+    source_slug: "llamaindex_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_llamaindex",
+    user_agent_substrings: ["llamaindex", "llama-index"],
+  },
+  {
+    source_slug: "crewai_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_crewai",
+    user_agent_substrings: ["crewai", "crew ai"],
+  },
+  {
+    source_slug: "autogen_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_autogen",
+    user_agent_substrings: ["autogen"],
+  },
+  {
+    source_slug: "semantic_kernel_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_semantic_kernel",
+    user_agent_substrings: ["semantic-kernel", "semantic kernel"],
+  },
+  {
+    source_slug: "pydantic_ai_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_pydantic_ai",
+    user_agent_substrings: ["pydantic-ai", "pydantic ai"],
+  },
+  {
+    source_slug: "mastra_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_mastra",
+    user_agent_substrings: ["mastra"],
+  },
+  {
+    source_slug: "dify_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_dify",
+    user_agent_substrings: ["dify"],
+  },
+  {
+    source_slug: "flowise_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_flowise",
+    user_agent_substrings: ["flowise"],
+  },
+  {
+    source_slug: "langflow_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_langflow",
+    user_agent_substrings: ["langflow"],
+  },
+  {
+    source_slug: "open_webui_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_open_webui",
+    user_agent_substrings: ["open-webui", "open webui"],
+  },
+  {
+    source_slug: "n8n_automation",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_n8n",
+    user_agent_substrings: ["n8n"],
+  },
+  {
+    source_slug: "zapier_automation",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_zapier",
+    user_agent_substrings: ["zapier"],
+  },
+  {
+    source_slug: "make_automation",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_make",
+    user_agent_substrings: ["make.com", "integromat"],
+  },
+  {
+    source_slug: "pipedream_automation",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_pipedream",
+    user_agent_substrings: ["pipedream"],
+  },
+  {
+    source_slug: "replit_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_replit",
+    user_agent_substrings: ["replit"],
+  },
+  {
+    source_slug: "devin_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_devin",
+    user_agent_substrings: ["devin"],
+  },
+  {
+    source_slug: "docker_mcp_catalog",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_docker",
+    user_agent_substrings: ["docker"],
+  },
+  {
+    source_slug: "mcp_so",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_mcp_so",
+    user_agent_substrings: ["chatmcp", "mcp.so"],
+  },
+  {
+    source_slug: "mcp_marketplace_io",
+    install_target: "mcp_marketplace",
+    source_inference: "user_agent_mcp_marketplace",
+    user_agent_substrings: ["mcp-marketplace", "mcp_marketplace"],
+  },
+  {
+    source_slug: "mcp_inspector",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_mcp_inspector",
+    user_agent_substrings: ["mcp-inspector", "modelcontextprotocol-inspector"],
+  },
+  {
+    source_slug: "unattributed_mcp_client",
+    install_target: "generic_streamable_http",
+    source_inference: "user_agent_generic_mcp_client",
+    user_agent_substrings: ["modelcontextprotocol", "mcp-client"],
+    user_agent_regex: ["\\bmcp\\b"],
+  },
+] as const;
+
 function normalizeMcpRuntimeSlug(value: unknown): string {
   const slug = safeEventText(value, 80)
     .toLowerCase()
@@ -330,21 +582,12 @@ function inferredRuntimeSource(sourceSlug: string, installTarget: string | undef
 function inferMcpRuntimeSourceFromUserAgent(userAgent: string): InferredMcpRuntimeSource | null {
   const ua = userAgent.toLowerCase();
   if (!ua) return null;
-  if (ua.includes("cline")) return inferredRuntimeSource("cline_mcp_marketplace", "cline", "user_agent_cline");
-  if (ua.includes("cursor")) return inferredRuntimeSource("cursor_directory", "cursor_windsurf_vscode", "user_agent_cursor");
-  if (ua.includes("windsurf")) return inferredRuntimeSource("windsurf_direct", "cursor_windsurf_vscode", "user_agent_windsurf");
-  if (ua.includes("roo")) return inferredRuntimeSource("roo_direct", "cursor_windsurf_vscode", "user_agent_roo");
-  if (ua.includes("vscode") || ua.includes("vs code")) return inferredRuntimeSource("vscode_direct", "cursor_windsurf_vscode", "user_agent_vscode");
-  if (ua.includes("codex")) return inferredRuntimeSource("codex_remote_mcp", "codex", "user_agent_codex");
-  if (ua.includes("claude")) return inferredRuntimeSource("claude_remote_mcp", "claude_code", "user_agent_claude");
-  if (ua.includes("anthropic")) return inferredRuntimeSource("anthropic_remote_mcp", "claude_code", "user_agent_anthropic");
-  if (ua.includes("glama")) return inferredRuntimeSource("glama_connector", "glama_connector", "user_agent_glama");
-  if (ua.includes("smithery")) return inferredRuntimeSource("smithery", "generic_streamable_http", "user_agent_smithery");
-  if (ua.includes("browserbase") || ua.includes("browse")) return inferredRuntimeSource("browse_sh", "generic_streamable_http", "user_agent_browserbase_browse");
-  if (ua.includes("chatmcp") || ua.includes("mcp.so")) return inferredRuntimeSource("mcp_so", "generic_streamable_http", "user_agent_mcp_so");
-  if (ua.includes("mcp-marketplace") || ua.includes("mcp_marketplace")) return inferredRuntimeSource("mcp_marketplace_io", "mcp_marketplace", "user_agent_mcp_marketplace");
-  if (ua.includes("modelcontextprotocol") || ua.includes("mcp-client") || /\bmcp\b/.test(ua)) {
-    return inferredRuntimeSource("unattributed_mcp_client", "generic_streamable_http", "user_agent_generic_mcp_client");
+  for (const rule of MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES) {
+    const substringMatch = rule.user_agent_substrings.some((needle) => ua.includes(needle));
+    const regexMatch = (rule.user_agent_regex ?? []).some((pattern) => new RegExp(pattern, "i").test(userAgent));
+    if (substringMatch || regexMatch) {
+      return inferredRuntimeSource(rule.source_slug, rule.install_target, rule.source_inference);
+    }
   }
   return null;
 }
@@ -882,7 +1125,7 @@ const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TE
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
 const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEMETRY-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
-const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R01";
+const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02";
 const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const MCP_ORDER_ATTRIBUTION_RELEASE = "PACKRIFT-MCP-ORDER-ATTRIBUTION-R01";
@@ -2935,6 +3178,13 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
       prompts_count: PROMPTS.length,
       default_public_event_limit: PUBLIC_MCP_DEFAULT_EVENT_LIMIT,
       full_event_limit_hint: "Use ?limit=5000 for a heavier operator snapshot when latency is acceptable.",
+    },
+    runtime_source_inference: {
+      release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
+      rule_count: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.length,
+      rule_families: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES,
+      rule:
+        "Direct /mcp calls keep explicit query or tool-argument source attribution first. When that is missing, Packrift infers a coarse source family from recognizable MCP client and agent-builder user agents.",
     },
     counts: {
       total_events: summary.total_events,
@@ -5010,6 +5260,13 @@ async function mcpFunnelSnapshotPayload(
       default_public_order_lookback_days: PUBLIC_MCP_DEFAULT_ORDER_DAYS,
       default_public_order_scan_limit: PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
       full_event_limit_hint: "Use ?limit=5000&order_days=90&order_limit=250 for a heavier operator snapshot when latency is acceptable.",
+    },
+    runtime_source_inference: {
+      release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
+      rule_count: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.length,
+      rule_families: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES,
+      rule:
+        "Direct /mcp calls keep explicit query or tool-argument source attribution first. When that is missing, Packrift infers a coarse source family from recognizable MCP client and agent-builder user agents.",
     },
     counts: {
       total_first_party_events: events.length,
@@ -7805,8 +8062,10 @@ function mcpMarketplaceDiscoveryPayload() {
     signals: {
       category: "Business Tools",
       runtime_source_inference_release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
+      runtime_source_inference_rule_count: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.length,
+      runtime_source_inference_rule_families: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES,
       runtime_source_inference:
-        "MCP calls with packrift_mcp_source, mcp_source, or utm_source keep explicit source attribution. Direct untracked MCP clients are source-attributed from recognizable user-agent families such as Cline, Cursor, Windsurf, Codex, Claude, Glama, Smithery, Browse, MCP.so, and generic MCP clients.",
+        "MCP calls with packrift_mcp_source, mcp_source, or utm_source keep explicit source attribution. Direct untracked MCP clients are source-attributed from recognizable user-agent families such as Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, and generic MCP clients.",
       tags: [
         "mcp",
         "ecommerce",

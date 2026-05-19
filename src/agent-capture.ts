@@ -597,7 +597,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R17",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R18",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -621,6 +621,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       tracked_reviewer_activation_generic: "https://mcp.packrift.com/r/activate/generic",
       tracked_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
+      tracked_reviewer_activation_shell_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=sh",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
@@ -652,8 +653,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Use /r/config/{source} for tracked config fetches when a directory or host accepts a direct MCP JSON config URL.",
       "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
       "Use /r/run/{source}/{target} after install to measure first-run intent and push users into create_cart_url.",
-      "When a direct MCP client skips tracked config, infer source attribution from recognizable user-agent families such as Cline, Cursor, Windsurf, Codex, Claude, Glama, Smithery, Browse, MCP.so, or generic MCP clients.",
+      "When a direct MCP client skips tracked config, infer source attribution from recognizable user-agent families such as Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, or generic MCP clients.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
+      "Use /r/activate/{source}?format=sh when an external reviewer or agent host prefers a shell runner that performs real JSON-RPC tools/list and tools/call requests against the hosted MCP endpoint.",
       "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
     ],
     counts: {
@@ -691,7 +693,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser runners, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",

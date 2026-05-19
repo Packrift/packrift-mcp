@@ -617,7 +617,12 @@ async function liveMcpCheck() {
       marketplaceManifest?.signals?.tool_count >= 15 &&
       marketplaceManifest?.signals?.tool_names?.includes("prepare_purchase_handoff") &&
       marketplaceManifest?.signals?.required_current_tools?.length >= 15 &&
-      marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R01" &&
+      marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 35 &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "n8n_automation") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "mcp_inspector") &&
       marketplaceManifest?.discovery?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
@@ -710,13 +715,14 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R17" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R18" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_install_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-install-actions.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_first_run_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" && surface.install_or_call?.includes("/r/run/{source}/{target}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_reviewer_activation" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-reviewer-activation.json" && surface.install_or_call?.includes("/r/activate/{source}?format=html")) &&
       agentCapture?.hub_urls?.tracked_reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
+      agentCapture?.hub_urls?.tracked_reviewer_activation_shell_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
       agentCapture?.hub_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       agentCapture?.hub_urls?.source_activation_queue_html === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html" &&
       agentCapture?.hub_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
@@ -855,6 +861,11 @@ async function liveMcpCheck() {
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R25" &&
       usageSnapshot?.runtime?.default_public_event_limit === 500 &&
       usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=5000") &&
+      usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
+      usageSnapshot?.runtime_source_inference?.rule_count >= 35 &&
+      usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
+      usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
+      usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "n8n_automation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -946,6 +957,9 @@ async function liveMcpCheck() {
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
       funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
+      funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
+      funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
+      funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
       funnelSnapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       typeof ga4FunnelProof?.visitor_goal?.qualified_external_mcp_session_starts === "number" &&

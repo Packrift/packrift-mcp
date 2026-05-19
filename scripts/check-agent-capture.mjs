@@ -186,6 +186,7 @@ async function main() {
     "tracked install actions",
     "first-run actions",
     "reviewer activation",
+    "shell runners",
     "client config",
     "usage snapshot",
     "funnel snapshot",
@@ -210,6 +211,9 @@ async function main() {
     "ChatGPT/OpenAI commerce",
     "Claude",
     "Cursor",
+    "LangChain",
+    "n8n",
+    "MCP Inspector",
     "Glama",
     "Machine-readable version",
   ];
@@ -217,7 +221,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R17", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R18", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -230,6 +234,14 @@ async function main() {
     check("operating rule blocks duplicate CLI", (capture?.operating_rules ?? []).some((rule) => /separate Packrift CLI/.test(rule)), {
       detail: "duplicate CLI guard",
     }),
+    check("operating rule advertises shell activation", (capture?.operating_rules ?? []).some((rule) => /format=sh/.test(rule) && /tools\/call/.test(rule)), {
+      detail: "shell activation guard",
+    }),
+    check(
+      "operating rule advertises expanded runtime inference",
+      (capture?.operating_rules ?? []).some((rule) => /OpenAI\/ChatGPT/.test(rule) && /LangChain/.test(rule) && /n8n/.test(rule) && /MCP Inspector/.test(rule)),
+      { detail: "runtime inference guard" }
+    ),
     check("hosted MCP marked live", coreSurface?.status === "live" && coreSurface?.canonical_url === "https://mcp.packrift.com/mcp", {
       detail: coreSurface?.status,
     }),
@@ -262,6 +274,9 @@ async function main() {
     }),
     check("resources/list advertises reviewer activation", hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.md") && hasResourceUri(resourceUris, "/r/activate/generic") && hasResourceUri(resourceUris, "/r/activate/generic?format=html") && hasResourceUri(resourceUris, "/r/activate/generic?format=sh"), {
       detail: `resources=${resources.length}`,
+    }),
+    check("hub advertises reviewer shell activation", capture?.hub_urls?.tracked_reviewer_activation_shell_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=sh", {
+      detail: capture?.hub_urls?.tracked_reviewer_activation_shell_runner_generic,
     }),
     check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/r/config/generic") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {
       detail: `resources=${resources.length}`,
