@@ -19,7 +19,8 @@ export class ShopifyError extends Error {
 export async function shopifyQuery<T = unknown>(
   env: Env,
   graphql: string,
-  variables: Record<string, unknown> = {}
+  variables: Record<string, unknown> = {},
+  options: { signal?: AbortSignal } = {}
 ): Promise<T> {
   const url = `https://${env.SHOPIFY_STORE_DOMAIN}/admin/api/${env.SHOPIFY_API_VERSION}/graphql.json`;
   const res = await fetch(url, {
@@ -30,6 +31,7 @@ export async function shopifyQuery<T = unknown>(
       "Accept": "application/json",
     },
     body: JSON.stringify({ query: graphql, variables }),
+    signal: options.signal,
   });
 
   if (!res.ok) {

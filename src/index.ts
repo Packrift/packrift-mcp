@@ -739,6 +739,8 @@ const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
 const AI_SALES_EVENT_PREFIX = "events/ai-sales";
 const AI_SALES_EVENT_TTL_SECONDS = 60 * 60 * 24 * 90;
+const AI_SALES_EVENT_READ_CONCURRENCY = 50;
+const PUBLIC_MCP_ORDER_SUMMARY_TIMEOUT_MS = 3500;
 const AI_SALES_ALLOWED_EVENTS = new Set([
   "add_to_cart",
   "product_click",
@@ -2662,28 +2664,43 @@ function publicOrderSourceBuckets(orders: Array<Record<string, unknown>> | undef
     .map(([key, count]) => ({ key, count }));
 }
 
+function publicMcpOrderUnavailableSummary(error: string, days: number, limit: number) {
+  return {
+    ok: false,
+    release: MCP_ORDER_ATTRIBUTION_RELEASE,
+    error,
+    lookback_days: days,
+    scan_limit: limit,
+    scanned_order_count: null,
+    attributed_order_count: 0,
+    attributed_revenue: 0,
+    currency: "USD",
+    proof_gate: {
+      first_party_mcp_orders_seen: false,
+      first_party_mcp_revenue_seen: false,
+    },
+    top_attribution_sources: [],
+  };
+}
+
 async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
   if (!env.SHOPIFY_PACKRIFT_TOKEN) {
-    return {
-      ok: false,
-      release: MCP_ORDER_ATTRIBUTION_RELEASE,
-      error: "shopify_token_not_configured",
-      lookback_days: days,
-      scan_limit: limit,
-      scanned_order_count: null,
-      attributed_order_count: null,
-      attributed_revenue: null,
-      currency: "USD",
-      proof_gate: {
-        first_party_mcp_orders_seen: false,
-        first_party_mcp_revenue_seen: false,
-      },
-      top_attribution_sources: [],
-    };
+    return publicMcpOrderUnavailableSummary("shopify_token_not_configured", days, limit);
   }
 
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
-    const payload = await shopifyMcpOrderAttributionPayload(env, days, limit);
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error("shopify_order_attribution_timeout"));
+      }, PUBLIC_MCP_ORDER_SUMMARY_TIMEOUT_MS);
+    });
+    const payload = await Promise.race([
+      shopifyMcpOrderAttributionPayload(env, days, limit, controller.signal),
+      timeout,
+    ]);
     const orders = Array.isArray(payload.orders) ? payload.orders : [];
     return {
       ok: payload.ok,
@@ -2700,22 +2717,9 @@ async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return {
-      ok: false,
-      release: MCP_ORDER_ATTRIBUTION_RELEASE,
-      error: safeEventText(message, 500),
-      lookback_days: days,
-      scan_limit: limit,
-      scanned_order_count: null,
-      attributed_order_count: null,
-      attributed_revenue: null,
-      currency: "USD",
-      proof_gate: {
-        first_party_mcp_orders_seen: false,
-        first_party_mcp_revenue_seen: false,
-      },
-      top_attribution_sources: [],
-    };
+    return publicMcpOrderUnavailableSummary(safeEventText(message, 500), days, limit);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 
@@ -3095,7 +3099,7 @@ function summarizedLineItems(order: ShopifyMcpOrderNode) {
     }));
 }
 
-async function shopifyMcpOrderAttributionPayload(env: Env, days: number, limit: number) {
+async function shopifyMcpOrderAttributionPayload(env: Env, days: number, limit: number, signal?: AbortSignal) {
   const boundedDays = Math.max(1, Math.min(365, Math.floor(days)));
   const boundedLimit = Math.max(1, Math.min(500, Math.floor(limit)));
   const query = `created_at:>=${isoDateDaysAgo(boundedDays)}`;
@@ -3105,11 +3109,16 @@ async function shopifyMcpOrderAttributionPayload(env: Env, days: number, limit: 
 
   while (scannedOrderCount < boundedLimit) {
     const first = Math.min(100, boundedLimit - scannedOrderCount);
-    const data: ShopifyMcpOrdersResponse = await shopifyQuery<ShopifyMcpOrdersResponse>(env, SHOPIFY_MCP_ORDERS_QUERY, {
-      first,
-      after,
-      query,
-    });
+    const data: ShopifyMcpOrdersResponse = await shopifyQuery<ShopifyMcpOrdersResponse>(
+      env,
+      SHOPIFY_MCP_ORDERS_QUERY,
+      {
+        first,
+        after,
+        query,
+      },
+      { signal }
+    );
     const edges = data.orders.edges ?? [];
     if (edges.length === 0) break;
 
@@ -3167,10 +3176,14 @@ async function readAiSalesEvents(env: Env, date: string, limit: number): Promise
   let cursor: string | undefined;
   while (events.length < limit) {
     const listed = await env.CATALOG_CACHE.list({ prefix, cursor, limit: Math.min(1000, limit - events.length) });
-    for (const key of listed.keys) {
-      const body = await env.CATALOG_CACHE.get(key.name, "json");
-      if (body && typeof body === "object") events.push(body as Record<string, unknown>);
-      if (events.length >= limit) break;
+    const keys = listed.keys.slice(0, limit - events.length);
+    for (let index = 0; index < keys.length && events.length < limit; index += AI_SALES_EVENT_READ_CONCURRENCY) {
+      const chunk = keys.slice(index, index + AI_SALES_EVENT_READ_CONCURRENCY);
+      const bodies = await Promise.all(chunk.map((key) => env.CATALOG_CACHE.get(key.name, "json").catch(() => null)));
+      for (const body of bodies) {
+        if (body && typeof body === "object") events.push(body as Record<string, unknown>);
+        if (events.length >= limit) break;
+      }
     }
     if (listed.list_complete || !listed.cursor || events.length >= limit) break;
     cursor = listed.cursor;
