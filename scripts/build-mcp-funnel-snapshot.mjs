@@ -16,6 +16,38 @@ const DEFAULT_PROPERTY_ID = "531219331";
 const DEFAULT_REPORTS = "ai_mcp_events,mcp_cart_url_landings";
 const DEFAULT_GA4_START_DATE = "90daysAgo";
 const DEFAULT_GA4_END_DATE = "today";
+const ROOT_SHOPIFY_CART_ACTIVATION_CHECKS = [
+  {
+    name: "root_llms_txt",
+    url: "https://packrift.com/llms.txt",
+    markers: ["mcp-cart-activation.json", "create_cart_url", "/r/cart/", "mcp-cart-handoff-candidates.json"],
+  },
+  {
+    name: "root_llms_full_txt",
+    url: "https://packrift.com/llms-full.txt",
+    markers: ["mcp-cart-activation.json", "create_cart_url", "/r/cart/", "mcp-cart-handoff-candidates.json"],
+  },
+  {
+    name: "root_agents_md",
+    url: "https://packrift.com/agents.md",
+    markers: ["mcp-cart-activation.json", "create_cart_url", "/r/cart/", "mcp-cart-handoff-candidates.json"],
+  },
+  {
+    name: "shopify_agent_instructions",
+    url: "https://packrift.com/pages/packrift-ai-agent-instructions?view=default",
+    markers: ["mcp-cart-activation.json", "create_cart_url", "https://mcp.packrift.com/r/cart/", "MCP cart activation"],
+  },
+  {
+    name: "shopify_exact_spec_data",
+    url: "https://packrift.com/pages/packrift-ai-exact-spec-data?view=default",
+    markers: ["mcp-cart-activation.json", "create_cart_url", "https://mcp.packrift.com/r/cart/1066", "Measured cart"],
+  },
+  {
+    name: "mcp_cart_landing_shim",
+    url: "https://mcp.packrift.com/r/cart/1066?utm_source=chatgpt-mcp&utm_medium=mcp_tool&utm_campaign=create_cart_url&utm_content=1066&utm_term=1066&ref=mcp&qty=1",
+    markers: ["Preparing Packrift cart", "mcp_cart_landing", "https://packrift.com/cart/"],
+  },
+];
 
 const args = parseArgs(process.argv.slice(2));
 loadEnvFile(GA4_ENV);
@@ -41,6 +73,7 @@ const snapshot = {
   ga4: null,
   distribution: null,
   live_discovery: null,
+  root_shopify_cart_activation_live: null,
   static_availability: null,
   indexnow: null,
   artifacts: {
@@ -77,6 +110,12 @@ try {
   if (!args["skip-live-discovery"]) snapshot.live_discovery = await buildLiveDiscoverySummary();
 } catch (error) {
   snapshot.live_discovery = { ok: false, error: error.message || String(error) };
+}
+
+try {
+  if (!args["skip-root-shopify-cart-activation"]) snapshot.root_shopify_cart_activation_live = await buildRootShopifyCartActivationSummary();
+} catch (error) {
+  snapshot.root_shopify_cart_activation_live = { ok: false, error: error.message || String(error) };
 }
 
 try {
@@ -383,6 +422,28 @@ async function buildLiveDiscoverySummary() {
   };
 }
 
+async function buildRootShopifyCartActivationSummary() {
+  const checks = await Promise.all(
+    ROOT_SHOPIFY_CART_ACTIVATION_CHECKS.map(async (check) => {
+      const response = await fetchTextWithMeta(check.url, {
+        "User-Agent": check.name === "mcp_cart_landing_shim" ? "Packrift-MCP-Funnel-Snapshot/1.0" : "ChatGPT-User/1.0",
+        "Accept": "text/plain,text/markdown,text/html,application/json,*/*",
+        "Cache-Control": "no-cache",
+      });
+      return summarizeRootCartActivationCheck(check, response);
+    })
+  );
+  return {
+    ok: checks.every((check) => check.ok),
+    release: "PACKRIFT-ROOT-SHOPIFY-CART-ACTIVATION-GATE-R01",
+    purpose:
+      "Hard gate for root-domain agent discovery and cart continuity. Packrift.com surfaces must expose MCP cart activation, create_cart_url, measured /r/cart handoff, and the cart landing shim.",
+    passed_checks: checks.filter((check) => check.ok).length,
+    total_checks: checks.length,
+    checks,
+  };
+}
+
 function buildIndexNowSummary() {
   const manifestPath = findLatestIndexNowManifest();
   if (!manifestPath) {
@@ -418,6 +479,23 @@ function buildIndexNowSummary() {
   };
 }
 
+function summarizeRootCartActivationCheck(check, response) {
+  const body = response.body || "";
+  const missing = check.markers.filter((marker) => !body.includes(marker));
+  const finalUrl = response.final_url || response.url;
+  return {
+    name: check.name,
+    url: check.url,
+    final_url: finalUrl,
+    ok: Boolean(response.ok && missing.length === 0),
+    http_status: response.http_status,
+    content_type: response.content_type,
+    bytes: response.bytes,
+    cache: response.cache,
+    missing_markers: missing,
+  };
+}
+
 async function fetchJsonWithMeta(url, headers = {}) {
   const text = await fetchTextWithMeta(url, headers);
   if (!text.ok) return { ...text, body: null };
@@ -437,6 +515,7 @@ async function fetchTextWithMeta(url, headers = {}) {
   const body = await response.text();
   return {
     url,
+    final_url: response.url,
     ok: response.ok,
     http_status: response.status,
     latency_ms: Date.now() - startedAt,
@@ -764,6 +843,7 @@ function applyProofGate(value) {
     stamped_mcp_cart_landings: qualifiedExternalCartLandings > 0,
     measurable_mcp_sales: qualifiedExternalCartRevenue > 0 || firstPartyMcpOrderRevenue > 0,
     mcp_tool_usage_is_material: Number(firstParty.total_tool_calls || 0) >= 50,
+    root_shopify_cart_activation_live: Boolean(value.root_shopify_cart_activation_live?.ok),
     distribution_core_live: Number(distribution.counts?.pass || 0) >= 2 && Number(distribution.counts?.fail || 0) === 0,
     llms_full_static_availability: Boolean(value.static_availability?.ok)
       && Number(value.static_availability?.status_5xx_rate || 0) < 0.01,
@@ -787,6 +867,7 @@ function markdownReport(value) {
   const cart = ga4.mcp_cart_url_landings || {};
   const dist = value.distribution || {};
   const live = value.live_discovery || {};
+  const rootCart = value.root_shopify_cart_activation_live || {};
   const availability = value.static_availability || {};
   const indexnow = value.indexnow || {};
   const proofMetrics = value.proof_metrics || {};
@@ -807,6 +888,7 @@ function markdownReport(value) {
     `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${proofMetrics.qualified_external_cart_landings ?? 0} qualified external cart landings (${proofMetrics.raw_stamped_mcp_cart_landings ?? 0} raw stamped) |`,
     `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)} qualified GA4 cart revenue; ${proofMetrics.first_party_mcp_orders ?? 0} first-party attributed orders / $${numberValue(proofMetrics.first_party_mcp_order_revenue).toFixed(2)} |`,
     `| Material MCP tool usage | ${yesNo(value.proof_gate.mcp_tool_usage_is_material)} | ${fp.total_tool_calls ?? 0} first-party MCP tool calls for ${fp.date ?? "selected date"} |`,
+    `| Root Shopify cart activation live | ${yesNo(value.proof_gate.root_shopify_cart_activation_live)} | ${rootCart.passed_checks ?? 0}/${rootCart.total_checks ?? 0} root-domain and cart-shim checks passed |`,
     `| Distribution core live | ${yesNo(value.proof_gate.distribution_core_live)} | ${dist.counts ? `${dist.counts.pass} pass, ${dist.counts.pending ?? 0} pending, ${dist.counts.stale} stale, ${dist.counts.blocked} blocked, ${dist.counts.fail} fail` : "not checked"} |`,
     `| llms-full static availability | ${yesNo(value.proof_gate.llms_full_static_availability)} | ${availability.total_fetches ?? 0} fetches, ${percentValue(availability.failed_fetch_rate)} failure rate, ${percentValue(availability.status_5xx_rate)} 5xx rate |`,
     "",
@@ -867,6 +949,12 @@ function markdownReport(value) {
     `- Cart handoff surfaces: create_cart_url ${yesNo(liveManifest.has_create_cart_url)}, get_cart_handoff_candidates ${yesNo(liveManifest.has_get_cart_handoff_candidates)}, prepare_cart_handoff ${yesNo(liveManifest.has_prepare_cart_handoff_prompt)}`,
     `- Server cards live: ${Array.isArray(live.server_cards) ? `${live.server_cards.filter((card) => card.ok).length}/${live.server_cards.length}` : "not checked"}`,
     `- llms-full: ${liveLlms.priority_sku_count ?? 0} priority SKUs, top SKU ${liveLlms.top_priority_skus?.[0]?.sku ?? "not available"}, cache ${liveLlms.cache ?? "unknown"}`,
+    "",
+    "## Root Shopify Cart Activation",
+    "",
+    `- Status: ${rootCart.ok == null ? "not checked" : yesNo(rootCart.ok)}`,
+    `- Checks: ${rootCart.passed_checks ?? 0}/${rootCart.total_checks ?? 0}`,
+    `- Failing checks: ${Array.isArray(rootCart.checks) ? rootCart.checks.filter((check) => !check.ok).map((check) => `${check.name} (${(check.missing_markers || []).join("|") || check.http_status || "failed"})`).join(", ") || "none" : "not checked"}`,
     "",
     "## Static Availability",
     "",
@@ -1051,6 +1139,7 @@ function skippedChecks() {
     args["skip-ga4"] ? "ga4" : "",
     args["skip-distribution"] ? "distribution" : "",
     args["skip-live-discovery"] ? "live_discovery" : "",
+    args["skip-root-shopify-cart-activation"] ? "root_shopify_cart_activation" : "",
     args["skip-static-availability"] ? "static_availability" : "",
     args["skip-indexnow"] ? "indexnow" : "",
   ].filter(Boolean);

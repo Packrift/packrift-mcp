@@ -248,7 +248,7 @@ async function liveMcpCheck() {
       installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R01" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.smoke_tests?.length >= 5 &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R02" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R03" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
