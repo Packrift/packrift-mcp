@@ -1126,7 +1126,9 @@ async function liveMcpCheck() {
           row.source === "cline_mcp_marketplace" &&
           row.preferred_target === "cline" &&
           row.external_activation_required === true &&
-          (row.operator_safety_rule?.includes("real MCP host") || row.operator_safety_rule?.includes("real MCP client run")) &&
+          (row.operator_safety_rule?.includes("real MCP host") ||
+            row.operator_safety_rule?.includes("real MCP client run") ||
+            row.operator_safety_rule?.includes("source-aware links")) &&
           row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
           row.eval_pack_json_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace" &&
           row.eval_pack_markdown_url === "https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace" &&
@@ -1137,14 +1139,16 @@ async function liveMcpCheck() {
           row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
           row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
           row.external_activation_message?.includes("One-command external runner") &&
-          row.external_activation_message?.includes("does not place an order") &&
+          (row.external_activation_message?.includes("does not place an order") ||
+            row.external_activation_message?.includes("without placing an order")) &&
           row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
           row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
           row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
           row.external_activation_message?.includes("Shell activation script") &&
           row.reviewer_activation_shell_url?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
           (row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
-            row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html")) &&
+            row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") ||
+            row.primary_action_url?.includes("/r/run/cline_mcp_marketplace/cline?format=html")) &&
           row.tracked_install_json_url?.includes("/r/install/cline_mcp_marketplace/cline?format=json") &&
           row.tracked_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline")
       ) &&
@@ -1158,7 +1162,8 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
       (sourceActivationQueueHtmlResult.text.includes("Activation runner") ||
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
-        sourceActivationQueueHtmlResult.text.includes("Install in Cline")) &&
+        sourceActivationQueueHtmlResult.text.includes("Install in Cline") ||
+        sourceActivationQueueHtmlResult.text.includes("One-command external runner")) &&
       sourceActivationQueueHtmlResult.text.includes("Shell script") &&
       sourceActivationQueueHtmlResult.text.includes("Update card") &&
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
