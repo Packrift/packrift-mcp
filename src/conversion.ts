@@ -32,6 +32,8 @@ interface TrackingInput {
   selectedHandle?: string | null;
   reorderSource?: string | null;
   utmTerm?: string | null;
+  mcpSourceContext?: string | null;
+  mcpInstallTarget?: string | null;
 }
 
 interface NoMatchRecoveryInput {
@@ -115,6 +117,8 @@ export function buildTrackingContext(input: TrackingInput) {
     continuity_key: continuityKey,
     journey_id: journeyId,
     result_set_id: input.resultSetId ?? null,
+    mcp_source_context: compact(input.mcpSourceContext) || null,
+    mcp_install_target: compact(input.mcpInstallTarget) || null,
     match_type: input.matchType ?? null,
     selected_sku: input.selectedSku ?? input.sku ?? null,
     selected_handle: input.selectedHandle ?? input.handle ?? null,
@@ -136,6 +140,8 @@ export function trackedUrl(url: string, tracking: ReturnType<typeof buildTrackin
   parsed.searchParams.set("mcp_key", tracking.continuity_key);
   parsed.searchParams.set("mcp_journey", tracking.journey_id);
   if (tracking.result_set_id) parsed.searchParams.set("mcp_result_set", tracking.result_set_id);
+  if (tracking.mcp_source_context) parsed.searchParams.set("mcp_source_context", tracking.mcp_source_context);
+  if (tracking.mcp_install_target) parsed.searchParams.set("mcp_install_target", tracking.mcp_install_target);
   if (tracking.match_type) parsed.searchParams.set("match_type", tracking.match_type);
   if (parsed.hostname === "packrift.com" && parsed.pathname.startsWith("/cart/")) {
     addCartPermalinkAttribution(parsed.searchParams, tracking);
@@ -154,6 +160,8 @@ export function addCartPermalinkAttribution(
     packrift_mcp_key: tracking.continuity_key,
     packrift_mcp_journey: tracking.journey_id,
     packrift_mcp_result_set: tracking.result_set_id,
+    packrift_mcp_source_context: tracking.mcp_source_context,
+    packrift_mcp_install_target: tracking.mcp_install_target,
     packrift_match_type: tracking.match_type,
     packrift_utm_source: tracking.utm_source,
     packrift_utm_medium: tracking.utm_medium,

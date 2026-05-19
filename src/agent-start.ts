@@ -275,9 +275,10 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use /start?utm_source={source} when a handoff should render the same source-specific tracked config URL and copy controls on the start page.",
       "Use /r/config/{source} tracked config links when a directory, partner, campaign, or agent host needs a copy-ready MCP JSON config with source attribution.",
       "Use /r/install/{source}/{target} tracked install-action links when a directory, partner, or agent host needs one target-specific install command or config plus install-intent attribution.",
+      "Use /r/run/{source}/{target} tracked first-run links when a directory, partner, or agent host needs a source-specific MCP call sequence with cart-handoff proof.",
       "Use /r/activate/{source}?format=html tracked reviewer activation browser runners when a proof click needs to become a real MCP call sequence ending in create_cart_url.",
       "Use the source activation queue to choose the next source-specific first run, tool call, cart landing, or order progression.",
-      "Custom /r/start/{source}, /r/config/{source}, /r/install/{source}/{target}, and /r/activate/{source}?format=html source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
+      "Custom /r/start/{source}, /r/config/{source}, /r/install/{source}/{target}, /r/run/{source}/{target}, and /r/activate/{source}?format=html source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Use create_cart_url only after buyer confirmation so the returned /r/cart URL keeps MCP attribution measurable.",
@@ -478,6 +479,10 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Start</title>
   <meta name="description" content="Install Packrift MCP, run the first exact-spec packaging flow, and create measured cart handoff URLs through the hosted MCP endpoint.">
+  <link rel="icon" href="/favicon.ico" type="image/svg+xml">
+  <link rel="icon" href="/favicon.png" type="image/png" sizes="400x400">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <meta property="og:image" content="https://mcp.packrift.com/favicon.png">
   <style>
     :root {
       color-scheme: light;

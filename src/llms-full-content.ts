@@ -395,6 +395,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - MCP client config JSON: https://mcp.packrift.com/ai/mcp-client-config.json
 - Generic tracked MCP config: https://mcp.packrift.com/r/config/generic
+- Tracked MCP start template: https://mcp.packrift.com/r/start/{source}
+- Tracked MCP install template: https://mcp.packrift.com/r/install/{source}/{target}
+- Tracked MCP first-run template: https://mcp.packrift.com/r/run/{source}/{target}
 - Root MCP JSON config: https://mcp.packrift.com/mcp.json
 - Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
 - llms.txt: https://mcp.packrift.com/llms.txt
@@ -405,12 +408,15 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP GA4 funnel proof: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
 - MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
+- MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP reviewer activation: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
+- Tracked reviewer activation template: https://mcp.packrift.com/r/activate/{source}?format=html
+- Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
 - MCP eval pack: https://mcp.packrift.com/ai/mcp-eval-pack.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json

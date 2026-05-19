@@ -397,6 +397,8 @@ async function liveMcpCheck() {
     rootMcpJsonResult,
     wellKnownMcpJsonResult,
     marketplaceManifestResult,
+    llmsTxtResult,
+    llmsFullTxtResult,
     trackedConfigGenericResult,
     trackedInstallCodexResult,
     trackedInstallCodexHtmlResult,
@@ -481,6 +483,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/mcp.json"),
     fetchText("https://mcp.packrift.com/.well-known/mcp.json"),
     fetchText("https://mcp.packrift.com/.well-known/mcp-marketplace.json"),
+    fetchText("https://mcp.packrift.com/llms.txt"),
+    fetchText("https://mcp.packrift.com/llms-full.txt"),
     fetchText("https://mcp.packrift.com/r/config/generic?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=text&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=html&utm_content=distribution_check"),
@@ -769,8 +773,21 @@ async function liveMcpCheck() {
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      marketplaceManifest?.discovery?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
+      marketplaceManifest?.discovery?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      marketplaceManifest?.discovery?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      marketplaceManifest?.discovery?.tracked_run_codex_generic === "https://mcp.packrift.com/r/run/generic/codex" &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
+      llmsTxtResult.ok &&
+      llmsTxtResult.text.includes("https://mcp.packrift.com/r/install/{source}/{target}") &&
+      llmsTxtResult.text.includes("https://mcp.packrift.com/r/run/{source}/{target}") &&
+      llmsTxtResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
+      llmsTxtResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      llmsFullTxtResult.ok &&
+      llmsFullTxtResult.text.includes("Tracked MCP first-run template: https://mcp.packrift.com/r/run/{source}/{target}") &&
+      llmsFullTxtResult.text.includes("MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
+      llmsFullTxtResult.text.includes("Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
@@ -1288,6 +1305,16 @@ async function liveMcpCheck() {
           row.copy_ready_host_configs?.codex_command?.startsWith("codex mcp add packrift --url") &&
           row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
           row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
+          row.copy_ready_host_configs?.success_gate?.includes("packrift_mcp_source_context") &&
+          row.order_conversion_handoff?.status === "order_proof_needed" &&
+          row.order_conversion_handoff?.source === "cline_mcp_marketplace" &&
+          row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+          row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
+          row.order_conversion_handoff?.source_specific_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
+          row.order_conversion_handoff?.required_shopify_cart_attributes?.includes("packrift_mcp_source_context") &&
+          row.order_conversion_handoff?.required_shopify_cart_attributes?.includes("packrift_mcp_install_target") &&
+          row.order_conversion_handoff?.proof_gate?.includes("first_party_mcp_orders") &&
+          row.order_conversion_handoff?.attribution_rule?.includes("packrift_mcp_source_context") &&
           row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
           row.external_activation_message?.includes("One-command external runner") &&
           (row.external_activation_message?.includes("does not place an order") ||

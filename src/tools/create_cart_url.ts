@@ -10,6 +10,8 @@ import {
 
 type CreateCartUrlContext = {
   sessionId?: string | null;
+  sourceSlug?: string | null;
+  installTarget?: string | null;
 };
 
 export const createCartUrlSchema = {
@@ -63,6 +65,19 @@ export const createCartUrlSchema = {
       match_type: { type: "string" },
       reorder_source: { type: "string" },
       utm_term: { type: "string" },
+      mcp_source_context: {
+        type: "string",
+        description: "Optional source slug for source-aware MCP installs, such as cline_mcp_marketplace or mcp_so.",
+      },
+      packrift_mcp_source: { type: "string" },
+      mcp_source: { type: "string" },
+      source_slug: { type: "string" },
+      mcp_install_target: {
+        type: "string",
+        description: "Optional install target for source-aware MCP installs, such as cline, codex, or generic_streamable_http.",
+      },
+      packrift_mcp_target: { type: "string" },
+      mcp_target: { type: "string" },
       suppress_analytics: {
         type: "boolean",
         description: "Internal QA flag. When true, do not record an AI-sales cart event.",
@@ -102,6 +117,13 @@ export const createCartUrlZod = z.object({
   match_type: z.string().min(1).max(80).optional(),
   reorder_source: z.string().min(1).max(80).optional(),
   utm_term: z.string().min(1).max(120).optional(),
+  mcp_source_context: z.string().min(1).max(80).optional(),
+  packrift_mcp_source: z.string().min(1).max(80).optional(),
+  mcp_source: z.string().min(1).max(80).optional(),
+  source_slug: z.string().min(1).max(80).optional(),
+  mcp_install_target: z.string().min(1).max(80).optional(),
+  packrift_mcp_target: z.string().min(1).max(80).optional(),
+  mcp_target: z.string().min(1).max(80).optional(),
   suppress_analytics: z.boolean().optional(),
   analytics_context: z.record(z.unknown()).optional(),
 }).refine((value) => Boolean(value.items?.length || value.sku), {
@@ -132,6 +154,17 @@ function normalizedMcpSessionId(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const sessionId = value.trim();
   return /^[A-Za-z0-9._:-]{1,120}$/.test(sessionId) ? sessionId : null;
+}
+
+function normalizedMcpSlug(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+  return slug && /^[a-z0-9_]{2,80}$/.test(slug) ? slug : null;
 }
 
 export async function createCartUrlHandler(env: Env, raw: unknown, context: CreateCartUrlContext = {}) {
@@ -199,6 +232,17 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
   const matchType = input.match_type ?? input.source_context ?? (approvedSkuItem ? "buyer_confirmed_exact_sku" : "cart_handoff");
   const mcpHandoffId = `mcp_handoff_${crypto.randomUUID()}`;
   const mcpSessionId = normalizedMcpSessionId(context.sessionId);
+  const mcpSourceContext =
+    normalizedMcpSlug(input.mcp_source_context) ??
+    normalizedMcpSlug(input.packrift_mcp_source) ??
+    normalizedMcpSlug(input.mcp_source) ??
+    normalizedMcpSlug(input.source_slug) ??
+    normalizedMcpSlug(context.sourceSlug);
+  const mcpInstallTarget =
+    normalizedMcpSlug(input.mcp_install_target) ??
+    normalizedMcpSlug(input.packrift_mcp_target) ??
+    normalizedMcpSlug(input.mcp_target) ??
+    normalizedMcpSlug(context.installTarget);
   const path = items
     .map((it) => `${variantIdToNumeric(it.variant_id)}:${it.qty}`)
     .join(",");
@@ -216,6 +260,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
     selectedHandle,
     reorderSource: input.reorder_source,
     utmTerm: input.utm_term ?? selectedSku,
+    mcpSourceContext,
+    mcpInstallTarget,
   });
   const cartUtmContent = selectedSku ?? items[0]?.variant_id ?? input.source_context ?? tracking.utm_content;
   const cartTracking = {
@@ -225,6 +271,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
     utm_campaign: "create_cart_url",
     utm_content: cartUtmContent,
     mcp_session_id: mcpSessionId,
+    mcp_source_context: mcpSourceContext,
+    mcp_install_target: mcpInstallTarget,
   };
   params.set("ref", input.ref);
   params.set("utm_source", cartTracking.utm_source);
@@ -235,6 +283,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
   params.set("packrift_ai_id", tracking.packrift_ai_id);
   params.set("mcp_handoff_id", mcpHandoffId);
   if (mcpSessionId) params.set("mcp_session_id", mcpSessionId);
+  if (mcpSourceContext) params.set("mcp_source_context", mcpSourceContext);
+  if (mcpInstallTarget) params.set("mcp_install_target", mcpInstallTarget);
   params.set("mcp_key", tracking.continuity_key);
   params.set("mcp_journey", tracking.journey_id);
   if (tracking.result_set_id) params.set("mcp_result_set", tracking.result_set_id);
@@ -256,6 +306,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
     landingUrl.searchParams.set("ai_commerce_id", tracking.ai_commerce_id);
     landingUrl.searchParams.set("mcp_handoff_id", mcpHandoffId);
     if (mcpSessionId) landingUrl.searchParams.set("mcp_session_id", mcpSessionId);
+    if (mcpSourceContext) landingUrl.searchParams.set("mcp_source_context", mcpSourceContext);
+    if (mcpInstallTarget) landingUrl.searchParams.set("mcp_install_target", mcpInstallTarget);
     landingUrl.searchParams.set("mcp_key", tracking.continuity_key);
     landingUrl.searchParams.set("mcp_journey", tracking.journey_id);
     if (tracking.result_set_id) landingUrl.searchParams.set("mcp_result_set", tracking.result_set_id);
@@ -283,6 +335,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
       utm_term: cartTracking.utm_term ?? null,
       mcp_handoff_id: mcpHandoffId,
       mcp_session_id: mcpSessionId,
+      mcp_source_context: mcpSourceContext,
+      mcp_install_target: mcpInstallTarget,
       mcp_key: tracking.continuity_key,
       mcp_journey: tracking.journey_id,
       mcp_result_set: tracking.result_set_id ?? null,
@@ -353,6 +407,8 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
         ai_commerce_id: tracking.ai_commerce_id,
         mcp_handoff_id: mcpHandoffId,
         mcp_session_id: mcpSessionId ?? "",
+        mcp_source_context: mcpSourceContext ?? "",
+        mcp_install_target: mcpInstallTarget ?? "",
         mcp_key: tracking.continuity_key,
         mcp_journey: tracking.journey_id,
         mcp_result_set: tracking.result_set_id ?? "",

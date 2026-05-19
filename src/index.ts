@@ -1856,6 +1856,8 @@ function copyRouteTrackingParams(source: URL, target: URL): URL {
     "mcp_key",
     "mcp_journey",
     "mcp_result_set",
+    "mcp_source_context",
+    "mcp_install_target",
     "match_type",
   ];
   for (const field of fields) {
@@ -1874,6 +1876,8 @@ function copyRouteCartAttributeParams(source: URL, target: URL): URL {
     packrift_mcp_key: source.searchParams.get("mcp_key"),
     packrift_mcp_journey: source.searchParams.get("mcp_journey"),
     packrift_mcp_result_set: source.searchParams.get("mcp_result_set"),
+    packrift_mcp_source_context: source.searchParams.get("mcp_source_context"),
+    packrift_mcp_install_target: source.searchParams.get("mcp_install_target"),
     packrift_match_type: source.searchParams.get("match_type"),
     packrift_utm_source: source.searchParams.get("utm_source"),
     packrift_utm_medium: source.searchParams.get("utm_medium"),
@@ -1939,6 +1943,8 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
       mcp_key: ${JSON.stringify(requestUrl.searchParams.get("mcp_key") ?? "")},
       mcp_journey: ${JSON.stringify(requestUrl.searchParams.get("mcp_journey") ?? "")},
       mcp_result_set: ${JSON.stringify(requestUrl.searchParams.get("mcp_result_set") ?? "")},
+      mcp_source_context: ${JSON.stringify(requestUrl.searchParams.get("mcp_source_context") ?? "")},
+      mcp_install_target: ${JSON.stringify(requestUrl.searchParams.get("mcp_install_target") ?? "")},
       match_type: ${JSON.stringify(requestUrl.searchParams.get("match_type") ?? "")}
     });
     window.setTimeout(continueToCart, 3000);`;
@@ -2259,6 +2265,8 @@ async function recordRouteRedirectTelemetry(
     mcp_key: requestUrl.searchParams.get("mcp_key") ?? item.sku,
     mcp_journey: requestUrl.searchParams.get("mcp_journey") ?? `${surface}:${item.sku}:${event}`,
     mcp_result_set: requestUrl.searchParams.get("mcp_result_set") ?? `${surface}_${compactDate()}`,
+    mcp_source_context: requestUrl.searchParams.get("mcp_source_context") ?? "",
+    mcp_install_target: requestUrl.searchParams.get("mcp_install_target") ?? "",
     utm_source: requestUrl.searchParams.get("utm_source") ?? surface,
     utm_medium: requestUrl.searchParams.get("utm_medium") ?? "ai_retrieval",
     utm_campaign: requestUrl.searchParams.get("utm_campaign") ?? "",
@@ -2327,6 +2335,8 @@ async function maybeRecordRouteLandingTelemetry(
     mcp_key: url.searchParams.get("mcp_key") ?? sku,
     mcp_journey: url.searchParams.get("mcp_journey") ?? "",
     mcp_result_set: url.searchParams.get("mcp_result_set") ?? "",
+    mcp_source_context: url.searchParams.get("mcp_source_context") ?? "",
+    mcp_install_target: url.searchParams.get("mcp_install_target") ?? "",
     utm_source: url.searchParams.get("utm_source") ?? "",
     utm_medium: url.searchParams.get("utm_medium") ?? "",
     utm_campaign: url.searchParams.get("utm_campaign") ?? "",
@@ -2417,6 +2427,8 @@ function buildToolResultAttribution(out: unknown): Record<string, unknown> {
     mcp_key: textFrom(cartTracking?.mcp_key, cartTracking?.continuity_key, params?.get("mcp_key")),
     mcp_journey: textFrom(cartTracking?.mcp_journey, cartTracking?.journey_id, params?.get("mcp_journey")),
     mcp_result_set: textFrom(cartTracking?.mcp_result_set, cartTracking?.result_set_id, params?.get("mcp_result_set")),
+    mcp_source_context: textFrom(cartTracking?.mcp_source_context, params?.get("mcp_source_context")),
+    mcp_install_target: textFrom(cartTracking?.mcp_install_target, params?.get("mcp_install_target")),
     utm_source: textFrom(cartTracking?.utm_source, utm?.source, params?.get("utm_source")),
     utm_medium: textFrom(cartTracking?.utm_medium, utm?.medium, params?.get("utm_medium")),
     utm_campaign: textFrom(cartTracking?.utm_campaign, utm?.campaign, params?.get("utm_campaign")),
@@ -4123,6 +4135,7 @@ function sourceActivationCopyReadyHostConfigs(input: {
   sourceAwareEndpoint: string;
   agentPrompt: string;
   curlScript: string;
+  successGate?: string;
 }) {
   const genericConfig = {
     mcpServers: {
@@ -4153,7 +4166,44 @@ function sourceActivationCopyReadyHostConfigs(input: {
     agent_prompt: input.agentPrompt,
     curl_script: input.curlScript,
     success_gate:
+      input.successGate ??
       "After install, run the agent prompt in the real MCP host and require create_cart_url to return a measured https://mcp.packrift.com/r/cart/1066 URL.",
+  };
+}
+
+function sourceActivationOrderConversionHandoff(
+  row: PostInstallActivationRow,
+  urls: ReturnType<typeof sourceActivationUrls>,
+  firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>
+) {
+  if (!sourceActivationHasToolAndCartProof(row)) return null;
+  const measuredCartUrl = row.recent_measured_cart_urls[0] ?? null;
+  return {
+    status: "order_proof_needed",
+    source: row.source,
+    preferred_target: urls.preferred_target,
+    buyer_action_url: measuredCartUrl,
+    source_aware_endpoint: firstUsefulRun.endpoint,
+    source_specific_first_run_url: urls.tracked_first_run_url,
+    reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
+    buyer_prompt:
+      `Use Packrift MCP from source ${row.source} to prepare a real purchase handoff for SKU 1066. Confirm live product, price, and inventory, then call prepare_purchase_handoff or create_cart_url only after buyer confirmation. Continue to Shopify checkout only if the buyer approves.`,
+    order_proof_watch: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+    proof_gate: "first_party_mcp_orders > 0 or first_party_mcp_order_revenue > 0 with source-preserving MCP cart attributes",
+    required_shopify_cart_attributes: [
+      "packrift_mcp_source_context",
+      "packrift_mcp_install_target",
+      "packrift_mcp_handoff_id",
+      "packrift_mcp_journey",
+      "packrift_mcp_result_set",
+      "packrift_utm_source",
+      "packrift_utm_medium",
+      "packrift_utm_campaign",
+    ],
+    attribution_rule:
+      "Source-specific order proof should prefer packrift_mcp_source_context, then fall back to source parsed from mcp_journey, result set, Packrift AI IDs, or UTM fields.",
+    suppression_rule:
+      "Do not count synthetic proof, shell-runner-only proof, or Packrift self-opened carts as an MCP-attributed order. The order must come from a buyer, reviewer, or real MCP host user completing Shopify checkout.",
   };
 }
 
@@ -4366,6 +4416,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
       const priority = score >= 110 ? "critical" : score >= 80 ? "high" : score >= 50 ? "medium" : "watch";
       const firstUsefulRun = mcpFirstUsefulRun(row.source, urls.preferred_target);
       const targetEvent = sourceActivationTargetEvent(row);
+      const orderConversionHandoff = sourceActivationOrderConversionHandoff(row, urls, firstUsefulRun);
       return {
         source: row.source,
         priority,
@@ -4399,12 +4450,16 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         eval_pack_markdown_url: urls.eval_pack_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
+        order_conversion_handoff: orderConversionHandoff,
         copy_ready_host_configs: sourceActivationCopyReadyHostConfigs({
           source: row.source,
           preferredTarget: urls.preferred_target,
           sourceAwareEndpoint: firstUsefulRun.endpoint,
           agentPrompt: firstUsefulRun.agent_prompt,
           curlScript: firstUsefulRun.curl_script,
+          successGate: orderConversionHandoff
+            ? "This source already has MCP tool and measured cart proof. The next success gate is a buyer/reviewer checkout that preserves packrift_mcp_source_context and produces first_party_mcp_orders or measurable MCP revenue."
+            : undefined,
         }),
         acceptance_criteria: [
           `Source remains attributed as ${row.source}.`,
@@ -5267,7 +5322,21 @@ function publicOrderSourceBuckets(orders: Array<Record<string, unknown>> | undef
   const counts: Record<string, number> = {};
   for (const order of orders ?? []) {
     const attribution = objectValue(order.attribution);
-    const source = safeEventText(attribution?.utm_source, 80) || "unknown";
+    const source =
+      safeEventText(attribution?.mcp_source_context, 80) ||
+      sourceFromMcpAttributionText(
+        [
+          attribution?.mcp_source_context,
+          attribution?.mcp_journey,
+          attribution?.mcp_result_set,
+          attribution?.packrift_ai_id,
+          attribution?.ai_commerce_id,
+          attribution?.utm_source,
+          attribution?.utm_campaign,
+        ].join(" ")
+      ) ||
+      safeEventText(attribution?.utm_source, 80) ||
+      "unknown";
     counts[source] = (counts[source] ?? 0) + 1;
   }
   return Object.entries(counts)
@@ -5906,6 +5975,8 @@ function mcpOrderAttribution(attrs: Record<string, string>) {
     mcp_key: get("packrift_mcp_key") || get("mcp_key"),
     mcp_journey: get("packrift_mcp_journey") || get("mcp_journey"),
     mcp_result_set: get("packrift_mcp_result_set") || get("mcp_result_set"),
+    mcp_source_context: get("packrift_mcp_source_context") || get("mcp_source_context"),
+    mcp_install_target: get("packrift_mcp_install_target") || get("mcp_install_target"),
     match_type: get("packrift_match_type") || get("match_type"),
     utm_source: get("packrift_utm_source") || get("utm_source"),
     utm_medium: get("packrift_utm_medium") || get("utm_medium"),
@@ -8279,6 +8350,9 @@ async function firstRunActionExecutionDemo(
       quantity,
       ...common,
       suppress_analytics: suppressCartAnalytics,
+    }, {
+      sourceSlug: source,
+      installTarget: target,
     })) as Record<string, unknown>;
     const payload = {
       release: MCP_FIRST_RUN_ACTION_RELEASE,
@@ -8574,8 +8648,14 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+      tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      tracked_start_generic: "https://mcp.packrift.com/r/start/generic",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      tracked_install_codex_generic: "https://mcp.packrift.com/r/install/generic/codex",
+      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
+      tracked_run_codex_generic: "https://mcp.packrift.com/r/run/generic/codex",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_sitemap: "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",

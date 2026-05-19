@@ -115,6 +115,39 @@ checks.push(
 );
 
 checks.push(
+  await expectPass(
+    "mcp_source_and_target_survive_cart_checkout",
+    {
+      sku: "1066",
+      quantity: 1,
+      selected_sku: "1066",
+      selected_handle: sku1066.handle,
+    },
+    (result) => {
+      assertCheck(result.url?.includes("mcp_source_context=cline_mcp_marketplace"), "Measured MCP cart URL did not include source context", {
+        url: result.url,
+      });
+      assertCheck(result.url?.includes("mcp_install_target=cline"), "Measured MCP cart URL did not include install target", {
+        url: result.url,
+      });
+      assertCheck(
+        result.final_cart_url?.includes("attributes%5Bpackrift_mcp_source_context%5D=cline_mcp_marketplace") ||
+          result.final_cart_url?.includes("attributes[packrift_mcp_source_context]=cline_mcp_marketplace"),
+        "Final Shopify cart URL did not include source-preserving cart attributes",
+        { final_cart_url: result.final_cart_url }
+      );
+      assertCheck(result.cart_tracking?.mcp_source_context === "cline_mcp_marketplace", "Cart tracking did not expose source context", {
+        cart_tracking: result.cart_tracking,
+      });
+      assertCheck(result.cart_tracking?.mcp_install_target === "cline", "Cart tracking did not expose install target", {
+        cart_tracking: result.cart_tracking,
+      });
+    },
+    { sourceSlug: "cline_mcp_marketplace", installTarget: "cline" }
+  )
+);
+
+checks.push(
   await expectBlock(
     "sku_variant_mismatch_blocks",
     { sku: "1066", items: [{ variant_id: skuMfl1295.variantId, qty: 1 }] },
