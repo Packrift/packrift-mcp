@@ -41,6 +41,7 @@ Use these as examples of exact product families that converted, not as universal
 - [MCP start pack](https://mcp.packrift.com/ai/mcp-start.json): one-link install config, first useful exact-SKU flow, buyer prompts, proof URLs, and measured cart handoff sequence
 - [MCP adoption kit](https://mcp.packrift.com/ai/mcp-adoption-kit.json): install snippets, first-five-minute JSON-RPC calls, curl/JavaScript/Python examples, demo SKUs, useful workflows, proof URLs, and exact-match rules for new agents and developers
 - [MCP install matrix](https://mcp.packrift.com/ai/mcp-install-matrix.json): copy-ready remote MCP setup paths for common agent hosts, smoke tests, and measured cart handoff rules
+- [MCP client config](https://mcp.packrift.com/ai/mcp-client-config.json): smallest copy-ready install bundle for IDEs, agent hosts, and directory reviewers; aliases are https://mcp.packrift.com/mcp.json and https://mcp.packrift.com/.well-known/mcp.json
 - [MCP usage snapshot](https://mcp.packrift.com/ai/mcp-usage-snapshot.json): public aggregate first-party usage proof for MCP discovery, tool calls, cart handoff, and proof-gate iteration
 - [MCP buyer use cases](https://mcp.packrift.com/ai/mcp-buyer-use-cases.json): buyer-facing exact SKU reorder, fit-by-dimensions, mailer selection, label procurement, no-match quote recovery, and procurement handoff workflows
 - [MCP cart activation](https://mcp.packrift.com/ai/mcp-cart-activation.json): exact buyer prompts, JSON-RPC sequences, and measured \`/r/cart\` landing rules for turning MCP discovery into qualified cart landings
@@ -90,7 +91,9 @@ Use these as examples of exact product families that converted, not as universal
 - [AI corpus sitemap](https://mcp.packrift.com/ai/sitemap.xml): crawl map for Packrift machine-readable exact-spec files
 - [Public exact-spec data page](https://packrift.com/pages/packrift-ai-exact-spec-data): Shopify-hosted resource page linking buyers, crawlers, and agents to the MCP corpus files
 - [AI agent instructions](https://packrift.com/pages/packrift-ai-agent-instructions): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
-- [Server card](https://packrift.com/.well-known/mcp/server-card.json): MCP discovery manifest
+- [Server card](https://mcp.packrift.com/.well-known/mcp/server-card.json): MCP discovery manifest
+- [Root MCP JSON](https://mcp.packrift.com/mcp.json): copy-ready MCP client config
+- [Well-known MCP JSON](https://mcp.packrift.com/.well-known/mcp.json): well-known copy-ready MCP client config
 - [Glama connector claim](https://mcp.packrift.com/.well-known/glama.json): hosted connector ownership and endpoint discovery
 - [MCP Marketplace discovery manifest](https://mcp.packrift.com/.well-known/mcp-marketplace.json): marketplace ownership and endpoint discovery
 - [Product feed (JSON)](https://packrift.com/products.json): Shopify product feed, paginated, no auth

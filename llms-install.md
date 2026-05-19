@@ -34,6 +34,17 @@ Use this when an agent host, directory, or developer needs copy-ready setup path
 
 The install matrix keeps Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
 
+## Client Config
+
+Use this when a host, IDE, or directory reviewer wants the smallest copy-ready MCP JSON instead of the larger install matrix:
+
+- JSON bundle: https://mcp.packrift.com/ai/mcp-client-config.json
+- Markdown: https://mcp.packrift.com/ai/mcp-client-config.md
+- Root alias: https://mcp.packrift.com/mcp.json
+- Well-known alias: https://mcp.packrift.com/.well-known/mcp.json
+
+The root and well-known aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`.
+
 ## First-Run Proof
 
 Use this when a developer, agent platform, or directory reviewer wants the shortest live proof before installing or recrawling:
@@ -148,5 +159,8 @@ The returned `url` is the MCP cart landing shim. It carries `ref=mcp`, `utm_sour
 - Documentation: https://packrift.com/pages/packrift-ai-agent-instructions
 - Source: https://github.com/Packrift/packrift-mcp
 - Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- Client config: https://mcp.packrift.com/ai/mcp-client-config.json
+- Root MCP JSON config: https://mcp.packrift.com/mcp.json
+- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
 - Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
 - MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json

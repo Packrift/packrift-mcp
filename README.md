@@ -92,6 +92,9 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - `llms.txt`: https://mcp.packrift.com/llms.txt
 - `llms-full.txt`: https://mcp.packrift.com/llms-full.txt
 - MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- MCP client config: https://mcp.packrift.com/ai/mcp-client-config.json
+- Root MCP JSON config: https://mcp.packrift.com/mcp.json
+- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
 - Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
 - MCP Marketplace manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
@@ -105,6 +108,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP adoption kit Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP install matrix Markdown: https://mcp.packrift.com/ai/mcp-install-matrix.md
+- MCP client config Markdown: https://mcp.packrift.com/ai/mcp-client-config.md
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json

@@ -392,6 +392,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Tracked MCP start template: https://mcp.packrift.com/r/start/{source} (use lowercase source slugs such as mcpservers_org, glama_connector, mcp_directory, anthropic_connectors_directory, smithery, cline_mcp_marketplace, mcp_so, mcpmarket_com, cursor_directory, mcpcentral, mcpfinder, pulsemcp_packrift, mcpskills, agentndx, mcpbench, chiark, docker_mcp_catalog, or partner-specific slugs; custom slugs are allowed without pre-registration when they match ^[a-z0-9_]{2,64}$)
 - MCP start pack JSON: https://mcp.packrift.com/ai/mcp-start.json
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
+- MCP client config JSON: https://mcp.packrift.com/ai/mcp-client-config.json
+- Root MCP JSON config: https://mcp.packrift.com/mcp.json
+- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
@@ -432,7 +435,10 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP robots file: https://mcp.packrift.com/robots.txt
 - Public exact-spec data page: https://packrift.com/pages/packrift-ai-exact-spec-data
 - AI agent instructions: https://packrift.com/pages/packrift-ai-agent-instructions
-- Server card: https://packrift.com/.well-known/mcp/server-card.json
+- Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- MCP client config: https://mcp.packrift.com/ai/mcp-client-config.json
+- Root MCP JSON config: https://mcp.packrift.com/mcp.json
+- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
 - Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
 - MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - Product feed: https://packrift.com/products.json (paginated)

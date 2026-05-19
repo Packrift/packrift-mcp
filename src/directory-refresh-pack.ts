@@ -12,6 +12,9 @@ const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
+const MCP_CLIENT_CONFIG_URL = "https://mcp.packrift.com/ai/mcp-client-config.json";
+const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
+const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
 const MCP_TRACKED_START_SOURCE_POLICY = {
   accepted_source_format: "^[a-z0-9_]{2,64}$",
   partner_specific_sources_allowed: true,
@@ -167,7 +170,7 @@ const DIRECTORY_TARGETS = [
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
     release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R08",
     generated_at: new Date().toISOString(),
@@ -197,6 +200,9 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
           },
         },
       },
+      client_config_url: MCP_CLIENT_CONFIG_URL,
+      root_mcp_json: ROOT_MCP_JSON_URL,
+      well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
       proof_summary: proofSummary,
     },
     live_proof: {
@@ -215,6 +221,9 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      client_config: MCP_CLIENT_CONFIG_URL,
+      root_mcp_json: ROOT_MCP_JSON_URL,
+      well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",

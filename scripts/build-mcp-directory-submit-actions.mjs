@@ -76,10 +76,10 @@ const DIRECT_STATUS = {
     next_action: "Use the browser-side MCP Central submit flow or request review access if auth is required.",
   },
   mcpfinder: {
-    status: "manual_submission_ready",
+    status: "submitted_pending",
     method: "Manual MCPfinder submit form",
-    evidence: "The submit page is reachable, but Packrift is not visible in the browsable index.",
-    next_action: "Submit Packrift MCP through MCPfinder with hosted endpoint proof and tracked start URL.",
+    evidence: "Free listing form POST returned 200 OK; Packrift is not visible in the browsable index yet.",
+    next_action: "Monitor for listing approval and provide endpoint proof if MCPfinder asks for more detail.",
   },
   mcpskills: {
     status: "submitted_pending",
@@ -152,7 +152,8 @@ function publicProofLine(pack) {
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
+  const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R01";
+  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
 }
 
 function recrawlMessage(pack, target) {
@@ -180,6 +181,9 @@ function recrawlMessage(pack, target) {
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
     "- Start pack: https://mcp.packrift.com/ai/mcp-start.json",
     "- Install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json",
+    "- Client config: https://mcp.packrift.com/ai/mcp-client-config.json",
+    "- Root MCP JSON config: https://mcp.packrift.com/mcp.json",
+    "- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json",
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     "- First-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     "- Workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json",

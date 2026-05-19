@@ -138,6 +138,7 @@ async function main() {
     "mcp_start",
     "mcp_adoption_kit",
     "mcp_install_matrix",
+    "mcp_client_config",
     "mcp_usage_snapshot",
     "buyer_mcp_use_cases",
     "mcp_cart_activation",
@@ -173,6 +174,7 @@ async function main() {
     "start page",
     "adoption kit",
     "install matrix",
+    "client config",
     "usage snapshot",
     "buyer use cases",
     "cart activation",
@@ -195,7 +197,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R03", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R04", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -230,6 +232,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises install matrix", hasResourceUri(resourceUris, "/ai/mcp-install-matrix.json") && hasResourceUri(resourceUris, "/ai/mcp-install-matrix.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises usage snapshot", hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.md"), {

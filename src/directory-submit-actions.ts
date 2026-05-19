@@ -11,6 +11,9 @@ const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const DIRECTORY_REFRESH_URL = "https://mcp.packrift.com/ai/mcp-directory-refresh.json";
 const INSTALL_MATRIX_URL = "https://mcp.packrift.com/ai/mcp-install-matrix.json";
+const CLIENT_CONFIG_URL = "https://mcp.packrift.com/ai/mcp-client-config.json";
+const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
+const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
@@ -179,14 +182,14 @@ const ACTIONS = [
   {
     id: "mcpfinder",
     label: "MCPfinder",
-    action_status: "manual_submission_ready",
-    directory_status: "unlisted",
+    action_status: "submitted_pending",
+    directory_status: "pending",
     priority: "medium",
     method: "Manual submit form.",
-    evidence: "The public submit page is reachable, but Packrift is not visible in the browsable index.",
+    evidence: "Free listing form POST returned 200 OK; Packrift is not visible in the browsable index yet.",
     stale_markers: ["Packrift not visible in MCPfinder"],
     recrawl_subject: "Submit Packrift MCP to MCPfinder",
-    next_action: "Submit Packrift MCP through MCPfinder with hosted endpoint proof and tracked start URL.",
+    next_action: "Monitor for listing approval and provide endpoint proof if MCPfinder asks for more detail.",
     listing_url: "https://www.mcpfinder.org/",
     submission_url: "https://www.mcpfinder.org/submit",
   },
@@ -271,7 +274,7 @@ function trackedStartUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -300,6 +303,9 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
     `- Start pack: ${MCP_START_JSON_URL}`,
     `- Install matrix: ${INSTALL_MATRIX_URL}`,
+    `- Client config: ${CLIENT_CONFIG_URL}`,
+    `- Root MCP JSON config: ${ROOT_MCP_JSON_URL}`,
+    `- Well-known MCP JSON config: ${WELL_KNOWN_MCP_JSON_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
     `- First-run proof: ${FIRST_RUN_PROOF_URL}`,
@@ -350,6 +356,9 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     tracked_start_template: MCP_TRACKED_START_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
+    source_client_config: CLIENT_CONFIG_URL,
+    source_root_mcp_json: ROOT_MCP_JSON_URL,
+    source_well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
     runtime: {
       server_version: runtime.serverVersion,
       tools_count: runtime.toolsCount,

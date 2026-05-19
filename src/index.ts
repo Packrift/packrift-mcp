@@ -9,6 +9,7 @@ import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture
 import { mcpStartHtml, mcpStartMarkdown, mcpStartPayload } from "./agent-start.js";
 import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js";
 import { mcpInstallMatrixMarkdown, mcpInstallMatrixPayload } from "./install-matrix.js";
+import { mcpClientConfigMarkdown, mcpClientConfigPayload } from "./client-config.js";
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-activation.js";
 import { mcpFirstRunProofMarkdown, mcpFirstRunProofPayload, type FirstRunProofDemo } from "./first-run-proof.js";
@@ -3400,6 +3401,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/SKILL.md",
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
+  "https://mcp.packrift.com/mcp.json",
   "https://mcp.packrift.com/manifest",
   "https://mcp.packrift.com/resources",
   "https://mcp.packrift.com/health",
@@ -3407,6 +3409,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-start.md",
   "https://mcp.packrift.com/ai/mcp-start.html",
   "https://mcp.packrift.com/server-card.json",
+  "https://mcp.packrift.com/.well-known/mcp.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
   "https://mcp.packrift.com/.well-known/glama.json",
   "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
@@ -3446,6 +3449,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
   "https://mcp.packrift.com/ai/mcp-install-matrix.json",
   "https://mcp.packrift.com/ai/mcp-install-matrix.md",
+  "https://mcp.packrift.com/ai/mcp-client-config.json",
+  "https://mcp.packrift.com/ai/mcp-client-config.md",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
@@ -3496,6 +3501,7 @@ const AI_DISCOVERY_URLS = [
 const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/llms.txt": "Short Packrift agent index with MCP, corpus, and family file links.",
   "/llms-full.txt": "Dense Packrift agent reference for packaging categories, tools, guides, and discovery links.",
+  "/mcp.json": "Copy-ready remote MCP client config for installing Packrift MCP in common agent hosts.",
   "/robots.txt": "MCP subdomain crawler policy and sitemap references.",
   "/sitemap.xml": "MCP discovery sitemap for machine-readable Packrift resources.",
   "/ai/sitemap.xml": "AI corpus sitemap for exact-spec Packrift product data files.",
@@ -3508,6 +3514,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-start.md": "Markdown Packrift MCP start guide for humans, agents, and directory reviewers.",
   "/ai/mcp-start.html": "HTML Packrift MCP start page for developers and agent operators.",
   "/server-card.json": "Root Packrift MCP server discovery card.",
+  "/.well-known/mcp.json": "Well-known copy-ready remote MCP client config for installing Packrift MCP.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
   "/.well-known/glama.json": "Glama remote connector claim file for the Packrift hosted MCP endpoint.",
   "/.well-known/mcp-marketplace.json": "MCP Marketplace discovery manifest for Packrift MCP.",
@@ -3547,6 +3554,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-adoption-kit.md": "Crawler-readable Packrift MCP adoption kit for developers, agents, marketplaces, and AI-commerce workflows with copy-paste hosted endpoint examples.",
   "/ai/mcp-install-matrix.json": "Machine-readable Packrift MCP install matrix for common agent hosts, copy-ready remote MCP config, smoke tests, and measured cart handoff rules.",
   "/ai/mcp-install-matrix.md": "Crawler-readable Packrift MCP install matrix for developers, directories, and agent hosts.",
+  "/ai/mcp-client-config.json": "Small copy-ready Packrift MCP client config bundle for IDEs, agent hosts, and directory reviewers.",
+  "/ai/mcp-client-config.md": "Markdown Packrift MCP client config bundle with install commands and first tests.",
   "/ai/mcp-usage-snapshot.json": "Machine-readable public aggregate usage snapshot for Packrift MCP discovery, tool calls, cart handoff, and proof-gate iteration.",
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
@@ -3721,6 +3730,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   const pathname = new URL(uri).pathname;
   if (pathname === "/llms.txt") return llmsTxt;
   if (pathname === "/llms-full.txt") return llmsFullTxt;
+  if (pathname === "/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
   if (pathname === "/robots.txt") return robotsTxt();
   if (pathname === "/sitemap.xml" || pathname === "/ai/sitemap.xml") return aiSitemapXml();
   if (pathname === "/ai/top-1000-ai-sales-sitemap.xml") return topAiSalesSkuSitemapXml();
@@ -3732,6 +3742,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/resources") return JSON.stringify(mcpResourcesPayload(MCP_RESOURCES.length, 0), null, 2);
   if (pathname === "/health") return JSON.stringify(await mcpHealthPayload(env), null, 2);
   if (pathname === "/server-card.json") return JSON.stringify(mcpServerCardPayload(), null, 2);
+  if (pathname === "/.well-known/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
   if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(mcpServerCardPayload(), null, 2);
   if (pathname === "/.well-known/glama.json") return JSON.stringify(glamaConnectorClaim(), null, 2);
   if (pathname === "/.well-known/mcp-marketplace.json") return JSON.stringify(mcpMarketplaceDiscoveryPayload(), null, 2);
@@ -3747,6 +3758,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
   if (pathname === "/ai/mcp-install-matrix.json") return JSON.stringify(mcpInstallMatrixPayload(installMatrixRuntime()), null, 2);
   if (pathname === "/ai/mcp-install-matrix.md") return mcpInstallMatrixMarkdown(installMatrixRuntime());
+  if (pathname === "/ai/mcp-client-config.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()), null, 2);
+  if (pathname === "/ai/mcp-client-config.md") return mcpClientConfigMarkdown(clientConfigRuntime());
   if (pathname === "/ai/mcp-usage-snapshot.json") return JSON.stringify(await mcpUsageSnapshotPayload(env), null, 2);
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
@@ -3838,6 +3851,9 @@ function mcpManifestPayload() {
     all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+    mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+    root_mcp_json: "https://mcp.packrift.com/mcp.json",
+    well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -3873,6 +3889,12 @@ function mcpServerCardPayload() {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+    },
+    client_config: {
+      root_mcp_json: "https://mcp.packrift.com/mcp.json",
+      well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+      full_bundle: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
     },
     static_server_card: {
       well_known_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -3910,6 +3932,15 @@ function adoptionKitRuntime() {
 }
 
 function installMatrixRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function clientConfigRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -4092,6 +4123,9 @@ function mcpMarketplaceDiscoveryPayload() {
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      root_mcp_json: "https://mcp.packrift.com/mcp.json",
+      well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -4911,6 +4945,17 @@ app.get("/.well-known/mcp/server-card.json", (c) =>
   )
 );
 
+app.get("/.well-known/mcp.json", async (c) => {
+  const config = mcpClientConfigPayload(clientConfigRuntime()).config;
+  await recordGeneratedAiResourceFetch(c, "/.well-known/mcp.json", "mcp_client_config", jsonByteSize(config));
+  return cachedStaticTextResponse(
+    c,
+    "mcp.json",
+    JSON.stringify(config, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
 function glamaConnectorClaim() {
   return {
     $schema: "https://glama.ai/mcp/schemas/connector.json",
@@ -4962,6 +5007,17 @@ app.get("/server-card.json", (c) =>
     "application/json; charset=utf-8"
   )
 );
+
+app.get("/mcp.json", async (c) => {
+  const config = mcpClientConfigPayload(clientConfigRuntime()).config;
+  await recordGeneratedAiResourceFetch(c, "/mcp.json", "mcp_client_config", jsonByteSize(config));
+  return cachedStaticTextResponse(
+    c,
+    "mcp.json",
+    JSON.stringify(config, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
 
 app.get("/robots.txt", (c) =>
   c.body(robotsTxt(), 200, {
@@ -5084,6 +5140,21 @@ app.get("/ai/mcp-install-matrix.json", async (c) => {
 app.get("/ai/mcp-install-matrix.md", async (c) => {
   const body = mcpInstallMatrixMarkdown(installMatrixRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-install-matrix.md", "mcp_install_matrix", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-client-config.json", async (c) => {
+  const payload = mcpClientConfigPayload(clientConfigRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-client-config.json", "mcp_client_config", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-client-config.md", async (c) => {
+  const body = mcpClientConfigMarkdown(clientConfigRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-client-config.md", "mcp_client_config", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
