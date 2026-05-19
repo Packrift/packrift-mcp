@@ -1137,6 +1137,7 @@ const AI_SALES_EVENT_TTL_SECONDS = 60 * 60 * 24 * 90;
 const AI_SALES_EVENT_READ_CONCURRENCY = 50;
 const PUBLIC_MCP_ORDER_SUMMARY_TIMEOUT_MS = 3500;
 const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
+const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 5000;
 const PUBLIC_MCP_DEFAULT_ORDER_DAYS = 30;
 const PUBLIC_MCP_DEFAULT_ORDER_LIMIT = 100;
 const AI_SALES_ALLOWED_EVENTS = new Set([
@@ -4372,7 +4373,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
 async function mcpSourceActivationQueuePayload(
   env: Env,
   date = todayUtc(),
-  limit = PUBLIC_MCP_DEFAULT_EVENT_LIMIT,
+  limit = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT,
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
@@ -4384,6 +4385,7 @@ async function mcpSourceActivationQueuePayload(
     release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R15",
     generated_at: new Date().toISOString(),
     date,
+    event_read_limit: limit,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     status: funnel.source_activation_priority_queue.length > 0 ? "activation_needed" : "no_priority_sources",
     purpose:
@@ -4917,7 +4919,7 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
 async function mcpActivationExperimentsPayload(
   env: Env,
   date = todayUtc(),
-  limit = PUBLIC_MCP_DEFAULT_EVENT_LIMIT,
+  limit = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT,
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
@@ -9332,7 +9334,7 @@ app.get("/ai/mcp-ga4-funnel-proof.md", async (c) => {
 app.get("/ai/mcp-source-activation-queue.json", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -9346,7 +9348,7 @@ app.get("/ai/mcp-source-activation-queue.json", async (c) => {
 app.get("/ai/mcp-source-activation-queue.md", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -9363,7 +9365,7 @@ app.get("/ai/mcp-source-activation-queue.md", async (c) => {
 app.get("/ai/mcp-source-activation-queue.html", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -9380,7 +9382,7 @@ app.get("/ai/mcp-source-activation-queue.html", async (c) => {
 app.get("/ai/mcp-activation-experiments.json", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -9394,7 +9396,7 @@ app.get("/ai/mcp-activation-experiments.json", async (c) => {
 app.get("/ai/mcp-activation-experiments.md", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -9411,7 +9413,7 @@ app.get("/ai/mcp-activation-experiments.md", async (c) => {
 app.get("/ai/mcp-activation-experiments.html", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -10183,7 +10185,7 @@ app.get("/r/run/:source", (c) =>
 app.get("/r/activate", async (c) => {
   const requestUrl = new URL(c.req.url);
   const date = normalizeAiSalesDate(requestUrl.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(requestUrl.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(requestUrl.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(requestUrl.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(requestUrl.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;

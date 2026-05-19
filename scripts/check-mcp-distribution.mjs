@@ -1084,6 +1084,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
       sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R15" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
+      sourceActivationQueue?.event_read_limit === 5000 &&
       sourceActivationQueue?.source_context_normalization?.release === "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01" &&
       sourceActivationQueue?.source_context_normalization?.examples?.some(
         (example) => example.raw === "cline_mcp_marketplace_first_cart_run" && example.normalized === "cline_mcp_marketplace"
