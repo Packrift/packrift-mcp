@@ -4171,18 +4171,44 @@ function sourceActivationCopyReadyHostConfigs(input: {
   };
 }
 
+function sourceActivationOrderCartUrl(source: string, target: string): string {
+  const day = compactDate();
+  const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
+  const targetSlug = normalizeMcpRuntimeSlug(target) || sourcePreferredActivationTarget(sourceSlug);
+  const id = `mcp_order_handoff_${sourceSlug}_1066_${day}`;
+  const url = new URL("https://mcp.packrift.com/r/cart/1066");
+  url.searchParams.set("ref", "mcp");
+  url.searchParams.set("qty", "1");
+  url.searchParams.set("utm_source", "chatgpt-mcp");
+  url.searchParams.set("utm_medium", "mcp_tool");
+  url.searchParams.set("utm_campaign", "create_cart_url");
+  url.searchParams.set("utm_content", "1066");
+  url.searchParams.set("utm_term", "1066");
+  url.searchParams.set("packrift_ai_id", id);
+  url.searchParams.set("ai_commerce_id", id);
+  url.searchParams.set("mcp_handoff_id", `mcp_order_handoff_${sourceSlug}_${day}`);
+  url.searchParams.set("mcp_source_context", sourceSlug);
+  url.searchParams.set("mcp_install_target", targetSlug);
+  url.searchParams.set("mcp_key", "1066:53472879935856");
+  url.searchParams.set("mcp_journey", `mcp_order_handoff:${sourceSlug}:${targetSlug}:1066`);
+  url.searchParams.set("mcp_result_set", `mcp_order_handoff_${day}`);
+  url.searchParams.set("match_type", "mcp_attributed_order_handoff");
+  return url.toString();
+}
+
 function sourceActivationOrderConversionHandoff(
   row: PostInstallActivationRow,
   urls: ReturnType<typeof sourceActivationUrls>,
   firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>
 ) {
   if (!sourceActivationHasToolAndCartProof(row)) return null;
-  const measuredCartUrl = row.recent_measured_cart_urls[0] ?? null;
+  const sourcePreservingCartUrl = sourceActivationOrderCartUrl(row.source, urls.preferred_target);
   return {
     status: "order_proof_needed",
     source: row.source,
     preferred_target: urls.preferred_target,
-    buyer_action_url: measuredCartUrl,
+    buyer_action_url: sourcePreservingCartUrl,
+    previous_measured_cart_url: row.recent_measured_cart_urls[0] ?? null,
     source_aware_endpoint: firstUsefulRun.endpoint,
     source_specific_first_run_url: urls.tracked_first_run_url,
     reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
@@ -4294,13 +4320,15 @@ function sourceActivationOperatorSafetyRule(row: PostInstallActivationRow): stri
 function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
   const cartUrl = row.recent_measured_cart_urls[0] ?? "";
   if (sourceActivationHasToolAndCartProof(row)) {
+    const orderCartUrl = sourceActivationOrderCartUrl(row.source, urls.preferred_target);
     return [
       "Packrift MCP has source-attributed MCP tool calls and qualified cart landing proof for this source.",
       "",
       `Source: ${row.source}`,
       "Endpoint: https://mcp.packrift.com/mcp",
       `Directory update card: ${urls.directory_update_card_json_url}`,
-      cartUrl ? `Measured cart URL already seen: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      `Source-preserving order cart handoff: ${orderCartUrl}`,
+      cartUrl ? `Earlier measured cart proof: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       ...sourceActivationEvalPackLines(urls),
@@ -4376,7 +4404,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
 
 function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
   if (sourceActivationHasToolAndCartProof(row)) {
-    return row.recent_measured_cart_urls[0] ?? urls.reviewer_activation_runner_url;
+    return sourceActivationOrderCartUrl(row.source, urls.preferred_target);
   }
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return row.recent_measured_cart_urls[0] ?? urls.reviewer_activation_runner_url;
@@ -4429,7 +4457,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         external_activation_message: sourceActivationExternalMessage(row, urls),
         primary_action_url: sourceActivationPrimaryUrl(row, urls),
         preferred_target: urls.preferred_target,
-        cart_landing_action_url: row.recent_measured_cart_urls[0] ?? null,
+        cart_landing_action_url: orderConversionHandoff?.buyer_action_url ?? row.recent_measured_cart_urls[0] ?? null,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
         directory_status: SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] ?? "source-attributed MCP activity visible; keep progressing toward real tool calls, measured carts, and orders",
         tracked_start_url: urls.tracked_start_url,

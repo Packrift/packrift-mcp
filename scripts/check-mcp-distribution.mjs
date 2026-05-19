@@ -1308,6 +1308,14 @@ async function liveMcpCheck() {
           row.copy_ready_host_configs?.success_gate?.includes("packrift_mcp_source_context") &&
           row.order_conversion_handoff?.status === "order_proof_needed" &&
           row.order_conversion_handoff?.source === "cline_mcp_marketplace" &&
+          row.primary_action_url?.includes("/r/cart/1066") &&
+          row.primary_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+          row.primary_action_url?.includes("mcp_install_target=cline") &&
+          row.cart_landing_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+          row.order_conversion_handoff?.buyer_action_url?.includes("/r/cart/1066") &&
+          row.order_conversion_handoff?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+          row.order_conversion_handoff?.buyer_action_url?.includes("mcp_install_target=cline") &&
+          row.order_conversion_handoff?.previous_measured_cart_url?.includes("/r/cart/1066") &&
           row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
           row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
           row.order_conversion_handoff?.source_specific_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
