@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, mcpFirstUsefulRun, sourceAwareMcpEndpoint, trackedInstallUrl } from "./install-action.js";
 import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 
 export interface McpClientConfigRuntime {
@@ -25,16 +25,28 @@ const TRACKED_CONFIG_RECOMMENDED_SOURCES = [
   "mcpfinder",
   "generic",
 ] as const;
+const SOURCE_AWARE_EXAMPLE_SOURCES = [
+  "generic",
+  "browse_sh",
+  "cline_mcp_marketplace",
+  "mcp_so",
+  "glama_connector",
+  "mcp_marketplace_io",
+] as const;
 
-function remoteMcpJson(name = "packrift") {
+function remoteMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
   return {
     mcpServers: {
       [name]: {
         type: "http",
-        url: MCP_ENDPOINT,
+        url: endpoint,
       },
     },
   };
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function trackedConfigUrl(source: string): string {
@@ -44,6 +56,39 @@ function trackedConfigUrl(source: string): string {
   url.searchParams.set("utm_campaign", "packrift_mcp_install");
   url.searchParams.set("utm_content", "client_config");
   return url.toString();
+}
+
+function sourceAwareInstallExample(source: string) {
+  const genericEndpoint = sourceAwareMcpEndpoint(source, "generic_streamable_http");
+  const claudeCodeEndpoint = sourceAwareMcpEndpoint(source, "claude_code");
+  const codexEndpoint = sourceAwareMcpEndpoint(source, "codex");
+  const clineEndpoint = sourceAwareMcpEndpoint(source, "cline");
+  return {
+    start_url: `https://mcp.packrift.com/start?utm_source=${source}`,
+    tracked_config_url: trackedConfigUrl(source),
+    tracked_install_urls: {
+      generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
+      claude_code: trackedInstallUrl(source, "claude_code"),
+      codex: trackedInstallUrl(source, "codex"),
+      cline: trackedInstallUrl(source, "cline"),
+    },
+    source_aware_endpoints: {
+      generic_streamable_http: genericEndpoint,
+      claude_code: claudeCodeEndpoint,
+      codex: codexEndpoint,
+      cline: clineEndpoint,
+    },
+    remote_mcp_json: remoteMcpJson("packrift", genericEndpoint),
+    cline_mcp_json: clineMcpJson("packrift", clineEndpoint),
+    commands: {
+      claude_code: `claude mcp add --transport http packrift ${shellQuote(claudeCodeEndpoint)}`,
+      codex: `codex mcp add packrift --url ${shellQuote(codexEndpoint)}`,
+    },
+    first_useful_run: {
+      endpoint: mcpFirstUsefulRun(source, "generic_streamable_http").endpoint,
+      tracked_run_url: trackedRunUrl(source, "generic_streamable_http"),
+    },
+  };
 }
 
 function toolCall(id: string, name: string, args: Record<string, unknown>) {
@@ -115,7 +160,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R09",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R10",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -141,6 +186,8 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_config_generic: trackedConfigUrl("generic"),
       tracked_config_examples: Object.fromEntries(TRACKED_CONFIG_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
+      source_aware_endpoint_template: "https://mcp.packrift.com/mcp?packrift_mcp_source={source}&packrift_mcp_target={target}",
+      source_aware_examples: Object.fromEntries(SOURCE_AWARE_EXAMPLE_SOURCES.map((source) => [source, sourceAwareInstallExample(source)])),
       tracked_install_template: TRACKED_INSTALL_TEMPLATE,
       tracked_install_examples: {
         generic_streamable_http: trackedInstallUrl("generic", "generic_streamable_http"),
@@ -172,6 +219,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       "For real buyer workflows, use prepare_purchase_handoff for exact SKU prep, then create cart handoffs only after buyer confirmation.",
       "Use /r/config/{source} when sharing the config from a directory, partner, campaign, or agent workflow so config fetches can be attributed.",
       "Use /r/install/{source}/{target} when sharing a target-specific command or config so install-intent can be attributed before tool calls arrive.",
+      "When the source is known, copy from aliases.source_aware_examples or /start?utm_source={source} so real tools/list and tools/call events are attributed to that source.",
     ],
     required_post_install_verification: {
       required: true,
@@ -233,6 +281,12 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     Object.entries(payload.aliases.tracked_config_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
+    "",
+    "## Source-Aware Install Examples",
+    "",
+    `Endpoint template: \`${payload.aliases.source_aware_endpoint_template}\``,
+    "",
+    fencedJson(payload.aliases.source_aware_examples),
     "",
     "## Tracked Install Actions",
     "",

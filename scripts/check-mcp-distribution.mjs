@@ -698,7 +698,7 @@ async function liveMcpCheck() {
       trackedFirstRunHtmlResult.text.includes("create_cart_url") &&
       trackedFirstRunHtmlResult.text.includes("Shell One-Liner") &&
       trackedFirstRunExecuteResult.ok &&
-      trackedFirstRunExecute?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R05" &&
+      trackedFirstRunExecute?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R06" &&
       trackedFirstRunExecute?.status === "ok" &&
       trackedFirstRunExecute?.sku === "1066" &&
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
@@ -746,7 +746,7 @@ async function liveMcpCheck() {
       installMatrix?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       installMatrix?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
       installMatrix?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
-      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R09" &&
+      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R10" &&
       installActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/generic/codex")) &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_html_url?.includes("format=html")) &&
@@ -757,8 +757,14 @@ async function liveMcpCheck() {
       installActions?.targets?.some((target) => target.id === "cline" && target.host_install_steps?.some((step) => step.includes("Cline's MCP Servers settings"))) &&
       installActions?.targets?.every((target) => target.required_post_install_final_tool === "create_cart_url") &&
       installActions?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
+      installActions?.first_useful_run?.sequence?.every(
+        (step) =>
+          step?.method !== "tools/call" ||
+          (step?.params?.arguments?.source_context && step?.params?.arguments?.journey_id && step?.params?.arguments?.result_set_id)
+      ) &&
       installActions?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       installActions?.first_useful_run?.agent_prompt?.includes("Required tool sequence") &&
+      installActions?.first_useful_run?.agent_prompt?.includes("source_context") &&
       installActions?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       installActions?.required_post_install_verification?.required_final_tool === "create_cart_url" &&
       trackedInstallCodexHtmlResult.ok &&
@@ -770,7 +776,7 @@ async function liveMcpCheck() {
       trackedInstallCodexHtmlResult.text.includes("Run real MCP check") &&
       trackedInstallClineHtmlResult.ok &&
       trackedInstallClineJsonResult.ok &&
-      trackedInstallClineJson?.release === "PACKRIFT-MCP-INSTALL-ACTION-R09" &&
+      trackedInstallClineJson?.release === "PACKRIFT-MCP-INSTALL-ACTION-R10" &&
       trackedInstallClineJson?.install?.mcpServers?.packrift?.type === "streamableHttp" &&
       trackedInstallClineJson?.install?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
       trackedInstallClineJson?.install?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=cline") &&
@@ -783,7 +789,7 @@ async function liveMcpCheck() {
       trackedInstallClineHtmlResult.text.includes("Cline&#39;s MCP Servers settings") &&
       trackedInstallClineHtmlResult.text.includes("Browser proof alone is review evidence") &&
       trackedInstallClineHtmlResult.text.includes("packrift_mcp_target=cline") &&
-      firstRunActions?.release === "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R04" &&
+      firstRunActions?.release === "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R05" &&
       firstRunActions?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       firstRunActions?.targets?.length >= 7 &&
       firstRunActions?.targets?.some((target) => target.id === "cline" && target.tracked_run_url?.startsWith("https://mcp.packrift.com/r/run/generic/cline")) &&
@@ -791,21 +797,33 @@ async function liveMcpCheck() {
       firstRunActions?.targets?.every((target) => target.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/") && target.tracked_run_html_url?.includes("format=html")) &&
       firstRunActions?.targets?.every((target) => target.tracked_run_execute_url?.includes("execute=1")) &&
       firstRunActions?.targets?.every((target) => target.required_final_tool === "create_cart_url") &&
-      firstRunActions?.first_run?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R05" &&
+      firstRunActions?.first_run?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R06" &&
       firstRunActions?.first_run?.tracked_run_url?.startsWith("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
       firstRunActions?.first_run?.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
       firstRunActions?.first_run?.tracked_run_html_url?.includes("format=html") &&
       firstRunActions?.first_run?.tracked_run_execute_url?.includes("execute=1") &&
       firstRunActions?.first_run?.first_useful_run?.curl_script?.includes("create_cart_url") &&
+      firstRunActions?.first_run?.first_useful_run?.sequence?.every(
+        (step) =>
+          step?.method !== "tools/call" ||
+          (step?.params?.arguments?.source_context && step?.params?.arguments?.journey_id && step?.params?.arguments?.result_set_id)
+      ) &&
       firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("Packrift MCP") &&
+      firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("source_context") &&
       firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       firstRunActions?.first_run?.shell_one_liner?.includes("format=sh") &&
-      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R09" &&
+      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R10" &&
       clientConfig?.canonical_endpoint === MCP_ENDPOINT &&
       clientConfig?.cline_config?.mcpServers?.packrift?.type === "streamableHttp" &&
       clientConfig?.cline_config?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       clientConfig?.aliases?.tracked_install_examples?.cline?.startsWith("https://mcp.packrift.com/r/install/generic/cline") &&
       clientConfig?.aliases?.tracked_run_examples?.cline?.startsWith("https://mcp.packrift.com/r/run/generic/cline") &&
+      clientConfig?.aliases?.source_aware_endpoint_template === "https://mcp.packrift.com/mcp?packrift_mcp_source={source}&packrift_mcp_target={target}" &&
+      clientConfig?.aliases?.source_aware_examples?.browse_sh?.commands?.codex?.includes("packrift_mcp_source=browse_sh") &&
+      clientConfig?.aliases?.source_aware_examples?.browse_sh?.commands?.codex?.includes("packrift_mcp_target=codex") &&
+      clientConfig?.aliases?.source_aware_examples?.browse_sh?.remote_mcp_json?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=generic_streamable_http") &&
+      clientConfig?.aliases?.source_aware_examples?.cline_mcp_marketplace?.cline_mcp_json?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=cline") &&
+      clientConfig?.host_notes?.some((note) => String(note).includes("aliases.source_aware_examples")) &&
       trackedFirstRunClineHtmlResult.ok &&
       trackedFirstRunClineHtmlResult.text.includes("Packrift MCP First Run") &&
       trackedFirstRunClineHtmlResult.text.includes("packrift_mcp_target=cline") &&
