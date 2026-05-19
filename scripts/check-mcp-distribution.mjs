@@ -20,6 +20,12 @@ const SURFACE_GUIDANCE = {
     priority: "core",
     follow_up_action: "Keep server.json published with mcp-publisher whenever the public MCP surface changes.",
   },
+  github_release: {
+    listing_url: "https://github.com/Packrift/packrift-mcp/releases/latest",
+    submission_url: "https://github.com/Packrift/packrift-mcp/releases/new",
+    priority: "core",
+    follow_up_action: "Publish a GitHub release whenever package.json and server.json move to a new public MCP version.",
+  },
   live_mcp_surface: {
     listing_url: "https://mcp.packrift.com/health",
     submission_url: "https://mcp.packrift.com/manifest",
@@ -347,6 +353,25 @@ async function officialRegistryCheck() {
     latest?.version === EXPECTED_VERSION && latest?.status === "active" ? "pass" : "stale",
     { expected_version: EXPECTED_VERSION, latest, versions }
   );
+}
+
+async function githubReleaseCheck() {
+  const result = await fetchText("https://api.github.com/repos/Packrift/packrift-mcp/releases/latest");
+  if (!result.ok) return check("github_release", "blocked", { http_status: result.status, url: result.url, error: result.error ?? null });
+
+  const parsed = JSON.parse(result.text);
+  const expectedTag = `v${EXPECTED_VERSION}`;
+  return check("github_release", parsed.tag_name === expectedTag && parsed.draft === false ? "pass" : "stale", {
+    http_status: result.status,
+    url: parsed.html_url ?? result.url,
+    expected_tag: expectedTag,
+    tag_name: parsed.tag_name,
+    release_name: parsed.name,
+    draft: parsed.draft,
+    prerelease: parsed.prerelease,
+    published_at: parsed.published_at,
+    target_commitish: parsed.target_commitish,
+  });
 }
 
 async function liveMcpCheck() {
@@ -2258,6 +2283,7 @@ async function main() {
   const checks = (
     await Promise.all([
       officialRegistryCheck(),
+      githubReleaseCheck(),
       liveMcpCheck(),
       mcpserversCheck(),
       mcpbenchCheck(),
