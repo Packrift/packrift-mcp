@@ -247,8 +247,9 @@ async function liveMcpCheck() {
       browserAgentBridge?.workflows?.length >= 3 &&
       directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R01" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R02" &&
       directorySubmitActions?.actions?.length >= 7 &&
+      directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&

@@ -7,6 +7,8 @@ export interface DirectorySubmitActionsRuntime {
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const DIRECTORY_REFRESH_URL = "https://mcp.packrift.com/ai/mcp-directory-refresh.json";
+const INSTALL_MATRIX_URL = "https://mcp.packrift.com/ai/mcp-install-matrix.json";
+const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 
 const ACTIONS = [
   {
@@ -98,7 +100,7 @@ const ACTIONS = [
 ] as const;
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Directory refresh pack is ${DIRECTORY_REFRESH_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -120,7 +122,9 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
     "- Description: Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
     "- All-agent evidence: https://mcp.packrift.com/ai/all-agent-capture.json",
+    `- Install matrix: ${INSTALL_MATRIX_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+    `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
     "- Cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     "",
     "Thanks,",
@@ -137,18 +141,21 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       manifest: "https://mcp.packrift.com/manifest",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
+      install_matrix: INSTALL_MATRIX_URL,
       directory_refresh: DIRECTORY_REFRESH_URL,
+      directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     },
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R01",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R02",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
     canonical_endpoint: MCP_ENDPOINT,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
+    source_install_matrix: INSTALL_MATRIX_URL,
     runtime: {
       server_version: runtime.serverVersion,
       tools_count: runtime.toolsCount,
