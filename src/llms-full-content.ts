@@ -394,6 +394,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
+- MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
 - AI-approved product corpus: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - Measured handoff directory JSON: https://mcp.packrift.com/ai/measured-handoffs.json
 - Measured handoff directory Markdown: https://mcp.packrift.com/ai/measured-handoffs.md

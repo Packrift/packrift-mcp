@@ -10,6 +10,7 @@ import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
+import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
@@ -1774,6 +1775,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     (bySource.mcp_buyer_use_cases ?? 0) +
     (bySource.browser_agent_bridge ?? 0) +
     (bySource.mcp_directory_refresh ?? 0) +
+    (bySource.mcp_directory_submit_actions ?? 0) +
     (bySource.mcp_cart_handoff_candidates ?? 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + directAgentResourceEvents;
   return {
@@ -1807,6 +1809,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
       browser_agent_bridge_resource_events: bySource.browser_agent_bridge ?? 0,
       directory_refresh_resource_events: bySource.mcp_directory_refresh ?? 0,
+      directory_submit_action_resource_events: bySource.mcp_directory_submit_actions ?? 0,
       cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
       sources: bySource,
@@ -1835,6 +1838,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
@@ -1876,6 +1880,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
     `- Directory refresh resource events: ${payload.counts.directory_refresh_resource_events}`,
+    `- Directory submit-action resource events: ${payload.counts.directory_submit_action_resource_events}`,
     `- Cart-handoff candidate resource events: ${payload.counts.cart_handoff_candidate_resource_events}`,
     "",
     "## Proof Gate",
@@ -3134,6 +3139,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/browser-agent-bridge.md",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
+  "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+  "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -3217,6 +3224,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/browser-agent-bridge.md": "Crawler-readable browser-agent bridge that keeps Browse-style workflows routed through the canonical Packrift MCP endpoint.",
   "/ai/mcp-directory-refresh.json": "Machine-readable Packrift MCP directory recrawl pack with listing copy, proof URLs, stale directory targets, and recrawl request text.",
   "/ai/mcp-directory-refresh.md": "Crawler-readable Packrift MCP directory recrawl pack for MCP directories, marketplaces, and agent indexes.",
+  "/ai/mcp-directory-submit-actions.json": "Machine-readable Packrift MCP directory action queue with stale-surface statuses, proof URLs, and copy-ready recrawl messages.",
+  "/ai/mcp-directory-submit-actions.md": "Crawler-readable Packrift MCP directory submit-action queue for support teams, reviewers, and agent indexes.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -3388,6 +3397,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/browser-agent-bridge.md") return browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
   if (pathname === "/ai/mcp-directory-refresh.json") return JSON.stringify(mcpDirectoryRefreshPayload(directoryRefreshRuntime()), null, 2);
   if (pathname === "/ai/mcp-directory-refresh.md") return mcpDirectoryRefreshMarkdown(directoryRefreshRuntime());
+  if (pathname === "/ai/mcp-directory-submit-actions.json") return JSON.stringify(mcpDirectorySubmitActionsPayload(directorySubmitActionsRuntime()), null, 2);
+  if (pathname === "/ai/mcp-directory-submit-actions.md") return mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -3460,6 +3471,7 @@ function mcpManifestPayload() {
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+    mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
   };
 }
 
@@ -3500,6 +3512,15 @@ function browserAgentBridgeRuntime() {
 }
 
 function directoryRefreshRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function directorySubmitActionsRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -3554,6 +3575,7 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
     },
     signals: {
       category: "Business Tools",
@@ -4527,6 +4549,21 @@ app.get("/ai/mcp-directory-refresh.json", async (c) => {
 app.get("/ai/mcp-directory-refresh.md", async (c) => {
   const body = mcpDirectoryRefreshMarkdown(directoryRefreshRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-directory-refresh.md", "mcp_directory_refresh", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-directory-submit-actions.json", async (c) => {
+  const payload = mcpDirectorySubmitActionsPayload(directorySubmitActionsRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-directory-submit-actions.json", "mcp_directory_submit_actions", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-directory-submit-actions.md", async (c) => {
+  const body = mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-directory-submit-actions.md", "mcp_directory_submit_actions", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

@@ -93,6 +93,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory refresh pack Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
+- MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
+- MCP directory submit actions Markdown: https://mcp.packrift.com/ai/mcp-directory-submit-actions.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - AI purchase paths JSONL: https://mcp.packrift.com/ai/purchase-paths.jsonl
 - MCP cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json
@@ -281,10 +283,11 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/mcp-usage-snapshot.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-buyer-use-cases.json` and `.md`, and
 `https://mcp.packrift.com/ai/browser-agent-bridge.json` and `.md`, and
-`https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md` are live,
+`https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
+`https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, public usage snapshot, buyer workflow map,
-browser-agent bridge, directory refresh pack, and Browserbase Browse candidate lane, and preserve the
+browser-agent bridge, directory refresh pack, directory submit-action queue, and Browserbase Browse candidate lane, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate
 briefs, proof links, and MCP install snippets under

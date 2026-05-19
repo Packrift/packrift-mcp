@@ -335,6 +335,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Push stale directory refreshes from this public recrawl pack instead of creating separate Packrift surfaces.",
     }),
     surface({
+      id: "mcp_directory_submit_actions",
+      name: "MCP directory submit actions",
+      agent_type: "mcp_directory_operations",
+      audience: "Directory support teams, listing reviewers, and Packrift operators turning stale discovery surfaces into current listings.",
+      status: "live",
+      priority: "high",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      install_or_call:
+        "Use the public submit-action queue for per-directory status, proof URLs, and copy-ready recrawl messages.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      next_action:
+        "Use this to keep mcpservers.org, MCP.Directory, Glama source listing, PulseMCP, MCPBench, Chiark, and Docker MCP Catalog moving without losing the current proof bundle.",
+    }),
+    surface({
       id: "search_and_answer_crawlers",
       name: "Search and answer-engine crawlers",
       agent_type: "crawler",
@@ -416,7 +432,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, crawlable corpora, search crawlers, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane.",
+    "One current Packrift map for every agent surface we care about: MCP clients, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane.",
     "",
     "## Operating Rules",
     "",
