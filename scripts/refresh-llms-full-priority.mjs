@@ -24,11 +24,13 @@ loadEnvFile("/Users/farhan/Downloads/env-cloudflare.txt");
 
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const runDir = resolve(args["run-dir"] || join(REPO_ROOT, "outputs/llms-full-refresh", stamp));
+const latestSummaryPath = resolve(args["latest-summary"] || join(REPO_ROOT, "outputs/llms-full-refresh", "latest.json"));
 mkdirSync(runDir, { recursive: true });
 
 const summary = {
   ok: false,
   run_dir: runDir,
+  latest_summary_path: latestSummaryPath,
   ga4_output_dir: null,
   ga4_items_path: null,
   approved_jsonl_path: null,
@@ -104,8 +106,11 @@ try {
 
   summary.ok = true;
 } finally {
-  writeFileSync(join(runDir, "refresh-summary.json"), JSON.stringify(summary, null, 2), "utf8");
-  console.log(JSON.stringify(summary, null, 2));
+  const summaryJson = JSON.stringify(summary, null, 2);
+  writeFileSync(join(runDir, "refresh-summary.json"), summaryJson, "utf8");
+  mkdirSync(dirname(latestSummaryPath), { recursive: true });
+  writeFileSync(latestSummaryPath, summaryJson, "utf8");
+  console.log(summaryJson);
 }
 
 function runGa4Pull(runDirPath) {
