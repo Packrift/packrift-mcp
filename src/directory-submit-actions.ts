@@ -25,6 +25,8 @@ const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.jso
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
 const WORKFLOW_GALLERY_URL = "https://mcp.packrift.com/ai/mcp-workflow-gallery.json";
+const REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
+const MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
@@ -109,7 +111,7 @@ const ACTIONS = [
     priority: "high",
     method: "GitHub issue submission.",
     evidence:
-      "Cline MCP Marketplace issue #1610 is open; the latest proof comment now includes R11/R04 snapshots and the source-aware first_useful_run sequence.",
+      "Cline MCP Marketplace issue #1610 is open; the latest proof comment now includes first-run, usage, and funnel snapshots plus the source-aware first_useful_run sequence.",
     stale_markers: ["Packrift not yet visible as a published Cline marketplace listing"],
     recrawl_subject: "Review Cline MCP Marketplace Packrift MCP submission",
     next_action:
@@ -282,7 +284,7 @@ const ACTIONS = [
     priority: "medium",
     method: "GitHub pull request.",
     evidence:
-      "Docker MCP Catalog PR #3388 is open and mergeable; the latest proof comment now includes R11/R04 snapshots and the source-aware first_useful_run sequence.",
+      "Docker MCP Catalog PR #3388 is open and mergeable; the latest proof comment now includes first-run, usage, and funnel snapshots plus the source-aware first_useful_run sequence.",
     recrawl_subject: "Refresh Docker MCP Catalog Packrift entry to current hosted endpoint",
     next_action:
       "Monitor for Docker review and publication; reviewers can use the linked first_useful_run sequence, and further comments should only respond to maintainer requests.",
@@ -310,7 +312,7 @@ function trackedConfigUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page and one-click live proof that reach create_cart_url after live price and inventory checks.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page and one-click live proof that reach create_cart_url after live price and inventory checks.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -324,6 +326,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const trackedRunGenericHtml = `${trackedRunGeneric}&format=html`;
   const trackedRunGenericExecute = `${trackedRunGeneric}&execute=1`;
   const trackedRunGenericSh = `${trackedRunGeneric}&format=sh`;
+  const reviewerActivation = `https://mcp.packrift.com/r/activate/${action.id}`;
   return [
     `Subject: ${action.recrawl_subject}`,
     "",
@@ -347,8 +350,9 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Tracked first-run action: ${trackedRunGeneric}`,
     `- Browser first-run page: ${trackedRunGenericHtml}`,
     `- One-click live proof: ${trackedRunGenericExecute}`,
+    `- Reviewer-to-real-MCP activation handoff: ${reviewerActivation}`,
     `- One-line first-run shell script: curl -sS '${trackedRunGenericSh}' | bash`,
-    `- First useful run: open ${trackedRunGenericHtml}, click Run live proof, or run the first_useful_run JSON-RPC sequence from ${trackedInstallGenericMd}; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
+    `- First useful run: open ${trackedRunGenericHtml}, click Run live proof, then use ${reviewerActivation} to run the same sequence through a real MCP client. It reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -363,6 +367,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Well-known MCP JSON config: ${WELL_KNOWN_MCP_JSON_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
+    `- Reviewer activation handoff: ${REVIEWER_ACTIVATION_URL}`,
     `- Agent capture outreach packet: ${AGENT_CAPTURE_OUTREACH_URL}`,
     `- Claude connector submission packet: ${CLAUDE_CONNECTOR_SUBMISSION_URL}`,
     `- First-run proof: ${FIRST_RUN_PROOF_URL}`,
@@ -409,6 +414,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       tracked_run_generic: trackedRunUrl(action.id, "generic_streamable_http"),
       tracked_run_generic_browser: `${trackedRunUrl(action.id, "generic_streamable_http")}&format=html`,
       tracked_run_generic_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
+      tracked_reviewer_activation: `https://mcp.packrift.com/r/activate/${action.id}`,
       tracked_run_codex: trackedRunUrl(action.id, "codex"),
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
@@ -418,6 +424,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       install_matrix: INSTALL_MATRIX_URL,
       directory_refresh: DIRECTORY_REFRESH_URL,
       directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
+      reviewer_activation: REVIEWER_ACTIVATION_URL,
       agent_capture_outreach: AGENT_CAPTURE_OUTREACH_URL,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
       cart_activation: CART_ACTIVATION_URL,
@@ -432,7 +439,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R19",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R20",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -441,6 +448,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
     tracked_install_template: TRACKED_INSTALL_TEMPLATE,
     tracked_run_template: TRACKED_RUN_TEMPLATE,
+    tracked_reviewer_activation_template: MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
     source_client_config: CLIENT_CONFIG_URL,
@@ -471,7 +479,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${action.tracked_run_urls.generic_streamable_http} | ${action.tracked_run_urls.generic_streamable_http_execute} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${action.tracked_run_urls.generic_streamable_http} | ${action.tracked_run_urls.generic_streamable_http_execute} | ${action.proof_urls.tracked_reviewer_activation} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -495,9 +503,10 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     `Tracked config template: ${payload.tracked_config_template}`,
     `Tracked install template: ${payload.tracked_install_template}`,
     `Tracked run template: ${payload.tracked_run_template}`,
+    `Tracked reviewer activation template: ${payload.tracked_reviewer_activation_template}`,
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Live proof URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Live proof URL | Activation handoff | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",

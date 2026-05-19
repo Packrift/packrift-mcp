@@ -83,6 +83,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
 - MCP first-run proof JSON: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP first-run proof Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
+- MCP reviewer activation JSON: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
+- MCP reviewer activation Markdown: https://mcp.packrift.com/ai/mcp-reviewer-activation.md
 - MCP workflow gallery JSON: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
 - Browser-agent bridge JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json

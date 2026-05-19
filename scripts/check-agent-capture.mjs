@@ -140,6 +140,7 @@ async function main() {
     "mcp_install_matrix",
     "mcp_install_actions",
     "mcp_first_run_actions",
+    "mcp_reviewer_activation",
     "mcp_client_config",
     "mcp_usage_snapshot",
     "mcp_funnel_snapshot",
@@ -181,6 +182,7 @@ async function main() {
     "install matrix",
     "tracked install actions",
     "first-run actions",
+    "reviewer activation",
     "client config",
     "usage snapshot",
     "funnel snapshot",
@@ -208,7 +210,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R10", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R11", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -249,6 +251,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises tracked first-run actions", hasResourceUri(resourceUris, "/ai/mcp-first-run-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-first-run-actions.md") && hasResourceUri(resourceUris, "/r/run/generic/generic_streamable_http"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises reviewer activation", hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.md") && hasResourceUri(resourceUris, "/r/activate/generic"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/r/config/generic") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {

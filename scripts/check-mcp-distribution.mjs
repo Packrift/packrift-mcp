@@ -304,6 +304,8 @@ async function liveMcpCheck() {
     browserbaseBrowseSkillPackResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
+    reviewerActivationResult,
+    trackedReviewerActivationGenericResult,
     claudeConnectorSubmissionResult,
     agentCaptureOutreachResult,
     trackedStartPartnerResult,
@@ -314,6 +316,7 @@ async function liveMcpCheck() {
     invalidInstallTargetResult,
     invalidFirstRunSourceResult,
     invalidFirstRunTargetResult,
+    invalidReviewerActivationSourceResult,
     toolsResult,
     resourcesResult,
     promptsResult,
@@ -345,6 +348,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-reviewer-activation.json"),
+    fetchText("https://mcp.packrift.com/r/activate/generic?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/claude-connector-submission.json"),
     fetchText("https://mcp.packrift.com/ai/agent-capture-outreach.json"),
     fetchRedirect("https://mcp.packrift.com/r/start/partner_demo?utm_content=distribution_check"),
@@ -355,6 +360,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/r/install/generic/not_a_real_target"),
     fetchText("https://mcp.packrift.com/r/run/bad-source/generic_streamable_http"),
     fetchText("https://mcp.packrift.com/r/run/generic/not_a_real_target"),
+    fetchText("https://mcp.packrift.com/r/activate/bad-source"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("prompts/list"),
@@ -383,6 +389,8 @@ async function liveMcpCheck() {
   const browserbaseBrowseSkillPack = browserbaseBrowseSkillPackResult.ok ? JSON.parse(browserbaseBrowseSkillPackResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
+  const reviewerActivation = reviewerActivationResult.ok ? JSON.parse(reviewerActivationResult.text) : null;
+  const trackedReviewerActivationGeneric = trackedReviewerActivationGenericResult.ok ? JSON.parse(trackedReviewerActivationGenericResult.text) : null;
   const claudeConnectorSubmission = claudeConnectorSubmissionResult.ok ? JSON.parse(claudeConnectorSubmissionResult.text) : null;
   const agentCaptureOutreach = agentCaptureOutreachResult.ok ? JSON.parse(agentCaptureOutreachResult.text) : null;
   const trackedStartTarget = parseUrlOrNull(trackedStartPartnerResult.location);
@@ -392,6 +400,7 @@ async function liveMcpCheck() {
   const invalidInstallTarget = parseJsonOrNull(invalidInstallTargetResult.text);
   const invalidFirstRunSource = parseJsonOrNull(invalidFirstRunSourceResult.text);
   const invalidFirstRunTarget = parseJsonOrNull(invalidFirstRunTargetResult.text);
+  const invalidReviewerActivationSource = parseJsonOrNull(invalidReviewerActivationSourceResult.text);
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const firstFinalCartUrl = cart?.items?.[0]?.final_shopify_cart_url_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
@@ -410,6 +419,8 @@ async function liveMcpCheck() {
       serverCard?.client_config?.root_mcp_json === "https://mcp.packrift.com/mcp.json" &&
       serverCard?.client_config?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       serverCard?.client_config?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      serverCard?.registry_distribution?.reviewer_activation === "https://mcp.packrift.com/ai/mcp-reviewer-activation.json" &&
+      serverCard?.registry_distribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
@@ -497,6 +508,8 @@ async function liveMcpCheck() {
       invalidFirstRunSource?.error === "invalid_mcp_first_run_source" &&
       invalidFirstRunTargetResult.status === 404 &&
       invalidFirstRunTarget?.error === "invalid_mcp_first_run_target" &&
+      invalidReviewerActivationSourceResult.status === 404 &&
+      invalidReviewerActivationSource?.error === "invalid_mcp_reviewer_activation_source" &&
       trackedInstallCodexResult.ok &&
       trackedInstallCodexResult.text.includes("codex mcp add packrift --url") &&
       trackedInstallCodexResult.text.includes("https://mcp.packrift.com/mcp") &&
@@ -516,11 +529,12 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.sku === "1066" &&
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R10" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R11" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_install_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-install-actions.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_first_run_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" && surface.install_or_call?.includes("/r/run/{source}/{target}")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "mcp_reviewer_activation" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-reviewer-activation.json" && surface.install_or_call?.includes("/r/activate/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_client_config" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-client-config.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_funnel_snapshot" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "agent_capture_outreach_packet" && surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
@@ -579,12 +593,13 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R13" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R14" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_funnel_snapshot") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_actions") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_reviewer_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
       typeof usageSnapshot?.counts?.mcp_cart_landings === "number" &&
@@ -593,6 +608,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_first_run_intent_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_first_run_execution_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
+      typeof usageSnapshot?.counts?.reviewer_activation_resource_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
       typeof usageSnapshot?.counts?.external_qualified_create_cart_url_calls === "number" &&
@@ -681,7 +697,7 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R11" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R12" &&
       directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directoryRefresh?.live_proof?.tracked_start_partner_demo === "https://mcp.packrift.com/r/start/partner_demo" &&
@@ -700,6 +716,8 @@ async function liveMcpCheck() {
       directoryRefresh?.canonical_listing?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       directoryRefresh?.canonical_listing?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
       directoryRefresh?.canonical_listing?.tracked_first_run_examples?.live_proof?.includes("execute=1") &&
+      directoryRefresh?.canonical_listing?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
+      directoryRefresh?.canonical_listing?.tracked_reviewer_activation_examples?.generic === "https://mcp.packrift.com/r/activate/generic" &&
       directoryRefresh?.canonical_listing?.client_config_url === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directoryRefresh?.canonical_listing?.tracked_start_source_policy?.partner_specific_sources_allowed === true &&
       directoryRefresh?.live_proof?.browserbase_browse_skill_pack === "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json" &&
@@ -710,9 +728,11 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_run_urls?.generic_streamable_http_browser?.includes("format=html")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_run_urls?.generic_streamable_http_execute?.includes("execute=1")) &&
+      directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/")) &&
       directoryRefresh?.recrawl_request?.includes("/r/install/") &&
       directoryRefresh?.recrawl_request?.includes("execute=1") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R19" &&
+      directoryRefresh?.recrawl_request?.includes("/r/activate/{source}") &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R20" &&
       directorySubmitActions?.actions?.length >= 18 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
@@ -726,6 +746,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       directorySubmitActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       directorySubmitActions?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      directorySubmitActions?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       directorySubmitActions?.actions?.every((action) => action.tracked_start_url?.startsWith("https://mcp.packrift.com/r/start/")) &&
       directorySubmitActions?.actions?.every((action) => action.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/")) &&
       directorySubmitActions?.actions?.every((action) => action.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
@@ -740,6 +761,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_run_generic?.startsWith("https://mcp.packrift.com/r/run/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_run_generic_browser?.includes("format=html")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_run_generic_execute?.includes("execute=1")) &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_reviewer_activation?.startsWith("https://mcp.packrift.com/r/activate/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
@@ -750,6 +772,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("/r/install/")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("One-click live proof")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("execute=1")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Reviewer-to-real-MCP activation handoff")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("format=md")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
@@ -757,13 +780,23 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("claude-connector-submission.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("agent-capture-outreach.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
+      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R01" &&
+      reviewerActivation?.target_source?.id === "generic" &&
+      reviewerActivation?.target_source?.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/generic") &&
+      reviewerActivation?.target_source?.tracked_first_run_live_proof_url?.includes("execute=1") &&
+      reviewerActivation?.real_mcp_client_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
+      reviewerActivation?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
+      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R01" &&
+      trackedReviewerActivationGeneric?.target_source?.id === "generic" &&
+      trackedReviewerActivationGeneric?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
+      trackedReviewerActivationGeneric?.real_mcp_client_run?.required_final_tool === "create_cart_url" &&
       claudeConnectorSubmission?.release === "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R01" &&
       claudeConnectorSubmission?.status === "manual_submission_ready" &&
       claudeConnectorSubmission?.server?.remote_endpoint === "https://mcp.packrift.com/mcp" &&
       claudeConnectorSubmission?.server?.authentication === "none_required_for_hosted_endpoint" &&
       claudeConnectorSubmission?.claude_install?.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R07" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R08" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
@@ -775,6 +808,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.browserbase_browse_candidate?.install_check?.status === "pass" &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      agentCaptureOutreach?.directory_submit_actions?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/start") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
@@ -820,6 +854,9 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-reviewer-activation.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-reviewer-activation.md") &&
+      resourceUris.has("https://mcp.packrift.com/r/activate/generic") &&
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
@@ -990,6 +1027,11 @@ async function liveMcpCheck() {
       directory_submit_actions_browserbase_browse_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("browserbase-browse-skill-pack.json")
       ).length ?? 0,
+      reviewer_activation_release: reviewerActivation?.release ?? null,
+      reviewer_activation_target: reviewerActivation?.target_source?.id ?? null,
+      reviewer_activation_priority_sources: reviewerActivation?.priority_sources_waiting_on_real_mcp_run?.length ?? null,
+      tracked_reviewer_activation_status: trackedReviewerActivationGenericResult.status,
+      tracked_reviewer_activation_target: trackedReviewerActivationGeneric?.target_source?.id ?? null,
       agent_capture_outreach_release: agentCaptureOutreach?.release ?? null,
       agent_capture_outreach_priority_queue: agentCaptureOutreach?.priority_queue?.length ?? 0,
       agent_capture_outreach_directory_refreshes: agentCaptureOutreach?.directory_refreshes?.length ?? 0,
