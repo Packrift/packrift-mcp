@@ -222,7 +222,10 @@ redirect.
 
 GitHub Actions also runs the hosted smoke checks every six hours and on manual
 dispatch through `.github/workflows/mcp-live-smoke.yml`. The scheduled job
-checks both `1066` and `LL251WR`, then uploads the smoke evidence artifact.
+checks both `1066` and `LL251WR`, then uploads smoke and capture evidence
+artifacts. Run `npm run check:distribution` for the broader directory and
+registry monitor; it exits nonzero only when a tracked surface has a true
+`fail` status.
 
 Refresh the `llms-full.txt` priority SKU block from recent GA4 item activity joined to the AI-approved catalog and live Shopify inventory:
 

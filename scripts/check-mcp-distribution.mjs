@@ -471,6 +471,7 @@ async function main() {
   writeFileSync(resolve(OUT_ROOT, "latest.json"), JSON.stringify(payload, null, 2) + "\n");
   writeFileSync(resolve(OUT_ROOT, "latest.md"), markdownReport(payload));
   console.log(JSON.stringify(payload, null, 2));
+  if (payload.counts.fail > 0) process.exit(1);
 }
 
 main().catch((error) => {
