@@ -6,6 +6,7 @@ export interface DirectoryRefreshRuntime {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 
 const DIRECTORY_TARGETS = [
   {
@@ -68,9 +69,9 @@ const DIRECTORY_TARGETS = [
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R02",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R03",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -116,6 +117,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+      browserbase_browse_skill_pack: BROWSERBASE_BROWSE_SKILL_PACK_URL,
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       docker_mcp_catalog_pr: "https://github.com/docker/mcp-registry/pull/3388",

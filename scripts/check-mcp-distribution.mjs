@@ -285,14 +285,16 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R03" &&
+      directoryRefresh?.live_proof?.browserbase_browse_skill_pack === "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R03" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R04" &&
       directorySubmitActions?.actions?.length >= 7 &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-workflow-gallery.json")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
@@ -368,6 +370,9 @@ async function liveMcpCheck() {
       ).length ?? 0,
       directory_submit_actions_workflow_gallery_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("mcp-workflow-gallery.json")
+      ).length ?? 0,
+      directory_submit_actions_browserbase_browse_messages: directorySubmitActions?.actions?.filter((action) =>
+        action.recrawl_message?.includes("browserbase-browse-skill-pack.json")
       ).length ?? 0,
       first_cart_url_candidate_type: cart?.items?.[0]?.cart_url_candidate_type ?? null,
       first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
