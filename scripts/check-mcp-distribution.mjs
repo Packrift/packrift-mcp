@@ -598,7 +598,7 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R12" &&
+      start?.release === "PACKRIFT-MCP-START-R13" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
@@ -652,6 +652,9 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/cline") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/run/partner_demo/generic_streamable_http") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/activate/partner_demo?format=html") &&
+      trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=generic_streamable_http") &&
+      trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=claude_code") &&
+      trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=codex") &&
       trackedStartHtmlPartnerResult.text.includes("Activation runner") &&
       trackedStartHtmlPartnerResult.text.includes("Tracked Cline install") &&
       trackedStartHtmlPartnerResult.text.includes("install cline: partner demo") &&

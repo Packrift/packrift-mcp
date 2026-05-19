@@ -74,15 +74,19 @@ function humanSourceLabel(source: string): string {
   return source.replace(/_/g, " ");
 }
 
-function remoteMcpJson() {
+function remoteMcpJson(endpoint = MCP_ENDPOINT) {
   return {
     mcpServers: {
       packrift: {
         type: "http",
-        url: MCP_ENDPOINT,
+        url: endpoint,
       },
     },
   };
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function toolCall(id: string, name: string, args: Record<string, unknown>) {
@@ -190,7 +194,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R12",
+    release: "PACKRIFT-MCP-START-R13",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -437,10 +441,15 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   const sourceActivationUrl = `https://mcp.packrift.com/r/activate/${source}`;
   const sourceActivationRunnerUrl = `${sourceActivationUrl}?format=html`;
   const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
+  const sourceRemoteConfig = remoteMcpJson(firstUsefulRun.endpoint);
+  const sourceRemoteConfigJson = JSON.stringify(sourceRemoteConfig, null, 2);
+  const sourceClaudeEndpoint = mcpFirstUsefulRun(source, "claude_code").endpoint;
+  const sourceCodexEndpoint = mcpFirstUsefulRun(source, "codex").endpoint;
+  const sourceClaudeCommand = `claude mcp add --transport http packrift ${shellQuote(sourceClaudeEndpoint)}`;
+  const sourceCodexCommand = `codex mcp add packrift --url ${shellQuote(sourceCodexEndpoint)}`;
   const firstUsefulPrompt = `${firstUsefulRun.buyer_prompt}\n\nUse endpoint: ${firstUsefulRun.endpoint}`;
   const firstUsefulSequence = JSON.stringify(firstUsefulRun.sequence, null, 2);
   const firstUsefulCurlScript = firstUsefulRun.curl_script;
-  const remoteConfig = JSON.stringify(payload.install.remote_mcp_json, null, 2);
   const flow = payload.first_flow
     .map(
       (step) => `<li>
@@ -616,16 +625,16 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
       <h2>Install</h2>
       <div class="grid">
         <div class="panel">
-          <div class="panel-head"><strong>Remote MCP config</strong>${copyButton(remoteConfig, "Copy", "remote_mcp_json")}</div>
-          <pre>${codeBlock(payload.install.remote_mcp_json)}</pre>
+          <div class="panel-head"><strong>Remote MCP config</strong>${copyButton(sourceRemoteConfigJson, "Copy", "remote_mcp_json")}</div>
+          <pre>${codeBlock(sourceRemoteConfig)}</pre>
         </div>
         <div class="panel">
-          <div class="panel-head"><strong>Claude Code</strong>${copyButton(payload.install.claude_code, "Copy", "claude_code")}</div>
-          <pre>${codeBlock(payload.install.claude_code)}</pre>
+          <div class="panel-head"><strong>Claude Code</strong>${copyButton(sourceClaudeCommand, "Copy", "claude_code")}</div>
+          <pre>${codeBlock(sourceClaudeCommand)}</pre>
         </div>
         <div class="panel">
-          <div class="panel-head"><strong>Codex</strong>${copyButton(payload.install.codex, "Copy", "codex")}</div>
-          <pre>${codeBlock(payload.install.codex)}</pre>
+          <div class="panel-head"><strong>Codex</strong>${copyButton(sourceCodexCommand, "Copy", "codex")}</div>
+          <pre>${codeBlock(sourceCodexCommand)}</pre>
         </div>
       </div>
     </section>
