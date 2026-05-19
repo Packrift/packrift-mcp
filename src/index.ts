@@ -869,6 +869,15 @@ const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "mcpbench",
   "chiark",
   "mcp_marketplace_io",
+  "mcplist_ai",
+  "mcphubz",
+  "mcp_blue",
+  "findmcp_dev",
+  "mcplane",
+  "mcpsolutions_dev",
+  "gpmcp",
+  "theresamcpforthat",
+  "mcpserverfinder",
   "docker_mcp_catalog",
   "generic",
 ] as const;
@@ -3667,6 +3676,8 @@ function sourceActivationUrls(source: string) {
     tracked_first_run_execute_url: `${trackedRun}?execute=1`,
     reviewer_activation_url: `https://mcp.packrift.com/r/activate/${slug}`,
     reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${slug}?format=html`,
+    directory_update_card_json_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.json`,
+    directory_update_card_markdown_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.md`,
   };
 }
 
@@ -3749,6 +3760,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       "",
       `Source: ${row.source}`,
       "Endpoint: https://mcp.packrift.com/mcp",
+      `Directory update card: ${urls.directory_update_card_json_url}`,
       cartUrl ? `Measured cart URL to review: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Install/config handoff: ${urls.tracked_install_url}`,
       "",
@@ -3761,6 +3773,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       "",
       `Source: ${row.source}`,
       "Endpoint: https://mcp.packrift.com/mcp",
+      `Directory update card: ${urls.directory_update_card_json_url}`,
       `Install/config handoff: ${urls.tracked_install_url}`,
       `Machine-readable config: ${urls.tracked_install_json_url}`,
       `First-run prompt: ${urls.tracked_first_run_url}`,
@@ -3774,6 +3787,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       "",
       `Source: ${row.source}`,
       "Endpoint: https://mcp.packrift.com/mcp",
+      `Directory update card: ${urls.directory_update_card_json_url}`,
       `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Install/config handoff: ${urls.tracked_install_url}`,
       "",
@@ -3785,6 +3799,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
     "",
     `Source: ${row.source}`,
     "Endpoint: https://mcp.packrift.com/mcp",
+    `Directory update card: ${urls.directory_update_card_json_url}`,
     `Install/config handoff: ${urls.tracked_install_url}`,
     `First-run action: ${urls.tracked_first_run_url}`,
     "",
@@ -3852,6 +3867,8 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         tracked_first_run_execute_url: urls.tracked_first_run_execute_url,
         reviewer_activation_url: urls.reviewer_activation_url,
         reviewer_activation_runner_url: urls.reviewer_activation_runner_url,
+        directory_update_card_json_url: urls.directory_update_card_json_url,
+        directory_update_card_markdown_url: urls.directory_update_card_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
         acceptance_criteria: [
@@ -3887,7 +3904,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R08",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R09",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3932,6 +3949,8 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
         run_real_mcp_check_url: row.reviewer_activation_runner_url,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
+        directory_update_card_json_url: row.directory_update_card_json_url,
+        directory_update_card_markdown_url: row.directory_update_card_markdown_url,
         source_aware_endpoint: row.source_aware_endpoint,
         cart_landing_action_url: row.cart_landing_action_url,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
@@ -3951,6 +3970,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      directory_update_card_template: "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json",
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },
     operating_rule:
@@ -3988,15 +4008,15 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     "## Priority Queue",
     "",
-    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Host install | Recent measured cart URL |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Update card | Host install | Recent measured cart URL |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.queue
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
       )
-      .join("\n") || "| none | none | none | none | none | none | none | none |",
+      .join("\n") || "| none | none | none | none | none | none | none | none | none |",
     "",
     "## Acceptance Rule",
     "",
@@ -4072,6 +4092,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           <a class="button primary" href="${escapeHtml(row.primary_action_url)}">${primaryLabel}</a>
           ${secondaryCheckLink}
           ${hostConfigLink}
+          <a class="button" href="${escapeHtml(row.directory_update_card_markdown_url)}">Update card</a>
           <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install path</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_execute_url)}">Live proof</a>
         </div>
@@ -4184,6 +4205,8 @@ interface SourceActivationExperimentQueueRow {
   tracked_first_run_execute_url: string;
   reviewer_activation_url: string;
   reviewer_activation_runner_url: string;
+  directory_update_card_json_url: string;
+  directory_update_card_markdown_url: string;
   source_aware_endpoint: string;
   agent_prompt: string;
   acceptance_criteria: string[];
@@ -4280,6 +4303,7 @@ function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRo
     "",
     `Source: ${row.source}`,
     "Endpoint: https://mcp.packrift.com/mcp",
+    `Directory update card: ${row.directory_update_card_json_url}`,
     `Install/config handoff: ${row.tracked_install_url}`,
     `Machine-readable config: ${row.tracked_install_json_url}`,
     `First-run action: ${row.tracked_first_run_url}`,
@@ -4314,6 +4338,8 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       tracked_first_run_execute_url: row.tracked_first_run_execute_url,
       reviewer_activation_url: row.reviewer_activation_url,
       reviewer_activation_runner_url: row.reviewer_activation_runner_url,
+      directory_update_card_json_url: row.directory_update_card_json_url,
+      directory_update_card_markdown_url: row.directory_update_card_markdown_url,
       primary_action_url: row.primary_action_url,
       cart_landing_action_url: row.cart_landing_action_url,
       recent_measured_cart_urls: row.recent_measured_cart_urls,
@@ -4328,6 +4354,7 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
         activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
         source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
         source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+        directory_update_card: row.directory_update_card_json_url,
         activation_command_center: "https://mcp.packrift.com/r/activate",
         usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
         funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
@@ -6275,6 +6302,15 @@ const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "mcpbench", target: "generic_streamable_http" },
   { source: "chiark", target: "generic_streamable_http" },
   { source: "mcp_marketplace_io", target: "mcp_marketplace" },
+  { source: "mcplist_ai", target: "generic_streamable_http" },
+  { source: "mcphubz", target: "generic_streamable_http" },
+  { source: "mcp_blue", target: "generic_streamable_http" },
+  { source: "findmcp_dev", target: "generic_streamable_http" },
+  { source: "mcplane", target: "generic_streamable_http" },
+  { source: "mcpsolutions_dev", target: "generic_streamable_http" },
+  { source: "gpmcp", target: "generic_streamable_http" },
+  { source: "theresamcpforthat", target: "generic_streamable_http" },
+  { source: "mcpserverfinder", target: "generic_streamable_http" },
   { source: "docker_mcp_catalog", target: "generic_streamable_http" },
   { source: "generic", target: "generic_streamable_http" },
 ] as const;

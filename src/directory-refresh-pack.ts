@@ -148,6 +148,87 @@ const DIRECTORY_TARGETS = [
       "Recrawl the hosted marketplace manifest and update the public listing to 15 tools, including prepare_purchase_handoff, with no buyer-required credentials for the hosted endpoint.",
   },
   {
+    id: "mcplist_ai",
+    name: "MCPLIST",
+    listing_url: "https://www.mcplist.ai/?search=packrift",
+    refresh_url: "https://www.mcplist.ai/",
+    priority: "medium",
+    requested_action:
+      "Find the current MCPLIST submission form or repository path, then submit Packrift with the hosted endpoint, marketplace manifest, and source-specific update card.",
+  },
+  {
+    id: "mcphubz",
+    name: "MCPHubz",
+    listing_url: "https://mcphubz.com/",
+    refresh_url: "https://mcphubz.com/submit",
+    priority: "medium",
+    requested_action:
+      "Submit Packrift MCP to MCPHubz with the hosted endpoint, tracked start URL, and first-useful-run proof.",
+  },
+  {
+    id: "mcp_blue",
+    name: "MCP Blue",
+    listing_url: "https://www.mcp.blue/",
+    refresh_url: "https://www.mcp.blue/submit",
+    priority: "medium",
+    requested_action:
+      "Submit Packrift MCP through MCP Blue's submit or registry process with the current hosted endpoint and marketplace manifest.",
+  },
+  {
+    id: "findmcp_dev",
+    name: "FindMCP",
+    listing_url: "https://findmcp.dev/",
+    refresh_url: "https://findmcp.dev/submit",
+    priority: "medium",
+    requested_action:
+      "Submit Packrift MCP through FindMCP's server listing flow with the source-specific start page and exact-spec packaging copy.",
+  },
+  {
+    id: "mcplane",
+    name: "MCPLane",
+    listing_url: "https://mcplane.com/mcp_servers?query=packrift",
+    refresh_url: "https://mcplane.com/mcp_servers/new",
+    priority: "medium",
+    requested_action:
+      "Publish Packrift MCP through MCPLane's server flow with the hosted endpoint and source-specific activation proof.",
+  },
+  {
+    id: "mcpsolutions_dev",
+    name: "MCP Solutions",
+    listing_url: "https://mcpsolutions.dev/explore/",
+    refresh_url: "https://mcpsolutions.dev/submit/",
+    priority: "medium",
+    requested_action:
+      "Submit Packrift MCP as a basic listing first, using the hosted no-auth endpoint and directory update card.",
+  },
+  {
+    id: "gpmcp",
+    name: "GPMCP",
+    listing_url: "https://www.gpmcp.com/",
+    refresh_url: "https://www.gpmcp.com/",
+    priority: "medium",
+    requested_action:
+      "Monitor GPMCP for a listing/import/contact path and use the source-specific update card if a submission path opens.",
+  },
+  {
+    id: "theresamcpforthat",
+    name: "There's an MCP for That",
+    listing_url: "https://theresamcpforthat.com/directory?search=packrift",
+    refresh_url: "https://theresamcpforthat.com/",
+    priority: "medium",
+    requested_action:
+      "Monitor for a public submit or repository path and use the source-specific update card when a path is available.",
+  },
+  {
+    id: "mcpserverfinder",
+    name: "MCP Server Finder",
+    listing_url: "https://www.mcpserverfinder.com/?q=packrift",
+    refresh_url: "mailto:info@mcpserverfinder.com",
+    priority: "medium",
+    requested_action:
+      "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+  },
+  {
     id: "cursor_directory",
     name: "Cursor Directory",
     listing_url: "https://cursor.directory/",
@@ -205,7 +286,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R19",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R20",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
