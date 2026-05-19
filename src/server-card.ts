@@ -55,6 +55,8 @@ export const serverCard = {
     mcpClientConfigMarkdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
     mcpUsageSnapshotJson: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcpUsageSnapshotMarkdown: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
+    mcpSourceActivationQueueJson: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+    mcpSourceActivationQueueMarkdown: "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
     mcpBuyerUseCasesJson: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcpBuyerUseCasesMarkdown: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
     mcpCartActivationJson: "https://mcp.packrift.com/ai/mcp-cart-activation.json",

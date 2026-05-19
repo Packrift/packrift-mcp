@@ -180,7 +180,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R10",
+    release: "PACKRIFT-MCP-START-R11",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -243,6 +243,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       root_skill_md: "https://mcp.packrift.com/SKILL.md",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
@@ -260,6 +261,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use /r/config/{source} tracked config links when a directory, partner, campaign, or agent host needs a copy-ready MCP JSON config with source attribution.",
       "Use /r/install/{source}/{target} tracked install-action links when a directory, partner, or agent host needs one target-specific install command or config plus install-intent attribution.",
       "Use /r/activate/{source}?format=html tracked reviewer activation browser runners when a proof click needs to become a real MCP call sequence ending in create_cart_url.",
+      "Use the source activation queue to choose the next source-specific first run, tool call, cart landing, or order progression.",
       "Custom /r/start/{source}, /r/config/{source}, /r/install/{source}/{target}, and /r/activate/{source}?format=html source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",

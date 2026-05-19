@@ -23,6 +23,8 @@ const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserba
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
 const MCP_CLIENT_CONFIG_URL = "https://mcp.packrift.com/ai/mcp-client-config.json";
 const MCP_FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
+const MCP_SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
+const MCP_SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.md";
 const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
 const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
 const MCP_TRACKED_START_SOURCE_POLICY = {
@@ -190,9 +192,9 @@ const DIRECTORY_TARGETS = [
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R15",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R16",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -250,6 +252,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         },
       },
       client_config_url: MCP_CLIENT_CONFIG_URL,
+      source_activation_queue_url: MCP_SOURCE_ACTIVATION_QUEUE_URL,
       root_mcp_json: ROOT_MCP_JSON_URL,
       well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
       proof_summary: proofSummary,
@@ -297,6 +300,8 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: MCP_FUNNEL_SNAPSHOT_URL,
+      source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
+      source_activation_queue_markdown: MCP_SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -340,7 +345,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         "Paste the source-specific agent prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before treating this source as activated.",
     })),
     recrawl_request:
-      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup, use browser proof links like ${trackedRunUrl("generic", "generic_streamable_http")}&execute=1 when validating the first useful run, use the Copy agent prompt button at ${trackedRunUrl("generic", "generic_streamable_http")}&format=html, and use ${REVIEWER_ACTIVATION_URL} plus /r/activate/{source}?format=html to convert proof clicks into real MCP client calls. Current proof: ${proofSummary}`,
+      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup, use browser proof links like ${trackedRunUrl("generic", "generic_streamable_http")}&execute=1 when validating the first useful run, use the Copy agent prompt button at ${trackedRunUrl("generic", "generic_streamable_http")}&format=html, use ${REVIEWER_ACTIVATION_URL} plus /r/activate/{source}?format=html to convert proof clicks into real MCP client calls, and use ${MCP_SOURCE_ACTIVATION_QUEUE_URL} to pick the next source-specific activation run. Current proof: ${proofSummary}`,
     operating_rules: [
       "The hosted endpoint is the primary listing target; do not require users to self-host or provide a Shopify token for normal MCP use.",
       "Use the official registry name io.github.Packrift/packrift-mcp and the remote endpoint https://mcp.packrift.com/mcp.",
@@ -348,6 +353,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       "Use /r/run/{source}/{target}?format=html for reviewer-friendly first-run pages and /r/run/{source}/{target}?execute=1 for one-click live proof.",
       "Use the copy-ready agent prompt in mcp-start, mcp-client-config, directory submit actions, first-run pages, and reviewer activation pages to move installs into real tool calls.",
       "Use /r/activate/{source}?format=html when a reviewer has clicked proof but still needs a browser-run real MCP client sequence ending in create_cart_url.",
+      "Use the source activation queue to decide which directory or agent host needs the next start, install, first-run, tool-call, cart-landing, or order event.",
       "Keep stale directory listings separate from the live MCP truth. The live health, server card, tools/list, resources/list, and prompts/list are authoritative.",
       "Discovery is not the final goal. Recrawls should drive external MCP sessions, tool calls, stamped cart landings, and measurable revenue.",
     ],

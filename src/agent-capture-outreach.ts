@@ -27,6 +27,8 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const CAPTURE_JSON_URL = "https://mcp.packrift.com/ai/all-agent-capture.json";
 const CAPTURE_MARKDOWN_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
+const SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
+const SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.md";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
@@ -135,6 +137,8 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
     copy_ready_agent_prompt: firstUsefulRun.agent_prompt,
     agent_prompt_page: "https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html",
     reviewer_activation_runner: "https://mcp.packrift.com/r/activate/generic?format=html",
+    source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+    source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
     acceptance_rule:
       "Paste the prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before calling the source activated.",
   };
@@ -255,6 +259,8 @@ function evidenceLinks() {
     mcp_first_run_agent_prompt_page: "https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html",
     mcp_reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
     mcp_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
+    mcp_source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+    mcp_source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -314,7 +320,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R11",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R12",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -342,6 +348,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       tracked_run_template: submitActions.tracked_run_template,
       tracked_reviewer_activation_template: submitActions.tracked_reviewer_activation_template,
       tracked_reviewer_activation_html_template: submitActions.tracked_reviewer_activation_html_template,
+      source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
     },
@@ -357,6 +364,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       "Use tracked /r/run/{source}/{target} links to move installed users into the first useful run and measure first-run intent.",
       "Use the copy-ready agent prompt from /r/run/{source}/{target}?format=html and /r/activate/{source}?format=html when the next step is a real MCP run, not another listing click.",
       "Use tracked /r/activate/{source}?format=html browser runners when proof clicks need to become real MCP client calls and create_cart_url output.",
+      "Use the source activation queue to pick the next source-specific run that moves starts, installs, tool calls, cart landings, and orders forward.",
       "Use the start page for first install, the install matrix for host-specific setup, and the workflow gallery for demo/eval flows.",
       "Route Browserbase Browse and other browser agents through read-first public resources, then confirm live commerce facts through MCP.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer interface.",

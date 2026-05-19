@@ -12,9 +12,10 @@ const TRACKED_START_URL =
   "https://mcp.packrift.com/r/start/anthropic_connectors_directory?utm_source=anthropic_connectors_directory&utm_medium=directory_recrawl&utm_campaign=packrift_mcp_start&utm_content=claude_connector_submission";
 const TRACKED_CONFIG_URL =
   "https://mcp.packrift.com/r/config/anthropic_connectors_directory?utm_source=anthropic_connectors_directory&utm_medium=directory_config&utm_campaign=packrift_mcp_install&utm_content=claude_connector_submission";
+const SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
 
 function proofSummary(runtime: ClaudeConnectorSubmissionRuntime): string {
-  return `${runtime.toolsCount} annotated tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, no-auth hosted Streamable HTTP endpoint, public server card, source-attributed config, first-run proof, workflow gallery, and measured MCP cart handoff candidates.`;
+  return `${runtime.toolsCount} annotated tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, no-auth hosted Streamable HTTP endpoint, public server card, source-attributed config, source activation queue, first-run proof, workflow gallery, and measured MCP cart handoff candidates.`;
 }
 
 function checklistRow(status: "pass" | "ready" | "manual_review", item: string, evidence: string) {
@@ -24,7 +25,7 @@ function checklistRow(status: "pass" | "ready" | "manual_review", item: string, 
 export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmissionRuntime) {
   const summary = proofSummary(runtime);
   return {
-    release: "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R01",
+    release: "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R02",
     generated_at: new Date().toISOString(),
     status: "manual_submission_ready",
     purpose:
@@ -104,6 +105,7 @@ export function claudeConnectorSubmissionPayload(runtime: ClaudeConnectorSubmiss
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",

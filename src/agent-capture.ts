@@ -178,6 +178,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the public goal gate; keep working until qualified visitors, cart landings, and MCP-attributed revenue are all proven.",
     }),
     surface({
+      id: "mcp_source_activation_queue",
+      name: "Packrift MCP source activation queue",
+      agent_type: "source_activation_measurement",
+      audience: "Directory reviewers, agent hosts, partners, and Packrift operators deciding which source-specific MCP run should happen next.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      install_or_call:
+        "Use the public queue to pick the next source-specific start, install, first-run, tool-call, cart-landing, or order event needed to move Packrift MCP toward measurable revenue.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      next_action:
+        "Work critical rows first, especially sources with installs or create_cart_url output but missing real MCP tool calls, measured /r/cart landings, or orders.",
+    }),
+    surface({
       id: "buyer_mcp_use_cases",
       name: "Packrift MCP buyer use cases",
       agent_type: "buyer_workflow_corpus",
@@ -550,7 +566,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R12",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R13",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -563,6 +579,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       agent_instructions: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",

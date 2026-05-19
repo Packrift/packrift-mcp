@@ -23,6 +23,7 @@ const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-conn
 const AGENT_CAPTURE_OUTREACH_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
 const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
+const SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
 const WORKFLOW_GALLERY_URL = "https://mcp.packrift.com/ai/mcp-workflow-gallery.json";
 const REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
@@ -315,7 +316,7 @@ function trackedConfigUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -375,6 +376,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
     `- Reviewer activation handoff: ${REVIEWER_ACTIVATION_URL}`,
+    `- Source activation queue: ${SOURCE_ACTIVATION_QUEUE_URL}`,
     `- Agent capture outreach packet: ${AGENT_CAPTURE_OUTREACH_URL}`,
     `- Claude connector submission packet: ${CLAUDE_CONNECTOR_SUBMISSION_URL}`,
     `- First-run proof: ${FIRST_RUN_PROOF_URL}`,
@@ -438,6 +440,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
       cart_activation: CART_ACTIVATION_URL,
       funnel_snapshot: FUNNEL_SNAPSHOT_URL,
+      source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       first_run_proof: FIRST_RUN_PROOF_URL,
       workflow_gallery: WORKFLOW_GALLERY_URL,
       root_browserbase_browse_skill_md: ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL,
@@ -448,7 +451,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R24",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R25",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -460,6 +463,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     tracked_reviewer_activation_template: MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
     tracked_reviewer_activation_html_template: MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
+    source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
     source_client_config: CLIENT_CONFIG_URL,
     source_root_mcp_json: ROOT_MCP_JSON_URL,
@@ -477,6 +481,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     actions,
     first_useful_run_agent_prompt: firstUsefulRun.agent_prompt,
     first_useful_run_agent_prompt_success_criteria: firstUsefulRun.agent_prompt_success_criteria,
+    public_comment_policy:
+      "Do not post another unsolicited update to already-submitted public issues or PRs such as Cline #1610, MCP.so #2189, or Docker #3388. Use this packet as central evidence and only comment when maintainers ask for more proof.",
     operating_rule:
       "Use this as a support/reviewer queue, not as proof that the MCP revenue goal is complete. Completion still requires qualified external MCP sessions, cart landings, and attributed orders.",
   };
@@ -495,7 +501,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     )
     .join("\n");
   const messages = payload.actions
-    .filter((action) => action.action_status !== "monitor_upstream_registry")
+    .filter((action) => !["monitor_upstream_registry", "submitted_pending", "pending_merge"].includes(action.action_status))
     .map((action) => [`### ${action.label}`, "", action.recrawl_message].join("\n"))
     .join("\n\n");
   return [

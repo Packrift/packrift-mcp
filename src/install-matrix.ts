@@ -245,7 +245,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R03",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R04",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -305,6 +305,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
