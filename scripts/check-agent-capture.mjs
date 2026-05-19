@@ -280,6 +280,14 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check(
+      "resources/list advertises source-specific activation runners",
+      resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
+        resourceUris.has("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory"),
+      { detail: `resources=${resources.length}` }
+    ),
+    check(
       "resources/templates advertises source-specific activation runners",
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}") &&
         resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?format=sh") &&

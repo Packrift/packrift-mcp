@@ -7003,6 +7003,12 @@ const MCP_DIRECTORY_UPDATE_CARD_URLS = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.fla
   `https://mcp.packrift.com/ai/mcp-directory-update/${source}.json`,
   `https://mcp.packrift.com/ai/mcp-directory-update/${source}.md`,
 ]);
+const MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
+  `https://mcp.packrift.com/r/config/${source}`,
+  `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`,
+  `https://mcp.packrift.com/r/run/${source}/${target}?format=md`,
+  `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+]);
 const APPROVED_CATALOG_BY_SKU = new Map(
   APPROVED_CATALOG.map((item) => [item.sku.toUpperCase(), item])
 );
@@ -7104,6 +7110,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
   MCP_SOURCE_ACTIVATION_SITEMAP_URL,
+  ...MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS,
   "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
   "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
   "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
@@ -7519,7 +7526,7 @@ const AI_SALES_PRIORITY_SKU_RESOURCE_URLS = AI_SALES_PRIORITY_SKUS.flatMap((sku)
   `https://mcp.packrift.com/ai/sku/${sku}.json`,
 ]);
 
-const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_URLS].map((uri) => {
+const MCP_RESOURCES = Array.from(new Set([...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_URLS])).map((uri) => {
   const parsed = new URL(uri);
   const pathname = parsed.pathname;
   const explicitFormat = parsed.searchParams.get("format")?.toLowerCase();
@@ -7533,6 +7540,10 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
           ? "text/html"
         : explicitFormat === "sh" || explicitFormat === "shell"
           ? "text/x-shellscript"
+        : explicitFormat === "md" || explicitFormat === "markdown"
+          ? "text/markdown"
+        : explicitFormat === "text" || explicitFormat === "txt"
+          ? "text/plain"
         : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/") || pathname.startsWith("/r/install/") || pathname.startsWith("/r/run/") || pathname.startsWith("/r/activate/")
           ? "application/json"
         : pathname.endsWith(".jsonl")

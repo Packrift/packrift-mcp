@@ -681,6 +681,10 @@ async function liveMcpCheck() {
       toolNames.includes("get_cart_handoff_candidates") &&
       toolNames.includes("prepare_purchase_handoff") &&
       resourcesCount >= 68 &&
+      resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
+      resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
+      resourceUris.has("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
+      resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       resourceTemplatesResult.ok &&
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}") &&
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?format=sh") &&
@@ -2120,6 +2124,7 @@ async function liveMcpCheck() {
         prompts_count: promptsCount,
         tools_status: toolsResult.status,
         resources_status: resourcesResult.status,
+        source_activation_direct_resource_count: resources.filter((resource) => /\/r\/(config|run|activate)\//.test(resource.uri)).length,
         prompts_status: promptsResult.status,
       },
       first_cart_url_has_mcp_attribution: hasAll(firstCartUrl, [
