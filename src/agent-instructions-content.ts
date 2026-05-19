@@ -93,6 +93,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - Canonical Browserbase/Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
 - MCP directory refresh JSON: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory refresh Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
+- Claude connector submission JSON: https://mcp.packrift.com/ai/claude-connector-submission.json
+- Claude connector submission Markdown: https://mcp.packrift.com/ai/claude-connector-submission.md
 - Crawler-safe purchase paths: https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md
 - Shopify native UCP commerce surface: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
 - Agent endpoints status: https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json

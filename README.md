@@ -34,6 +34,8 @@ The start page also renders source-specific copy controls when it receives a sou
 https://mcp.packrift.com/start?utm_source={source}
 ```
 
+Those copy controls record aggregate `mcp_install_copy` telemetry by source and target so partner and directory handoffs can be evaluated before downstream cart events appear.
+
 Custom partner, campaign, directory, and agent-workflow slugs are allowed without code changes as long as they match `^[a-z0-9_]{2,64}$`. Examples: `mcpservers_org`, `agency_partner`, `browser_agent_demo`, `newsletter_mcp`.
 
 When a directory or agent host wants a source-attributed config file instead of an HTML start page, use:
@@ -62,6 +64,7 @@ Use the hosted endpoint above when possible. It requires no buyer-side API key a
 - Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
 - MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
 - Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
+- Claude connector submission packet: https://mcp.packrift.com/ai/claude-connector-submission.json
 - Source repository: https://github.com/Packrift/packrift-mcp
 - Direct Streamable HTTP endpoint: https://mcp.packrift.com/mcp
 

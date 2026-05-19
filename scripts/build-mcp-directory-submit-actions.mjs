@@ -7,6 +7,7 @@ const REPO_ROOT = process.cwd();
 const OUT_ROOT = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions");
 const PACK_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submission-pack/latest.json");
 const PREVIOUS_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions/latest.json");
+const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
 
 const DIRECT_STATUS = {
   mcpservers_org: {
@@ -24,8 +25,8 @@ const DIRECT_STATUS = {
   anthropic_connectors_directory: {
     status: "manual_submission_ready",
     method: "Manual Claude connector directory submission",
-    evidence: "Claude connector submission is form-based and requires manual review.",
-    next_action: "Submit the hosted endpoint, no-auth policy, first-run proof, and directory refresh pack through the Claude form.",
+    evidence: "Claude connector submission is form-based and requires manual review; use the Packrift Claude submission packet for form-ready fields and proof.",
+    next_action: "Submit the hosted endpoint, no-auth policy, legal/support links, first-run proof, tracked start/config URLs, and directory refresh pack through the Claude form.",
   },
   smithery: {
     status: "api_key_required",
@@ -164,7 +165,7 @@ function publicProofLine(pack) {
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02";
   const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R02";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
+  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}.`;
 }
 
 function recrawlMessage(pack, target) {
@@ -201,6 +202,7 @@ function recrawlMessage(pack, target) {
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     "- First-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     "- Workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+    `- Claude connector submission packet: ${CLAUDE_CONNECTOR_SUBMISSION_URL}`,
     "- Browserbase Browse SKILL.md: https://mcp.packrift.com/SKILL.md",
     "- Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
     "- Canonical Browse skill file: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
@@ -239,6 +241,7 @@ function buildAction(pack, previousByName, target) {
       ...target.proof_urls,
       tracked_start: trackedStartUrl(target.name),
       tracked_config: trackedConfigUrl(target.name),
+      claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
     },
     recrawl_message: recrawlMessage(pack, target),
   };

@@ -53,6 +53,7 @@ Use these as examples of exact product families that converted, not as universal
 - [Browserbase Browse skill pack](https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json): candidate Browse/browser-skill wrapper with start URLs, rules, prompts, and JSON-RPC calls that keep Packrift live commerce facts routed through MCP
 - [Canonical Browserbase/Browse SKILL.md](https://mcp.packrift.com/ai/browserbase-browse/SKILL.md): mirrored SKILL.md submission artifact for browser agents that prefer a skill-file URL
 - [MCP directory refresh pack](https://mcp.packrift.com/ai/mcp-directory-refresh.json): current listing copy, proof URLs, recrawl request, and stale-directory targets for MCP directories and agent indexes
+- [Claude connector submission packet](https://mcp.packrift.com/ai/claude-connector-submission.json): form-ready Packrift MCP fields, no-auth proof, legal/support URLs, redirect hosts, tracked start/config URLs, and buyer safety rules for Claude connector review
 - [MCP directory submit actions](https://mcp.packrift.com/ai/mcp-directory-submit-actions.json): per-directory action queue, proof URLs, tracked start URLs, and copy-ready recrawl messages for stale MCP listings
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration

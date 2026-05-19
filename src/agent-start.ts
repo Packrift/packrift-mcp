@@ -335,8 +335,8 @@ function codeBlock(value: unknown): string {
   return escapeHtml(typeof value === "string" ? value : JSON.stringify(value, null, 2));
 }
 
-function copyButton(value: string, label = "Copy"): string {
-  return `<button class="copy" type="button" data-label="${escapeHtml(label)}" data-copy="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
+function copyButton(value: string, label = "Copy", target = "unknown"): string {
+  return `<button class="copy" type="button" data-label="${escapeHtml(label)}" data-copy-target="${escapeHtml(target)}" data-copy="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
 }
 
 export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOptions = {}): string {
@@ -509,22 +509,22 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
           <p>Use this config URL when a directory, partner, campaign, or agent host can fetch MCP JSON directly.</p>
         </div>
         <a class="button" href="${escapeHtml(sourceConfigUrl)}">Tracked config</a>
-        ${copyButton(sourceConfigUrl, "Copy config URL")}
+        ${copyButton(sourceConfigUrl, "Copy config URL", "tracked_config_url")}
       </div>
     </header>
     <section>
       <h2>Install</h2>
       <div class="grid">
         <div class="panel">
-          <div class="panel-head"><strong>Remote MCP config</strong>${copyButton(remoteConfig)}</div>
+          <div class="panel-head"><strong>Remote MCP config</strong>${copyButton(remoteConfig, "Copy", "remote_mcp_json")}</div>
           <pre>${codeBlock(payload.install.remote_mcp_json)}</pre>
         </div>
         <div class="panel">
-          <div class="panel-head"><strong>Claude Code</strong>${copyButton(payload.install.claude_code)}</div>
+          <div class="panel-head"><strong>Claude Code</strong>${copyButton(payload.install.claude_code, "Copy", "claude_code")}</div>
           <pre>${codeBlock(payload.install.claude_code)}</pre>
         </div>
         <div class="panel">
-          <div class="panel-head"><strong>Codex</strong>${copyButton(payload.install.codex)}</div>
+          <div class="panel-head"><strong>Codex</strong>${copyButton(payload.install.codex, "Copy", "codex")}</div>
           <pre>${codeBlock(payload.install.codex)}</pre>
         </div>
       </div>
@@ -568,14 +568,48 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
     </footer>
   </main>
   <script>
+    const installSource = "${escapeHtml(source)}";
+    const startRelease = "${escapeHtml(payload.release)}";
+    function recordInstallCopy(target) {
+      const safeTarget = String(target || "unknown").replace(/[^a-z0-9_:-]/gi, "_").slice(0, 80);
+      const stamp = Date.now();
+      const body = JSON.stringify({
+        event: "mcp_install_copy",
+        source: "mcp_start_install_copy",
+        tool_name: safeTarget,
+        release: startRelease,
+        packrift_ai_id: "mcp_install_copy_" + installSource + "_" + safeTarget + "_" + stamp,
+        ai_commerce_id: "mcp_install_copy_" + installSource + "_" + safeTarget + "_" + stamp,
+        mcp_key: "install_copy:" + installSource + ":" + safeTarget,
+        mcp_journey: "mcp_start:" + installSource + ":copy:" + safeTarget,
+        mcp_result_set: "mcp_start_install_copy",
+        utm_source: installSource,
+        utm_medium: "install_copy",
+        utm_campaign: "packrift_mcp_install",
+        utm_content: safeTarget,
+        page_url: window.location.href,
+        source_url: window.location.href,
+        referrer: document.referrer
+      });
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon && navigator.sendBeacon("/events/ai-sales", blob)) return;
+      fetch("/events/ai-sales", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+        keepalive: true
+      }).catch(() => {});
+    }
     document.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-copy]");
       if (!button) return;
       const original = button.getAttribute("data-label") || "Copy";
       const value = button.getAttribute("data-copy") || "";
+      const target = button.getAttribute("data-copy-target") || "unknown";
       try {
         await navigator.clipboard.writeText(value);
         button.textContent = "Copied";
+        recordInstallCopy(target);
       } catch {
         button.textContent = "Select text";
       }

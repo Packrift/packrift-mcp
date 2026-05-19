@@ -18,6 +18,7 @@ Use this as the shortest public handoff for developers, agents, and directory re
 - Markdown: https://mcp.packrift.com/ai/mcp-start.md
 
 The source-aware page shows the matching tracked config URL and copy-ready install controls for the supplied source slug.
+Copy interactions are counted in aggregate as `mcp_install_copy` events so a directory or partner source can be measured before real buyer workflows arrive.
 
 ## Hosted Adoption Kit
 
@@ -49,6 +50,17 @@ Use this when a host, IDE, or directory reviewer wants the smallest copy-ready M
 - Generic source-attributed config: https://mcp.packrift.com/r/config/generic
 
 The root, well-known, and source-attributed aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`.
+
+## Claude Connector Submission
+
+Use this when submitting or reviewing Packrift for Claude connector discovery:
+
+- JSON: https://mcp.packrift.com/ai/claude-connector-submission.json
+- Markdown: https://mcp.packrift.com/ai/claude-connector-submission.md
+- Tracked Claude start: https://mcp.packrift.com/r/start/anthropic_connectors_directory?utm_source=anthropic_connectors_directory&utm_medium=directory_recrawl&utm_campaign=packrift_mcp_start&utm_content=claude_connector_submission
+- Tracked Claude config: https://mcp.packrift.com/r/config/anthropic_connectors_directory?utm_source=anthropic_connectors_directory&utm_medium=directory_config&utm_campaign=packrift_mcp_install&utm_content=claude_connector_submission
+
+The packet includes form-ready fields, no-auth endpoint proof, legal/support links, allowed redirect hosts, and buyer safety rules.
 
 ## First-Run Proof
 

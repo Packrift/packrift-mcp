@@ -215,6 +215,7 @@ const LIVE_PROOF_URLS = {
   canonical_browserbase_browse_skill_md: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
   mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
   mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+  claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
   docker_mcp_catalog_pr: "https://api.github.com/repos/docker/mcp-registry/pulls/3388",
 };
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
@@ -380,6 +381,7 @@ function targetRows(distribution, copy) {
       canonical_browserbase_browse_skill_md: LIVE_PROOF_URLS.canonical_browserbase_browse_skill_md,
       mcp_directory_refresh: LIVE_PROOF_URLS.mcp_directory_refresh,
       mcp_directory_submit_actions: LIVE_PROOF_URLS.mcp_directory_submit_actions,
+      claude_connector_submission: LIVE_PROOF_URLS.claude_connector_submission,
       docker_mcp_catalog_pr: "https://github.com/docker/mcp-registry/pull/3388",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     },
@@ -583,6 +585,14 @@ function liveProofDigest(liveProof) {
       release: liveProof.mcp_directory_submit_actions.value?.release ?? null,
       actions_count: liveProof.mcp_directory_submit_actions.value?.actions?.length ?? null,
       canonical_endpoint: liveProof.mcp_directory_submit_actions.value?.canonical_endpoint ?? null,
+    },
+    claude_connector_submission: {
+      ok: liveProof.claude_connector_submission.ok,
+      status: liveProof.claude_connector_submission.status,
+      url: liveProof.claude_connector_submission.url,
+      release: liveProof.claude_connector_submission.value?.release ?? null,
+      packet_status: liveProof.claude_connector_submission.value?.status ?? null,
+      canonical_endpoint: liveProof.claude_connector_submission.value?.server?.remote_endpoint ?? null,
     },
     docker_mcp_catalog_pr: {
       ok: liveProof.docker_mcp_catalog_pr.ok,

@@ -18,6 +18,7 @@ import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser
 import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
 import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
+import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } from "./claude-connector-submission.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
@@ -662,6 +663,7 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "mcp_resource_templates_list",
   "mcp_resource_read",
   "mcp_start_click",
+  "mcp_install_copy",
   "spec_search",
   "exact_match",
   "multi_match",
@@ -1887,6 +1889,8 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byEventSource: Record<string, number> = {};
   const byEventAttribution: Record<string, number> = {};
   const byStartSource: Record<string, number> = {};
+  const byInstallCopySource: Record<string, number> = {};
+  const byInstallCopyTarget: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
   for (const event of events) {
     const eventName = String(event.event ?? "unknown");
@@ -1918,6 +1922,12 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     if (eventName === "mcp_start_click") {
       const startSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("start:") ? mcpKey.slice("start:".length) : "unknown";
       byStartSource[startSource] = (byStartSource[startSource] ?? 0) + 1;
+    }
+    if (eventName === "mcp_install_copy") {
+      const installSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("install_copy:") ? mcpKey.split(":")[1] || "unknown" : "unknown";
+      const installTarget = toolName !== "unknown" ? toolName : utmContent !== "unknown" ? utmContent : "unknown";
+      byInstallCopySource[installSource] = (byInstallCopySource[installSource] ?? 0) + 1;
+      byInstallCopyTarget[installTarget] = (byInstallCopyTarget[installTarget] ?? 0) + 1;
     }
     if (eventName === "mcp_prompt_get") byPrompt[promptName] = (byPrompt[promptName] ?? 0) + 1;
     if (eventName === "mcp_resource_read") byResource[resourceUri] = (byResource[resourceUri] ?? 0) + 1;
@@ -2011,7 +2021,10 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_event_source: top(byEventSource, 100),
     by_event_attribution: top(byEventAttribution, 100),
     by_start_source: top(byStartSource),
+    by_install_copy_source: top(byInstallCopySource),
+    by_install_copy_target: top(byInstallCopyTarget),
     recent_start_clicks: recent("mcp_start_click"),
+    recent_install_copies: recent("mcp_install_copy"),
     recent_tool_calls: recent("mcp_tool_call"),
     recent_prompt_gets: recent("mcp_prompt_get"),
     recent_resource_reads: recent("mcp_resource_read"),
@@ -2053,6 +2066,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const cartClicks = byEvent.mcp_cart_click ?? 0;
   const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
+  const installCopies = byEvent.mcp_install_copy ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
   const directAgentResourceSources = [
@@ -2073,7 +2087,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + directAgentResourceEvents;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + installCopies + directAgentResourceEvents;
   return {
     release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R05",
     generated_at: new Date().toISOString(),
@@ -2099,6 +2113,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_cart_clicks: cartClicks,
       mcp_cart_landings: cartLandings,
       mcp_start_clicks: startClicks,
+      mcp_install_copy_events: installCopies,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
       direct_agent_resource_events: directAgentResourceEvents,
@@ -2122,6 +2137,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     },
     proof_gate: {
       usage_exists: totalMcpSignals > 0,
+      install_copy_seen: installCopies > 0,
       create_cart_url_seen: createCartUrlCalls > 0,
       material_tool_usage_50_plus: mcpToolCalls >= 50,
       thousands_of_qualified_visitors: false,
@@ -2135,6 +2151,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_methods: summary.by_mcp_method,
       utm_sources: summary.by_utm_source,
       start_sources: summary.by_start_source,
+      install_copy_sources: summary.by_install_copy_source,
+      install_copy_targets: summary.by_install_copy_target,
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       tool_mcp_keys: summary.by_tool_mcp_key,
@@ -2145,6 +2163,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       mcp_start_click_sources: summary.by_start_source,
+      install_copy_sources: summary.by_install_copy_source,
+      install_copy_targets: summary.by_install_copy_target,
       utm_sources: summary.by_utm_source,
       utm_campaigns: summary.by_utm_campaign,
       mcp_keys: summary.by_mcp_key,
@@ -2152,6 +2172,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tool_mcp_keys: summary.by_tool_mcp_key,
       event_attribution: summary.by_event_attribution,
       recent_start_clicks: summary.recent_start_clicks,
+      recent_install_copies: summary.recent_install_copies,
       recent_tool_calls: summary.recent_tool_calls,
       recent_cart_landings: summary.recent_cart_landings,
     },
@@ -2211,6 +2232,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
+    `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
     `- Direct agent resource events: ${payload.counts.direct_agent_resource_events}`,
@@ -2239,6 +2261,18 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| --- | ---: |",
     table(payload.source_attribution.mcp_start_click_sources),
     "",
+    "### MCP Install Copy Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.install_copy_sources),
+    "",
+    "### MCP Install Copy Targets",
+    "",
+    "| Target | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.install_copy_targets),
+    "",
     "### UTM Sources",
     "",
     "| Source | Count |",
@@ -2260,6 +2294,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "## Proof Gate",
     "",
     `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
+    `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
     `- create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
     `- Material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
     `- Thousands of qualified visitors: ${payload.proof_gate.thousands_of_qualified_visitors ? "yes" : "no"}`,
@@ -3536,6 +3571,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
+  "https://mcp.packrift.com/ai/claude-connector-submission.json",
+  "https://mcp.packrift.com/ai/claude-connector-submission.md",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -3642,6 +3679,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-directory-refresh.md": "Crawler-readable Packrift MCP directory recrawl pack for MCP directories, marketplaces, and agent indexes.",
   "/ai/mcp-directory-submit-actions.json": "Machine-readable Packrift MCP directory action queue with stale-surface statuses, proof URLs, and copy-ready recrawl messages.",
   "/ai/mcp-directory-submit-actions.md": "Crawler-readable Packrift MCP directory submit-action queue for support teams, reviewers, and agent indexes.",
+  "/ai/claude-connector-submission.json": "Machine-readable Claude Connectors Directory submission packet for Packrift MCP with form fields, proof URLs, and safety rules.",
+  "/ai/claude-connector-submission.md": "Crawler-readable Claude Connectors Directory submission packet for reviewers and Packrift operators.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -3847,6 +3886,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-directory-refresh.md") return mcpDirectoryRefreshMarkdown(directoryRefreshRuntime());
   if (pathname === "/ai/mcp-directory-submit-actions.json") return JSON.stringify(mcpDirectorySubmitActionsPayload(directorySubmitActionsRuntime()), null, 2);
   if (pathname === "/ai/mcp-directory-submit-actions.md") return mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
+  if (pathname === "/ai/claude-connector-submission.json") return JSON.stringify(claudeConnectorSubmissionPayload(claudeConnectorSubmissionRuntime()), null, 2);
+  if (pathname === "/ai/claude-connector-submission.md") return claudeConnectorSubmissionMarkdown(claudeConnectorSubmissionRuntime());
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -3932,6 +3973,7 @@ function mcpManifestPayload() {
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+    claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
   };
 }
 
@@ -3959,6 +4001,7 @@ function mcpServerCardPayload() {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
     },
     client_config: {
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
@@ -4149,6 +4192,15 @@ function directorySubmitActionsRuntime() {
   };
 }
 
+function claudeConnectorSubmissionRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
 function mcpMarketplaceDiscoveryPayload() {
   return {
     schema_version: "1",
@@ -4208,6 +4260,7 @@ function mcpMarketplaceDiscoveryPayload() {
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
     },
     signals: {
       category: "Business Tools",
@@ -5004,6 +5057,16 @@ function robotsTxt(): string {
   ].join("\n");
 }
 
+function faviconSvg(): string {
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">',
+    '<rect width="64" height="64" rx="12" fill="#111827"/>',
+    '<path d="M18 18h19c7.2 0 12 4.7 12 11.5S44.2 41 37 41h-8v11H18V18Zm11 9v5.5h7.2c1.8 0 2.9-1 2.9-2.8s-1.1-2.7-2.9-2.7H29Z" fill="#f9fafb"/>',
+    '<path d="M18 52h31v-7H29v-4H18v11Z" fill="#22c55e"/>',
+    "</svg>",
+  ].join("");
+}
+
 app.get("/llms.txt", (c) => cachedStaticTextResponse(c, "llms.txt", llmsTxt, "text/plain; charset=utf-8"));
 
 app.get("/llms-full.txt", (c) =>
@@ -5096,6 +5159,13 @@ app.get("/mcp.json", async (c) => {
 app.get("/robots.txt", (c) =>
   c.body(robotsTxt(), 200, {
     "Content-Type": "text/plain; charset=utf-8",
+    ...RAW_HEADERS,
+  })
+);
+
+app.get("/favicon.ico", (c) =>
+  c.body(faviconSvg(), 200, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
     ...RAW_HEADERS,
   })
 );
@@ -5383,6 +5453,21 @@ app.get("/ai/mcp-directory-submit-actions.json", async (c) => {
 app.get("/ai/mcp-directory-submit-actions.md", async (c) => {
   const body = mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-directory-submit-actions.md", "mcp_directory_submit_actions", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/claude-connector-submission.json", async (c) => {
+  const payload = claudeConnectorSubmissionPayload(claudeConnectorSubmissionRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/claude-connector-submission.json", "claude_connector_submission", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/claude-connector-submission.md", async (c) => {
+  const body = claudeConnectorSubmissionMarkdown(claudeConnectorSubmissionRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/claude-connector-submission.md", "claude_connector_submission", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

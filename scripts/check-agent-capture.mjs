@@ -162,6 +162,7 @@ async function main() {
     "browserbase_browse_candidate",
     "mcp_directory_refreshes",
     "mcp_directory_submit_actions",
+    "claude_connector_submission_packet",
     "search_and_answer_crawlers",
   ];
   const missingSurfaceIds = requiredSurfaceIds.filter((id) => !surfaceIds.has(id));
@@ -184,6 +185,7 @@ async function main() {
     "browserbase-browse-skill-pack",
     "directory refresh",
     "directory submit actions",
+    "Claude connector submission",
     "tracked start",
     "tracked config",
     "Browserbase Browse",
@@ -266,6 +268,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises directory submit actions", hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises Claude connector submission", hasResourceUri(resourceUris, "/ai/claude-connector-submission.json") && hasResourceUri(resourceUris, "/ai/claude-connector-submission.md"), {
       detail: `resources=${resources.length}`,
     }),
   ];

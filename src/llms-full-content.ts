@@ -412,6 +412,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Canonical Browserbase/Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
+- Claude connector submission packet: https://mcp.packrift.com/ai/claude-connector-submission.json
 - AI-approved product corpus: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
 - Measured handoff directory JSON: https://mcp.packrift.com/ai/measured-handoffs.json
 - Measured handoff directory Markdown: https://mcp.packrift.com/ai/measured-handoffs.md
