@@ -209,6 +209,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
         "Open the command center, work critical rows first, and use the source-specific real MCP runner for sources with installs or create_cart_url output but missing tool calls, measured /r/cart landings, or orders.",
     }),
     surface({
+      id: "mcp_activation_experiments",
+      name: "Packrift MCP activation experiments",
+      agent_type: "source_activation_measurement",
+      audience: "Directory reviewers, agent hosts, partners, and Packrift operators who need source-specific hypotheses, target events, snapshot deltas, and suppression rules.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
+      install_or_call:
+        "Use the experiment board to run each source-specific MCP activation as a measurable test with tracked install URLs, first-run URLs, activation runners, copy-ready external requests, and proof-gate measurement links.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      next_action:
+        "Run critical experiments first and close them only when the linked usage, funnel, GA4, or source-queue snapshots show non-suppressed external proof.",
+    }),
+    surface({
       id: "buyer_mcp_use_cases",
       name: "Packrift MCP buyer use cases",
       agent_type: "buyer_workflow_corpus",
@@ -581,7 +597,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R15",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R16",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -597,6 +613,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
+      activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
@@ -635,6 +653,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
       "Use /r/run/{source}/{target} after install to measure first-run intent and push users into create_cart_url.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
+      "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
     ],
     counts: {
       total_surfaces: surfaces.length,
