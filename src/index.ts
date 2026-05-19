@@ -3463,11 +3463,13 @@ function sourceActivationUrls(source: string) {
   const target = sourcePreferredActivationTarget(source);
   const encodedTarget = encodeURIComponent(target);
   const trackedRun = `https://mcp.packrift.com/r/run/${slug}/${encodedTarget}`;
+  const trackedInstallBase = `https://mcp.packrift.com/r/install/${slug}/${encodedTarget}`;
   return {
     preferred_target: target,
     tracked_start_url: `https://mcp.packrift.com/r/start/${slug}`,
     tracked_config_url: `https://mcp.packrift.com/r/config/${slug}`,
-    tracked_install_url: `https://mcp.packrift.com/r/install/${slug}/${encodedTarget}?format=html`,
+    tracked_install_url: `${trackedInstallBase}?format=html`,
+    tracked_install_json_url: `${trackedInstallBase}?format=json`,
     tracked_first_run_url: `${trackedRun}?format=html`,
     tracked_first_run_execute_url: `${trackedRun}?execute=1`,
     reviewer_activation_url: `https://mcp.packrift.com/r/activate/${slug}`,
@@ -3509,6 +3511,9 @@ function sourceActivationRecommendedAction(row: PostInstallActivationRow): strin
     return "Run the source-specific reviewer activation flow, copy the returned measured cart URL, and open that /r/cart URL so the source records a qualified cart landing.";
   }
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
+    if (sourcePreferredActivationTarget(row.source) === "cline") {
+      return "Open the tracked Cline install page, copy the streamableHttp config into Cline, then paste the source-specific agent prompt so the source records real get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url tool calls.";
+    }
     return "Paste the source-specific agent prompt into a real MCP host so the source records get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url tool calls, not only browser proof landings.";
   }
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) {
@@ -3526,7 +3531,9 @@ function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnT
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return row.recent_measured_cart_urls[0] ?? urls.reviewer_activation_runner_url;
   }
-  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return urls.reviewer_activation_runner_url;
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
+    return urls.preferred_target === "cline" ? urls.tracked_install_url : urls.reviewer_activation_runner_url;
+  }
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return urls.reviewer_activation_runner_url;
   if (row.first_run_actions > 0 || row.mcp_tool_calls > 0) return urls.tracked_first_run_url;
   if (row.install_intents + row.tracked_config_fetches > 0) return urls.tracked_first_run_url;
@@ -3572,6 +3579,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         tracked_start_url: urls.tracked_start_url,
         tracked_config_url: urls.tracked_config_url,
         tracked_install_url: urls.tracked_install_url,
+        tracked_install_json_url: urls.tracked_install_json_url,
         tracked_first_run_url: urls.tracked_first_run_url,
         tracked_first_run_execute_url: urls.tracked_first_run_execute_url,
         reviewer_activation_url: urls.reviewer_activation_url,
@@ -3610,7 +3618,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R03",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R04",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3646,6 +3654,8 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
         target_event_to_watch: row.target_event_to_watch,
         recommended_action: row.recommended_action,
         run_real_mcp_check_url: row.reviewer_activation_runner_url,
+        host_install_url: row.tracked_install_url,
+        host_install_json_url: row.tracked_install_json_url,
         cart_landing_action_url: row.cart_landing_action_url,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
         primary_action_url: row.primary_action_url,
@@ -3696,15 +3706,15 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     "## Priority Queue",
     "",
-    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Recent measured cart URL |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Host install | Recent measured cart URL |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.queue
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
       )
-      .join("\n") || "| none | none | none | none | none | none | none |",
+      .join("\n") || "| none | none | none | none | none | none | none | none |",
     "",
     "## Acceptance Rule",
     "",
@@ -3726,10 +3736,21 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
     .map((row, index) => {
       const counts = row.current_counts;
       const cartLandingActionUrl = row.cart_landing_action_url || "";
-      const primaryLabel = cartLandingActionUrl ? "Open returned cart URL" : "Run real MCP check";
+      const needsHostToolCall = row.target_event_to_watch.startsWith("mcp_tool_call") && counts.mcp_tool_calls === 0;
+      const primaryLabel = cartLandingActionUrl
+        ? "Open returned cart URL"
+        : needsHostToolCall && row.preferred_target === "cline"
+          ? "Install in Cline"
+          : needsHostToolCall
+            ? "Install in MCP host"
+            : "Run real MCP check";
       const secondaryCheckLink =
         cartLandingActionUrl && row.reviewer_activation_runner_url !== row.primary_action_url
           ? `<a class="button" href="${escapeHtml(row.reviewer_activation_runner_url)}">Run real MCP check</a>`
+          : "";
+      const hostConfigLink =
+        needsHostToolCall && row.tracked_install_json_url
+          ? `<a class="button" href="${escapeHtml(row.tracked_install_json_url)}">Copy host config</a>`
           : "";
       const firstRecentCartUrl = row.recent_measured_cart_urls[0] ?? "";
       const recentCartUrls = firstRecentCartUrl
@@ -3756,6 +3777,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <div class="actions">
           <a class="button primary" href="${escapeHtml(row.primary_action_url)}">${primaryLabel}</a>
           ${secondaryCheckLink}
+          ${hostConfigLink}
           <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install path</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_execute_url)}">Live proof</a>
         </div>
