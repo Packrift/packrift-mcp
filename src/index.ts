@@ -18,6 +18,7 @@ import {
   mcpInstallActionPayload,
   mcpInstallActionsMarkdown,
   mcpInstallActionsPayload,
+  mcpFirstUsefulRun,
   normalizeInstallTarget,
   sourceAwareMcpEndpoint,
 } from "./install-action.js";
@@ -2406,6 +2407,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const activationCartReady = byEvent.mcp_activation_cart_ready ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
+  const sourceActivationPriorityQueue = mcpSourceActivationPriorityQueue(postInstallCartActivation);
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
   const directAgentResourceSources = [
@@ -2427,6 +2429,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_directory_refresh",
     "mcp_directory_submit_actions",
     "mcp_reviewer_activation",
+    "mcp_source_activation_queue",
     "claude_connector_submission",
     "agent_capture_outreach",
     "mcp_cart_handoff_candidates",
@@ -2446,7 +2449,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     activationCartReady +
     directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R19",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R20",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2487,6 +2490,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       post_install_sources_waiting_on_cart_landing: postInstallCartActivation.filter(
         (row) => row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0
       ).length,
+      source_activation_priority_sources: sourceActivationPriorityQueue.length,
+      source_activation_priority_critical: sourceActivationPriorityQueue.filter((row) => row.priority === "critical").length,
       direct_agent_resource_events: directAgentResourceEvents,
       direct_agent_resource_sources: directAgentResourceSources,
       mcp_start_resource_events: bySource.mcp_start ?? 0,
@@ -2501,6 +2506,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       directory_refresh_resource_events: bySource.mcp_directory_refresh ?? 0,
       directory_submit_action_resource_events: bySource.mcp_directory_submit_actions ?? 0,
       reviewer_activation_resource_events: bySource.mcp_reviewer_activation ?? 0,
+      source_activation_queue_resource_events: bySource.mcp_source_activation_queue ?? 0,
       cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
       cart_activation_resource_events: bySource.mcp_cart_activation ?? 0,
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
@@ -2549,6 +2555,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       event_attribution: summary.by_event_attribution,
       post_install_cart_activation_by_source: postInstallCartActivation,
     },
+    source_activation_priority_queue: sourceActivationPriorityQueue,
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
@@ -2582,6 +2589,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       recent_tool_calls: summary.recent_tool_calls,
       recent_cart_landings: summary.recent_cart_landings,
       post_install_cart_activation_by_source: postInstallCartActivation,
+      source_activation_priority_queue: sourceActivationPriorityQueue,
     },
     links: {
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -2610,11 +2618,13 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       tracked_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
     next_actions: [
+      "Work the source_activation_priority_queue first; it ranks sources by the next event most likely to move Packrift from directory proof into real MCP carts.",
       "Push directory recrawls and partner installs toward /r/run/{source}/{target} first-run actions, not only tools/list and config fetches.",
       "Use /r/activate/{source}?format=html after proof clicks to move reviewers into real MCP client calls and measured create_cart_url output.",
       "Drive real workflows through get_cart_handoff_candidates, get_pricing, check_inventory, create_cart_url, and then the returned /r/cart URL; the public post_install_cart_activation_by_source table shows which sources are stuck before cart URL creation or landing.",
@@ -2649,6 +2659,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
     `- Post-install sources waiting on create_cart_url: ${payload.counts.post_install_sources_waiting_on_create_cart_url}`,
     `- Post-install sources waiting on cart landing: ${payload.counts.post_install_sources_waiting_on_cart_landing}`,
+    `- Source activation priority sources: ${payload.counts.source_activation_priority_sources}`,
+    `- Critical source activation priorities: ${payload.counts.source_activation_priority_critical}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
@@ -2688,6 +2700,18 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
     `Tracked reviewer activation template: \`${payload.source_attribution.tracked_reviewer_activation_template}\``,
     `Tracked reviewer activation browser runner template: \`${payload.source_attribution.tracked_reviewer_activation_html_template}\``,
+    "",
+    "### Source Activation Priority Queue",
+    "",
+    "| Priority | Source | Current stage | Target event | Recommended action | Tracked run | Directory status |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    payload.source_activation_priority_queue
+      .slice(0, 10)
+      .map(
+        (row) =>
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.tracked_first_run_url} | ${markdownTableCell(row.directory_status)} |`
+      )
+      .join("\n") || "| none | none | none | none | none | none | none |",
     "",
     "### MCP Start Click Sources",
     "",
@@ -2825,7 +2849,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R12";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R13";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3080,6 +3104,288 @@ function countQualifiedFirstPartyCartLandings(events: Array<Record<string, unkno
   return events.filter((event) => String(event.event ?? "") === "mcp_cart_landing" && isQualifiedPublicFunnelEvent(event)).length;
 }
 
+function markdownTableCell(value: unknown): string {
+  return safeEventText(value, 500).replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
+}
+
+interface PostInstallActivationRow {
+  source: string;
+  starts: number;
+  tracked_config_fetches: number;
+  install_intents: number;
+  first_run_actions: number;
+  first_run_executions: number;
+  mcp_tool_calls: number;
+  get_cart_handoff_candidates: number;
+  get_pricing: number;
+  check_inventory: number;
+  create_cart_url_calls: number;
+  external_qualified_create_cart_url_calls: number;
+  qualified_cart_landings: number;
+}
+
+const SOURCE_ACTIVATION_INTERNAL_SOURCES = new Set(["generic", "partner_demo", "codex_probe", "codex_probe_r04", "mcp_route_redirect"]);
+
+const SOURCE_ACTIVATION_DIRECTORY_STATUS: Record<string, string> = {
+  cline_mcp_marketplace: "pending marketplace issue; convert reviewer/browser proof into a real hosted MCP client run",
+  mcp_so: "stale public listing; issue updated, now needs returned measured cart URL opened",
+  mcpservers_org: "submitted and stale; needs first-run action after listing/recrawl",
+  mcp_directory: "queued and not visible; needs first-run action after listing appears",
+  official_registry: "core registry live; needs downstream first-run and tool-call activation",
+  glama_connector: "hosted connector healthy; needs downstream first-run and tool-call activation",
+  glama_server_listing: "source listing stale; needs recrawl to hosted no-auth endpoint",
+  docker_mcp_catalog: "remote-server PR open; needs review and post-merge activation",
+  anthropic_connectors_directory: "manual connector submission still needed",
+  smithery: "publish or claim blocked on authentication",
+  browse_sh: "catalog live and installable; monitor installs and drive MCP-first runs",
+};
+
+const SOURCE_ACTIVATION_SEED_SOURCES = Object.keys(SOURCE_ACTIVATION_DIRECTORY_STATUS);
+
+function emptySourceActivationRow(source: string): PostInstallActivationRow {
+  return {
+    source,
+    starts: 0,
+    tracked_config_fetches: 0,
+    install_intents: 0,
+    first_run_actions: 0,
+    first_run_executions: 0,
+    mcp_tool_calls: 0,
+    get_cart_handoff_candidates: 0,
+    get_pricing: 0,
+    check_inventory: 0,
+    create_cart_url_calls: 0,
+    external_qualified_create_cart_url_calls: 0,
+    qualified_cart_landings: 0,
+  };
+}
+
+function sourceActivationRowsWithSeeds(rows: PostInstallActivationRow[]): PostInstallActivationRow[] {
+  const bySource = new Map(rows.map((row) => [row.source, row]));
+  for (const source of SOURCE_ACTIVATION_SEED_SOURCES) {
+    if (!bySource.has(source)) bySource.set(source, emptySourceActivationRow(source));
+  }
+  return [...bySource.values()];
+}
+
+function sourceActivationUrls(source: string) {
+  const slug = encodeURIComponent(source);
+  const trackedRun = `https://mcp.packrift.com/r/run/${slug}/generic_streamable_http`;
+  return {
+    tracked_start_url: `https://mcp.packrift.com/r/start/${slug}`,
+    tracked_config_url: `https://mcp.packrift.com/r/config/${slug}`,
+    tracked_install_url: `https://mcp.packrift.com/r/install/${slug}/generic_streamable_http?format=html`,
+    tracked_first_run_url: `${trackedRun}?format=html`,
+    tracked_first_run_execute_url: `${trackedRun}?execute=1`,
+    reviewer_activation_url: `https://mcp.packrift.com/r/activate/${slug}`,
+    reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${slug}?format=html`,
+  };
+}
+
+function sourceActivationStage(row: PostInstallActivationRow): string {
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls > 0) return "qualified cart landing and MCP tool calls visible";
+  if (row.qualified_cart_landings > 0) return "qualified cart landing visible but real MCP tool calls missing";
+  if (row.external_qualified_create_cart_url_calls > 0) return "external-qualified cart URL created but /r/cart landing missing";
+  if (row.create_cart_url_calls > 0) return "cart URL created from unqualified or internal source";
+  if (row.check_inventory > 0) return "live inventory checked, create_cart_url missing";
+  if (row.get_pricing > 0) return "live price checked, inventory and cart URL missing";
+  if (row.get_cart_handoff_candidates > 0) return "cart candidates fetched, price/inventory/cart sequence incomplete";
+  if (row.mcp_tool_calls > 0) return "MCP tool calls visible, purchase sequence incomplete";
+  if (row.first_run_executions > 0) return "browser first-run executions visible, real MCP tool calls missing";
+  if (row.first_run_actions > 0) return "first-run action opens visible, execution/tool calls missing";
+  if (row.install_intents > 0 || row.tracked_config_fetches > 0) return "install or config intent visible, first useful run missing";
+  if (row.starts > 0) return "tracked start clicks only";
+  return "discovery only";
+}
+
+function sourceActivationTargetEvent(row: PostInstallActivationRow): string {
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return "mcp_cart_landing";
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return "mcp_tool_call";
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return "mcp_tool_call";
+  if (row.create_cart_url_calls === 0 && row.check_inventory > 0) return "mcp_tool_call:create_cart_url";
+  if (row.check_inventory === 0 && row.get_pricing > 0) return "mcp_tool_call:check_inventory";
+  if (row.get_pricing === 0 && row.get_cart_handoff_candidates > 0) return "mcp_tool_call:get_pricing";
+  if (row.get_cart_handoff_candidates === 0 && row.mcp_tool_calls > 0) return "mcp_tool_call:get_cart_handoff_candidates";
+  if (row.first_run_actions > 0) return "mcp_first_run_execution";
+  if (row.install_intents + row.tracked_config_fetches > 0) return "mcp_first_run_intent";
+  return "mcp_install_intent";
+}
+
+function sourceActivationRecommendedAction(row: PostInstallActivationRow): string {
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
+    return "Run the source-specific reviewer activation flow, copy the returned measured cart URL, and open that /r/cart URL so the source records a qualified cart landing.";
+  }
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) {
+    return "Paste the source-specific agent prompt into a real MCP host so the source records get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url tool calls, not only browser proof landings.";
+  }
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) {
+    return "Convert browser first-run proof into a real MCP client run using the source-specific reviewer activation runner.";
+  }
+  if (row.create_cart_url_calls === 0 && row.mcp_tool_calls > 0) {
+    return "Complete the purchase-ready MCP sequence for SKU 1066 through create_cart_url, then open the returned measured cart URL.";
+  }
+  if (row.first_run_actions > 0) return "Run the source-specific first-run page and require the live proof to finish with create_cart_url.";
+  if (row.install_intents + row.tracked_config_fetches > 0) return "Open the source-specific first-run action after install/config so the source progresses beyond setup intent.";
+  return "Use the source-specific tracked install page and agent prompt to create an attributed first useful run.";
+}
+
+function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return urls.reviewer_activation_runner_url;
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return urls.reviewer_activation_runner_url;
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return urls.reviewer_activation_runner_url;
+  if (row.first_run_actions > 0 || row.mcp_tool_calls > 0) return urls.tracked_first_run_url;
+  if (row.install_intents + row.tracked_config_fetches > 0) return urls.tracked_first_run_url;
+  return urls.tracked_install_url;
+}
+
+function sourceActivationPriorityScore(row: PostInstallActivationRow): number {
+  const signalScore =
+    Math.min(30, row.starts + row.tracked_config_fetches + row.install_intents + row.first_run_actions + row.first_run_executions) +
+    Math.min(20, row.mcp_tool_calls * 2) +
+    Math.min(20, row.qualified_cart_landings * 5);
+  if (SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] && signalScore === 0) return 50;
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return 120 + signalScore;
+  if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return 110 + signalScore;
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return 100 + signalScore;
+  if (row.create_cart_url_calls === 0 && row.mcp_tool_calls > 0) return 90 + signalScore;
+  if (row.first_run_actions > 0) return 80 + signalScore;
+  if (row.install_intents + row.tracked_config_fetches > 0) return 70 + signalScore;
+  if (row.starts > 0) return 50 + signalScore;
+  return signalScore;
+}
+
+function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
+  return sourceActivationRowsWithSeeds(rows)
+    .filter((row) => !SOURCE_ACTIVATION_INTERNAL_SOURCES.has(row.source))
+    .map((row) => {
+      const urls = sourceActivationUrls(row.source);
+      const score = sourceActivationPriorityScore(row);
+      const priority = score >= 110 ? "critical" : score >= 80 ? "high" : score >= 50 ? "medium" : "watch";
+      const firstUsefulRun = mcpFirstUsefulRun(row.source, "generic_streamable_http");
+      return {
+        source: row.source,
+        priority,
+        priority_score: score,
+        current_stage: sourceActivationStage(row),
+        target_event_to_watch: sourceActivationTargetEvent(row),
+        recommended_action: sourceActivationRecommendedAction(row),
+        primary_action_url: sourceActivationPrimaryUrl(row, urls),
+        directory_status: SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] ?? "source-attributed MCP activity visible; keep progressing toward real tool calls, measured carts, and orders",
+        tracked_start_url: urls.tracked_start_url,
+        tracked_config_url: urls.tracked_config_url,
+        tracked_install_url: urls.tracked_install_url,
+        tracked_first_run_url: urls.tracked_first_run_url,
+        tracked_first_run_execute_url: urls.tracked_first_run_execute_url,
+        reviewer_activation_url: urls.reviewer_activation_url,
+        reviewer_activation_runner_url: urls.reviewer_activation_runner_url,
+        agent_prompt: firstUsefulRun.agent_prompt,
+        acceptance_criteria: [
+          `Source remains attributed as ${row.source}.`,
+          "The agent host calls tools/list against https://mcp.packrift.com/mcp.",
+          "The workflow calls get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
+          "The returned measured https://mcp.packrift.com/r/cart/1066 URL is opened before any Shopify cart handoff.",
+          "The funnel source row moves closer to material MCP tool calls, qualified cart landings, and attributed orders.",
+        ],
+        current_counts: {
+          starts: row.starts,
+          tracked_config_fetches: row.tracked_config_fetches,
+          install_intents: row.install_intents,
+          first_run_actions: row.first_run_actions,
+          first_run_executions: row.first_run_executions,
+          mcp_tool_calls: row.mcp_tool_calls,
+          create_cart_url_calls: row.create_cart_url_calls,
+          external_qualified_create_cart_url_calls: row.external_qualified_create_cart_url_calls,
+          qualified_cart_landings: row.qualified_cart_landings,
+        },
+      };
+    })
+    .filter((row) => row.priority !== "watch" || row.current_counts.starts + row.current_counts.install_intents + row.current_counts.first_run_actions > 0)
+    .sort((a, b) => b.priority_score - a.priority_score || a.source.localeCompare(b.source))
+    .slice(0, 25);
+}
+
+async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limit = 5000, orderDays = 90, orderLimit = 250) {
+  const funnel = await mcpFunnelSnapshotPayload(env, date, limit, orderDays, orderLimit);
+  const blockingGates = Object.entries(funnel.proof_gate)
+    .filter(([, value]) => value === false)
+    .map(([key]) => key);
+  return {
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R01",
+    generated_at: new Date().toISOString(),
+    date,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    status: funnel.source_activation_priority_queue.length > 0 ? "activation_needed" : "no_priority_sources",
+    purpose:
+      "Public next-best-action queue for converting Packrift MCP directory/source activity into real MCP tool calls, qualified /r/cart landings, and MCP-attributed purchases.",
+    source_snapshot: {
+      funnel_release: funnel.release,
+      funnel_status: funnel.status,
+      external_qualified_mcp_tool_calls: funnel.counts.external_qualified_mcp_tool_calls,
+      material_tool_usage_50_plus: funnel.proof_gate.material_tool_usage_50_plus,
+      qualified_first_party_mcp_cart_landings: funnel.counts.qualified_first_party_mcp_cart_landings,
+      first_party_mcp_orders: funnel.counts.first_party_mcp_orders,
+      first_party_mcp_order_revenue: funnel.counts.first_party_mcp_order_revenue,
+      traffic_quality: funnel.traffic_quality,
+    },
+    queue_count: funnel.source_activation_priority_queue.length,
+    critical_count: funnel.source_activation_priority_queue.filter((row) => row.priority === "critical").length,
+    blocking_goal_gates: blockingGates,
+    queue: funnel.source_activation_priority_queue,
+    links: {
+      source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      source_activation_queue_markdown: "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
+      funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
+    },
+    operating_rule:
+      "Work this queue until source rows show real MCP tool calls, qualified cart landings, and attributed orders. This queue is not completion proof by itself.",
+  };
+}
+
+function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcpSourceActivationQueuePayload>>): string {
+  return [
+    "# Packrift MCP Source Activation Queue",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Date: ${payload.date}`,
+    `Status: ${payload.status}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.purpose,
+    "",
+    "## Funnel Snapshot",
+    "",
+    `- Funnel release: ${payload.source_snapshot.funnel_release}`,
+    `- Funnel status: ${payload.source_snapshot.funnel_status}`,
+    `- External-qualified MCP tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}`,
+    `- Qualified MCP cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}`,
+    `- First-party MCP orders: ${payload.source_snapshot.first_party_mcp_orders}`,
+    `- First-party MCP revenue: ${payload.source_snapshot.first_party_mcp_order_revenue}`,
+    `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
+    "",
+    "## Priority Queue",
+    "",
+    "| Priority | Source | Current stage | Target event | Primary action | Action URL |",
+    "| --- | --- | --- | --- | --- | --- |",
+    payload.queue
+      .slice(0, 15)
+      .map(
+        (row) =>
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} |`
+      )
+      .join("\n") || "| none | none | none | none | none | none |",
+    "",
+    "## Acceptance Rule",
+    "",
+    payload.operating_rule,
+    "",
+  ].join("\n");
+}
+
 function publicFunnelTrafficBuckets(summary: ReturnType<typeof summarizeAiSalesEvents>) {
   const buckets = {
     external_qualified_demand: 0,
@@ -3202,6 +3508,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const activationCartReady = byEvent.mcp_activation_cart_ready ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
+  const sourceActivationPriorityQueue = mcpSourceActivationPriorityQueue(postInstallCartActivation);
   const qualifiedCartLandings = countQualifiedFirstPartyCartLandings(events);
   const orderSummary = await publicMcpOrderSummary(env, orderDays, orderLimit);
   const attributedOrderCount = Number(orderSummary.attributed_order_count || 0);
@@ -3270,6 +3577,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       post_install_sources_waiting_on_cart_landing: postInstallCartActivation.filter(
         (row) => row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0
       ).length,
+      source_activation_priority_sources: sourceActivationPriorityQueue.length,
+      source_activation_priority_critical: sourceActivationPriorityQueue.filter((row) => row.priority === "critical").length,
       mcp_cart_clicks: cartClicks,
       raw_first_party_mcp_cart_landings: cartLandings,
       qualified_first_party_mcp_cart_landings: qualifiedCartLandings,
@@ -3279,6 +3588,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     },
     proof_gate: proofGate,
     traffic_quality: publicFunnelTrafficBuckets(summary),
+    source_activation_priority_queue: sourceActivationPriorityQueue,
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
@@ -3300,6 +3610,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       tool_mcp_keys: summary.by_tool_mcp_key,
       tool_runtime_sources: summary.by_tool_mcp_source_context,
       post_install_cart_activation_by_source: postInstallCartActivation,
+      source_activation_priority_queue: sourceActivationPriorityQueue,
       order_attribution_sources: orderSummary.top_attribution_sources,
     },
     top: {
@@ -3320,6 +3631,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
       tracked_run_generic: "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
@@ -3327,6 +3639,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     },
     next_actions: [
+      "Work the source_activation_priority_queue first; it is the public next-best-action list for turning source-level MCP proof into qualified carts.",
       "Use tracked install-action and first-run links in every stale directory refresh so starts, installs, and first useful runs stay source-attributed.",
       "Use source-specific reviewer activation browser runners to convert proof clicks into real MCP client calls and create_cart_url output.",
       "Push external users from install intent into get_cart_handoff_candidates, get_pricing, check_inventory, create_cart_url, and then the returned /r/cart URL; use post_install_cart_activation_by_source to see the exact stuck source.",
@@ -3368,6 +3681,8 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
     `- External-qualified MCP tool calls: ${payload.counts.external_qualified_mcp_tool_calls}`,
     `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
+    `- Source activation priority sources: ${payload.counts.source_activation_priority_sources}`,
+    `- Critical source activation priorities: ${payload.counts.source_activation_priority_critical}`,
     `- Post-install sources waiting on cart landing: ${payload.counts.post_install_sources_waiting_on_cart_landing}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- Raw first-party MCP cart landings: ${payload.counts.raw_first_party_mcp_cart_landings}`,
@@ -3389,6 +3704,18 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
     `Tracked reviewer activation template: \`${payload.source_attribution.tracked_reviewer_activation_template}\``,
     `Tracked reviewer activation browser runner template: \`${payload.source_attribution.tracked_reviewer_activation_html_template}\``,
+    "",
+    "### Source Activation Priority Queue",
+    "",
+    "| Priority | Source | Current stage | Target event | Recommended action | Tracked run | Directory status |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    payload.source_activation_priority_queue
+      .slice(0, 10)
+      .map(
+        (row) =>
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.tracked_first_run_url} | ${markdownTableCell(row.directory_status)} |`
+      )
+      .join("\n") || "| none | none | none | none | none | none | none |",
     "",
     "### Start Sources",
     "",
@@ -4717,6 +5044,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
   "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+  "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+  "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -4839,6 +5168,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-funnel-snapshot.json": "Machine-readable public aggregate MCP funnel snapshot with starts, installs, tool calls, qualified cart landings, and order proof gates.",
   "/ai/mcp-funnel-snapshot.md": "Crawler-readable Packrift MCP funnel proof gate for directory reviewers, agents, and Packrift operators.",
+  "/ai/mcp-source-activation-queue.json": "Machine-readable next-best-action queue that ranks Packrift MCP sources by the event needed to progress toward real tool calls, cart landings, and orders.",
+  "/ai/mcp-source-activation-queue.md": "Crawler-readable Packrift MCP source activation queue with source-specific action URLs, target events, and acceptance criteria.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
   "/ai/mcp-cart-activation.json": "Machine-readable Packrift MCP cart activation playbook for turning exact buyer intent into measured /r/cart landings after live checks.",
@@ -5070,6 +5401,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-funnel-snapshot.json") return JSON.stringify(await mcpFunnelSnapshotPayload(env), null, 2);
   if (pathname === "/ai/mcp-funnel-snapshot.md") return mcpFunnelSnapshotMarkdown(await mcpFunnelSnapshotPayload(env));
+  if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await mcpSourceActivationQueuePayload(env), null, 2);
+  if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-cart-activation.json") return JSON.stringify(mcpCartActivationPayload(cartActivationRuntime()), null, 2);
@@ -5177,6 +5510,7 @@ function mcpManifestPayload() {
     tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
     tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+    mcp_source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -5218,6 +5552,7 @@ function mcpServerCardPayload() {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
       tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
       tracked_reviewer_activation_html_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
@@ -6868,6 +7203,37 @@ app.get("/ai/mcp-funnel-snapshot.md", async (c) => {
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
   const body = mcpFunnelSnapshotMarkdown(await mcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-funnel-snapshot.md", "mcp_funnel_snapshot", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-source-activation-queue.json", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "5000", 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? "90", 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? "250", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const payload = await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit);
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.json", "mcp_source_activation_queue", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-source-activation-queue.md", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "5000", 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? "90", 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? "250", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const body = mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.md", "mcp_source_activation_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
