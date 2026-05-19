@@ -39,7 +39,12 @@ import { mcpWorkflowGalleryMarkdown, mcpWorkflowGalleryPayload } from "./workflo
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
-import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
+import {
+  mcpDirectorySubmitActionMarkdown,
+  mcpDirectorySubmitActionPayload,
+  mcpDirectorySubmitActionsMarkdown,
+  mcpDirectorySubmitActionsPayload,
+} from "./directory-submit-actions.js";
 import { mcpReviewerActivationHtml, mcpReviewerActivationMarkdown, mcpReviewerActivationPayload, trackedReviewerActivationUrl } from "./reviewer-activation.js";
 import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } from "./claude-connector-submission.js";
 import { agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
@@ -6259,6 +6264,7 @@ const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "smithery", target: "generic_streamable_http" },
   { source: "cline_mcp_marketplace", target: "cline" },
   { source: "mcp_so", target: "generic_streamable_http" },
+  { source: "browse_sh", target: "codex" },
   { source: "mcpmarket_com", target: "mcp_marketplace" },
   { source: "cursor_directory", target: "cursor_windsurf_vscode" },
   { source: "mcpcentral", target: "generic_streamable_http" },
@@ -6272,6 +6278,10 @@ const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "docker_mcp_catalog", target: "generic_streamable_http" },
   { source: "generic", target: "generic_streamable_http" },
 ] as const;
+const MCP_DIRECTORY_UPDATE_CARD_URLS = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source }) => [
+  `https://mcp.packrift.com/ai/mcp-directory-update/${source}.json`,
+  `https://mcp.packrift.com/ai/mcp-directory-update/${source}.md`,
+]);
 const APPROVED_CATALOG_BY_SKU = new Map(
   APPROVED_CATALOG.map((item) => [item.sku.toUpperCase(), item])
 );
@@ -6393,6 +6403,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
+  ...MCP_DIRECTORY_UPDATE_CARD_URLS,
   "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
   "https://mcp.packrift.com/ai/mcp-reviewer-activation.md",
   "https://mcp.packrift.com/r/activate",
@@ -6565,6 +6576,13 @@ function resourceName(pathname: string): string {
   return pathname.replace(/^\/+/, "").replace(/[-_/]/g, " ").replace(/\.\w+$/, "");
 }
 
+function resourceDescription(pathname: string): string {
+  if (pathname.match(/^\/ai\/mcp-directory-update\/[a-z0-9_]{2,64}\.(json|md)$/)) {
+    return "Source-specific Packrift MCP directory update card with canonical listing data, tracked install URLs, first-run proof, and acceptance gate.";
+  }
+  return RESOURCE_DESCRIPTIONS[pathname] ?? "Packrift MCP discovery resource.";
+}
+
 function normalizeProductIdentifier(value: string): string {
   const withoutExtension = value.replace(/\.(json|md)$/i, "");
   try {
@@ -6683,7 +6701,7 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
   return {
     uri,
     name: resourceName(pathname),
-    description: RESOURCE_DESCRIPTIONS[pathname] ?? "Packrift MCP discovery resource.",
+    description: resourceDescription(pathname),
     mimeType,
   };
 });
@@ -6765,6 +6783,16 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-directory-refresh.md") return mcpDirectoryRefreshMarkdown(directoryRefreshRuntime());
   if (pathname === "/ai/mcp-directory-submit-actions.json") return JSON.stringify(mcpDirectorySubmitActionsPayload(directorySubmitActionsRuntime()), null, 2);
   if (pathname === "/ai/mcp-directory-submit-actions.md") return mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
+  const directoryUpdateMatch = pathname.match(/^\/ai\/mcp-directory-update\/([a-z0-9_]{2,64})\.(json|md)$/);
+  if (directoryUpdateMatch) {
+    const source = directoryUpdateMatch[1] ?? "";
+    const format = directoryUpdateMatch[2] ?? "json";
+    const payload = mcpDirectorySubmitActionPayload(directorySubmitActionsRuntime(), source);
+    if (!payload) throw new Error(`Unsupported directory update source: ${source}`);
+    return format === "json"
+      ? JSON.stringify(payload, null, 2)
+      : mcpDirectorySubmitActionMarkdown(directorySubmitActionsRuntime(), source) ?? "";
+  }
   if (pathname === "/ai/mcp-reviewer-activation.json") return JSON.stringify(mcpReviewerActivationPayload(reviewerActivationRuntime()), null, 2);
   if (pathname === "/ai/mcp-reviewer-activation.md") return mcpReviewerActivationMarkdown(reviewerActivationRuntime());
   if (pathname === "/ai/claude-connector-submission.json") return JSON.stringify(claudeConnectorSubmissionPayload(claudeConnectorSubmissionRuntime()), null, 2);
@@ -6809,6 +6837,7 @@ function aiSitemapXml(): string {
 
 function sourceActivationSitemapUrls(): string[] {
   return MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
+    ...MCP_DIRECTORY_UPDATE_CARD_URLS.filter((url) => url.includes(`/mcp-directory-update/${source}.`)),
     `https://mcp.packrift.com/r/start/${source}`,
     `https://mcp.packrift.com/start?utm_source=${source}`,
     `https://mcp.packrift.com/r/config/${source}`,
@@ -7365,6 +7394,7 @@ function directorySubmitActionsRuntime() {
     toolsCount: TOOLS.length,
     resourcesCount: MCP_RESOURCES.length,
     promptsCount: PROMPTS.length,
+    toolNames: TOOLS.map((tool) => tool.schema.name),
   };
 }
 
@@ -8861,6 +8891,31 @@ app.get("/ai/mcp-directory-submit-actions.json", async (c) => {
 app.get("/ai/mcp-directory-submit-actions.md", async (c) => {
   const body = mcpDirectorySubmitActionsMarkdown(directorySubmitActionsRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-directory-submit-actions.md", "mcp_directory_submit_actions", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-directory-update/*", async (c) => {
+  const pathname = new URL(c.req.url).pathname;
+  const match = pathname.match(/^\/ai\/mcp-directory-update\/([a-z0-9_]{2,64})\.(json|md)$/);
+  if (!match) {
+    return c.json({ error: "not_found", message: "Use /ai/mcp-directory-update/{source}.json or .md." }, 404, RAW_HEADERS);
+  }
+  const source = match[1] ?? "";
+  const format = match[2] ?? "json";
+  const runtime = directorySubmitActionsRuntime();
+  const payload = mcpDirectorySubmitActionPayload(runtime, source);
+  if (!payload) {
+    return c.json({ error: "unknown_directory_update_source", source }, 404, RAW_HEADERS);
+  }
+  if (format === "json") {
+    await recordGeneratedAiResourceFetch(c, `/ai/mcp-directory-update/${source}.json`, "mcp_directory_update_card", jsonByteSize(payload));
+    return c.json(payload, 200, RAW_HEADERS);
+  }
+  const body = mcpDirectorySubmitActionMarkdown(runtime, source) ?? "";
+  await recordGeneratedAiResourceFetch(c, `/ai/mcp-directory-update/${source}.md`, "mcp_directory_update_card", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

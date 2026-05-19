@@ -13,6 +13,8 @@ const CONTACT_EMAIL_PLACEHOLDER = "[directory contact email]";
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
+const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
+const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 
 const TARGETS = [
   {
@@ -206,6 +208,7 @@ const LIVE_PROOF_URLS = {
   well_known_server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
   glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
   marketplace_manifest: "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
+  source_activation_sitemap: "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
   cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
   mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
@@ -231,6 +234,14 @@ const LIVE_PROOF_URLS = {
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 
+function trackedInstallUrl(source, target) {
+  return TRACKED_INSTALL_TEMPLATE.replace("{source}", source).replace("{target}", target);
+}
+
+function trackedRunUrl(source, target) {
+  return TRACKED_RUN_TEMPLATE.replace("{source}", source).replace("{target}", target);
+}
+
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
   const parsed = new URL(url);
@@ -250,11 +261,12 @@ async function fetchJson(url) {
       redirect: "follow",
     });
     const text = await response.text();
+    const value = response.ok && !url.endsWith(".xml") ? JSON.parse(text) : text;
     return {
       ok: response.ok,
       status: response.status,
       url: response.url,
-      value: response.ok ? JSON.parse(text) : null,
+      value: response.ok ? value : null,
       error: null,
     };
   } catch (error) {
@@ -444,6 +456,11 @@ function liveProofDigest(liveProof) {
       tool_count: liveProof.marketplace_manifest.value?.signals?.tool_count ?? null,
       hosted_endpoint_requires_auth: liveProof.marketplace_manifest.value?.signals?.hosted_endpoint_requires_auth ?? null,
     },
+    source_activation_sitemap: {
+      ok: liveProof.source_activation_sitemap.ok,
+      status: liveProof.source_activation_sitemap.status,
+      url: liveProof.source_activation_sitemap.url,
+    },
     mcp_tools_list: {
       ok: liveProof.mcp_tools_list.ok,
       status: liveProof.mcp_tools_list.status,
@@ -615,6 +632,111 @@ function liveProofDigest(liveProof) {
   };
 }
 
+function directoryUpdateCard(payload, target) {
+  const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
+  return {
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R01",
+    generated_at: payload.generated_at,
+    source: target.name,
+    directory: {
+      id: target.name,
+      label: target.label,
+      current_status: target.current_status,
+      priority: target.priority,
+      listing_url: target.listing_url,
+      submission_url: target.submission_url,
+      stale_markers: target.missing ?? [],
+      requested_action: target.action,
+    },
+    canonical_listing: {
+      server_name: payload.copy.server_name,
+      registry_name: payload.copy.registry_name,
+      endpoint: MCP_ENDPOINT,
+      authentication: "none_required_for_hosted_endpoint",
+      version: payload.copy.version,
+      description: payload.copy.short_description,
+      tool_count: payload.live_proof.mcp_tools_list.tools_count ?? toolNames.length,
+      tool_names: toolNames,
+      repository_url: payload.copy.repository_url,
+      website_url: payload.copy.website_url,
+      marketplace_manifest: LIVE_PROOF_URLS.marketplace_manifest,
+      source_activation_sitemap: LIVE_PROOF_URLS.source_activation_sitemap,
+    },
+    tracked_urls: {
+      start: TRACKED_START_TEMPLATE.replace("{source}", target.name),
+      config: TRACKED_CONFIG_TEMPLATE.replace("{source}", target.name),
+      install_generic: trackedInstallUrl(target.name, "generic_streamable_http"),
+      install_codex: trackedInstallUrl(target.name, "codex"),
+      install_cline: trackedInstallUrl(target.name, "cline"),
+      first_run_generic: trackedRunUrl(target.name, "generic_streamable_http"),
+      first_run_live_proof: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
+      reviewer_activation: `https://mcp.packrift.com/r/activate/${target.name}`,
+      reviewer_activation_html: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+    },
+    acceptance_gate: [
+      "Install the hosted no-auth Streamable HTTP endpoint.",
+      "Run tools/list against the source-aware endpoint.",
+      "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Treat the listing as activated only when create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ],
+    copy_ready_update_message: [
+      `Subject: Refresh ${target.label} Packrift MCP listing`,
+      "",
+      `Please recrawl Packrift MCP from ${LIVE_PROOF_URLS.marketplace_manifest} and ${LIVE_PROOF_URLS.source_activation_sitemap}.`,
+      `Endpoint: ${MCP_ENDPOINT}`,
+      `Source-specific update card: https://mcp.packrift.com/ai/mcp-directory-update/${target.name}.json`,
+      `Tracked config: ${TRACKED_CONFIG_TEMPLATE.replace("{source}", target.name)}`,
+      `Live first-run proof: ${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
+      `Activation runner: https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+      "",
+      "Acceptance gate: tools/list -> get_cart_handoff_candidates -> get_pricing -> check_inventory -> create_cart_url.",
+    ].join("\n"),
+  };
+}
+
+function directoryUpdateCardMarkdown(card) {
+  return [
+    "# Packrift MCP Directory Update Card",
+    "",
+    `Release: ${card.release}`,
+    `Generated: ${card.generated_at}`,
+    `Source: ${card.source}`,
+    `Directory: ${card.directory.label}`,
+    `Endpoint: ${card.canonical_listing.endpoint}`,
+    "",
+    "## Canonical Listing",
+    "",
+    `Server name: ${card.canonical_listing.server_name}`,
+    `Registry name: ${card.canonical_listing.registry_name}`,
+    `Authentication: ${card.canonical_listing.authentication}`,
+    `Version: ${card.canonical_listing.version}`,
+    `Tools: ${card.canonical_listing.tool_count} (${card.canonical_listing.tool_names.join(", ")})`,
+    `Marketplace manifest: ${card.canonical_listing.marketplace_manifest}`,
+    `Source activation sitemap: ${card.canonical_listing.source_activation_sitemap}`,
+    "",
+    "## Directory State",
+    "",
+    `Current status: ${card.directory.current_status}`,
+    `Priority: ${card.directory.priority}`,
+    `Listing URL: ${card.directory.listing_url}`,
+    `Submission URL: ${card.directory.submission_url}`,
+    `Stale markers: ${card.directory.stale_markers.length ? card.directory.stale_markers.join(", ") : "none"}`,
+    "",
+    "## Tracked URLs",
+    "",
+    fencedJson(card.tracked_urls),
+    "",
+    "## Acceptance Gate",
+    "",
+    card.acceptance_gate.map((rule) => `- ${rule}`).join("\n"),
+    "",
+    "## Copy-Ready Update Message",
+    "",
+    card.copy_ready_update_message,
+    "",
+  ].join("\n");
+}
+
 function glamaRecrawlNote(payload) {
   const glamaConnector = payload.targets.find((target) => target.name === "glama_connector");
   const glamaServer = payload.targets.find((target) => target.name === "glama_server_listing");
@@ -739,6 +861,11 @@ async function main() {
   mkdirSync(outDir, { recursive: true });
   writeFileSync(resolve(outDir, "directory-submission-pack.json"), JSON.stringify(payload, null, 2) + "\n");
   writeFileSync(resolve(outDir, "directory-submission-pack.md"), markdownReport(payload));
+  for (const target of targets) {
+    const card = directoryUpdateCard(payload, target);
+    writeFileSync(resolve(outDir, `directory-update-${target.name}.json`), JSON.stringify(card, null, 2) + "\n");
+    writeFileSync(resolve(outDir, `directory-update-${target.name}.md`), directoryUpdateCardMarkdown(card));
+  }
   writeFileSync(resolve(OUT_ROOT, "latest.json"), JSON.stringify(payload, null, 2) + "\n");
   writeFileSync(resolve(OUT_ROOT, "latest.md"), markdownReport(payload));
   console.log(JSON.stringify(payload, null, 2));

@@ -165,6 +165,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP directory refresh pack Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
 - MCP directory submit actions Markdown: https://mcp.packrift.com/ai/mcp-directory-submit-actions.md
+- MCP directory update card template: https://mcp.packrift.com/ai/mcp-directory-update/{source}.json
+- MCP directory update card Markdown template: https://mcp.packrift.com/ai/mcp-directory-update/{source}.md
 - MCP reviewer activation: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
 - MCP reviewer activation Markdown: https://mcp.packrift.com/ai/mcp-reviewer-activation.md
 - MCP activation command center: https://mcp.packrift.com/r/activate

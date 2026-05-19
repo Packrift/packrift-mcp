@@ -308,6 +308,9 @@ async function main() {
     check("resources/list advertises directory submit actions", hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.md"), {
       detail: `resources=${resources.length}`,
     }),
+    check("resources/list advertises source-specific directory update cards", hasResourceUri(resourceUris, "/ai/mcp-directory-update/cline_mcp_marketplace.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-update/cline_mcp_marketplace.md") && hasResourceUri(resourceUris, "/ai/mcp-directory-update/mcp_so.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-update/mcp_so.md") && hasResourceUri(resourceUris, "/ai/mcp-directory-update/browse_sh.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-update/browse_sh.md"), {
+      detail: `resources=${resources.length}`,
+    }),
     check("resources/list advertises agent capture outreach", hasResourceUri(resourceUris, "/ai/agent-capture-outreach.json") && hasResourceUri(resourceUris, "/ai/agent-capture-outreach.md"), {
       detail: `resources=${resources.length}`,
     }),

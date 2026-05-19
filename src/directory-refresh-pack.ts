@@ -139,6 +139,15 @@ const DIRECTORY_TARGETS = [
       "Claim or update the Packrift MCP Market listing so it points at the hosted endpoint and current server card.",
   },
   {
+    id: "mcp_marketplace_io",
+    name: "MCP Marketplace",
+    listing_url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
+    refresh_url: "https://mcp-marketplace.io/for-creators",
+    priority: "medium",
+    requested_action:
+      "Recrawl the hosted marketplace manifest and update the public listing to 15 tools, including prepare_purchase_handoff, with no buyer-required credentials for the hosted endpoint.",
+  },
+  {
     id: "cursor_directory",
     name: "Cursor Directory",
     listing_url: "https://cursor.directory/",
@@ -196,7 +205,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R18",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R19",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -339,11 +348,14 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         codex: trackedInstallUrl(target.id, "codex"),
         cursor_windsurf_vscode: trackedInstallUrl(target.id, "cursor_windsurf_vscode"),
         cline: trackedInstallUrl(target.id, "cline"),
+        mcp_marketplace: trackedInstallUrl(target.id, "mcp_marketplace"),
       },
       tracked_run_urls: {
         generic_streamable_http: trackedRunUrl(target.id, "generic_streamable_http"),
         generic_streamable_http_browser: `${trackedRunUrl(target.id, "generic_streamable_http")}&format=html`,
         generic_streamable_http_execute: `${trackedRunUrl(target.id, "generic_streamable_http")}&execute=1`,
+        mcp_marketplace: trackedRunUrl(target.id, "mcp_marketplace"),
+        mcp_marketplace_execute: `${trackedRunUrl(target.id, "mcp_marketplace")}&execute=1`,
       },
       tracked_reviewer_activation_url: `https://mcp.packrift.com/r/activate/${target.id}`,
       tracked_reviewer_activation_html_url: `https://mcp.packrift.com/r/activate/${target.id}?format=html`,

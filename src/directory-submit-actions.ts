@@ -6,6 +6,7 @@ export interface DirectorySubmitActionsRuntime {
   toolsCount: number;
   resourcesCount: number;
   promptsCount: number;
+  toolNames?: string[];
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
@@ -38,8 +39,39 @@ const MARKETPLACE_MANIFEST_URL = "https://mcp.packrift.com/.well-known/mcp-marke
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
+const DEFAULT_TOOL_NAMES = [
+  "search_products",
+  "get_product",
+  "get_pricing",
+  "check_inventory",
+  "find_packaging_for_item",
+  "get_shipping_estimate",
+  "get_cart_handoff_candidates",
+  "create_cart_url",
+  "prepare_purchase_handoff",
+  "compare_alternatives",
+  "pack_calculator",
+  "inventory_status",
+  "get_reorder_link",
+  "get_bulk_quote_link",
+  "explain_no_exact_match",
+];
 
 const ACTIONS = [
+  {
+    id: "official_registry",
+    label: "Official MCP Registry",
+    action_status: "published_current",
+    directory_status: "pass",
+    priority: "core",
+    method: "Published through the official MCP Registry server package.",
+    evidence: "Official registry latest version is current and points at the hosted Packrift MCP endpoint.",
+    stale_markers: [],
+    recrawl_subject: "Keep official MCP Registry Packrift MCP entry current",
+    next_action: "Publish with mcp-publisher whenever the public MCP surface changes.",
+    listing_url: "https://registry.modelcontextprotocol.io/servers/io.github.Packrift/packrift-mcp",
+    submission_url: "https://github.com/modelcontextprotocol/registry",
+  },
   {
     id: "mcpservers_org",
     label: "mcpservers.org",
@@ -53,6 +85,20 @@ const ACTIONS = [
     next_action: "Use the refreshed proof message if support or review asks for current evidence.",
     listing_url: "https://mcpservers.org/servers/packrift/packrift-mcp",
     submission_url: "https://mcpservers.org/submit",
+  },
+  {
+    id: "glama_connector",
+    label: "Glama hosted connector",
+    action_status: "hosted_connector_live",
+    directory_status: "pass",
+    priority: "high",
+    method: "Hosted Glama connector ingestion.",
+    evidence: "Glama hosted connector is healthy and lists the current 15-tool remote MCP surface.",
+    stale_markers: [],
+    recrawl_subject: "Keep Glama hosted connector Packrift MCP entry current",
+    next_action: "Monitor the hosted connector and use the source server listing only as secondary recrawl cleanup.",
+    listing_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+    submission_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
   },
   {
     id: "glama_server_listing",
@@ -158,6 +204,22 @@ const ACTIONS = [
       "Monitor Browse install count and skill quality, keep the Packrift MCP endpoint current, and update the skill if Browserbase changes the generated source or catalog slug.",
     listing_url: "https://browse.sh/",
     submission_url: "https://browse.sh/",
+  },
+  {
+    id: "mcp_marketplace_io",
+    label: "MCP Marketplace",
+    action_status: "recrawl_needed",
+    directory_status: "stale",
+    priority: "medium",
+    method: "Marketplace manifest recrawl request.",
+    evidence:
+      "The public MCP Marketplace listing exists but still shows the older 14-tool surface; the hosted marketplace manifest now exposes the full 15-tool no-auth remote endpoint.",
+    stale_markers: ["toolCount 14", "prepare_purchase_handoff missing", "hosted endpoint framed as self-host credentials"],
+    recrawl_subject: "Refresh MCP Marketplace Packrift listing to the current 15-tool hosted endpoint",
+    next_action:
+      "Request a marketplace recrawl using the hosted marketplace manifest, source activation sitemap, server card, and mcp_marketplace_io first-run activation card.",
+    listing_url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
+    submission_url: "https://mcp-marketplace.io/for-creators",
   },
   {
     id: "pulsemcp_packrift",
@@ -287,6 +349,20 @@ const ACTIONS = [
     submission_url: "https://chiark.ai/methodology",
   },
   {
+    id: "generic",
+    label: "Generic MCP source",
+    action_status: "source_template",
+    directory_status: "not_directory_specific",
+    priority: "medium",
+    method: "Reusable source-specific activation template.",
+    evidence: "Generic tracked start, config, install, run, and activation URLs are available for partner, campaign, and unclassified MCP traffic.",
+    stale_markers: [],
+    recrawl_subject: "Use generic Packrift MCP source activation template",
+    next_action: "Use this only when the source does not have a named directory or host-specific card.",
+    listing_url: "https://mcp.packrift.com/start",
+    submission_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+  },
+  {
     id: "docker_mcp_catalog",
     label: "Docker MCP Catalog",
     action_status: "pending_merge",
@@ -319,6 +395,14 @@ function trackedConfigUrl(source: string): string {
   url.searchParams.set("utm_campaign", "packrift_mcp_install");
   url.searchParams.set("utm_content", "directory_submit_actions");
   return url.toString();
+}
+
+function normalizeDirectoryUpdateSource(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
@@ -426,6 +510,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       codex: trackedInstallUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
       cline: trackedInstallUrl(action.id, "cline"),
+      glama_connector: trackedInstallUrl(action.id, "glama_connector"),
+      mcp_marketplace: trackedInstallUrl(action.id, "mcp_marketplace"),
     },
     tracked_run_urls: {
       generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
@@ -435,6 +521,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       codex: trackedRunUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedRunUrl(action.id, "cursor_windsurf_vscode"),
       cline: trackedRunUrl(action.id, "cline"),
+      glama_connector: trackedRunUrl(action.id, "glama_connector"),
+      mcp_marketplace: trackedRunUrl(action.id, "mcp_marketplace"),
     },
     first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
     proof_urls: {
@@ -487,12 +575,16 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         claude_code: trackedInstallUrl(action.id, "claude_code"),
         codex: trackedInstallUrl(action.id, "codex"),
         cline: trackedInstallUrl(action.id, "cline"),
+        glama_connector: trackedInstallUrl(action.id, "glama_connector"),
+        mcp_marketplace: trackedInstallUrl(action.id, "mcp_marketplace"),
       },
       quickest_first_run_by_host: {
         generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
         claude_code: trackedRunUrl(action.id, "claude_code"),
         codex: trackedRunUrl(action.id, "codex"),
         cline: trackedRunUrl(action.id, "cline"),
+        glama_connector: trackedRunUrl(action.id, "glama_connector"),
+        mcp_marketplace: trackedRunUrl(action.id, "mcp_marketplace"),
       },
       acceptance_gate: [
         "Install the existing hosted Packrift MCP endpoint only.",
@@ -510,7 +602,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R28",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R29",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -552,6 +644,122 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     operating_rule:
       "Use this as a support/reviewer queue, not as proof that the MCP revenue goal is complete. Completion still requires qualified external MCP sessions, cart landings, and attributed orders.",
   };
+}
+
+export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsRuntime, source: string) {
+  const sourceSlug = normalizeDirectoryUpdateSource(source);
+  const payload = mcpDirectorySubmitActionsPayload(runtime);
+  const action = payload.actions.find((row) => row.id === sourceSlug);
+  if (!sourceSlug || !action) return null;
+  const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
+  return {
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R01",
+    generated_at: new Date().toISOString(),
+    purpose:
+      "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
+    source: sourceSlug,
+    directory: {
+      id: action.id,
+      label: action.label,
+      action_status: action.action_status,
+      directory_status: action.directory_status,
+      priority: action.priority,
+      listing_url: action.listing_url,
+      submission_url: action.submission_url,
+      stale_markers: "stale_markers" in action ? action.stale_markers ?? [] : [],
+      next_action: action.next_action,
+    },
+    canonical_listing: {
+      server_name: "Packrift MCP",
+      registry_name: "io.github.Packrift/packrift-mcp",
+      endpoint: MCP_ENDPOINT,
+      authentication: "none_required_for_hosted_endpoint",
+      version: runtime.serverVersion,
+      description: "Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
+      tool_count: runtime.toolsCount,
+      tool_names: toolNames,
+      resources_count: runtime.resourcesCount,
+      prompts_count: runtime.promptsCount,
+      repository_url: "https://github.com/Packrift/packrift-mcp",
+      website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
+      marketplace_manifest: MARKETPLACE_MANIFEST_URL,
+      source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
+    },
+    tracked_urls: {
+      start: action.tracked_start_url,
+      config: action.tracked_config_url,
+      install: action.tracked_install_urls,
+      first_run: action.tracked_run_urls,
+      live_proof: action.tracked_run_urls.generic_streamable_http_execute,
+      reviewer_activation: action.proof_urls.tracked_reviewer_activation,
+      reviewer_activation_html: action.proof_urls.tracked_reviewer_activation_html,
+    },
+    acceptance_gate: [
+      "Install the hosted no-auth Streamable HTTP endpoint.",
+      "Run tools/list against the source-aware endpoint.",
+      "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Treat the listing as activated only when create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ],
+    crawler_inputs: action.activation_packet.crawler_inputs,
+    proof_urls: action.proof_urls,
+    copy_ready_recrawl_message: action.recrawl_message,
+  };
+}
+
+function fencedJson(value: unknown): string {
+  return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
+}
+
+function fencedText(value: string): string {
+  return ["```text", value, "```"].join("\n");
+}
+
+export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActionsRuntime, source: string): string | null {
+  const payload = mcpDirectorySubmitActionPayload(runtime, source);
+  if (!payload) return null;
+  return [
+    "# Packrift MCP Directory Update Card",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Source: ${payload.source}`,
+    `Directory: ${payload.directory.label}`,
+    `Canonical endpoint: ${payload.canonical_listing.endpoint}`,
+    "",
+    "## Canonical Listing",
+    "",
+    `Server name: ${payload.canonical_listing.server_name}`,
+    `Registry name: ${payload.canonical_listing.registry_name}`,
+    `Authentication: ${payload.canonical_listing.authentication}`,
+    `Version: ${payload.canonical_listing.version}`,
+    `Tools: ${payload.canonical_listing.tool_count} (${payload.canonical_listing.tool_names.join(", ")})`,
+    `Marketplace manifest: ${payload.canonical_listing.marketplace_manifest}`,
+    `Source activation sitemap: ${payload.canonical_listing.source_activation_sitemap}`,
+    "",
+    "## Current Directory State",
+    "",
+    `Action status: ${payload.directory.action_status}`,
+    `Directory status: ${payload.directory.directory_status}`,
+    `Priority: ${payload.directory.priority}`,
+    `Listing URL: ${payload.directory.listing_url}`,
+    `Submission URL: ${payload.directory.submission_url}`,
+    `Stale markers: ${payload.directory.stale_markers.length ? payload.directory.stale_markers.join(", ") : "none"}`,
+    "",
+    "## Tracked URLs",
+    "",
+    fencedJson(payload.tracked_urls),
+    "",
+    "## Acceptance Gate",
+    "",
+    payload.acceptance_gate.map((rule) => `- ${rule}`).join("\n"),
+    "",
+    "## Copy-Ready Recrawl Message",
+    "",
+    fencedText(payload.copy_ready_recrawl_message),
+    "",
+    `Machine-readable version: https://mcp.packrift.com/ai/mcp-directory-update/${payload.source}.json`,
+    "",
+  ].join("\n");
 }
 
 function escapeMarkdown(value: string): string {

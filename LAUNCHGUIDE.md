@@ -22,6 +22,7 @@ The server is designed for buyers and AI agents that need packaging supplies by 
 - Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
+- MCP directory update card template: https://mcp.packrift.com/ai/mcp-directory-update/{source}.json
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - Source repository: https://github.com/Packrift/packrift-mcp
 
