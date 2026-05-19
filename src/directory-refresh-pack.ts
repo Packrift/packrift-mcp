@@ -1,3 +1,5 @@
+import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+
 export interface DirectoryRefreshRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -11,6 +13,7 @@ const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const MCP_TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const MCP_TRACKED_CONFIG_GENERIC_URL = "https://mcp.packrift.com/r/config/generic";
+const INSTALL_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-install-actions.json";
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
@@ -172,9 +175,9 @@ const DIRECTORY_TARGETS = [
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, source-attributed /r/config/{source} config links, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R08",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R09",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -191,7 +194,14 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       start_url: MCP_START_URL,
       tracked_start_template: MCP_TRACKED_START_TEMPLATE,
       tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
+      tracked_install_template: TRACKED_INSTALL_TEMPLATE,
       tracked_config_generic: MCP_TRACKED_CONFIG_GENERIC_URL,
+      tracked_install_examples: {
+        generic_streamable_http: trackedInstallUrl("generic", "generic_streamable_http"),
+        claude_code: trackedInstallUrl("generic", "claude_code"),
+        codex: trackedInstallUrl("generic", "codex"),
+        cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+      },
       tracked_start_source_policy: MCP_TRACKED_START_SOURCE_POLICY,
       repository_url: "https://github.com/Packrift/packrift-mcp",
       remote_endpoint: MCP_ENDPOINT,
@@ -217,6 +227,9 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       tracked_start_partner_demo: "https://mcp.packrift.com/r/start/partner_demo",
       tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
       tracked_config_generic: MCP_TRACKED_CONFIG_GENERIC_URL,
+      tracked_install_template: TRACKED_INSTALL_TEMPLATE,
+      tracked_install_codex_generic: trackedInstallUrl("generic", "codex"),
+      install_actions: INSTALL_ACTIONS_URL,
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
       glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
@@ -252,19 +265,30 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       resources_count: runtime.resourcesCount,
       prompts_count: runtime.promptsCount,
     },
-    priority_refresh_targets: DIRECTORY_TARGETS,
+    priority_refresh_targets: DIRECTORY_TARGETS.map((target) => ({
+      ...target,
+      tracked_start_url: `https://mcp.packrift.com/r/start/${target.id}`,
+      tracked_config_url: `https://mcp.packrift.com/r/config/${target.id}`,
+      tracked_install_urls: {
+        generic_streamable_http: trackedInstallUrl(target.id, "generic_streamable_http"),
+        claude_code: trackedInstallUrl(target.id, "claude_code"),
+        codex: trackedInstallUrl(target.id, "codex"),
+        cursor_windsurf_vscode: trackedInstallUrl(target.id, "cursor_windsurf_vscode"),
+      },
+    })),
     recrawl_request:
-      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Current proof: ${proofSummary}`,
+      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup. Current proof: ${proofSummary}`,
     operating_rules: [
       "The hosted endpoint is the primary listing target; do not require users to self-host or provide a Shopify token for normal MCP use.",
       "Use the official registry name io.github.Packrift/packrift-mcp and the remote endpoint https://mcp.packrift.com/mcp.",
-      "Use /r/start/{source} for directory, partner, campaign, and agent handoff attribution; use /r/config/{source} when the directory or host can fetch MCP JSON config directly. Custom source slugs are allowed when they match ^[a-z0-9_]{2,64}$.",
+      "Use /r/start/{source} for directory, partner, campaign, and agent handoff attribution; use /r/config/{source} when the directory or host can fetch MCP JSON config directly; use /r/install/{source}/{target} when the directory can link to client-specific setup. Custom source slugs are allowed when they match ^[a-z0-9_]{2,64}$.",
       "Keep stale directory listings separate from the live MCP truth. The live health, server card, tools/list, resources/list, and prompts/list are authoritative.",
       "Discovery is not the final goal. Recrawls should drive external MCP sessions, tool calls, stamped cart landings, and measurable revenue.",
     ],
     success_metrics: [
       "stale directory listings become current",
       "directory referral sessions appear in analytics",
+      "tracked install-action opens appear by directory source and target in the usage snapshot",
       "external agents call tools/list or resources/list from directory referrals",
       "real workflows call get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url",
       "qualified MCP cart landings and MCP-attributed sales become visible",
@@ -281,7 +305,7 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
   const targetRows = payload.priority_refresh_targets
     .map(
       (target) =>
-        `| ${escapeMarkdown(target.name)} | ${target.priority} | ${target.listing_url} | ${target.refresh_url} | ${escapeMarkdown(target.requested_action)} |`
+        `| ${escapeMarkdown(target.name)} | ${target.priority} | ${target.listing_url} | ${target.refresh_url} | ${target.tracked_install_urls.codex} | ${escapeMarkdown(target.requested_action)} |`
     )
     .join("\n");
   const proofRows = Object.entries(payload.live_proof)
@@ -304,6 +328,8 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     `Start page: ${payload.canonical_listing.start_url}`,
     `Tracked start template: ${payload.canonical_listing.tracked_start_template}`,
     `Tracked config template: ${payload.canonical_listing.tracked_config_template}`,
+    `Tracked install template: ${payload.canonical_listing.tracked_install_template}`,
+    `Tracked Codex install example: ${payload.canonical_listing.tracked_install_examples.codex}`,
     `Tracked source format: ${payload.canonical_listing.tracked_start_source_policy.accepted_source_format}`,
     `Repository: ${payload.canonical_listing.repository_url}`,
     `Website: ${payload.canonical_listing.website_url}`,
@@ -316,8 +342,8 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     "",
     "## Priority Refresh Targets",
     "",
-    "| Directory | Priority | Current listing | Refresh URL | Requested action |",
-    "| --- | --- | --- | --- | --- |",
+    "| Directory | Priority | Current listing | Refresh URL | Tracked Codex install URL | Requested action |",
+    "| --- | --- | --- | --- | --- | --- |",
     targetRows,
     "",
     "## Live Proof URLs",
