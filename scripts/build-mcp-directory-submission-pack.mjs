@@ -214,7 +214,7 @@ const TARGETS = [
     submission_url: "https://www.mcp.blue/submit",
     category: "Business",
     priority: "medium",
-    action: "Submit Packrift MCP through MCP Blue's submit or registry process with the current hosted endpoint and marketplace manifest.",
+    action: "Do not spend time submitting until MCP Blue is live again; the submit URL redirected to an expired-domain parking page on 2026-05-19.",
   },
   {
     name: "findmcp_dev",
@@ -223,7 +223,7 @@ const TARGETS = [
     submission_url: "https://findmcp.dev/submit",
     category: "Business",
     priority: "medium",
-    action: "Submit Packrift MCP through FindMCP's server listing flow with source-specific start and exact-spec packaging copy.",
+    action: "Find a real contact, repository, or working submit endpoint; /submit rendered the landing page without a form on 2026-05-19.",
   },
   {
     name: "mcplane",
@@ -232,7 +232,7 @@ const TARGETS = [
     submission_url: "https://mcplane.com/mcp_servers/new",
     category: "Business",
     priority: "medium",
-    action: "Publish Packrift MCP through MCPLane's server flow with the hosted endpoint and source-specific activation proof.",
+    action: "Contact MCPLane or retry only after its GitHub validator accepts the public Packrift/packrift-mcp repository.",
   },
   {
     name: "mcpsolutions_dev",
@@ -241,7 +241,7 @@ const TARGETS = [
     submission_url: "https://mcpsolutions.dev/submit/",
     category: "Business",
     priority: "medium",
-    action: "Submit Packrift MCP as a basic listing first, using the hosted no-auth endpoint and directory update card.",
+    action: "Monitor the submitted basic listing for publication and provide the source-specific update card if review asks for current endpoint proof.",
   },
   {
     name: "gpmcp",
@@ -716,7 +716,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R02",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R03",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {

@@ -41,7 +41,6 @@ const TRACKED_START_RECOMMENDED_SOURCES = [
   "mcp_marketplace_io",
   "mcplist_ai",
   "mcphubz",
-  "mcp_blue",
   "findmcp_dev",
   "mcplane",
   "mcpsolutions_dev",
