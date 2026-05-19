@@ -143,11 +143,22 @@ function directoryRefreshMessage(row, capture = null) {
 
 function browseCandidateBrief() {
   return {
-    status: "catalog_missing_submission_ready",
+    status: "catalog_visible_install_blocked",
     domain: "packrift.com",
     catalog_url: "https://browse.sh/",
     catalog_check_command: "browse skills find packrift",
-    expected_catalog_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
+    catalog_slug: "packrift.com/exact-spec-packaging-procurement-e4ujmy",
+    catalog_task: "exact-spec-packaging-procurement-e4ujmy",
+    catalog_source_url: "https://github.com/browserbase/browse.sh/blob/main/skills/packrift.com/exact-spec-packaging-procurement-e4ujmy/SKILL.md",
+    submitted_at: "2026-05-19",
+    first_seen_in_catalog_at: "2026-05-19",
+    submitted_contact: "partnerships@packrift.com",
+    install_check: {
+      command: "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy",
+      status: "blocked_github_auth",
+      observed_at: "2026-05-19",
+      error_summary: "Browse can find the skill, but install fails while cloning https://github.com/browserbase/browse.sh.git because GitHub authentication is required.",
+    },
     product_positioning:
       "Packrift should be a read-first packaging procurement skill if Browse adds a retailer/domain submission lane. The skill should not replace MCP; it should route exact SKU/spec lookup and measured handoff through the hosted MCP endpoint.",
     skill_md_url: "https://mcp.packrift.com/SKILL.md",
@@ -265,13 +276,24 @@ function browserAssistedSubmissions(rows, capture) {
       ...claude,
     },
     browse_sh: {
-      status: "catalog_missing_submission_ready",
+      status: "catalog_visible_install_blocked",
       submission_url: "https://browse.sh/",
       listing_url: "https://browse.sh/",
       catalog_check_command: "browse skills find packrift",
-      expected_catalog_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
+      catalog_slug: "packrift.com/exact-spec-packaging-procurement-e4ujmy",
+      catalog_task: "exact-spec-packaging-procurement-e4ujmy",
+      catalog_source_url: "https://github.com/browserbase/browse.sh/blob/main/skills/packrift.com/exact-spec-packaging-procurement-e4ujmy/SKILL.md",
+      submitted_at: "2026-05-19",
+      first_seen_in_catalog_at: "2026-05-19",
+      submitted_contact: "partnerships@packrift.com",
       submission_note:
-        "Use the Browse Add website flow with Packrift as a read-first commerce skill. Keep the hosted MCP endpoint as the live fact and cart-handoff authority.",
+        "Submitted through the Browse Add website flow on 2026-05-19 and now visible in browse skills find packrift, but browse skills add currently fails on GitHub authentication for Browserbase's generated source repo. Keep the hosted MCP endpoint as the live fact and cart-handoff authority while Browserbase makes the generated skill publicly installable.",
+      install_check: {
+        command: "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy",
+        status: "blocked_github_auth",
+        observed_at: "2026-05-19",
+        error_summary: "Authentication failed while cloning https://github.com/browserbase/browse.sh.git.",
+      },
       fields: {
         domain: "packrift.com",
         title: "Packrift Exact-Spec Packaging Procurement",

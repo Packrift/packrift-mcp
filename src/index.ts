@@ -11,11 +11,14 @@ import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js
 import { mcpInstallMatrixMarkdown, mcpInstallMatrixPayload } from "./install-matrix.js";
 import {
   MCP_INSTALL_ACTION_RELEASE,
+  MCP_SOURCE_QUERY_PARAM,
+  MCP_TARGET_QUERY_PARAM,
   mcpInstallActionMarkdown,
   mcpInstallActionPayload,
   mcpInstallActionsMarkdown,
   mcpInstallActionsPayload,
   normalizeInstallTarget,
+  sourceAwareMcpEndpoint,
 } from "./install-action.js";
 import { mcpClientConfigMarkdown, mcpClientConfigPayload } from "./client-config.js";
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
@@ -263,9 +266,101 @@ interface JsonRpcRequest {
 interface RpcExecutionContext {
   sessionId?: string;
   userAgent?: string;
+  sourceSlug?: string;
+  installTarget?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
 }
 
 type RouteRedirectAction = "product" | "reorder" | "quote" | "cart";
+
+function normalizeMcpRuntimeSlug(value: unknown): string {
+  const slug = safeEventText(value, 80)
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
+  return MCP_START_SOURCE_PATTERN.test(slug) ? slug : "";
+}
+
+function firstRuntimeSlug(url: URL, keys: string[]): string {
+  for (const key of keys) {
+    const slug = normalizeMcpRuntimeSlug(url.searchParams.get(key));
+    if (slug) return slug;
+  }
+  return "";
+}
+
+function mcpSourceContinuityFromUrl(url: URL): RpcExecutionContext {
+  const sourceSlug = firstRuntimeSlug(url, [MCP_SOURCE_QUERY_PARAM, "mcp_source", "utm_source"]);
+  if (!sourceSlug) return {};
+  const installTarget = firstRuntimeSlug(url, [MCP_TARGET_QUERY_PARAM, "mcp_target", "utm_content"]);
+  return {
+    sourceSlug,
+    installTarget: installTarget || undefined,
+    utmMedium: safeEventText(url.searchParams.get("utm_medium"), 80) || undefined,
+    utmCampaign: safeEventText(url.searchParams.get("utm_campaign"), 120) || undefined,
+    utmContent: safeEventText(url.searchParams.get("utm_content"), 120) || undefined,
+  };
+}
+
+function rpcContextTelemetry(context: RpcExecutionContext) {
+  return {
+    sessionId: context.sessionId,
+    userAgent: context.userAgent,
+    sourceSlug: context.sourceSlug,
+    installTarget: context.installTarget,
+    utmMedium: context.utmMedium,
+    utmCampaign: context.utmCampaign,
+    utmContent: context.utmContent,
+  };
+}
+
+function mcpContinuityAttribution(meta: RpcExecutionContext, actionLabel: string): Record<string, unknown> {
+  const sourceSlug = normalizeMcpRuntimeSlug(meta.sourceSlug);
+  if (!sourceSlug) return {};
+  const action = normalizeMcpRuntimeSlug(actionLabel) || "runtime";
+  const target = normalizeMcpRuntimeSlug(meta.installTarget) || action;
+  const day = compactDate();
+  const id = `mcp_runtime_${sourceSlug}_${day}_${action}`;
+  return {
+    mcp_source_context: sourceSlug,
+    mcp_install_target: target,
+    packrift_ai_id: id,
+    ai_commerce_id: id,
+    mcp_key: `runtime:${sourceSlug}`,
+    mcp_journey: `mcp_runtime:${sourceSlug}:${target}:${action}`,
+    mcp_result_set: `mcp_runtime_${day}`,
+    utm_source: sourceSlug,
+    utm_medium: safeEventText(meta.utmMedium, 80) || "mcp_runtime",
+    utm_campaign: safeEventText(meta.utmCampaign, 120) || "packrift_mcp_runtime",
+    utm_content: safeEventText(meta.utmContent, 120) || target,
+  };
+}
+
+function mergeNonEmptyAttribution(...rows: Array<Record<string, unknown>>): Record<string, unknown> {
+  const merged: Record<string, unknown> = {};
+  for (const row of rows) {
+    for (const [key, value] of Object.entries(row)) {
+      if (value === null || value === undefined) continue;
+      if (typeof value === "string" && value.trim() === "") continue;
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
+function sourceAwareMcpJson(source: string, target = "tracked_config") {
+  return {
+    mcpServers: {
+      packrift: {
+        type: "http",
+        url: sourceAwareMcpEndpoint(source, target),
+      },
+    },
+  };
+}
 
 function rpcResult(id: unknown, result: unknown) {
   return { jsonrpc: "2.0", id: id ?? null, result };
@@ -340,6 +435,7 @@ function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
 
 async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionContext = {}): Promise<unknown | null> {
   const { method, params, id } = req;
+  const telemetryContext = rpcContextTelemetry(context);
   // Notifications (no id) get no response.
   const isNotification = id === undefined || id === null;
 
@@ -370,8 +466,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           mcpMethod: method,
           resultCount: TOOLS.length,
           resultSizeBytes: jsonByteSize(TOOLS.map((t) => t.schema)),
-          sessionId: context.sessionId,
-          userAgent: context.userAgent,
+          ...telemetryContext,
           ok: true,
         });
         return rpcResult(id, { tools: TOOLS.map((t) => t.schema) });
@@ -392,8 +487,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
               buildMcpToolCallEvent(name, out, {
                 latencyMs: Date.now() - startedAt,
                 resultSizeBytes: jsonByteSize(out),
-                sessionId: context.sessionId,
-                userAgent: context.userAgent,
+                ...telemetryContext,
                 ok: true,
               })
             );
@@ -410,8 +504,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
               buildMcpToolCallEvent(name, { error: msg }, {
                 latencyMs: Date.now() - startedAt,
                 resultSizeBytes: jsonByteSize({ error: msg }),
-                sessionId: context.sessionId,
-                userAgent: context.userAgent,
+                ...telemetryContext,
                 ok: false,
                 errorMessage: msg,
               })
@@ -431,8 +524,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           mcpMethod: method,
           resultCount: MCP_RESOURCES.length,
           resultSizeBytes: jsonByteSize(MCP_RESOURCES),
-          sessionId: context.sessionId,
-          userAgent: context.userAgent,
+          ...telemetryContext,
           ok: true,
         });
         return rpcResult(id, { resources: MCP_RESOURCES });
@@ -442,8 +534,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           mcpMethod: method,
           resultCount: MCP_RESOURCE_TEMPLATES.length,
           resultSizeBytes: jsonByteSize(MCP_RESOURCE_TEMPLATES),
-          sessionId: context.sessionId,
-          userAgent: context.userAgent,
+          ...telemetryContext,
           ok: true,
         });
         return rpcResult(id, { resourceTemplates: MCP_RESOURCE_TEMPLATES });
@@ -461,8 +552,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             format: skuResourceMatch?.[1] ?? "",
             latencyMs: Date.now() - startedAt,
             resultSizeBytes: 0,
-            sessionId: context.sessionId,
-            userAgent: context.userAgent,
+            ...telemetryContext,
             ok: false,
             errorMessage: `Unknown resource: ${uri}`,
           });
@@ -476,8 +566,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           format: skuResourceMatch?.[1] ?? mimeType,
           latencyMs: Date.now() - startedAt,
           resultSizeBytes: jsonByteSize(text),
-          sessionId: context.sessionId,
-          userAgent: context.userAgent,
+          ...telemetryContext,
           ok: true,
         });
         return rpcResult(id, {
@@ -490,8 +579,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           mcpMethod: method,
           resultCount: PROMPTS.length,
           resultSizeBytes: jsonByteSize(PROMPTS.map(promptListItem)),
-          sessionId: context.sessionId,
-          userAgent: context.userAgent,
+          ...telemetryContext,
           ok: true,
         });
         return rpcResult(id, { prompts: PROMPTS.map(promptListItem) });
@@ -507,8 +595,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             promptName: name,
             latencyMs: Date.now() - startedAt,
             resultSizeBytes: 0,
-            sessionId: context.sessionId,
-            userAgent: context.userAgent,
+            ...telemetryContext,
             ok: false,
             errorMessage: `Unknown prompt: ${name}`,
           });
@@ -521,8 +608,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             promptName: name,
             latencyMs: Date.now() - startedAt,
             resultSizeBytes: 0,
-            sessionId: context.sessionId,
-            userAgent: context.userAgent,
+            ...telemetryContext,
             ok: false,
             errorMessage: `Missing required prompt argument: ${missing.map((arg) => arg.name).join(", ")}`,
           });
@@ -534,8 +620,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           promptName: name,
           latencyMs: Date.now() - startedAt,
           resultSizeBytes: jsonByteSize(text),
-          sessionId: context.sessionId,
-          userAgent: context.userAgent,
+          ...telemetryContext,
           ok: true,
         });
         return rpcResult(id, {
@@ -1776,12 +1861,17 @@ function buildMcpToolCallEvent(
     resultSizeBytes: number;
     sessionId?: string;
     userAgent?: string;
+    sourceSlug?: string;
+    installTarget?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
     ok: boolean;
     errorMessage?: string;
   }
 ): Record<string, unknown> {
   const row = summarizeToolResult(out);
-  const attribution = buildToolResultAttribution(out);
+  const attribution = mergeNonEmptyAttribution(mcpContinuityAttribution(meta, name), buildToolResultAttribution(out));
   const userAgent = meta.userAgent ?? "";
   return {
     event: "mcp_tool_call",
@@ -1814,6 +1904,11 @@ async function recordMcpDiscoveryEvent(
     resultSizeBytes?: number;
     sessionId?: string;
     userAgent?: string;
+    sourceSlug?: string;
+    installTarget?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
     ok: boolean;
     errorMessage?: string;
     promptName?: string;
@@ -1823,6 +1918,7 @@ async function recordMcpDiscoveryEvent(
 ): Promise<void> {
   const userAgent = meta.userAgent ?? "";
   if (shouldSkipInternalTelemetry(userAgent)) return;
+  const attribution = mcpContinuityAttribution(meta, meta.mcpMethod);
   await recordAiSalesEvent(env, {
     event: eventName,
     source: "mcp_discovery",
@@ -1840,6 +1936,7 @@ async function recordMcpDiscoveryEvent(
     user_agent: safeEventText(userAgent, 240),
     bot_family: classifyAgentFamily(userAgent),
     error: safeEventText(meta.errorMessage, 240),
+    ...attribution,
   });
 }
 
@@ -1934,6 +2031,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byMcpKey: Record<string, number> = {};
   const byMcpJourney: Record<string, number> = {};
   const byToolMcpKey: Record<string, number> = {};
+  const byMcpSourceContext: Record<string, number> = {};
+  const byMcpInstallTarget: Record<string, number> = {};
+  const byToolMcpSourceContext: Record<string, number> = {};
   const byUtmSource: Record<string, number> = {};
   const byUtmMedium: Record<string, number> = {};
   const byUtmCampaign: Record<string, number> = {};
@@ -1970,6 +2070,8 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const packriftAiId = String(event.packrift_ai_id ?? event.ai_commerce_id ?? "") || "unknown";
     const mcpKey = String(event.mcp_key ?? "") || "unknown";
     const mcpJourney = String(event.mcp_journey ?? "") || "unknown";
+    const mcpSourceContext = String(event.mcp_source_context ?? "") || "unknown";
+    const mcpInstallTarget = String(event.mcp_install_target ?? "") || "unknown";
     const utmSource = String(event.utm_source ?? "") || "unknown";
     const utmMedium = String(event.utm_medium ?? "") || "unknown";
     const utmCampaign = String(event.utm_campaign ?? "") || "unknown";
@@ -2021,6 +2123,11 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     byPackriftAiId[packriftAiId] = (byPackriftAiId[packriftAiId] ?? 0) + 1;
     if (mcpKey !== "unknown") byMcpKey[mcpKey] = (byMcpKey[mcpKey] ?? 0) + 1;
     if (mcpJourney !== "unknown") byMcpJourney[mcpJourney] = (byMcpJourney[mcpJourney] ?? 0) + 1;
+    if (mcpSourceContext !== "unknown") byMcpSourceContext[mcpSourceContext] = (byMcpSourceContext[mcpSourceContext] ?? 0) + 1;
+    if (mcpInstallTarget !== "unknown") byMcpInstallTarget[mcpInstallTarget] = (byMcpInstallTarget[mcpInstallTarget] ?? 0) + 1;
+    if (eventName === "mcp_tool_call" && mcpSourceContext !== "unknown") {
+      byToolMcpSourceContext[`${toolName} | ${mcpSourceContext}`] = (byToolMcpSourceContext[`${toolName} | ${mcpSourceContext}`] ?? 0) + 1;
+    }
   }
   const top = (obj: Record<string, number>, limit = 25) =>
     Object.entries(obj)
@@ -2068,6 +2175,8 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         packrift_ai_id: safeEventText(event.packrift_ai_id ?? event.ai_commerce_id, 160) || null,
         mcp_key: safeEventText(event.mcp_key, 120) || null,
         mcp_journey: safeEventText(event.mcp_journey, 160) || null,
+        mcp_source_context: safeEventText(event.mcp_source_context, 80) || null,
+        mcp_install_target: safeEventText(event.mcp_install_target, 80) || null,
         mcp_result_set: safeEventText(event.mcp_result_set, 160) || null,
         utm_source: safeEventText(event.utm_source, 80) || null,
         utm_medium: safeEventText(event.utm_medium, 80) || null,
@@ -2090,6 +2199,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_mcp_key: top(byMcpKey),
     by_mcp_journey: top(byMcpJourney),
     by_tool_mcp_key: top(byToolMcpKey),
+    by_mcp_source_context: top(byMcpSourceContext),
+    by_mcp_install_target: top(byMcpInstallTarget),
+    by_tool_mcp_source_context: top(byToolMcpSourceContext),
     by_utm_source: top(byUtmSource),
     by_utm_medium: top(byUtmMedium),
     by_utm_campaign: top(byUtmCampaign),
@@ -2151,6 +2263,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const trackedConfigFetches = summary.tracked_config_fetches;
   const installIntents = byEvent.mcp_install_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
+  const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
   const directAgentResourceSources = [
@@ -2177,7 +2290,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R08",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R09",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2204,6 +2317,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_intent_events: installIntents,
       mcp_install_copy_events: installCopies,
+      mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
       direct_agent_resource_events: directAgentResourceEvents,
@@ -2232,6 +2346,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_config_fetch_seen: trackedConfigFetches > 0,
       install_intent_seen: installIntents > 0,
       install_copy_seen: installCopies > 0,
+      mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
       create_cart_url_seen: createCartUrlCalls > 0,
       material_tool_usage_50_plus: mcpToolCalls >= 50,
       thousands_of_qualified_visitors: false,
@@ -2253,6 +2368,9 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      mcp_runtime_sources: summary.by_mcp_source_context,
+      mcp_install_targets: summary.by_mcp_install_target,
+      tool_runtime_sources: summary.by_tool_mcp_source_context,
       event_sources: summary.by_event_source,
       event_attribution: summary.by_event_attribution,
     },
@@ -2271,6 +2389,9 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      mcp_runtime_sources: summary.by_mcp_source_context,
+      mcp_install_targets: summary.by_mcp_install_target,
+      tool_runtime_sources: summary.by_tool_mcp_source_context,
       event_attribution: summary.by_event_attribution,
       recent_start_clicks: summary.recent_start_clicks,
       recent_tracked_config_fetches: summary.recent_tracked_config_fetches,
@@ -2342,6 +2463,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
+    `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
     `- Direct agent resource events: ${payload.counts.direct_agent_resource_events}`,
@@ -2409,6 +2531,12 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| --- | ---: |",
     table(payload.source_attribution.utm_sources),
     "",
+    "### MCP Runtime Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.mcp_runtime_sources),
+    "",
     "### MCP Keys",
     "",
     "| MCP key | Count |",
@@ -2421,12 +2549,19 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| --- | ---: |",
     table(payload.source_attribution.tool_mcp_keys),
     "",
+    "### Tool Calls By Runtime Source",
+    "",
+    "| Tool and source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.tool_runtime_sources),
+    "",
     "## Proof Gate",
     "",
     `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
     `- Tracked config fetch seen: ${payload.proof_gate.tracked_config_fetch_seen ? "yes" : "no"}`,
     `- Install intent seen: ${payload.proof_gate.install_intent_seen ? "yes" : "no"}`,
     `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
+    `- Runtime source continuity seen: ${payload.proof_gate.mcp_runtime_source_continuity_seen ? "yes" : "no"}`,
     `- create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
     `- Material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
     `- Thousands of qualified visitors: ${payload.proof_gate.thousands_of_qualified_visitors ? "yes" : "no"}`,
@@ -2463,7 +2598,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R01";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R02";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -2603,6 +2738,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const trackedConfigFetches = summary.tracked_config_fetches;
   const installIntents = byEvent.mcp_install_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
+  const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const qualifiedCartLandings = qualifiedFirstPartyCartLandingsFromSummary(summary);
   const orderSummary = await publicMcpOrderSummary(env, orderDays, orderLimit);
   const attributedOrderCount = Number(orderSummary.attributed_order_count || 0);
@@ -2610,6 +2746,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const proofGate = {
     usage_exists: events.length > 0,
     external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + installCopies > 0,
+    mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
     material_tool_usage_50_plus: mcpToolCalls >= 50,
     create_cart_url_seen: createCartUrlCalls > 0,
     qualified_first_party_cart_landing_seen: qualifiedCartLandings > 0,
@@ -2653,6 +2790,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_intent_events: installIntents,
       mcp_install_copy_events: installCopies,
+      mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
       mcp_cart_clicks: cartClicks,
@@ -2674,7 +2812,10 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       install_intent_targets: summary.by_install_intent_target,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
+      mcp_runtime_sources: summary.by_mcp_source_context,
+      mcp_install_targets: summary.by_mcp_install_target,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      tool_runtime_sources: summary.by_tool_mcp_source_context,
       order_attribution_sources: orderSummary.top_attribution_sources,
     },
     top: {
@@ -2730,6 +2871,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
+    `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
@@ -2767,6 +2909,18 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     "| Tool and MCP key | Count |",
     "| --- | ---: |",
     table(payload.source_attribution.tool_mcp_keys),
+    "",
+    "### MCP Runtime Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.mcp_runtime_sources),
+    "",
+    "### Tool Calls By Runtime Source",
+    "",
+    "| Tool and source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.tool_runtime_sources),
     "",
     "## Orders",
     "",
@@ -4335,7 +4489,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-start.json") return JSON.stringify(mcpStartPayload(mcpStartRuntime()), null, 2);
   if (pathname === "/ai/mcp-start.md") return mcpStartMarkdown(mcpStartRuntime());
   if (pathname === "/ai/mcp-start.html") return mcpStartHtml(mcpStartRuntime());
-  if (pathname === "/r/config/generic") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
+  if (pathname === "/r/config/generic") return JSON.stringify(sourceAwareMcpJson("generic"), null, 2);
   if (pathname === "/r/install/generic/codex") return JSON.stringify(mcpInstallActionPayload({ source: "generic", target: "codex" }), null, 2);
   if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
@@ -6395,7 +6549,7 @@ app.get("/r/config/:source", async (c) => {
     );
   }
 
-  const config = mcpClientConfigPayload(clientConfigRuntime()).config;
+  const config = sourceAwareMcpJson(source);
   await recordGeneratedAiResourceFetch(c, `/r/config/${source}`, "mcp_client_config", jsonByteSize(config), {
     sourceSlug: source,
     utmMedium: requestUrl.searchParams.get("utm_medium") || "directory_config",
@@ -6643,6 +6797,8 @@ app.get("/admin/mcp-stats", async (c) => {
 // it open with no events; this keeps interop with clients that probe GET first.
 app.post("/mcp", async (c) => {
   const env = c.env;
+  const requestUrl = new URL(c.req.url);
+  const continuity = mcpSourceContinuityFromUrl(requestUrl);
   let body: unknown;
   try {
     body = await c.req.json();
@@ -6666,15 +6822,16 @@ app.post("/mcp", async (c) => {
   };
 
   const userAgent = c.req.header("User-Agent") ?? "";
+  const rpcContext = { sessionId, userAgent, ...continuity };
 
   if (Array.isArray(body)) {
-    const results = await Promise.all(body.map((req) => handleRpc(env, req as JsonRpcRequest, { sessionId, userAgent })));
+    const results = await Promise.all(body.map((req) => handleRpc(env, req as JsonRpcRequest, rpcContext)));
     const filtered = results.filter((r) => r !== null);
     if (filtered.length === 0) return new Response(null, { status: 202, headers: { "Mcp-Session-Id": sessionId } });
     return respond(filtered);
   }
 
-  const result = await handleRpc(env, body as JsonRpcRequest, { sessionId, userAgent });
+  const result = await handleRpc(env, body as JsonRpcRequest, rpcContext);
   if (result === null) {
     return new Response(null, { status: 202, headers: { "Mcp-Session-Id": sessionId } });
   }

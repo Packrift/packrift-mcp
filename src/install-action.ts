@@ -5,9 +5,11 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R01";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R01";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R02";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R02";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
+export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
 export const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 export const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 
@@ -23,12 +25,28 @@ type InstallTarget = {
   notes: readonly string[];
 };
 
-function remoteMcpJson(name = "packrift") {
+function normalizeRuntimeSlug(value: string, fallback: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
+  return slug.length >= 2 ? slug : fallback;
+}
+
+export function sourceAwareMcpEndpoint(source: string, target = "runtime"): string {
+  const url = new URL(MCP_ENDPOINT);
+  url.searchParams.set(MCP_SOURCE_QUERY_PARAM, normalizeRuntimeSlug(source, "generic"));
+  url.searchParams.set(MCP_TARGET_QUERY_PARAM, normalizeRuntimeSlug(target, "runtime"));
+  return url.toString();
+}
+
+function remoteMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
   return {
     mcpServers: {
       [name]: {
         type: "http",
-        url: MCP_ENDPOINT,
+        url: endpoint,
       },
     },
   };
@@ -157,9 +175,80 @@ export function trackedConfigUrl(source: string): string {
   return url.toString();
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
+  const endpoint = sourceAwareMcpEndpoint(source, target.id);
+  const config = remoteMcpJson("packrift", endpoint);
+  const quotedEndpoint = shellQuote(endpoint);
+  switch (target.id) {
+    case "generic_streamable_http":
+    case "claude_desktop":
+    case "cursor_windsurf_vscode":
+      return {
+        endpoint,
+        config,
+        copyText: JSON.stringify(config, null, 2),
+        install: config,
+      };
+    case "claude_code": {
+      const command = `claude mcp add --transport http packrift ${quotedEndpoint}`;
+      return {
+        endpoint,
+        config,
+        copyText: command,
+        install: { command },
+      };
+    }
+    case "codex": {
+      const command = `codex mcp add packrift --url ${quotedEndpoint}`;
+      return {
+        endpoint,
+        config,
+        copyText: command,
+        install: { command, config },
+      };
+    }
+    case "mcp_marketplace": {
+      const command = `claude mcp add --transport http io-github-packrift-packrift-mcp ${quotedEndpoint}`;
+      return {
+        endpoint,
+        config,
+        copyText: command,
+        install: {
+          url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
+          command,
+          config,
+        },
+      };
+    }
+    case "glama_connector":
+      return {
+        endpoint,
+        config,
+        copyText: target.copyText,
+        install: {
+          ...(target.install as Record<string, unknown>),
+          source_aware_endpoint: endpoint,
+          source_aware_config: config,
+        },
+      };
+    default:
+      return {
+        endpoint,
+        config,
+        copyText: target.copyText,
+        install: target.install,
+      };
+  }
+}
+
 export function mcpInstallActionPayload(input: { source: string; target: string }) {
   const target = normalizeInstallTarget(input.target);
   if (!target) return null;
+  const sourceAware = sourceAwareInstallForTarget(target, input.source);
   return {
     release: MCP_INSTALL_ACTION_RELEASE,
     generated_at: new Date().toISOString(),
@@ -171,10 +260,12 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
       format: target.format,
     },
     canonical_endpoint: MCP_ENDPOINT,
+    source_aware_endpoint: sourceAware.endpoint,
+    source_aware_config: sourceAware.config,
     tracked_install_url: trackedInstallUrl(input.source, target.id),
     tracked_config_url: trackedConfigUrl(input.source),
-    copy_text: target.copyText,
-    install: target.install,
+    copy_text: sourceAware.copyText,
+    install: sourceAware.install,
     first_tests: target.firstTests,
     notes: target.notes,
     proof_urls: {
@@ -211,6 +302,7 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       audience: target.audience,
       format: target.format,
       tracked_install_url: trackedInstallUrl(source, target.id),
+      source_aware_endpoint: sourceAwareMcpEndpoint(source, target.id),
       aliases: target.aliases,
       first_tests: target.firstTests,
     })),

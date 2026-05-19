@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
+import { execFile } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 const PACKAGE_JSON = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
 const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JSON.version;
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
+const execFileAsync = promisify(execFile);
 
 const SURFACE_GUIDANCE = {
   official_registry: {
@@ -80,7 +83,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://browse.sh/",
     submission_url: "https://browse.sh/",
     priority: "high",
-    follow_up_action: "Submit Packrift through the Browse Add website / catalog skill flow with the root SKILL.md and hosted MCP endpoint.",
+    follow_up_action: "Browse catalog search now finds Packrift; get Browserbase to expose the generated source so browse skills add works publicly.",
   },
   chiark: {
     listing_url: "https://chiark.ai/",
@@ -458,8 +461,10 @@ async function liveMcpCheck() {
       invalidInstallTargetResult.status === 404 &&
       invalidInstallTarget?.error === "invalid_mcp_install_target" &&
       trackedInstallCodexResult.ok &&
-      trackedInstallCodexResult.text.includes("codex mcp add packrift --url https://mcp.packrift.com/mcp") &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R07" &&
+      trackedInstallCodexResult.text.includes("codex mcp add packrift --url") &&
+      trackedInstallCodexResult.text.includes("https://mcp.packrift.com/mcp") &&
+      trackedInstallCodexResult.text.includes("packrift_mcp_source=generic") &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R08" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_install_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-install-actions.json") &&
@@ -477,9 +482,10 @@ async function liveMcpCheck() {
       installMatrix?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
       installMatrix?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       installMatrix?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
-      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R01" &&
+      installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R02" &&
       installActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/generic/codex")) &&
+      installActions?.targets?.some((target) => target.id === "codex" && target.source_aware_endpoint?.includes("packrift_mcp_source=generic")) &&
       clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R03" &&
       clientConfig?.canonical_endpoint === MCP_ENDPOINT &&
       clientConfig?.config?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
@@ -491,8 +497,10 @@ async function liveMcpCheck() {
       clientConfig?.first_tests?.some((test) => test.id === "tools-list") &&
       rootMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       wellKnownMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
-      trackedConfigGeneric?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R08" &&
+      trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
+      trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
+      trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R09" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -503,8 +511,10 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
+      typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.proof_gate?.tracked_config_fetch_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.install_intent_seen === "boolean" &&
+      typeof usageSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       usageSnapshot?.source_attribution?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       usageSnapshot?.source_attribution?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       usageSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
@@ -516,18 +526,24 @@ async function liveMcpCheck() {
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R01" &&
+      Array.isArray(usageSnapshot?.source_attribution?.mcp_runtime_sources) &&
+      Array.isArray(usageSnapshot?.source_attribution?.tool_runtime_sources) &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R02" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof funnelSnapshot?.counts?.mcp_tool_calls === "number" &&
+      typeof funnelSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === "number" &&
       typeof funnelSnapshot?.counts?.first_party_mcp_orders === "number" &&
       typeof funnelSnapshot?.counts?.first_party_mcp_order_revenue === "number" &&
       typeof funnelSnapshot?.proof_gate?.thousands_of_qualified_visitors === "boolean" &&
+      typeof funnelSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.measurable_mcp_revenue_seen === "boolean" &&
       funnelSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      Array.isArray(funnelSnapshot?.source_attribution?.mcp_runtime_sources) &&
+      Array.isArray(funnelSnapshot?.source_attribution?.tool_runtime_sources) &&
       funnelSnapshot?.links?.cart_activation === "https://mcp.packrift.com/ai/mcp-cart-activation.json" &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
@@ -551,7 +567,7 @@ async function liveMcpCheck() {
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
-      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R03" &&
+      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R04" &&
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.browse_skill_candidate?.skill_md_url === "https://mcp.packrift.com/SKILL.md" &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.check_command === "browse skills find packrift" &&
@@ -583,13 +599,13 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "browse_sh" && target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/browse_sh/codex")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directoryRefresh?.recrawl_request?.includes("/r/install/") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R12" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R14" &&
       directorySubmitActions?.actions?.length >= 18 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so") &&
-      directorySubmitActions?.actions?.some((action) => action.id === "browse_sh" && action.action_status === "manual_submission_ready") &&
+      directorySubmitActions?.actions?.some((action) => action.id === "browse_sh" && action.action_status === "catalog_visible_install_blocked") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery" && action.action_status === "api_key_required") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace" && action.action_status === "submitted_pending") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.action_status === "manual_submission_ready") &&
@@ -622,14 +638,16 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.server?.authentication === "none_required_for_hosted_endpoint" &&
       claudeConnectorSubmission?.claude_install?.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R03" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R05" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
       agentCaptureOutreach?.agent_install_snippets?.claude_code?.includes(MCP_ENDPOINT) &&
       agentCaptureOutreach?.browser_assisted_submissions?.mcp_so?.submission_url === "https://mcp.so/submit" &&
       agentCaptureOutreach?.browser_assisted_submissions?.browse_sh?.catalog_check_command === "browse skills find packrift" &&
-      agentCaptureOutreach?.browserbase_browse_candidate?.status === "catalog_missing_submission_ready" &&
+      agentCaptureOutreach?.browserbase_browse_candidate?.status === "catalog_visible_install_blocked" &&
+      agentCaptureOutreach?.browserbase_browse_candidate?.catalog_slug === "packrift.com/exact-spec-packaging-procurement-e4ujmy" &&
+      agentCaptureOutreach?.browserbase_browse_candidate?.install_check?.status === "blocked_github_auth" &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/start") &&
@@ -938,6 +956,36 @@ async function simplePresenceCheck(name, url, needles) {
   });
 }
 
+async function browseSkillsFindCheck() {
+  try {
+    const { stdout, stderr } = await execFileAsync("npx", ["--yes", "browse", "skills", "find", "packrift", "--json"], {
+      timeout: 30000,
+      maxBuffer: 1024 * 1024,
+    });
+    const parsed = JSON.parse(stdout);
+    const skill = parsed.skills?.find((row) => row.slug === "packrift.com/exact-spec-packaging-procurement-e4ujmy") ?? null;
+    return check("browse_sh", skill ? "pending" : "stale", {
+      http_status: null,
+      url: skill?.sourceUrl ?? "https://browse.sh/",
+      catalog_slug: skill?.slug ?? null,
+      recommended_method: skill?.recommendedMethod ?? null,
+      verified: skill?.verified ?? null,
+      install_count: skill?.installCount ?? null,
+      missing: skill ? ["public browse skills add access"] : ["Packrift Browse skill"],
+      error: stderr?.trim() || null,
+      install_check_note:
+        "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy failed locally on 2026-05-19 because Browserbase's generated GitHub source required authentication.",
+    });
+  } catch (error) {
+    return check("browse_sh", "blocked", {
+      http_status: null,
+      url: "https://browse.sh/",
+      missing: ["Packrift Browse skill check"],
+      error: error.message,
+    });
+  }
+}
+
 async function clineMcpMarketplaceCheck() {
   const result = await fetchText("https://api.github.com/search/issues?q=repo:cline/mcp-marketplace%20Packrift");
   if (!result.ok) return check("cline_mcp_marketplace", "blocked", { http_status: result.status, url: result.url, error: result.error ?? null });
@@ -1017,7 +1065,7 @@ async function main() {
       simplePresenceCheck("smithery", "https://smithery.ai/servers?q=Packrift", ["Packrift MCP"]),
       clineMcpMarketplaceCheck(),
       simplePresenceCheck("mcp_so", "https://mcp.so/servers?keyword=Packrift", ["Exact-spec Packrift packaging search"]),
-      simplePresenceCheck("browse_sh", "https://browse.sh/", ["Packrift"]),
+      browseSkillsFindCheck(),
       simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
       mcpMarketplaceCheck(),
       simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),

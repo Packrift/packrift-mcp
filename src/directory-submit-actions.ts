@@ -131,16 +131,16 @@ const ACTIONS = [
   {
     id: "browse_sh",
     label: "Browserbase Browse / browse.sh",
-    action_status: "manual_submission_ready",
-    directory_status: "unlisted",
+    action_status: "catalog_live_installable",
+    directory_status: "pass",
     priority: "high",
     method: "Browse Add website / catalog skill submission flow.",
     evidence:
-      "browse skills find packrift returns no Packrift skill, while Packrift already has a root SKILL.md and Browse skill pack that route browser agents to the hosted MCP endpoint.",
-    stale_markers: ["Packrift not visible in browse skills find packrift", "Packrift not visible in Browse catalog search"],
-    recrawl_subject: "Add Packrift MCP as a Browse catalog skill",
+      "Browse accepted and published Packrift on 2026-05-19 as packrift.com/exact-spec-packaging-procurement-e4ujmy. browse skills find returns verified=true, recommendedMethod=mcp, proxies=true, and browse skills add installed the skill locally.",
+    stale_markers: [],
+    recrawl_subject: "Keep Packrift Browse catalog skill current",
     next_action:
-      "Submit Packrift to Browse with the root SKILL.md, Browse skill pack, hosted endpoint, tracked start URL, and exact-spec packaging procurement copy.",
+      "Monitor Browse install count and skill quality, keep the Packrift MCP endpoint current, and update the skill if Browserbase changes the generated source or catalog slug.",
     listing_url: "https://browse.sh/",
     submission_url: "https://browse.sh/",
   },
@@ -403,7 +403,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R12",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R15",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

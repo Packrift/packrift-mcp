@@ -10,3 +10,5 @@ outputs/
 *.log
 .DS_Store
 dist/
+.agents/
+skills-lock.json

@@ -426,20 +426,20 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
     surface({
       id: "browserbase_browse_candidate",
       name: "Browserbase Browse / browse.sh",
-      agent_type: "browser_skill_candidate",
+      agent_type: "browser_skill_catalog",
       audience: "Browser agents that install open-web skills and use browser primitives for dynamic sites.",
-      status: "candidate",
+      status: "monitored",
       priority: "watch",
       packrift_owned: false,
       canonical_url: "https://browse.sh/",
       install_or_call:
-        "Candidate only: use https://mcp.packrift.com/SKILL.md or the Packrift Browse skill pack as a read-first wrapper around the hosted MCP endpoint if Browserbase opens or documents a retailer submission path that fits product search and cart handoff.",
+        "Catalog-visible but not yet publicly installable: browse skills find packrift returns packrift.com/exact-spec-packaging-procurement-e4ujmy, while browse skills add currently fails on Browserbase GitHub source access. Use https://mcp.packrift.com/SKILL.md or the Packrift Browse skill pack as the fallback wrapper around the hosted MCP endpoint.",
       proof_url: "https://mcp.packrift.com/SKILL.md",
       fallback_url: "https://mcp.packrift.com/mcp",
       next_action:
-        "Submit Packrift through the Browse Add website / catalog skill flow using the root SKILL.md, Browse skill pack, hosted MCP endpoint, and tracked browse_sh start/install URLs. Do not build a parallel Packrift CLI unless it is a thin wrapper around the hosted MCP endpoint.",
+        "Ask Browserbase/Browse to expose the generated skill source so browse skills add works publicly, then keep all Browse usage routed through the hosted MCP endpoint.",
       notes:
-        "Browse is useful as an agent browser-skill pattern; Packrift's current canonical agent surface remains MCP plus corpus. The Packrift SKILL.md and skill pack are candidate submission artifacts, not a live Browse listing; browse skills find packrift currently returns no Packrift skill.",
+        "Browse is useful as an agent browser-skill pattern; Packrift's current canonical agent surface remains MCP plus corpus. Browse accepted the Add website submission on 2026-05-19 and browse skills find packrift returns a generated skill, but public install is blocked until Browserbase's generated source is accessible.",
     }),
     surface({
       id: "mcp_directory_refreshes",
@@ -481,7 +481,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       install_or_call:
-        "Use the outreach packet as the single public distribution handoff: it combines all-agent capture, directory submit actions, tracked start/config URLs, Claude/Codex/Cursor install snippets, Browserbase Browse candidate guidance, and copy-ready recrawl messages.",
+        "Use the outreach packet as the single public distribution handoff: it combines all-agent capture, directory submit actions, tracked start/config URLs, Claude/Codex/Cursor install snippets, Browserbase Browse catalog/install-blocker guidance, and copy-ready recrawl messages.",
       proof_url: "https://mcp.packrift.com/ai/agent-capture-outreach.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       next_action:
@@ -521,7 +521,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R07",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R08",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -601,7 +601,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, direct client config, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane with a root SKILL.md.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, direct client config, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a catalog-visible monitored lane whose public install still needs Browserbase source access. Browse skill pack and SKILL.md remain the fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",
