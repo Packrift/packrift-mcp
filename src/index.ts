@@ -2161,6 +2161,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_install_actions",
     "mcp_client_config",
     "mcp_usage_snapshot",
+    "mcp_funnel_snapshot",
     "mcp_buyer_use_cases",
     "mcp_cart_activation",
     "mcp_first_run_proof",
@@ -2176,7 +2177,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R07",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R08",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2222,6 +2223,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
       workflow_gallery_resource_events: bySource.mcp_workflow_gallery ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
+      funnel_snapshot_resource_events: bySource.mcp_funnel_snapshot ?? 0,
       browserbase_browse_skill_pack_resource_events: bySource.browserbase_browse_skill_pack ?? 0,
       sources: bySource,
     },
@@ -2280,6 +2282,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     links: {
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       usage_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
+      funnel_snapshot_json: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      funnel_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
       live_summary_api: `https://mcp.packrift.com/events/ai-sales/summary?date=${date}&limit=${limit}`,
       dashboard: `https://mcp.packrift.com/events/ai-sales/dashboard?date=${date}`,
       mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
@@ -2355,6 +2359,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Cart activation resource events: ${payload.counts.cart_activation_resource_events}`,
     `- First-run proof resource events: ${payload.counts.first_run_proof_resource_events}`,
     `- Workflow gallery resource events: ${payload.counts.workflow_gallery_resource_events}`,
+    `- Funnel snapshot resource events: ${payload.counts.funnel_snapshot_resource_events}`,
     "",
     "## Source Attribution",
     "",
@@ -2444,6 +2449,337 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| SKU | Count |",
     "| --- | --- |",
     table(payload.top.skus),
+    "",
+    "## Links",
+    "",
+    Object.entries(payload.links)
+      .map(([name, url]) => `- ${name}: ${url}`)
+      .join("\n"),
+    "",
+    "## Next Actions",
+    "",
+    payload.next_actions.map((item) => `- ${item}`).join("\n"),
+    "",
+  ].join("\n");
+}
+
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R01";
+
+function matchesPublicFunnelInternalSynthetic(text: string): boolean {
+  return (
+    /(codex|localhost|manual_verify|packrift-agent|packrift-mcp-funnel|packrift-static|routecatalogqa|packriftqa|criticalpathqa|curl\/|python-urllib|node-fetch|undici)/i.test(text) ||
+    /(^|[^a-z0-9])(qa|smoke|synthetic|eval|test)([^a-z0-9]|$)/i.test(text)
+  );
+}
+
+function matchesPublicFunnelSelfGenerated(text: string): boolean {
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|mcp_buyer_use_cases|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_install_matrix|mcp_directory_refresh|generated_ai_resource)/i.test(text);
+}
+
+function matchesPublicFunnelQualifiedDemand(text: string): boolean {
+  return /(chatgpt-mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
+}
+
+function qualifiedFirstPartyCartLandingsFromSummary(summary: ReturnType<typeof summarizeAiSalesEvents>): number {
+  const rows = (summary.by_event_attribution ?? []).length ? summary.by_event_attribution : summary.by_event_source;
+  return (rows ?? []).reduce((total, row) => {
+    const text = safeEventText(row.key, 500).toLowerCase();
+    if (!text.startsWith("mcp_cart_landing|")) return total;
+    if (matchesPublicFunnelInternalSynthetic(text) || matchesPublicFunnelSelfGenerated(text)) return total;
+    return matchesPublicFunnelQualifiedDemand(text) ? total + Number(row.count || 0) : total;
+  }, 0);
+}
+
+function publicFunnelTrafficBuckets(summary: ReturnType<typeof summarizeAiSalesEvents>) {
+  const buckets = {
+    external_qualified_demand: 0,
+    external_unqualified_ai_crawl: 0,
+    internal_synthetic: 0,
+    self_generated_distribution: 0,
+    unknown: 0,
+  };
+  const rows = summary.by_event_attribution ?? [];
+  for (const row of rows) {
+    const text = safeEventText(row.key, 500).toLowerCase();
+    const count = Number(row.count || 0);
+    if (matchesPublicFunnelInternalSynthetic(text)) buckets.internal_synthetic += count;
+    else if (matchesPublicFunnelSelfGenerated(text)) buckets.self_generated_distribution += count;
+    else if (matchesPublicFunnelQualifiedDemand(text)) buckets.external_qualified_demand += count;
+    else if (/bot|crawler|spider|gptbot|oai_searchbot|claude|anthropic|google|bing|duckduck|bytespider/.test(text)) {
+      buckets.external_unqualified_ai_crawl += count;
+    } else {
+      buckets.unknown += count;
+    }
+  }
+  return buckets;
+}
+
+function publicOrderSourceBuckets(orders: Array<Record<string, unknown>> | undefined) {
+  const counts: Record<string, number> = {};
+  for (const order of orders ?? []) {
+    const attribution = objectValue(order.attribution);
+    const source = safeEventText(attribution?.utm_source, 80) || "unknown";
+    counts[source] = (counts[source] ?? 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10)
+    .map(([key, count]) => ({ key, count }));
+}
+
+async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
+  if (!env.SHOPIFY_PACKRIFT_TOKEN) {
+    return {
+      ok: false,
+      release: MCP_ORDER_ATTRIBUTION_RELEASE,
+      error: "shopify_token_not_configured",
+      lookback_days: days,
+      scan_limit: limit,
+      scanned_order_count: null,
+      attributed_order_count: null,
+      attributed_revenue: null,
+      currency: "USD",
+      proof_gate: {
+        first_party_mcp_orders_seen: false,
+        first_party_mcp_revenue_seen: false,
+      },
+      top_attribution_sources: [],
+    };
+  }
+
+  try {
+    const payload = await shopifyMcpOrderAttributionPayload(env, days, limit);
+    const orders = Array.isArray(payload.orders) ? payload.orders : [];
+    return {
+      ok: payload.ok,
+      release: payload.release,
+      generated_at: payload.generated_at,
+      lookback_days: payload.lookback_days,
+      scan_limit: payload.scan_limit,
+      scanned_order_count: payload.scanned_order_count,
+      attributed_order_count: payload.attributed_order_count,
+      attributed_revenue: payload.attributed_revenue,
+      currency: payload.currency,
+      proof_gate: payload.proof_gate,
+      top_attribution_sources: publicOrderSourceBuckets(orders),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      release: MCP_ORDER_ATTRIBUTION_RELEASE,
+      error: safeEventText(message, 500),
+      lookback_days: days,
+      scan_limit: limit,
+      scanned_order_count: null,
+      attributed_order_count: null,
+      attributed_revenue: null,
+      currency: "USD",
+      proof_gate: {
+        first_party_mcp_orders_seen: false,
+        first_party_mcp_revenue_seen: false,
+      },
+      top_attribution_sources: [],
+    };
+  }
+}
+
+async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 5000, orderDays = 90, orderLimit = 250) {
+  const events = await readAiSalesEvents(env, date, limit);
+  const summary = summarizeAiSalesEvents(events);
+  const byEvent = topRowsToRecord(summary.by_event);
+  const mcpDiscoveryEvents =
+    (byEvent.mcp_tools_list ?? 0) +
+    (byEvent.mcp_prompt_list ?? 0) +
+    (byEvent.mcp_prompt_get ?? 0) +
+    (byEvent.mcp_resource_list ?? 0) +
+    (byEvent.mcp_resource_templates_list ?? 0) +
+    (byEvent.mcp_resource_read ?? 0);
+  const mcpToolCalls = byEvent.mcp_tool_call ?? 0;
+  const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
+  const cartClicks = (byEvent.cart_click ?? 0) + (byEvent.mcp_cart_click ?? 0);
+  const cartLandings = byEvent.mcp_cart_landing ?? 0;
+  const startClicks = byEvent.mcp_start_click ?? 0;
+  const trackedConfigFetches = summary.tracked_config_fetches;
+  const installIntents = byEvent.mcp_install_intent ?? 0;
+  const installCopies = byEvent.mcp_install_copy ?? 0;
+  const qualifiedCartLandings = qualifiedFirstPartyCartLandingsFromSummary(summary);
+  const orderSummary = await publicMcpOrderSummary(env, orderDays, orderLimit);
+  const attributedOrderCount = Number(orderSummary.attributed_order_count || 0);
+  const attributedRevenue = Number(orderSummary.attributed_revenue || 0);
+  const proofGate = {
+    usage_exists: events.length > 0,
+    external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + installCopies > 0,
+    material_tool_usage_50_plus: mcpToolCalls >= 50,
+    create_cart_url_seen: createCartUrlCalls > 0,
+    qualified_first_party_cart_landing_seen: qualifiedCartLandings > 0,
+    first_party_mcp_order_seen: attributedOrderCount > 0,
+    measurable_mcp_revenue_seen: attributedRevenue > 0,
+    thousands_of_qualified_visitors: false,
+  };
+  const status =
+    proofGate.thousands_of_qualified_visitors &&
+    proofGate.material_tool_usage_50_plus &&
+    proofGate.qualified_first_party_cart_landing_seen &&
+    proofGate.measurable_mcp_revenue_seen
+      ? "proven"
+      : "not_proven";
+
+  return {
+    release: MCP_FUNNEL_SNAPSHOT_RELEASE,
+    generated_at: new Date().toISOString(),
+    date,
+    limit,
+    order_lookback_days: orderDays,
+    order_scan_limit: orderLimit,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    status,
+    purpose:
+      "Public aggregate Packrift MCP funnel proof gate for directory reviewers, agents, and Packrift iteration: discovery, install intent, tool usage, cart landing, and MCP-attributed order totals.",
+    privacy:
+      "Aggregated counts only. Raw event bodies, buyer identifiers, order rows, and private admin tokens are not exposed.",
+    scope_note:
+      "This public snapshot uses first-party MCP telemetry plus aggregate Shopify order attribution. GA4 visitor/session proof remains in the local full funnel artifact.",
+    runtime: {
+      server_version: serverCard.version,
+      tools_count: TOOLS.length,
+      resources_count: MCP_RESOURCES.length,
+      prompts_count: PROMPTS.length,
+    },
+    counts: {
+      total_first_party_events: events.length,
+      mcp_discovery_events: mcpDiscoveryEvents,
+      mcp_start_clicks: startClicks,
+      mcp_tracked_config_fetches: trackedConfigFetches,
+      mcp_install_intent_events: installIntents,
+      mcp_install_copy_events: installCopies,
+      mcp_tool_calls: mcpToolCalls,
+      create_cart_url_calls: createCartUrlCalls,
+      mcp_cart_clicks: cartClicks,
+      raw_first_party_mcp_cart_landings: cartLandings,
+      qualified_first_party_mcp_cart_landings: qualifiedCartLandings,
+      first_party_mcp_orders: attributedOrderCount,
+      first_party_mcp_order_revenue: attributedRevenue,
+      first_party_mcp_order_currency: orderSummary.currency,
+    },
+    proof_gate: proofGate,
+    traffic_quality: publicFunnelTrafficBuckets(summary),
+    source_attribution: {
+      tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      start_sources: summary.by_start_source,
+      tracked_config_sources: summary.by_tracked_config_source,
+      install_intent_sources: summary.by_install_intent_source,
+      install_intent_targets: summary.by_install_intent_target,
+      install_copy_sources: summary.by_install_copy_source,
+      install_copy_targets: summary.by_install_copy_target,
+      tool_mcp_keys: summary.by_tool_mcp_key,
+      order_attribution_sources: orderSummary.top_attribution_sources,
+    },
+    top: {
+      events: summary.by_event,
+      tools: summary.by_tool,
+      utm_sources: summary.by_utm_source,
+      event_attribution: summary.by_event_attribution?.slice(0, 25),
+      skus: summary.by_sku,
+      bot_families: summary.by_bot_family,
+    },
+    orders: orderSummary,
+    links: {
+      funnel_snapshot_json: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      funnel_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+      usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      usage_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
+      directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+      cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+    },
+    next_actions: [
+      "Use tracked install-action links in every stale directory refresh so starts and installs stay source-attributed.",
+      "Push external users from install intent into get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Do not call the MCP goal complete until qualified visitor volume, qualified cart landings, and MCP-attributed revenue are all visible.",
+    ],
+  };
+}
+
+function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelSnapshotPayload>>): string {
+  const table = (rows: Array<{ key: string; count: number }> | undefined) =>
+    (rows ?? []).slice(0, 10).map((row) => `| ${row.key} | ${row.count} |`).join("\n") || "| none | 0 |";
+  const gateRows = Object.entries(payload.proof_gate)
+    .map(([key, value]) => `| ${key} | ${value ? "yes" : "no"} |`)
+    .join("\n");
+  return [
+    "# Packrift MCP Funnel Snapshot",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Date: ${payload.date}`,
+    `Status: ${payload.status}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.purpose,
+    "",
+    "## Counts",
+    "",
+    `- Total first-party events: ${payload.counts.total_first_party_events}`,
+    `- MCP discovery events: ${payload.counts.mcp_discovery_events}`,
+    `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
+    `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
+    `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
+    `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
+    `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
+    `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
+    `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
+    `- Raw first-party MCP cart landings: ${payload.counts.raw_first_party_mcp_cart_landings}`,
+    `- Qualified first-party MCP cart landings: ${payload.counts.qualified_first_party_mcp_cart_landings}`,
+    `- First-party MCP orders: ${payload.counts.first_party_mcp_orders}`,
+    `- First-party MCP order revenue: ${payload.counts.first_party_mcp_order_revenue} ${payload.counts.first_party_mcp_order_currency}`,
+    "",
+    "## Proof Gate",
+    "",
+    "| Gate | Proven |",
+    "| --- | --- |",
+    gateRows,
+    "",
+    "## Source Attribution",
+    "",
+    `Tracked start template: \`${payload.source_attribution.tracked_start_template}\``,
+    `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
+    `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
+    "",
+    "### Start Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.start_sources),
+    "",
+    "### Install Intent Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.install_intent_sources),
+    "",
+    "### Tool Calls By MCP Key",
+    "",
+    "| Tool and MCP key | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.tool_mcp_keys),
+    "",
+    "## Orders",
+    "",
+    `- Order scan ok: ${payload.orders.ok ? "yes" : "no"}`,
+    `- Scanned orders: ${payload.orders.scanned_order_count ?? "unknown"}`,
+    `- Attributed orders: ${payload.orders.attributed_order_count ?? "unknown"}`,
+    `- Attributed revenue: ${payload.orders.attributed_revenue ?? "unknown"} ${payload.orders.currency}`,
+    "",
+    "## Top Events",
+    "",
+    "| Event | Count |",
+    "| --- | ---: |",
+    table(payload.top.events),
     "",
     "## Links",
     "",
@@ -3684,6 +4020,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-client-config.md",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
+  "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+  "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -3797,6 +4135,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-client-config.md": "Markdown Packrift MCP client config bundle with install commands and first tests.",
   "/ai/mcp-usage-snapshot.json": "Machine-readable public aggregate usage snapshot for Packrift MCP discovery, tool calls, cart handoff, and proof-gate iteration.",
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
+  "/ai/mcp-funnel-snapshot.json": "Machine-readable public aggregate MCP funnel snapshot with starts, installs, tool calls, qualified cart landings, and order proof gates.",
+  "/ai/mcp-funnel-snapshot.md": "Crawler-readable Packrift MCP funnel proof gate for directory reviewers, agents, and Packrift operators.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
   "/ai/mcp-cart-activation.json": "Machine-readable Packrift MCP cart activation playbook for turning exact buyer intent into measured /r/cart landings after live checks.",
@@ -4009,6 +4349,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-client-config.md") return mcpClientConfigMarkdown(clientConfigRuntime());
   if (pathname === "/ai/mcp-usage-snapshot.json") return JSON.stringify(await mcpUsageSnapshotPayload(env), null, 2);
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
+  if (pathname === "/ai/mcp-funnel-snapshot.json") return JSON.stringify(await mcpFunnelSnapshotPayload(env), null, 2);
+  if (pathname === "/ai/mcp-funnel-snapshot.md") return mcpFunnelSnapshotMarkdown(await mcpFunnelSnapshotPayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-cart-activation.json") return JSON.stringify(mcpCartActivationPayload(cartActivationRuntime()), null, 2);
@@ -5506,6 +5848,37 @@ app.get("/ai/mcp-usage-snapshot.md", async (c) => {
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(1000, requestedLimit)) : 1000;
   const body = mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(c.env, date, limit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-usage-snapshot.md", "mcp_usage_snapshot", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-funnel-snapshot.json", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "5000", 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? "90", 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? "250", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const payload = await mcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit);
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-funnel-snapshot.json", "mcp_funnel_snapshot", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-funnel-snapshot.md", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "5000", 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? "90", 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? "250", 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const body = mcpFunnelSnapshotMarkdown(await mcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-funnel-snapshot.md", "mcp_funnel_snapshot", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

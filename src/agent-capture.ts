@@ -133,6 +133,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the iteration proof layer while pushing installs and cart-handoff workflows toward measurable usage.",
     }),
     surface({
+      id: "mcp_funnel_snapshot",
+      name: "Packrift MCP funnel snapshot",
+      agent_type: "funnel_measurement",
+      audience: "Directory reviewers, agent builders, and Packrift operators who need the public proof gate from discovery to installs, cart landings, and order totals.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      install_or_call:
+        "Use the public funnel snapshot to verify aggregate starts, install intent, tool usage, qualified first-party MCP cart landings, and MCP-attributed order totals.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      next_action: "Use this as the public goal gate; keep working until qualified visitors, cart landings, and MCP-attributed revenue are all proven.",
+    }),
+    surface({
       id: "buyer_mcp_use_cases",
       name: "Packrift MCP buyer use cases",
       agent_type: "buyer_workflow_corpus",
@@ -422,9 +437,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       proof_url: "https://mcp.packrift.com/SKILL.md",
       fallback_url: "https://mcp.packrift.com/mcp",
       next_action:
-        "Monitor Browse skill submission/packaging options and keep the root SKILL.md plus browserbase-browse-skill-pack live. Do not build a parallel Packrift CLI unless it is a thin wrapper around the hosted MCP endpoint.",
+        "Submit Packrift through the Browse Add website / catalog skill flow using the root SKILL.md, Browse skill pack, hosted MCP endpoint, and tracked browse_sh start/install URLs. Do not build a parallel Packrift CLI unless it is a thin wrapper around the hosted MCP endpoint.",
       notes:
-        "Browse is useful as an agent browser-skill pattern; Packrift's current canonical agent surface remains MCP plus corpus. The Packrift SKILL.md and skill pack are candidate submission artifacts, not a live Browse listing.",
+        "Browse is useful as an agent browser-skill pattern; Packrift's current canonical agent surface remains MCP plus corpus. The Packrift SKILL.md and skill pack are candidate submission artifacts, not a live Browse listing; browse skills find packrift currently returns no Packrift skill.",
     }),
     surface({
       id: "mcp_directory_refreshes",
@@ -506,7 +521,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R06",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R07",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -518,6 +533,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       start_json: "https://mcp.packrift.com/ai/mcp-start.json",
       agent_instructions: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",

@@ -62,9 +62,11 @@ function agentInstallSnippets() {
 
 function browserbaseBrowseCandidate() {
   return {
-    status: "candidate_only",
+    status: "catalog_missing_submission_ready",
     domain: "packrift.com",
     catalog_url: "https://browse.sh/",
+    catalog_check_command: "browse skills find packrift",
+    expected_catalog_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
     skill_md_url: "https://mcp.packrift.com/SKILL.md",
     canonical_skill_md_url: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
     skill_pack_url: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
@@ -88,6 +90,7 @@ function trackedUrls(rows: DirectoryRefreshRow[], source: string) {
 function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: DirectoryRefreshRow[]) {
   const mcpSo = trackedUrls(rows, "mcp_so");
   const claude = trackedUrls(rows, "anthropic_connectors_directory");
+  const browse = trackedUrls(rows, "browse_sh");
   const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${runtime.serverVersion}, ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources.`;
 
   return {
@@ -133,6 +136,32 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
       },
       ...claude,
     },
+    browse_sh: {
+      status: "catalog_missing_submission_ready",
+      submission_url: "https://browse.sh/",
+      listing_url: "https://browse.sh/",
+      catalog_check_command: "browse skills find packrift",
+      expected_catalog_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
+      submission_note:
+        "Use the Browse Add website flow with Packrift as a read-first commerce skill. Keep the hosted MCP endpoint as the live fact and cart-handoff authority.",
+      fields: {
+        domain: "packrift.com",
+        title: "Packrift Exact-Spec Packaging Procurement",
+        category: "shopping",
+        recommended_method: "hybrid",
+        skill_md_url: "https://mcp.packrift.com/SKILL.md",
+        canonical_skill_md_url: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
+        skill_pack_url: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
+        browser_agent_bridge_url: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+        mcp_endpoint: MCP_ENDPOINT,
+        description:
+          "Find exact Packrift packaging SKUs, confirm live price and inventory through the hosted MCP endpoint, and return measured cart or quote handoffs. Read-first browser discovery; MCP-confirmed commercial facts.",
+        tags: ["packaging", "procurement", "shopping", "mcp", "shopify", "cart-handoff", "inventory"],
+        safe_operation: "Read-only discovery until the agent calls Packrift MCP for live price, inventory, shipping, and cart handoff.",
+      },
+      supporting_copy: proofLine,
+      ...browse,
+    },
   };
 }
 
@@ -166,6 +195,7 @@ function evidenceLinks() {
     official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     glama_connector: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     mcp_marketplace: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
+    browse_sh: "https://browse.sh/",
     cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     llms_txt: "https://mcp.packrift.com/llms.txt",
@@ -205,7 +235,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R02",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R03",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

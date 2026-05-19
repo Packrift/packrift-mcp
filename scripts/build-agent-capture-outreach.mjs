@@ -143,9 +143,11 @@ function directoryRefreshMessage(row, capture = null) {
 
 function browseCandidateBrief() {
   return {
-    status: "candidate_only",
+    status: "catalog_missing_submission_ready",
     domain: "packrift.com",
     catalog_url: "https://browse.sh/",
+    catalog_check_command: "browse skills find packrift",
+    expected_catalog_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
     product_positioning:
       "Packrift should be a read-first packaging procurement skill if Browse adds a retailer/domain submission lane. The skill should not replace MCP; it should route exact SKU/spec lookup and measured handoff through the hosted MCP endpoint.",
     skill_md_url: "https://mcp.packrift.com/SKILL.md",
@@ -216,6 +218,7 @@ function trackedUrls(rows, source) {
 function browserAssistedSubmissions(rows, capture) {
   const mcpSo = trackedUrls(rows, "mcp_so");
   const claude = trackedUrls(rows, "anthropic_connectors_directory");
+  const browse = trackedUrls(rows, "browse_sh");
   const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${SERVER_JSON.version}, ${capture.runtime.tools_count} tools, ${capture.runtime.resources_count} resources.`;
 
   return {
@@ -261,6 +264,32 @@ function browserAssistedSubmissions(rows, capture) {
       },
       ...claude,
     },
+    browse_sh: {
+      status: "catalog_missing_submission_ready",
+      submission_url: "https://browse.sh/",
+      listing_url: "https://browse.sh/",
+      catalog_check_command: "browse skills find packrift",
+      expected_catalog_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
+      submission_note:
+        "Use the Browse Add website flow with Packrift as a read-first commerce skill. Keep the hosted MCP endpoint as the live fact and cart-handoff authority.",
+      fields: {
+        domain: "packrift.com",
+        title: "Packrift Exact-Spec Packaging Procurement",
+        category: "shopping",
+        recommended_method: "hybrid",
+        skill_md_url: "https://mcp.packrift.com/SKILL.md",
+        canonical_skill_md_url: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
+        skill_pack_url: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
+        browser_agent_bridge_url: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+        mcp_endpoint: MCP_ENDPOINT,
+        description:
+          "Find exact Packrift packaging SKUs, confirm live price and inventory through the hosted MCP endpoint, and return measured cart or quote handoffs. Read-first browser discovery; MCP-confirmed commercial facts.",
+        tags: ["packaging", "procurement", "shopping", "mcp", "shopify", "cart-handoff", "inventory"],
+        safe_operation: "Read-only discovery until the agent calls Packrift MCP for live price, inventory, shipping, and cart handoff.",
+      },
+      supporting_copy: proofLine,
+      ...browse,
+    },
   };
 }
 
@@ -285,7 +314,7 @@ function markdown(payload) {
     "- Give partners or agent platforms a single evidence bundle.",
     "- Point developers to the install matrix for copy-ready setup and smoke tests.",
     "- Use the live browser-agent bridge for Browse-style agents without creating a duplicate Packrift CLI.",
-    "- Keep Browserbase Browse as a candidate browser-skill lane with a root SKILL.md until a real Packrift skill is published.",
+    "- Push Browserbase Browse as a catalog-missing browser-skill lane with a root SKILL.md until a real Packrift skill is published.",
     "- Share install snippets for Claude, Codex, Cursor, Windsurf, and other MCP clients.",
     "",
     "## Proof Links",

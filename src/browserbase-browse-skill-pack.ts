@@ -107,7 +107,7 @@ const DEMO_SEQUENCE = [
 
 export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkillPackRuntime) {
   return {
-    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02",
+    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R03",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -141,6 +141,16 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
         "quote_url",
         "no_match_reason",
       ],
+    },
+    browse_catalog_submission: {
+      status: "not_yet_listed",
+      check_command: "browse skills find packrift",
+      expected_slug_after_publication: "packrift.com/exact-spec-packaging-procurement",
+      submission_url: "https://browse.sh/",
+      tracked_start_url: "https://mcp.packrift.com/r/start/browse_sh",
+      tracked_install_codex_url: "https://mcp.packrift.com/r/install/browse_sh/codex",
+      positioning:
+        "Submit as a read-first Browse skill for Packrift packaging procurement. The skill should install or call the hosted MCP endpoint for live price, inventory, shipping, and cart handoff.",
     },
     skill_md: {
       root_url: ROOT_BROWSE_SKILL_MD_URL,
@@ -237,6 +247,17 @@ export function browserbaseBrowseSkillPackMarkdown(runtime: BrowserbaseBrowseSki
     `Canonical SKILL.md: ${payload.browse_skill_candidate.canonical_skill_md_url}`,
     "",
     payload.browse_skill_candidate.duplicate_surface_guard,
+    "",
+    "## Browse Catalog Submission",
+    "",
+    `Status: ${payload.browse_catalog_submission.status}`,
+    `Check command: \`${payload.browse_catalog_submission.check_command}\``,
+    `Expected slug after publication: \`${payload.browse_catalog_submission.expected_slug_after_publication}\``,
+    `Submission URL: ${payload.browse_catalog_submission.submission_url}`,
+    `Tracked start URL: ${payload.browse_catalog_submission.tracked_start_url}`,
+    `Tracked Codex install URL: ${payload.browse_catalog_submission.tracked_install_codex_url}`,
+    "",
+    payload.browse_catalog_submission.positioning,
     "",
     "## SKILL.md",
     "",

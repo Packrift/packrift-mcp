@@ -88,6 +88,16 @@ const TARGETS = [
     action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
   },
   {
+    name: "browse_sh",
+    label: "Browserbase Browse / browse.sh",
+    listing_url: "https://browse.sh/",
+    submission_url: "https://browse.sh/",
+    category: "Shopping",
+    priority: "high",
+    action:
+      "Submit Packrift as a Browse catalog skill with the root SKILL.md, Browse skill pack, hosted MCP endpoint, and exact-spec packaging procurement copy.",
+  },
+  {
     name: "pulsemcp_packrift",
     label: "PulseMCP",
     listing_url: "https://www.pulsemcp.com/servers/packrift",

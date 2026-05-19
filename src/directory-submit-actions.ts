@@ -21,6 +21,7 @@ const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
 const AGENT_CAPTURE_OUTREACH_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
 const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.json";
+const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
 const WORKFLOW_GALLERY_URL = "https://mcp.packrift.com/ai/mcp-workflow-gallery.json";
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
@@ -126,6 +127,22 @@ const ACTIONS = [
     next_action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
     listing_url: "https://mcp.so/servers?keyword=Packrift",
     submission_url: "https://mcp.so/submit",
+  },
+  {
+    id: "browse_sh",
+    label: "Browserbase Browse / browse.sh",
+    action_status: "manual_submission_ready",
+    directory_status: "unlisted",
+    priority: "high",
+    method: "Browse Add website / catalog skill submission flow.",
+    evidence:
+      "browse skills find packrift returns no Packrift skill, while Packrift already has a root SKILL.md and Browse skill pack that route browser agents to the hosted MCP endpoint.",
+    stale_markers: ["Packrift not visible in browse skills find packrift", "Packrift not visible in Browse catalog search"],
+    recrawl_subject: "Add Packrift MCP as a Browse catalog skill",
+    next_action:
+      "Submit Packrift to Browse with the root SKILL.md, Browse skill pack, hosted endpoint, tracked start URL, and exact-spec packaging procurement copy.",
+    listing_url: "https://browse.sh/",
+    submission_url: "https://browse.sh/",
   },
   {
     id: "pulsemcp_packrift",
@@ -338,6 +355,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Browserbase Browse skill pack: ${BROWSERBASE_BROWSE_SKILL_PACK_URL}`,
     `- Canonical Browse skill file: ${CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL}`,
     `- Cart activation playbook: ${CART_ACTIVATION_URL}`,
+    `- Funnel proof snapshot: ${FUNNEL_SNAPSHOT_URL}`,
     "- Cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     "",
     "Thanks,",
@@ -374,6 +392,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       agent_capture_outreach: AGENT_CAPTURE_OUTREACH_URL,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
       cart_activation: CART_ACTIVATION_URL,
+      funnel_snapshot: FUNNEL_SNAPSHOT_URL,
       first_run_proof: FIRST_RUN_PROOF_URL,
       workflow_gallery: WORKFLOW_GALLERY_URL,
       root_browserbase_browse_skill_md: ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL,
@@ -384,7 +403,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R11",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R12",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

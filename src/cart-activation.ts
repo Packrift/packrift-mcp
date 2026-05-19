@@ -65,7 +65,7 @@ function exactSkuSequence(sku: (typeof STARTER_SKUS)[number]) {
 
 export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
   return {
-    release: "PACKRIFT-MCP-CART-ACTIVATION-R01",
+    release: "PACKRIFT-MCP-CART-ACTIVATION-R02",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -167,7 +167,7 @@ export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
-      funnel_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
       endpoint_health: "https://mcp.packrift.com/health",
     },
     success_signals: [

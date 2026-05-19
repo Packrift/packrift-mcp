@@ -18,6 +18,7 @@ const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md"
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
 const MCP_CLIENT_CONFIG_URL = "https://mcp.packrift.com/ai/mcp-client-config.json";
+const MCP_FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
 const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
 const MCP_TRACKED_START_SOURCE_POLICY = {
@@ -78,6 +79,15 @@ const DIRECTORY_TARGETS = [
     priority: "high",
     requested_action:
       "Submit or claim Packrift MCP with the hosted endpoint, tracked start link, and exact-spec packaging category copy.",
+  },
+  {
+    id: "browse_sh",
+    name: "Browserbase Browse / browse.sh",
+    listing_url: "https://browse.sh/",
+    refresh_url: "https://browse.sh/",
+    priority: "high",
+    requested_action:
+      "Add Packrift as a Browse catalog skill using the root SKILL.md and hosted MCP endpoint, so browser agents can discover Packrift without a duplicate CLI.",
   },
   {
     id: "glama_server_listing",
@@ -177,7 +187,7 @@ const DIRECTORY_TARGETS = [
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R09",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R10",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -244,6 +254,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       root_mcp_json: ROOT_MCP_JSON_URL,
       well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      funnel_snapshot: MCP_FUNNEL_SNAPSHOT_URL,
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
