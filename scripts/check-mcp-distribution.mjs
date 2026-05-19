@@ -1020,7 +1020,7 @@ async function liveMcpCheck() {
       funnelSnapshot?.links?.tracked_run_generic === "https://mcp.packrift.com/r/run/generic/generic_streamable_http" &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/generic?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R11" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R12" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.links?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       sourceActivationQueue?.links?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
@@ -1035,7 +1035,9 @@ async function liveMcpCheck() {
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       Array.isArray(sourceActivationQueue?.critical_actions) &&
       sourceActivationQueue?.critical_actions?.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not ")) &&
-      sourceActivationQueue?.critical_actions?.some((row) => row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"')) &&
+      sourceActivationQueue?.critical_actions?.some(
+        (row) => row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') && row.run_real_mcp_shell_url?.includes("format=sh")
+      ) &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
       Array.isArray(sourceActivationQueue?.blocking_goal_gates) &&
@@ -1052,9 +1054,12 @@ async function liveMcpCheck() {
           row.copy_ready_host_configs?.claude_code_command?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
           row.copy_ready_host_configs?.codex_command?.startsWith("codex mcp add packrift --url") &&
           row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
+          row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
           row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
           row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
           row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
+          row.external_activation_message?.includes("Shell activation script") &&
+          row.reviewer_activation_shell_url?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
           (row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
             row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html")) &&
           row.tracked_install_json_url?.includes("/r/install/cline_mcp_marketplace/cline?format=json") &&
@@ -1069,13 +1074,14 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Copy-ready host configs") &&
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
       sourceActivationQueueHtmlResult.text.includes("Activation runner") &&
+      sourceActivationQueueHtmlResult.text.includes("Shell script") &&
       sourceActivationQueueHtmlResult.text.includes("Update card") &&
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
-      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R04" &&
+      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R05" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R11" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R12" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       typeof activationExperiments?.experiment_count === "number" &&
@@ -1099,18 +1105,23 @@ async function liveMcpCheck() {
           experiment.copy_ready_activation_request?.includes("Claude Code:") &&
           experiment.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
           experiment.copy_ready_host_configs?.agent_prompt?.includes("create_cart_url") &&
+          experiment.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
           experiment.reviewer_activation_runner_url?.startsWith("https://mcp.packrift.com/r/activate/") &&
+          experiment.reviewer_activation_shell_url?.includes("format=sh") &&
+          experiment.copy_ready_activation_request?.includes("Shell activation script") &&
           experiment.expected_snapshot_delta?.funnel_snapshot &&
           experiment.measurement_urls?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json"
       ) &&
       activationExperimentsMarkdownResult.ok &&
       activationExperimentsMarkdownResult.text.includes("Packrift MCP Activation Experiments") &&
+      activationExperimentsMarkdownResult.text.includes("format=sh") &&
       activationExperimentsHtmlResult.ok &&
       activationExperimentsHtmlResult.text.includes("Packrift MCP Activation Experiments") &&
       activationExperimentsHtmlResult.text.includes("Expected snapshot delta") &&
       activationExperimentsHtmlResult.text.includes("Suppression rules") &&
       activationExperimentsHtmlResult.text.includes("Copy-ready activation request") &&
       activationExperimentsHtmlResult.text.includes("Copy-ready host configs") &&
+      activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
