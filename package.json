@@ -34,6 +34,7 @@
     "smoke:cart-handoff": "node scripts/smoke-cart-handoff.mjs",
     "check:distribution": "node scripts/check-mcp-distribution.mjs",
     "check:agent-capture": "node scripts/check-agent-capture.mjs",
+    "submit:source-activation-indexnow": "node scripts/submit-source-activation-indexnow.mjs",
     "build:agent-capture-outreach": "node scripts/build-agent-capture-outreach.mjs",
     "build:claude-connector-submission": "npm run build --silent && node scripts/build-claude-connector-submission.mjs",
     "build:directory-submission-pack": "node scripts/build-mcp-directory-submission-pack.mjs",

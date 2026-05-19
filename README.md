@@ -186,6 +186,16 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - Example SKU markdown page: https://mcp.packrift.com/ai/sku/1066.md
 - Example SKU JSON record: https://mcp.packrift.com/ai/sku/1066.json
 
+## Source Activation IndexNow
+
+Notify IndexNow about the existing source-specific MCP start, install, first-run, and activation URLs:
+
+```bash
+npm run submit:source-activation-indexnow
+```
+
+The script preflights `https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml`, writes artifacts under `outputs/source-activation-indexnow/`, and submits only existing hosted MCP URLs. It does not create a new CLI, buyer surface, checkout path, or directory submission.
+
 ## Tools
 
 Tools are framed around exact-spec procurement, not generic browsing. Use `find_packaging_for_item` when the buyer has item dimensions or a fit question; use SKU and exact-spec tools when the buyer is replenishing a known product.
