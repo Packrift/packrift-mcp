@@ -1277,6 +1277,7 @@ function normalizeAiSalesEvent(raw: Record<string, unknown>, request: Request) {
       safeEventText(raw.mcp_key, 120),
     mcp_key: safeEventText(raw.mcp_key, 120),
     mcp_journey: safeEventText(raw.mcp_journey, 160),
+    mcp_session_id: safeEventText(raw.mcp_session_id, 120),
     mcp_source_context: safeEventText(raw.mcp_source_context, 80),
     mcp_install_target: safeEventText(raw.mcp_install_target, 80),
     mcp_result_set: safeEventText(raw.mcp_result_set, 160),
@@ -2182,6 +2183,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byBotFamily: Record<string, number> = {};
   const byPackriftAiId: Record<string, number> = {};
   const byMcpHandoffId: Record<string, number> = {};
+  const byMcpSessionId: Record<string, number> = {};
   const byMcpKey: Record<string, number> = {};
   const byMcpJourney: Record<string, number> = {};
   const byToolMcpKey: Record<string, number> = {};
@@ -2225,6 +2227,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const botFamily = String(event.bot_family ?? "") || "unknown";
     const packriftAiId = String(event.packrift_ai_id ?? event.ai_commerce_id ?? "") || "unknown";
     const mcpHandoffId = String(event.mcp_handoff_id ?? "") || "unknown";
+    const mcpSessionId = String(event.mcp_session_id ?? "") || "unknown";
     const mcpKey = String(event.mcp_key ?? "") || "unknown";
     const mcpJourney = String(event.mcp_journey ?? "") || "unknown";
     const mcpSourceContext = String(event.mcp_source_context ?? "") || "unknown";
@@ -2285,6 +2288,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     byBotFamily[botFamily] = (byBotFamily[botFamily] ?? 0) + 1;
     byPackriftAiId[packriftAiId] = (byPackriftAiId[packriftAiId] ?? 0) + 1;
     if (mcpHandoffId !== "unknown") byMcpHandoffId[mcpHandoffId] = (byMcpHandoffId[mcpHandoffId] ?? 0) + 1;
+    if (mcpSessionId !== "unknown") byMcpSessionId[mcpSessionId] = (byMcpSessionId[mcpSessionId] ?? 0) + 1;
     if (mcpKey !== "unknown") byMcpKey[mcpKey] = (byMcpKey[mcpKey] ?? 0) + 1;
     if (mcpJourney !== "unknown") byMcpJourney[mcpJourney] = (byMcpJourney[mcpJourney] ?? 0) + 1;
     if (mcpSourceContext !== "unknown") byMcpSourceContext[mcpSourceContext] = (byMcpSourceContext[mcpSourceContext] ?? 0) + 1;
@@ -2338,6 +2342,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         bot_family: safeEventText(event.bot_family, 80) || null,
         packrift_ai_id: safeEventText(event.packrift_ai_id ?? event.ai_commerce_id, 160) || null,
         mcp_handoff_id: safeEventText(event.mcp_handoff_id, 160) || null,
+        mcp_session_id: safeEventText(event.mcp_session_id, 120) || null,
         mcp_key: safeEventText(event.mcp_key, 120) || null,
         mcp_journey: safeEventText(event.mcp_journey, 160) || null,
         mcp_source_context: safeEventText(event.mcp_source_context, 80) || null,
@@ -2364,6 +2369,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_bot_family: top(byBotFamily),
     by_packrift_ai_id: top(byPackriftAiId),
     by_mcp_handoff_id: top(byMcpHandoffId),
+    by_mcp_session_id: top(byMcpSessionId),
     by_mcp_key: top(byMcpKey),
     by_mcp_journey: top(byMcpJourney),
     by_tool_mcp_key: top(byToolMcpKey),
@@ -2473,9 +2479,66 @@ function topVisitorProofRows(events: Array<Record<string, unknown>>, field: "eve
     .map(([key, count]) => ({ key, count }));
 }
 
+function qualifiedMcpIdentityKey(event: Record<string, unknown>): { key: string; type: "mcp_session_id" | "mcp_handoff_id" | "ai_commerce_journey_id" } | null {
+  const sessionId = safeEventText(event.mcp_session_id, 120);
+  if (sessionId) return { key: `session:${sessionId}`, type: "mcp_session_id" };
+  const handoffId = safeEventText(event.mcp_handoff_id, 160);
+  if (handoffId) return { key: `handoff:${handoffId}`, type: "mcp_handoff_id" };
+  const journeyId = safeEventText(event.ai_commerce_id ?? event.packrift_ai_id ?? event.mcp_journey, 160);
+  if (journeyId) return { key: `journey:${journeyId}`, type: "ai_commerce_journey_id" };
+  return null;
+}
+
+function uniqueQualifiedMcpIdentityProof(events: Array<Record<string, unknown>>) {
+  const qualifiedEvents = events.filter((event) => isQualifiedMcpVisitorSignal(event));
+  const uniqueByType: Record<"mcp_session_id" | "mcp_handoff_id" | "ai_commerce_journey_id", Set<string>> = {
+    mcp_session_id: new Set<string>(),
+    mcp_handoff_id: new Set<string>(),
+    ai_commerce_journey_id: new Set<string>(),
+  };
+  const allKeys = new Set<string>();
+  const sourceKeys = new Map<string, Set<string>>();
+  let withoutIdentity = 0;
+  for (const event of qualifiedEvents) {
+    const identity = qualifiedMcpIdentityKey(event);
+    if (!identity) {
+      withoutIdentity += 1;
+      continue;
+    }
+    uniqueByType[identity.type].add(identity.key);
+    allKeys.add(identity.key);
+    const source =
+      safeEventText(event.mcp_source_context, 80) ||
+      safeEventText(event.utm_source, 80) ||
+      safeEventText(event.source, 80) ||
+      "unknown";
+    const sourceSet = sourceKeys.get(source) ?? new Set<string>();
+    sourceSet.add(identity.key);
+    sourceKeys.set(source, sourceSet);
+  }
+  const topSourcesByUniqueIdentity = [...sourceKeys.entries()]
+    .map(([key, value]) => ({ key, count: value.size }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+    .slice(0, 10);
+  return {
+    basis: "explicit_mcp_session_handoff_or_journey_ids_no_ip_or_cookie_fingerprint",
+    caveat:
+      "This is a privacy-safe first-party uniqueness proxy for MCP activation breadth. It is not a GA4 user count and does not replace the GA4-qualified session_start gate.",
+    qualified_event_signals: qualifiedEvents.length,
+    events_with_identity: qualifiedEvents.length - withoutIdentity,
+    events_without_identity: withoutIdentity,
+    unique_identity_signals: allKeys.size,
+    unique_mcp_session_ids: uniqueByType.mcp_session_id.size,
+    unique_mcp_handoff_ids: uniqueByType.mcp_handoff_id.size,
+    unique_ai_commerce_journey_ids: uniqueByType.ai_commerce_journey_id.size,
+    top_sources_by_unique_identity: topSourcesByUniqueIdentity,
+  };
+}
+
 function monthlyQualifiedVisitorProof(events: Array<Record<string, unknown>>, lookbackDays: number, threshold: number, readLimit: number) {
   const qualifiedEvents = events.filter(isQualifiedMcpVisitorSignal);
   const qualifiedSignals = qualifiedEvents.length;
+  const uniqueIdentityProof = uniqueQualifiedMcpIdentityProof(events);
   return {
     gate_name: "thousands_of_qualified_visitors",
     status: qualifiedSignals >= threshold ? "threshold_met_by_first_party_proxy" : "below_threshold",
@@ -2495,6 +2558,7 @@ function monthlyQualifiedVisitorProof(events: Array<Record<string, unknown>>, lo
     top_sources: topVisitorProofRows(qualifiedEvents, "source"),
     top_utm_sources: topVisitorProofRows(qualifiedEvents, "utm_source"),
     top_runtime_sources: topVisitorProofRows(qualifiedEvents, "mcp_source_context"),
+    unique_identity_proof: uniqueIdentityProof,
   };
 }
 
@@ -2583,6 +2647,7 @@ async function mcpGa4FunnelProofPayload(env: Env): Promise<PublicMcpGa4FunnelPro
 async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000) {
   const events = await readAiSalesEvents(env, date, limit);
   const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
+  const uniqueIdentityProof = uniqueQualifiedMcpIdentityProof(events);
   const summary = summarizeAiSalesEvents(events);
   const byEvent = countEventsByStringField(events, "event");
   const bySource = countEventsByStringField(events, "source");
@@ -2653,7 +2718,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     activationCartReady +
     directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R23",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R24",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2685,6 +2750,12 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_activation_cart_ready_events: activationCartReady,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       unique_mcp_handoff_ids: uniqueMcpHandoffIds,
+      unique_qualified_mcp_identity_signals: uniqueIdentityProof.unique_identity_signals,
+      unique_qualified_mcp_session_ids: uniqueIdentityProof.unique_mcp_session_ids,
+      unique_qualified_mcp_handoff_ids: uniqueIdentityProof.unique_mcp_handoff_ids,
+      unique_qualified_ai_commerce_journey_ids: uniqueIdentityProof.unique_ai_commerce_journey_ids,
+      qualified_mcp_events_with_identity: uniqueIdentityProof.events_with_identity,
+      qualified_mcp_events_without_identity: uniqueIdentityProof.events_without_identity,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
@@ -2743,6 +2814,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       measurable_mcp_sales: false,
     },
     monthly_qualified_visitor_proof: monthlyVisitorProof,
+    unique_qualified_identity_proof: uniqueIdentityProof,
     top: {
       events: summary.by_event,
       tools: summary.by_tool,
@@ -2761,6 +2833,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       mcp_handoff_ids: summary.by_mcp_handoff_id,
+      mcp_session_ids: summary.by_mcp_session_id,
       tool_mcp_keys: summary.by_tool_mcp_key,
       mcp_runtime_sources: summary.by_mcp_source_context,
       mcp_install_targets: summary.by_mcp_install_target,
@@ -2790,6 +2863,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       mcp_handoff_ids: summary.by_mcp_handoff_id,
+      mcp_session_ids: summary.by_mcp_session_id,
       tool_mcp_keys: summary.by_tool_mcp_key,
       mcp_runtime_sources: summary.by_mcp_source_context,
       mcp_install_targets: summary.by_mcp_install_target,
@@ -2882,6 +2956,12 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Critical source activation priorities: ${payload.counts.source_activation_priority_critical}`,
     `- Monthly qualified visitor signals: ${payload.counts.monthly_qualified_visitor_signals} / ${payload.counts.monthly_qualified_visitor_threshold}`,
     `- Monthly qualified visitor gap: ${payload.counts.monthly_qualified_visitor_remaining}`,
+    `- Unique qualified MCP identity signals: ${payload.counts.unique_qualified_mcp_identity_signals}`,
+    `- Unique qualified MCP session IDs: ${payload.counts.unique_qualified_mcp_session_ids}`,
+    `- Unique qualified MCP handoff IDs: ${payload.counts.unique_qualified_mcp_handoff_ids}`,
+    `- Unique qualified AI-commerce journey IDs: ${payload.counts.unique_qualified_ai_commerce_journey_ids}`,
+    `- Qualified MCP events with identity: ${payload.counts.qualified_mcp_events_with_identity}`,
+    `- Qualified MCP events without identity: ${payload.counts.qualified_mcp_events_without_identity}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
@@ -3053,6 +3133,24 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Truncated by read limit: ${payload.monthly_qualified_visitor_proof.truncated_by_read_limit ? "yes" : "no"}`,
     `- Note: ${payload.monthly_qualified_visitor_proof.canonical_note}`,
     "",
+    "## Unique Qualified Identity Proof",
+    "",
+    `- Basis: ${payload.unique_qualified_identity_proof.basis}`,
+    `- Caveat: ${payload.unique_qualified_identity_proof.caveat}`,
+    `- Qualified event signals: ${payload.unique_qualified_identity_proof.qualified_event_signals}`,
+    `- Events with identity: ${payload.unique_qualified_identity_proof.events_with_identity}`,
+    `- Events without identity: ${payload.unique_qualified_identity_proof.events_without_identity}`,
+    `- Unique identity signals: ${payload.unique_qualified_identity_proof.unique_identity_signals}`,
+    `- Unique MCP session IDs: ${payload.unique_qualified_identity_proof.unique_mcp_session_ids}`,
+    `- Unique MCP handoff IDs: ${payload.unique_qualified_identity_proof.unique_mcp_handoff_ids}`,
+    `- Unique AI-commerce journey IDs: ${payload.unique_qualified_identity_proof.unique_ai_commerce_journey_ids}`,
+    "",
+    "### Top Sources By Unique Qualified Identity",
+    "",
+    "| Source | Unique identities |",
+    "| --- | ---: |",
+    table(payload.unique_qualified_identity_proof.top_sources_by_unique_identity),
+    "",
     "## Top Events",
     "",
     "| Event | Count |",
@@ -3084,7 +3182,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R17";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R18";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -3714,7 +3812,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R07",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R08",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3729,6 +3827,10 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
       qualified_first_party_mcp_cart_landings: funnel.counts.qualified_first_party_mcp_cart_landings,
       first_party_mcp_orders: funnel.counts.first_party_mcp_orders,
       first_party_mcp_order_revenue: funnel.counts.first_party_mcp_order_revenue,
+      unique_qualified_mcp_identity_signals: funnel.counts.unique_qualified_mcp_identity_signals,
+      unique_qualified_mcp_session_ids: funnel.counts.unique_qualified_mcp_session_ids,
+      unique_qualified_mcp_handoff_ids: funnel.counts.unique_qualified_mcp_handoff_ids,
+      unique_qualified_ai_commerce_journey_ids: funnel.counts.unique_qualified_ai_commerce_journey_ids,
       monthly_qualified_visitor_signals: funnel.counts.monthly_qualified_visitor_signals,
       monthly_qualified_visitor_threshold: funnel.counts.monthly_qualified_visitor_threshold,
       monthly_qualified_visitor_remaining: funnel.counts.monthly_qualified_visitor_remaining,
@@ -3805,6 +3907,8 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- GA4 proof status: ${payload.source_snapshot.ga4_canonical_visitor_proof.status}`,
     `- First-party MCP orders: ${payload.source_snapshot.first_party_mcp_orders}`,
     `- First-party MCP revenue: ${payload.source_snapshot.first_party_mcp_order_revenue}`,
+    `- Unique qualified MCP identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}`,
+    `- Unique qualified MCP session IDs: ${payload.source_snapshot.unique_qualified_mcp_session_ids}`,
     `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
     "",
     "## Priority Queue",
@@ -3964,6 +4068,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
         <span>Cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}</span>
         <span>Qualified visitors: ${payload.source_snapshot.monthly_qualified_visitor_signals}/${payload.source_snapshot.monthly_qualified_visitor_threshold}</span>
+        <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
       </div>
       <div class="blocking">${blocking}</div>
@@ -4163,7 +4268,7 @@ async function mcpActivationExperimentsPayload(env: Env, date = todayUtc(), limi
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R01",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R02",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -4214,6 +4319,8 @@ function mcpActivationExperimentsMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Monthly qualified visitor signals: ${payload.source_snapshot.monthly_qualified_visitor_signals} / ${payload.source_snapshot.monthly_qualified_visitor_threshold}`,
     `- First-party MCP orders: ${payload.source_snapshot.first_party_mcp_orders}`,
     `- First-party MCP revenue: ${payload.source_snapshot.first_party_mcp_order_revenue}`,
+    `- Unique qualified MCP identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}`,
+    `- Unique qualified MCP session IDs: ${payload.source_snapshot.unique_qualified_mcp_session_ids}`,
     `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
     "",
     "## Experiments",
@@ -4347,6 +4454,7 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
         <span>Experiments: ${payload.experiment_count}</span>
         <span>Critical: ${payload.critical_count}</span>
         <span>GA4 sessions: ${payload.source_snapshot.ga4_qualified_external_mcp_session_starts}/${payload.source_snapshot.ga4_qualified_external_mcp_session_threshold}</span>
+        <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
         <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
       </div>
@@ -4464,6 +4572,7 @@ async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
 async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 5000, orderDays = 90, orderLimit = 250) {
   const events = await readAiSalesEvents(env, date, limit);
   const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
+  const uniqueIdentityProof = uniqueQualifiedMcpIdentityProof(events);
   const ga4CanonicalProof = await mcpGa4FunnelProofPayload(env);
   const ga4CanonicalVisitorProofIsAvailable =
     ga4CanonicalProof.status === "proven" || ga4CanonicalProof.status === "not_proven";
@@ -4558,6 +4667,12 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_activation_cart_ready_events: activationCartReady,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       unique_mcp_handoff_ids: uniqueMcpHandoffIds,
+      unique_qualified_mcp_identity_signals: uniqueIdentityProof.unique_identity_signals,
+      unique_qualified_mcp_session_ids: uniqueIdentityProof.unique_mcp_session_ids,
+      unique_qualified_mcp_handoff_ids: uniqueIdentityProof.unique_mcp_handoff_ids,
+      unique_qualified_ai_commerce_journey_ids: uniqueIdentityProof.unique_ai_commerce_journey_ids,
+      qualified_mcp_events_with_identity: uniqueIdentityProof.events_with_identity,
+      qualified_mcp_events_without_identity: uniqueIdentityProof.events_without_identity,
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
@@ -4588,6 +4703,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     proof_gate: proofGate,
     traffic_quality: publicFunnelTrafficBuckets(summary),
     monthly_qualified_visitor_proof: monthlyVisitorProof,
+    unique_qualified_identity_proof: uniqueIdentityProof,
     ga4_canonical_visitor_proof: ga4CanonicalProof,
     source_activation_priority_queue: sourceActivationPriorityQueue,
     source_attribution: {
@@ -4609,6 +4725,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_runtime_sources: summary.by_mcp_source_context,
       mcp_install_targets: summary.by_mcp_install_target,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      mcp_session_ids: summary.by_mcp_session_id,
       mcp_handoff_ids: summary.by_mcp_handoff_id,
       tool_runtime_sources: summary.by_tool_mcp_source_context,
       post_install_cart_activation_by_source: postInstallCartActivation,
@@ -4695,6 +4812,12 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- Monthly qualified visitor signals: ${payload.counts.monthly_qualified_visitor_signals} / ${payload.counts.monthly_qualified_visitor_threshold}`,
     `- Monthly qualified visitor gap: ${payload.counts.monthly_qualified_visitor_remaining}`,
     `- GA4 qualified external MCP sessions: ${payload.counts.ga4_qualified_external_mcp_session_starts} / ${payload.counts.ga4_qualified_external_mcp_session_threshold}`,
+    `- Unique qualified MCP identity signals: ${payload.counts.unique_qualified_mcp_identity_signals}`,
+    `- Unique qualified MCP session IDs: ${payload.counts.unique_qualified_mcp_session_ids}`,
+    `- Unique qualified MCP handoff IDs: ${payload.counts.unique_qualified_mcp_handoff_ids}`,
+    `- Unique qualified AI-commerce journey IDs: ${payload.counts.unique_qualified_ai_commerce_journey_ids}`,
+    `- Qualified MCP events with identity: ${payload.counts.qualified_mcp_events_with_identity}`,
+    `- Qualified MCP events without identity: ${payload.counts.qualified_mcp_events_without_identity}`,
     `- Post-install sources waiting on cart landing: ${payload.counts.post_install_sources_waiting_on_cart_landing}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- Raw first-party MCP cart landings: ${payload.counts.raw_first_party_mcp_cart_landings}`,
@@ -4721,6 +4844,24 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- Read limit: ${payload.monthly_qualified_visitor_proof.read_limit}`,
     `- Truncated by read limit: ${payload.monthly_qualified_visitor_proof.truncated_by_read_limit ? "yes" : "no"}`,
     `- Note: ${payload.monthly_qualified_visitor_proof.canonical_note}`,
+    "",
+    "## Unique Qualified Identity Proof",
+    "",
+    `- Basis: ${payload.unique_qualified_identity_proof.basis}`,
+    `- Caveat: ${payload.unique_qualified_identity_proof.caveat}`,
+    `- Qualified event signals: ${payload.unique_qualified_identity_proof.qualified_event_signals}`,
+    `- Events with identity: ${payload.unique_qualified_identity_proof.events_with_identity}`,
+    `- Events without identity: ${payload.unique_qualified_identity_proof.events_without_identity}`,
+    `- Unique identity signals: ${payload.unique_qualified_identity_proof.unique_identity_signals}`,
+    `- Unique MCP session IDs: ${payload.unique_qualified_identity_proof.unique_mcp_session_ids}`,
+    `- Unique MCP handoff IDs: ${payload.unique_qualified_identity_proof.unique_mcp_handoff_ids}`,
+    `- Unique AI-commerce journey IDs: ${payload.unique_qualified_identity_proof.unique_ai_commerce_journey_ids}`,
+    "",
+    "### Top Sources By Unique Qualified Identity",
+    "",
+    "| Source | Unique identities |",
+    "| --- | ---: |",
+    table(payload.unique_qualified_identity_proof.top_sources_by_unique_identity),
     "",
     "## GA4 Canonical Visitor Proof",
     "",
