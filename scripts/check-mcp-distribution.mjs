@@ -1005,7 +1005,7 @@ async function liveMcpCheck() {
           row.source === "cline_mcp_marketplace" &&
           row.preferred_target === "cline" &&
           row.external_activation_required === true &&
-          row.operator_safety_rule?.includes("real MCP client run") &&
+          row.operator_safety_rule?.includes("real MCP host") &&
           row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
           row.agent_prompt?.includes("target=cline") &&
           row.copy_ready_host_configs?.claude_code_command?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
@@ -1014,7 +1014,7 @@ async function liveMcpCheck() {
           row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
           row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
           row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
-          row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") &&
+          row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") &&
           row.tracked_install_json_url?.includes("/r/install/cline_mcp_marketplace/cline?format=json") &&
           row.tracked_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline")
       ) &&
