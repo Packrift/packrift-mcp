@@ -1,15 +1,26 @@
 import { z } from "zod";
 import { Env, variantIdToNumeric } from "../shopify.js";
-import { assertApprovedVariantIds } from "../approval.js";
+import { approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
 import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
 
 export const createCartUrlSchema = {
   name: "create_cart_url",
   description:
-    "Final step: hand the user off to checkout. Inputs: items[{variant_id, qty}], optional discount_code. Returns a Packrift cart landing URL with ref=mcp plus UTM attribution for AI-commerce purchase tracking, and the final Shopify cart permalink.",
+    "Final step: hand the user off to checkout. Inputs: either items[{variant_id, qty}] or an exact AI_APPROVE sku plus quantity, optional discount_code. Returns a Packrift cart landing URL with ref=mcp plus UTM attribution for AI-commerce purchase tracking, and the final Shopify cart permalink.",
   inputSchema: {
     type: "object",
     properties: {
+      sku: {
+        type: "string",
+        description:
+          "Shortcut for exact Packrift SKUs such as 1066, MFL1295, or LL251WR. When provided without items, the approved variant is resolved automatically.",
+      },
+      quantity: {
+        type: "integer",
+        minimum: 1,
+        default: 1,
+        description: "Buyer-confirmed quantity to use with sku shortcut. Ignored when items is provided.",
+      },
       items: {
         type: "array",
         minItems: 1,
@@ -46,13 +57,15 @@ export const createCartUrlSchema = {
         description: "Internal QA context for synthetic evals.",
       },
     },
-    required: ["items"],
+    anyOf: [{ required: ["items"] }, { required: ["sku"] }],
   },
 
   annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
 export const createCartUrlZod = z.object({
+  sku: z.string().min(1).max(80).optional(),
+  quantity: z.number().int().min(1).optional(),
   items: z
     .array(
       z.object({
@@ -60,7 +73,8 @@ export const createCartUrlZod = z.object({
         qty: z.number().int().min(1),
       })
     )
-    .min(1),
+    .min(1)
+    .optional(),
   discount_code: z.string().min(1).optional(),
   ref: z.string().default("mcp"),
   source_context: z.string().min(1).max(80).optional(),
@@ -75,29 +89,41 @@ export const createCartUrlZod = z.object({
   utm_term: z.string().min(1).max(120).optional(),
   suppress_analytics: z.boolean().optional(),
   analytics_context: z.record(z.unknown()).optional(),
+}).refine((value) => Boolean(value.items?.length || value.sku), {
+  message: "create_cart_url requires either items[{variant_id, qty}] or an exact AI_APPROVE sku.",
 });
 
 export async function createCartUrlHandler(env: Env, raw: unknown) {
   const input = createCartUrlZod.parse(raw);
-  assertApprovedVariantIds(input.items.map((it) => it.variant_id));
-  const path = input.items
+  const approvedSkuItem = input.sku ? approvalForSku(input.sku) : null;
+  if (input.sku && !approvedSkuItem) {
+    throw new Error(`AI_APPROVE gate blocked sku: ${input.sku}. Use search_products or find_packaging_for_item to choose approved Packrift SKUs.`);
+  }
+  const items = input.items?.length ? input.items : [{ variant_id: approvedSkuItem!.variantId, qty: input.quantity ?? 1 }];
+  const inferredVariantItem = items.length === 1 ? approvalForVariantId(items[0]!.variant_id) : null;
+  const resolvedItem = approvedSkuItem ?? inferredVariantItem;
+  const selectedSku = input.selected_sku ?? resolvedItem?.sku;
+  const selectedHandle = input.selected_handle ?? resolvedItem?.handle;
+  const matchType = input.match_type ?? input.source_context ?? (approvedSkuItem ? "buyer_confirmed_exact_sku" : "cart_handoff");
+  assertApprovedVariantIds(items.map((it) => it.variant_id));
+  const path = items
     .map((it) => `${variantIdToNumeric(it.variant_id)}:${it.qty}`)
     .join(",");
   const params = new URLSearchParams();
   const tracking = buildTrackingContext({
     source: "create_cart_url",
-    variantId: input.items[0]?.variant_id ?? null,
-    matchType: input.match_type ?? input.source_context ?? "cart_handoff",
+    variantId: items[0]?.variant_id ?? null,
+    matchType,
     packriftAiId: input.packrift_ai_id,
     aiCommerceId: input.ai_commerce_id,
     journeyId: input.journey_id,
     resultSetId: input.result_set_id,
-    selectedSku: input.selected_sku,
-    selectedHandle: input.selected_handle,
+    selectedSku,
+    selectedHandle,
     reorderSource: input.reorder_source,
-    utmTerm: input.utm_term,
+    utmTerm: input.utm_term ?? selectedSku,
   });
-  const cartUtmContent = input.selected_sku ?? input.items[0]?.variant_id ?? input.source_context ?? tracking.utm_content;
+  const cartUtmContent = selectedSku ?? items[0]?.variant_id ?? input.source_context ?? tracking.utm_content;
   const cartTracking = {
     ...tracking,
     utm_source: "chatgpt-mcp",
@@ -119,11 +145,11 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   if (input.discount_code) params.set("discount", input.discount_code);
   addCartPermalinkAttribution(params, cartTracking);
   const finalCartUrl = `https://${env.STOREFRONT_DOMAIN}/cart/${path}?${params.toString()}`;
-  const canUseLandingUrl = input.items.length === 1 && Boolean(input.selected_sku);
-  const landingUrl = canUseLandingUrl ? new URL(`https://mcp.packrift.com/r/cart/${encodeURIComponent(input.selected_sku!)}`) : null;
+  const canUseLandingUrl = items.length === 1 && Boolean(selectedSku);
+  const landingUrl = canUseLandingUrl ? new URL(`https://mcp.packrift.com/r/cart/${encodeURIComponent(selectedSku!)}`) : null;
   if (landingUrl) {
     landingUrl.searchParams.set("ref", input.ref);
-    landingUrl.searchParams.set("qty", String(input.items[0]?.qty ?? 1));
+    landingUrl.searchParams.set("qty", String(items[0]?.qty ?? 1));
     landingUrl.searchParams.set("utm_source", cartTracking.utm_source);
     landingUrl.searchParams.set("utm_medium", cartTracking.utm_medium);
     landingUrl.searchParams.set("utm_campaign", cartTracking.utm_campaign);
@@ -140,7 +166,16 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   const response = {
     url,
     final_cart_url: finalCartUrl,
-    items: input.items,
+    items,
+    resolved_from_catalog: resolvedItem
+      ? {
+          sku: resolvedItem.sku,
+          handle: resolvedItem.handle,
+          variant_id: resolvedItem.variantId,
+          family: resolvedItem.family || null,
+          source: approvedSkuItem ? "sku" : "variant_id",
+        }
+      : null,
     ref: input.ref,
     utm: {
       source: cartTracking.utm_source,
@@ -152,13 +187,13 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
     cart_tracking: cartTracking,
     post_confirmation_handoff: buildPostConfirmationHandoff({
       source: "create_cart_url",
-      variantId: input.items[0]?.variant_id ?? null,
+      variantId: items[0]?.variant_id ?? null,
       journeyId: input.journey_id,
       resultSetId: input.result_set_id,
-      selectedSku: input.selected_sku,
-      selectedHandle: input.selected_handle,
-      matchType: input.match_type ?? input.source_context ?? "cart_handoff",
-      quantity: input.items[0]?.qty ?? 1,
+      selectedSku,
+      selectedHandle,
+      matchType,
+      quantity: items[0]?.qty ?? 1,
       cartUrl: url,
       cartEligible: true,
     }),
@@ -172,10 +207,10 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
       JSON.stringify({
         event: "cart_click",
         source: "create_cart_url",
-        sku: input.selected_sku ?? "",
-        handle: input.selected_handle ?? "",
-        variant_id: input.items[0]?.variant_id ?? "",
-        match_type: input.match_type ?? input.source_context ?? "cart_handoff",
+        sku: selectedSku ?? "",
+        handle: selectedHandle ?? "",
+        variant_id: items[0]?.variant_id ?? "",
+        match_type: matchType,
         packrift_ai_id: tracking.packrift_ai_id,
         ai_commerce_id: tracking.ai_commerce_id,
         mcp_key: tracking.continuity_key,

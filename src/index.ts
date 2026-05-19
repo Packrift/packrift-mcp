@@ -161,7 +161,7 @@ const PROMPTS: PromptDef[] = [
     description: "Reorder a known Packrift SKU with exact product continuity.",
     arguments: [{ name: "sku", description: "Packrift SKU to reorder.", required: true }],
     template:
-      "Reorder Packrift SKU {{sku}}. Use search_products with the SKU, then get_product, get_pricing, and check_inventory. Return the product URL, reorder URL, copy-procurement-spec text, and cart URL only after live commercial facts are confirmed.",
+      "Reorder Packrift SKU {{sku}}. First call get_cart_handoff_candidates with the SKU, then get_product, get_pricing, and check_inventory. After the exact SKU, live facts, and buyer quantity are confirmed, call create_cart_url with the candidate's create_cart_url_sku_arguments or create_cart_url_arguments. Return the MCP /r/cart URL as the primary handoff; keep product, reorder, quote, and copy-procurement-spec actions as fallbacks. If the SKU is not an exact AI_APPROVE match, do not create a cart URL.",
   },
   {
     name: "prepare_cart_handoff",
@@ -318,7 +318,7 @@ function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
     items: filtered,
     recommended_next_step:
       filtered.length > 0
-        ? "For a selected item, call get_product, get_pricing, and check_inventory. After the buyer confirms exact SKU and quantity, pass create_cart_url_arguments to create_cart_url."
+        ? "For a selected item, call get_product, get_pricing, and check_inventory. After the buyer confirms exact SKU and quantity, call create_cart_url with create_cart_url_sku_arguments, or pass create_cart_url_arguments when your agent already needs explicit variant IDs."
         : "No priority cart handoff candidate matched this filter. Use search_products for the exact spec, or get_bulk_quote_link when no exact approved match exists.",
   };
 }
@@ -3982,6 +3982,16 @@ function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
       result_set_id: "mcp_cart_handoff_candidates",
       utm_term: item.sku,
     },
+    create_cart_url_sku_arguments: {
+      sku: item.sku,
+      quantity: safeQuantity,
+      selected_handle: item.handle,
+      match_type: "cart_handoff_candidate",
+      source_context: "exact_spec_ai_agent",
+      journey_id: `mcp_${item.sku}_${item.variantId}`,
+      result_set_id: "mcp_cart_handoff_candidates",
+      utm_term: item.sku,
+    },
     cart_url_candidate: measuredCartUrl,
     cart_url_candidate_type: "mcp_cart_landing_redirect",
     measured_cart_url: measuredCartUrl,
@@ -4355,6 +4365,7 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
     prompt_name: payload.mcp_cart_handoff.prompt_name,
     create_cart_url_tool: payload.mcp_cart_handoff.create_cart_url_tool,
     create_cart_url_arguments: payload.mcp_cart_handoff.create_cart_url_arguments,
+    create_cart_url_sku_arguments: payload.mcp_cart_handoff.create_cart_url_sku_arguments,
     cart_url_qty_1_candidate: payload.mcp_cart_handoff.cart_url_candidate,
     cart_url_candidate_type: payload.mcp_cart_handoff.cart_url_candidate_type,
     final_shopify_cart_url_candidate: payload.mcp_cart_handoff.final_shopify_cart_url_candidate,
@@ -4412,6 +4423,8 @@ function cartHandoffCandidatesMarkdown(limit = 25): string {
     "## Required MCP Sequence",
     "",
     payload.mcp_sequence.map((step, index) => `${index + 1}. \`${step}\``).join("\n"),
+    "",
+    "After live confirmation, agents may call `create_cart_url` with `create_cart_url_sku_arguments` from the JSON payload. Variant-ID arguments remain available for hosts that require explicit cart line items.",
     "",
     "## Priority Cart Candidates",
     "",

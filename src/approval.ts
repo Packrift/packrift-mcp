@@ -7,10 +7,16 @@ function numericId(idOrGid: string): string {
 
 const byHandle = new Map<string, ApprovedCatalogItem>();
 const byVariantId = new Map<string, ApprovedCatalogItem>();
+const bySku = new Map<string, ApprovedCatalogItem>();
 
 for (const item of APPROVED_CATALOG) {
   if (item.handle && !byHandle.has(item.handle)) byHandle.set(item.handle, item);
   if (item.variantId) byVariantId.set(numericId(item.variantId), item);
+  if (item.sku && !bySku.has(item.sku.toUpperCase())) bySku.set(item.sku.toUpperCase(), item);
+}
+
+export function approvalForSku(sku: string): ApprovedCatalogItem | null {
+  return bySku.get(sku.trim().toUpperCase()) ?? null;
 }
 
 export function approvalForHandle(handle: string): ApprovedCatalogItem | null {
