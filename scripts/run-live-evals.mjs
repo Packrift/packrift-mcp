@@ -245,6 +245,19 @@ async function evaluate(test, tools) {
         structured?.cart_handoff?.landing_records_event === true,
       observed: structured?.cart_handoff || null,
     });
+    checks.push({
+      name: "mcp_handoff_id_present",
+      pass:
+        typeof structured?.mcp_handoff_id === "string" &&
+        structured.mcp_handoff_id.startsWith("mcp_handoff_") &&
+        structured?.url?.includes(`mcp_handoff_id=${encodeURIComponent(structured.mcp_handoff_id)}`) &&
+        structured?.cart_handoff?.mcp_handoff_id === structured.mcp_handoff_id,
+      observed: {
+        mcp_handoff_id: structured?.mcp_handoff_id ?? null,
+        url: structured?.url ?? null,
+        cart_handoff_id: structured?.cart_handoff?.mcp_handoff_id ?? null,
+      },
+    });
   }
 
   if (test.expected?.results) {

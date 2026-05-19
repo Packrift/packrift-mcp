@@ -23,6 +23,7 @@ interface TrackingInput {
   matchType?: string | null;
   packriftAiId?: string | null;
   aiCommerceId?: string | null;
+  mcpHandoffId?: string | null;
   journeyId?: string | null;
   resultSetId?: string | null;
   selectedSku?: string | null;
@@ -57,6 +58,14 @@ function compact(value: string | null | undefined): string {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 80);
+}
+
+function compactHandoffId(value: string | null | undefined): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 120);
 }
 
 function skuAnchor(value: string | null | undefined): string {
@@ -100,6 +109,7 @@ export function buildTrackingContext(input: TrackingInput) {
     utm_term: input.utmTerm ?? input.selectedSku ?? input.sku ?? input.selectedHandle ?? input.handle ?? null,
     packrift_ai_id: packriftAiId,
     ai_commerce_id: packriftAiId,
+    mcp_handoff_id: compactHandoffId(input.mcpHandoffId) || null,
     continuity_key: continuityKey,
     journey_id: journeyId,
     result_set_id: input.resultSetId ?? null,
@@ -120,6 +130,7 @@ export function trackedUrl(url: string, tracking: ReturnType<typeof buildTrackin
   parsed.searchParams.set("utm_content", tracking.utm_content);
   if (tracking.utm_term) parsed.searchParams.set("utm_term", tracking.utm_term);
   parsed.searchParams.set("packrift_ai_id", tracking.packrift_ai_id);
+  if (tracking.mcp_handoff_id) parsed.searchParams.set("mcp_handoff_id", tracking.mcp_handoff_id);
   parsed.searchParams.set("mcp_key", tracking.continuity_key);
   parsed.searchParams.set("mcp_journey", tracking.journey_id);
   if (tracking.result_set_id) parsed.searchParams.set("mcp_result_set", tracking.result_set_id);
@@ -137,6 +148,7 @@ export function addCartPermalinkAttribution(
   const attributes: Record<string, string | null | undefined> = {
     packrift_packrift_ai_id: tracking.packrift_ai_id,
     packrift_ai_commerce_id: tracking.ai_commerce_id,
+    packrift_mcp_handoff_id: tracking.mcp_handoff_id,
     packrift_mcp_key: tracking.continuity_key,
     packrift_mcp_journey: tracking.journey_id,
     packrift_mcp_result_set: tracking.result_set_id,

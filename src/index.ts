@@ -1450,6 +1450,7 @@ function copyRouteCartAttributeParams(source: URL, target: URL): URL {
   const attributes: Record<string, string | null> = {
     packrift_packrift_ai_id: source.searchParams.get("packrift_ai_id") ?? source.searchParams.get("ai_commerce_id"),
     packrift_ai_commerce_id: source.searchParams.get("ai_commerce_id") ?? source.searchParams.get("packrift_ai_id"),
+    packrift_mcp_handoff_id: source.searchParams.get("mcp_handoff_id"),
     packrift_mcp_key: source.searchParams.get("mcp_key"),
     packrift_mcp_journey: source.searchParams.get("mcp_journey"),
     packrift_mcp_result_set: source.searchParams.get("mcp_result_set"),
@@ -1513,6 +1514,7 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
       term: ${JSON.stringify(requestUrl.searchParams.get("utm_term") ?? "")},
       packrift_ai_id: ${JSON.stringify(requestUrl.searchParams.get("packrift_ai_id") ?? "")},
       ai_commerce_id: ${JSON.stringify(requestUrl.searchParams.get("ai_commerce_id") ?? "")},
+      mcp_handoff_id: ${JSON.stringify(requestUrl.searchParams.get("mcp_handoff_id") ?? "")},
       mcp_key: ${JSON.stringify(requestUrl.searchParams.get("mcp_key") ?? "")},
       mcp_journey: ${JSON.stringify(requestUrl.searchParams.get("mcp_journey") ?? "")},
       mcp_result_set: ${JSON.stringify(requestUrl.searchParams.get("mcp_result_set") ?? "")},
@@ -1829,6 +1831,7 @@ async function recordRouteRedirectTelemetry(
     match_type: requestUrl.searchParams.get("match_type") ?? "",
     packrift_ai_id: packriftAiId,
     ai_commerce_id: requestUrl.searchParams.get("ai_commerce_id") || packriftAiId,
+    mcp_handoff_id: requestUrl.searchParams.get("mcp_handoff_id") ?? "",
     mcp_key: requestUrl.searchParams.get("mcp_key") ?? item.sku,
     mcp_journey: requestUrl.searchParams.get("mcp_journey") ?? `${surface}:${item.sku}:${event}`,
     mcp_result_set: requestUrl.searchParams.get("mcp_result_set") ?? `${surface}_${compactDate()}`,
@@ -1896,6 +1899,7 @@ async function maybeRecordRouteLandingTelemetry(
     match_type: url.searchParams.get("match_type") ?? "",
     packrift_ai_id: packriftAiId,
     ai_commerce_id: url.searchParams.get("ai_commerce_id") || packriftAiId,
+    mcp_handoff_id: url.searchParams.get("mcp_handoff_id") ?? "",
     mcp_key: url.searchParams.get("mcp_key") ?? sku,
     mcp_journey: url.searchParams.get("mcp_journey") ?? "",
     mcp_result_set: url.searchParams.get("mcp_result_set") ?? "",
@@ -1985,6 +1989,7 @@ function buildToolResultAttribution(out: unknown): Record<string, unknown> {
   return {
     packrift_ai_id: textFrom(cartTracking?.packrift_ai_id, params?.get("packrift_ai_id")),
     ai_commerce_id: textFrom(cartTracking?.ai_commerce_id, params?.get("ai_commerce_id"), cartTracking?.packrift_ai_id),
+    mcp_handoff_id: textFrom(cartTracking?.mcp_handoff_id, params?.get("mcp_handoff_id")),
     mcp_key: textFrom(cartTracking?.mcp_key, cartTracking?.continuity_key, params?.get("mcp_key")),
     mcp_journey: textFrom(cartTracking?.mcp_journey, cartTracking?.journey_id, params?.get("mcp_journey")),
     mcp_result_set: textFrom(cartTracking?.mcp_result_set, cartTracking?.result_set_id, params?.get("mcp_result_set")),
@@ -2174,6 +2179,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byMcpMethod: Record<string, number> = {};
   const byBotFamily: Record<string, number> = {};
   const byPackriftAiId: Record<string, number> = {};
+  const byMcpHandoffId: Record<string, number> = {};
   const byMcpKey: Record<string, number> = {};
   const byMcpJourney: Record<string, number> = {};
   const byToolMcpKey: Record<string, number> = {};
@@ -2216,6 +2222,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const mcpMethod = String(event.mcp_method ?? "") || "unknown";
     const botFamily = String(event.bot_family ?? "") || "unknown";
     const packriftAiId = String(event.packrift_ai_id ?? event.ai_commerce_id ?? "") || "unknown";
+    const mcpHandoffId = String(event.mcp_handoff_id ?? "") || "unknown";
     const mcpKey = String(event.mcp_key ?? "") || "unknown";
     const mcpJourney = String(event.mcp_journey ?? "") || "unknown";
     const mcpSourceContext = String(event.mcp_source_context ?? "") || "unknown";
@@ -2275,6 +2282,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     }
     byBotFamily[botFamily] = (byBotFamily[botFamily] ?? 0) + 1;
     byPackriftAiId[packriftAiId] = (byPackriftAiId[packriftAiId] ?? 0) + 1;
+    if (mcpHandoffId !== "unknown") byMcpHandoffId[mcpHandoffId] = (byMcpHandoffId[mcpHandoffId] ?? 0) + 1;
     if (mcpKey !== "unknown") byMcpKey[mcpKey] = (byMcpKey[mcpKey] ?? 0) + 1;
     if (mcpJourney !== "unknown") byMcpJourney[mcpJourney] = (byMcpJourney[mcpJourney] ?? 0) + 1;
     if (mcpSourceContext !== "unknown") byMcpSourceContext[mcpSourceContext] = (byMcpSourceContext[mcpSourceContext] ?? 0) + 1;
@@ -2327,6 +2335,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         match_type: safeEventText(event.match_type, 80) || null,
         bot_family: safeEventText(event.bot_family, 80) || null,
         packrift_ai_id: safeEventText(event.packrift_ai_id ?? event.ai_commerce_id, 160) || null,
+        mcp_handoff_id: safeEventText(event.mcp_handoff_id, 160) || null,
         mcp_key: safeEventText(event.mcp_key, 120) || null,
         mcp_journey: safeEventText(event.mcp_journey, 160) || null,
         mcp_source_context: safeEventText(event.mcp_source_context, 80) || null,
@@ -2352,6 +2361,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     tool_latency_ms: toolLatency,
     by_bot_family: top(byBotFamily),
     by_packrift_ai_id: top(byPackriftAiId),
+    by_mcp_handoff_id: top(byMcpHandoffId),
     by_mcp_key: top(byMcpKey),
     by_mcp_journey: top(byMcpJourney),
     by_tool_mcp_key: top(byToolMcpKey),
@@ -2597,6 +2607,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
   const sourceActivationPriorityQueue = mcpSourceActivationPriorityQueue(postInstallCartActivation);
+  const uniqueMcpHandoffIds = new Set(events.map((event) => safeEventText(event.mcp_handoff_id, 160)).filter(Boolean)).size;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
   const directAgentResourceSources = [
@@ -2639,7 +2650,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     activationCartReady +
     directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R21",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R22",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2670,6 +2681,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_install_copy_events: installCopies,
       mcp_activation_cart_ready_events: activationCartReady,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
+      unique_mcp_handoff_ids: uniqueMcpHandoffIds,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
@@ -2744,6 +2756,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       install_copy_targets: summary.by_install_copy_target,
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
+      mcp_handoff_ids: summary.by_mcp_handoff_id,
       tool_mcp_keys: summary.by_tool_mcp_key,
       mcp_runtime_sources: summary.by_mcp_source_context,
       mcp_install_targets: summary.by_mcp_install_target,
@@ -2772,6 +2785,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       utm_campaigns: summary.by_utm_campaign,
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
+      mcp_handoff_ids: summary.by_mcp_handoff_id,
       tool_mcp_keys: summary.by_tool_mcp_key,
       mcp_runtime_sources: summary.by_mcp_source_context,
       mcp_install_targets: summary.by_mcp_install_target,
@@ -3064,7 +3078,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R15";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R16";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -4086,6 +4100,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
   const sourceActivationPriorityQueue = mcpSourceActivationPriorityQueue(postInstallCartActivation);
+  const uniqueMcpHandoffIds = new Set(events.map((event) => safeEventText(event.mcp_handoff_id, 160)).filter(Boolean)).size;
   const qualifiedCartLandings = countQualifiedFirstPartyCartLandings(events);
   const orderSummary = await publicMcpOrderSummary(env, orderDays, orderLimit);
   const attributedOrderCount = Number(orderSummary.attributed_order_count || 0);
@@ -4146,6 +4161,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_install_copy_events: installCopies,
       mcp_activation_cart_ready_events: activationCartReady,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
+      unique_mcp_handoff_ids: uniqueMcpHandoffIds,
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
@@ -4197,6 +4213,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_runtime_sources: summary.by_mcp_source_context,
       mcp_install_targets: summary.by_mcp_install_target,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      mcp_handoff_ids: summary.by_mcp_handoff_id,
       tool_runtime_sources: summary.by_tool_mcp_source_context,
       post_install_cart_activation_by_source: postInstallCartActivation,
       source_activation_priority_queue: sourceActivationPriorityQueue,
@@ -4562,6 +4579,7 @@ function mcpOrderAttribution(attrs: Record<string, string>) {
   return {
     packrift_ai_id: get("packrift_packrift_ai_id") || get("packrift_ai_id"),
     ai_commerce_id: get("packrift_ai_commerce_id") || get("ai_commerce_id"),
+    mcp_handoff_id: get("packrift_mcp_handoff_id") || get("mcp_handoff_id"),
     mcp_key: get("packrift_mcp_key") || get("mcp_key"),
     mcp_journey: get("packrift_mcp_journey") || get("mcp_journey"),
     mcp_result_set: get("packrift_mcp_result_set") || get("mcp_result_set"),
@@ -4847,7 +4865,7 @@ function buildPdpProcurementHandoff(html: string, url: URL): string {
   if (!root || root.dataset.copyBound === 'true') return;
   root.dataset.copyBound = 'true';
   const clean = (value, max) => String(value || '').replace(/\\s+/g, ' ').trim().slice(0, max);
-  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_handoff_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
   const readContinuity = () => {
     const params = new URLSearchParams(window.location.search);
     let saved = {};
@@ -5004,7 +5022,7 @@ function buildAiSalesAddToCartListener(): string {
   const root = document.querySelector('.packrift-pdp-procurement[data-packrift-sku], [data-packrift-sku]');
   const seen = new Map();
   const clean = (value, max) => String(value || '').replace(/\\s+/g, ' ').trim().slice(0, max);
-  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_handoff_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
   const readContinuity = () => {
     const params = new URLSearchParams(window.location.search);
     let saved = {};

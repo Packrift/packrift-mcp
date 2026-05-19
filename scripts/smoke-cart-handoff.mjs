@@ -239,6 +239,20 @@ async function main() {
         primary_buyer_handoff: cart?.structured?.primary_buyer_handoff ?? null,
       }
     ),
+    check(
+      "mcp_handoff_id_ok",
+      Boolean(
+        cart?.structured?.mcp_handoff_id &&
+          String(cart.structured.mcp_handoff_id).startsWith("mcp_handoff_") &&
+          cartUrl?.includes(`mcp_handoff_id=${encodeURIComponent(cart.structured.mcp_handoff_id)}`) &&
+          cart?.structured?.cart_handoff?.mcp_handoff_id === cart.structured.mcp_handoff_id
+      ),
+      {
+        mcp_handoff_id: cart?.structured?.mcp_handoff_id ?? null,
+        cart_handoff_id: cart?.structured?.cart_handoff?.mcp_handoff_id ?? null,
+        cart_url: cartUrl,
+      }
+    ),
     check("cart_continuity_ok", Boolean(cart?.structured?.cart_continuity?.validated && cart?.structured?.cart_continuity?.selected_sku === sku), {
       cart_continuity: cart?.structured?.cart_continuity ?? null,
     }),

@@ -171,6 +171,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   const selectedSku = resolvedItem?.sku ?? input.selected_sku ?? input.sku;
   const selectedHandle = selectedHandleInput ?? resolvedItem?.handle;
   const matchType = input.match_type ?? input.source_context ?? (approvedSkuItem ? "buyer_confirmed_exact_sku" : "cart_handoff");
+  const mcpHandoffId = `mcp_handoff_${crypto.randomUUID()}`;
   const path = items
     .map((it) => `${variantIdToNumeric(it.variant_id)}:${it.qty}`)
     .join(",");
@@ -181,6 +182,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
     matchType,
     packriftAiId: input.packrift_ai_id,
     aiCommerceId: input.ai_commerce_id,
+    mcpHandoffId,
     journeyId: input.journey_id,
     resultSetId: input.result_set_id,
     selectedSku,
@@ -203,6 +205,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   params.set("utm_content", cartTracking.utm_content);
   if (cartTracking.utm_term) params.set("utm_term", cartTracking.utm_term);
   params.set("packrift_ai_id", tracking.packrift_ai_id);
+  params.set("mcp_handoff_id", mcpHandoffId);
   params.set("mcp_key", tracking.continuity_key);
   params.set("mcp_journey", tracking.journey_id);
   if (tracking.result_set_id) params.set("mcp_result_set", tracking.result_set_id);
@@ -222,6 +225,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
     if (cartTracking.utm_term) landingUrl.searchParams.set("utm_term", cartTracking.utm_term);
     landingUrl.searchParams.set("packrift_ai_id", tracking.packrift_ai_id);
     landingUrl.searchParams.set("ai_commerce_id", tracking.ai_commerce_id);
+    landingUrl.searchParams.set("mcp_handoff_id", mcpHandoffId);
     landingUrl.searchParams.set("mcp_key", tracking.continuity_key);
     landingUrl.searchParams.set("mcp_journey", tracking.journey_id);
     if (tracking.result_set_id) landingUrl.searchParams.set("mcp_result_set", tracking.result_set_id);
@@ -229,6 +233,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   }
   const url = landingUrl?.toString() ?? finalCartUrl;
   const cartHandoff = {
+    mcp_handoff_id: mcpHandoffId,
     primary_url: url,
     primary_url_role: landingUrl ? "measured_mcp_cart_landing" : "shopify_cart_permalink",
     required_next_action: landingUrl
@@ -246,12 +251,14 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
       utm_campaign: cartTracking.utm_campaign,
       utm_content: cartTracking.utm_content,
       utm_term: cartTracking.utm_term ?? null,
+      mcp_handoff_id: mcpHandoffId,
       mcp_key: tracking.continuity_key,
       mcp_journey: tracking.journey_id,
       mcp_result_set: tracking.result_set_id ?? null,
     },
   };
   const response = {
+    mcp_handoff_id: mcpHandoffId,
     url,
     final_cart_url: finalCartUrl,
     cart_handoff: cartHandoff,
@@ -312,6 +319,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
         match_type: matchType,
         packrift_ai_id: tracking.packrift_ai_id,
         ai_commerce_id: tracking.ai_commerce_id,
+        mcp_handoff_id: mcpHandoffId,
         mcp_key: tracking.continuity_key,
         mcp_journey: tracking.journey_id,
         mcp_result_set: tracking.result_set_id ?? "",

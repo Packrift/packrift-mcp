@@ -564,6 +564,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.status === "ok" &&
       trackedFirstRunExecute?.sku === "1066" &&
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
+      trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R15" &&
       agentCapture?.surfaces?.length >= 22 &&
@@ -678,7 +679,7 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R21" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R22" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -696,6 +697,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_activation_cart_ready_events === "number" &&
       typeof usageSnapshot?.counts?.reviewer_activation_resource_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
+      typeof usageSnapshot?.counts?.unique_mcp_handoff_ids === "number" &&
       typeof usageSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
       typeof usageSnapshot?.counts?.external_qualified_create_cart_url_calls === "number" &&
       typeof usageSnapshot?.counts?.post_install_sources_waiting_on_create_cart_url === "number" &&
@@ -733,6 +735,7 @@ async function liveMcpCheck() {
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.recent_activation_cart_ready) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
+      Array.isArray(usageSnapshot?.source_attribution?.mcp_handoff_ids) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
@@ -748,7 +751,7 @@ async function liveMcpCheck() {
       ) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R15" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R16" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       funnelSnapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
@@ -772,6 +775,7 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.counts?.ga4_qualified_external_mcp_session_starts === "number" &&
       typeof funnelSnapshot?.counts?.ga4_qualified_external_mcp_session_threshold === "number" &&
       typeof funnelSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
+      typeof funnelSnapshot?.counts?.unique_mcp_handoff_ids === "number" &&
       typeof funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === "number" &&
       (funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === 0 ||
         funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === true) &&
@@ -865,7 +869,7 @@ async function liveMcpCheck() {
       firstRunProof?.live_demo?.pricing?.currency &&
       firstRunProof?.live_demo?.inventory?.in_stock === true &&
       firstRunProof?.live_demo?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/") &&
-      hasAll(firstRunProof?.live_demo?.cart?.url ?? "", ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]) &&
+      hasAll(firstRunProof?.live_demo?.cart?.url ?? "", ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "mcp_handoff_id="]) &&
       workflowGallery?.release === "PACKRIFT-MCP-WORKFLOW-GALLERY-R01" &&
       workflowGallery?.canonical_endpoint === MCP_ENDPOINT &&
       workflowGallery?.workflow_count >= 5 &&
@@ -1190,6 +1194,7 @@ async function liveMcpCheck() {
       tracked_first_run_execute_ok: trackedFirstRunExecute?.status ?? null,
       tracked_first_run_execute_sku: trackedFirstRunExecute?.sku ?? null,
       tracked_first_run_execute_cart_url: trackedFirstRunExecute?.cart?.url ?? null,
+      tracked_first_run_execute_mcp_handoff_id_present: String(trackedFirstRunExecute?.cart?.url ?? "").includes("mcp_handoff_id="),
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
@@ -1202,6 +1207,7 @@ async function liveMcpCheck() {
       usage_snapshot_first_run_intent_events: usageSnapshot?.counts?.mcp_first_run_intent_events ?? null,
       usage_snapshot_first_run_execution_events: usageSnapshot?.counts?.mcp_first_run_execution_events ?? null,
       usage_snapshot_install_copy_events: usageSnapshot?.counts?.mcp_install_copy_events ?? null,
+      usage_snapshot_unique_mcp_handoff_ids: usageSnapshot?.counts?.unique_mcp_handoff_ids ?? null,
       usage_snapshot_start_sources: usageSnapshot?.source_attribution?.mcp_start_click_sources ?? [],
       usage_snapshot_tracked_config_sources: usageSnapshot?.source_attribution?.tracked_config_sources ?? [],
       usage_snapshot_install_intent_sources: usageSnapshot?.source_attribution?.install_intent_sources ?? [],
@@ -1214,6 +1220,7 @@ async function liveMcpCheck() {
       funnel_snapshot_release: funnelSnapshot?.release ?? null,
       funnel_snapshot_status: funnelSnapshot?.status ?? null,
       funnel_snapshot_cart_landings: funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings ?? null,
+      funnel_snapshot_unique_mcp_handoff_ids: funnelSnapshot?.counts?.unique_mcp_handoff_ids ?? null,
       funnel_snapshot_orders: funnelSnapshot?.counts?.first_party_mcp_orders ?? null,
       funnel_snapshot_revenue: funnelSnapshot?.counts?.first_party_mcp_order_revenue ?? null,
       buyer_use_cases_release: buyerUseCases?.release ?? null,
