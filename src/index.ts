@@ -1778,19 +1778,22 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const cartClicks = byEvent.mcp_cart_click ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
-  const directAgentResourceEvents =
-    (bySource.all_agent_capture ?? 0) +
-    (bySource.mcp_adoption_kit ?? 0) +
-    (bySource.mcp_install_matrix ?? 0) +
-    (bySource.mcp_usage_snapshot ?? 0) +
-    (bySource.mcp_buyer_use_cases ?? 0) +
-    (bySource.browser_agent_bridge ?? 0) +
-    (bySource.mcp_directory_refresh ?? 0) +
-    (bySource.mcp_directory_submit_actions ?? 0) +
-    (bySource.mcp_cart_handoff_candidates ?? 0);
+  const directAgentResourceSources = [
+    "all_agent_capture",
+    "mcp_adoption_kit",
+    "mcp_install_matrix",
+    "mcp_usage_snapshot",
+    "mcp_buyer_use_cases",
+    "mcp_cart_activation",
+    "browser_agent_bridge",
+    "mcp_directory_refresh",
+    "mcp_directory_submit_actions",
+    "mcp_cart_handoff_candidates",
+  ];
+  const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R01",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R02",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -1815,6 +1818,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       exact_match_events: exactMatches,
       no_match_events: noMatches,
       direct_agent_resource_events: directAgentResourceEvents,
+      direct_agent_resource_sources: directAgentResourceSources,
       adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
       install_matrix_resource_events: bySource.mcp_install_matrix ?? 0,
       all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,

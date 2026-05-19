@@ -248,7 +248,8 @@ async function liveMcpCheck() {
       installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R01" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.smoke_tests?.length >= 5 &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R01" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R02" &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
       cartActivation?.release === "PACKRIFT-MCP-CART-ACTIVATION-R01" &&
@@ -258,9 +259,11 @@ async function liveMcpCheck() {
       browserAgentBridge?.workflows?.length >= 3 &&
       directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R02" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R03" &&
       directorySubmitActions?.actions?.length >= 7 &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
@@ -299,6 +302,7 @@ async function liveMcpCheck() {
       install_matrix_smoke_tests: installMatrix?.smoke_tests?.length ?? 0,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
+      usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],
       buyer_use_cases_release: buyerUseCases?.release ?? null,
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
       cart_activation_release: cartActivation?.release ?? null,
@@ -309,6 +313,9 @@ async function liveMcpCheck() {
       directory_refresh_targets: directoryRefresh?.priority_refresh_targets?.length ?? 0,
       directory_submit_actions_release: directorySubmitActions?.release ?? null,
       directory_submit_actions_count: directorySubmitActions?.actions?.length ?? 0,
+      directory_submit_actions_cart_activation_messages: directorySubmitActions?.actions?.filter((action) =>
+        action.recrawl_message?.includes("mcp-cart-activation.json")
+      ).length ?? 0,
       first_cart_url_candidate_type: cart?.items?.[0]?.cart_url_candidate_type ?? null,
       first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
       mcp_introspection: {
