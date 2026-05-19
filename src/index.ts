@@ -2446,7 +2446,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     activationCartReady +
     directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R18",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R19",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2825,7 +2825,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R10";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R11";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3038,6 +3038,20 @@ function postInstallCartActivationBySource(events: Array<Record<string, unknown>
     }
   }
   return [...rows.values()]
+    .filter(
+      (row) =>
+        row.source !== "mcp_route_redirect" ||
+        row.starts +
+          row.tracked_config_fetches +
+          row.install_intents +
+          row.first_run_actions +
+          row.first_run_executions +
+          row.install_copies +
+          row.mcp_tool_calls +
+          row.activation_cart_ready +
+          row.external_qualified_create_cart_url_calls >
+          0
+    )
     .map((row) => ({
       ...row,
       install_targets: Object.entries(row.install_targets)
