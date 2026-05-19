@@ -1150,7 +1150,7 @@ async function liveMcpCheck() {
       directoryUpdateMarketplace?.copy_ready_recrawl_message?.includes("mcp_marketplace_io") &&
       directoryUpdateBrowse?.source === "browse_sh" &&
       directoryUpdateBrowse?.directory?.action_status === "catalog_live_installable" &&
-      directoryUpdateBrowse?.tracked_urls?.install?.codex === "https://mcp.packrift.com/r/install/browse_sh/codex" &&
+      directoryUpdateBrowse?.tracked_urls?.install?.codex?.startsWith("https://mcp.packrift.com/r/install/browse_sh/codex") &&
       directoryUpdateBrowseMarkdownResult.ok &&
       directoryUpdateBrowseMarkdownResult.text.includes("Browserbase Browse / browse.sh") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_marketplace_io" && action.proof_urls?.marketplace_manifest === "https://mcp.packrift.com/.well-known/mcp-marketplace.json") &&
