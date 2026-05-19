@@ -155,6 +155,7 @@ async function main() {
     "browser_agent_bridge",
     "browserbase_browse_candidate",
     "mcp_directory_refreshes",
+    "mcp_directory_submit_actions",
     "search_and_answer_crawlers",
   ];
   const missingSurfaceIds = requiredSurfaceIds.filter((id) => !surfaceIds.has(id));
@@ -169,6 +170,7 @@ async function main() {
     "buyer use cases",
     "browser-agent bridge",
     "directory refresh",
+    "directory submit actions",
     "Browserbase Browse",
     "ChatGPT/OpenAI commerce",
     "Claude",
@@ -221,6 +223,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises directory refresh pack", hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises directory submit actions", hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-submit-actions.md"), {
       detail: `resources=${resources.length}`,
     }),
   ];

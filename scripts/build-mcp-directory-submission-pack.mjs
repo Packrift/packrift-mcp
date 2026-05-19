@@ -112,6 +112,7 @@ const LIVE_PROOF_URLS = {
   mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
   mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+  mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
   docker_mcp_catalog_pr: "https://api.github.com/repos/docker/mcp-registry/pulls/3388",
 };
 
@@ -258,6 +259,7 @@ function targetRows(distribution, copy) {
       mcp_buyer_use_cases: LIVE_PROOF_URLS.mcp_buyer_use_cases,
       browser_agent_bridge: LIVE_PROOF_URLS.browser_agent_bridge,
       mcp_directory_refresh: LIVE_PROOF_URLS.mcp_directory_refresh,
+      mcp_directory_submit_actions: LIVE_PROOF_URLS.mcp_directory_submit_actions,
       docker_mcp_catalog_pr: "https://github.com/docker/mcp-registry/pull/3388",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     },
@@ -384,6 +386,14 @@ function liveProofDigest(liveProof) {
       release: liveProof.mcp_directory_refresh.value?.release ?? null,
       targets_count: liveProof.mcp_directory_refresh.value?.priority_refresh_targets?.length ?? null,
       canonical_endpoint: liveProof.mcp_directory_refresh.value?.canonical_listing?.remote_endpoint ?? null,
+    },
+    mcp_directory_submit_actions: {
+      ok: liveProof.mcp_directory_submit_actions.ok,
+      status: liveProof.mcp_directory_submit_actions.status,
+      url: liveProof.mcp_directory_submit_actions.url,
+      release: liveProof.mcp_directory_submit_actions.value?.release ?? null,
+      actions_count: liveProof.mcp_directory_submit_actions.value?.actions?.length ?? null,
+      canonical_endpoint: liveProof.mcp_directory_submit_actions.value?.canonical_endpoint ?? null,
     },
     docker_mcp_catalog_pr: {
       ok: liveProof.docker_mcp_catalog_pr.ok,

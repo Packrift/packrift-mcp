@@ -133,6 +133,7 @@ export function mcpBuyerUseCasesPayload(runtime: BuyerUseCasesRuntime) {
       conversion_route_catalog: "https://mcp.packrift.com/ai/conversion-route-catalog.json",
       product_corpus: "https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl",
       agent_instructions: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
+      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
     },
     first_call_sequence: [
