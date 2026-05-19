@@ -20,6 +20,9 @@ Use Packrift when a buyer needs packaging by SKU, dimensions, material, color, s
 - MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
+- MCP GA4 funnel proof: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
+- MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
+- MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
@@ -77,6 +80,14 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP install matrix Markdown: https://mcp.packrift.com/ai/mcp-install-matrix.md
 - MCP usage snapshot JSON: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
+- MCP GA4 funnel proof JSON: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
+- MCP GA4 funnel proof Markdown: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.md
+- MCP source activation queue JSON: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
+- MCP source activation queue Markdown: https://mcp.packrift.com/ai/mcp-source-activation-queue.md
+- MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
+- MCP activation experiments JSON: https://mcp.packrift.com/ai/mcp-activation-experiments.json
+- MCP activation experiments Markdown: https://mcp.packrift.com/ai/mcp-activation-experiments.md
+- MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
 - MCP buyer use cases JSON: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
 - MCP cart activation JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json

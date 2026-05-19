@@ -402,6 +402,11 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
+- MCP GA4 funnel proof: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
+- MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
+- MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
+- MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
+- MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
