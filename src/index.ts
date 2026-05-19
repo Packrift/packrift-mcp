@@ -3769,10 +3769,23 @@ function sourceFromMcpAttributionText(value: unknown): string {
   return "";
 }
 
+function normalizedPostInstallMcpSourceContext(value: unknown): string {
+  const context = safeEventText(value, 80).toLowerCase();
+  if (!context) return "";
+  const attributedSource = sourceFromMcpAttributionText(context);
+  if (attributedSource) return attributedSource;
+  const suffixMatch = /^(.+)_(?:first_cart_run|first_run|cart_run|purchase_handoff|activation)$/.exec(context);
+  const source = safeEventText(suffixMatch?.[1], 80);
+  if (source && MCP_START_SOURCE_PATTERN.test(source)) return source;
+  return context;
+}
+
 function postInstallActivationSource(event: Record<string, unknown>): string {
   const eventName = String(event.event ?? "");
   const mcpSource = safeEventText(event.mcp_source_context, 80);
-  if ((eventName === "mcp_tool_call" || eventName === "mcp_activation_cart_ready") && mcpSource) return mcpSource;
+  if ((eventName === "mcp_tool_call" || eventName === "mcp_activation_cart_ready") && mcpSource) {
+    return normalizedPostInstallMcpSourceContext(mcpSource);
+  }
   const attributedSource = sourceFromMcpAttributionText(
     [event.mcp_journey, event.mcp_result_set, event.packrift_ai_id, event.ai_commerce_id].filter(Boolean).join("|")
   );
@@ -4366,13 +4379,32 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R14",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R15",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     status: funnel.source_activation_priority_queue.length > 0 ? "activation_needed" : "no_priority_sources",
     purpose:
       "Public next-best-action queue for converting Packrift MCP directory/source activity into real MCP tool calls, qualified /r/cart landings, and MCP-attributed purchases.",
+    source_context_normalization: {
+      release: "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01",
+      rule:
+        "First-run tool contexts like {source}_first_cart_run are grouped back to the base source so real MCP calls close the correct source activation row.",
+      examples: [
+        {
+          raw: "cline_mcp_marketplace_first_cart_run",
+          normalized: normalizedPostInstallMcpSourceContext("cline_mcp_marketplace_first_cart_run"),
+        },
+        {
+          raw: "mcp_so_first_cart_run",
+          normalized: normalizedPostInstallMcpSourceContext("mcp_so_first_cart_run"),
+        },
+        {
+          raw: "browse_sh_first_cart_run",
+          normalized: normalizedPostInstallMcpSourceContext("browse_sh_first_cart_run"),
+        },
+      ],
+    },
     source_snapshot: {
       funnel_release: funnel.release,
       funnel_status: funnel.status,
@@ -4890,7 +4922,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R06",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R07",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
