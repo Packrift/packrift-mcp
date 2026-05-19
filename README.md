@@ -67,6 +67,12 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 }
 ```
 
+Cline users should use the tracked Cline target, which returns Cline-native `streamableHttp` config:
+
+```text
+https://mcp.packrift.com/r/install/generic/cline?format=json
+```
+
 ## Hosted connector and directory listings
 
 Use the hosted endpoint above when possible. It requires no buyer-side API key and exposes the current 15-tool Packrift exact-spec commerce surface.

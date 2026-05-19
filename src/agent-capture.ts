@@ -178,6 +178,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the public goal gate; keep working until qualified visitors, cart landings, and MCP-attributed revenue are all proven.",
     }),
     surface({
+      id: "mcp_ga4_funnel_proof",
+      name: "Packrift MCP GA4 funnel proof",
+      agent_type: "funnel_measurement",
+      audience: "Directory reviewers, agent builders, and Packrift operators who need canonical visitor proof without local GA4 files or raw order rows.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      install_or_call:
+        "Use the public GA4 proof to verify qualified external MCP session starts, the remaining gap to 1,000 qualified visitors, qualified cart landings, and MCP-attributed order progress.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      next_action: "Treat this as the canonical visitor gate and keep proof-page fetches separate from buyer demand.",
+    }),
+    surface({
       id: "mcp_source_activation_queue",
       name: "Packrift MCP source activation queue",
       agent_type: "source_activation_measurement",
@@ -566,7 +581,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R14",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R15",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -579,6 +594,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       agent_instructions: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
@@ -655,7 +671,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser runners, direct client config, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser runners, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",

@@ -1,6 +1,6 @@
 import { allAgentCapturePayload, type AgentCaptureRuntime } from "./agent-capture.js";
 import { mcpDirectorySubmitActionsPayload, type DirectorySubmitActionsRuntime } from "./directory-submit-actions.js";
-import { TRACKED_INSTALL_TEMPLATE, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 
 export interface AgentCaptureOutreachRuntime extends AgentCaptureRuntime, DirectorySubmitActionsRuntime {}
 
@@ -70,7 +70,7 @@ function agentInstallSnippets() {
     codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
     claude_desktop_config: genericMcpJson(),
     cursor_windsurf_vscode_config: genericMcpJson(),
-    cline_config: genericMcpJson(),
+    cline_config: clineMcpJson(),
     cline_tracked_install: "https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=html",
     cline_tracked_first_run: "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=html",
     client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
@@ -323,7 +323,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R13",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R14",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

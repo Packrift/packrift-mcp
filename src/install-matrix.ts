@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, trackedInstallUrl } from "./install-action.js";
 
 export interface InstallMatrixRuntime {
   serverVersion: string;
@@ -189,10 +189,11 @@ const HOSTS = [
     audience: "Cline users and Cline MCP Marketplace reviewers who need a direct remote MCP config.",
     status: "ready",
     preferred: true,
-    install: remoteMcpJson(),
+    install: clineMcpJson(),
     first_test_ids: ["tools-list", "candidate-1066", "price-1066", "inventory-1066", "cart-1066"],
     notes: [
       "Use the Cline-specific target for Cline Marketplace activation and recrawl proof.",
+      "Use streamableHttp in Cline remote MCP config.",
       "This is a hosted remote MCP config only; do not create a Packrift CLI.",
     ],
   },
@@ -258,7 +259,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R05",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R06",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -365,6 +366,10 @@ export function mcpInstallMatrixMarkdown(runtime: InstallMatrixRuntime): string 
     "## Copy-Ready Generic Config",
     "",
     fencedJson(remoteMcpJson()),
+    "",
+    "## Copy-Ready Cline Config",
+    "",
+    fencedJson(clineMcpJson()),
     "",
     "## Tracked Install Actions",
     "",

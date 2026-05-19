@@ -144,6 +144,7 @@ async function main() {
     "mcp_client_config",
     "mcp_usage_snapshot",
     "mcp_funnel_snapshot",
+    "mcp_ga4_funnel_proof",
     "mcp_source_activation_queue",
     "buyer_mcp_use_cases",
     "mcp_cart_activation",
@@ -187,6 +188,7 @@ async function main() {
     "client config",
     "usage snapshot",
     "funnel snapshot",
+    "GA4 proof",
     "source activation queue",
     "command center",
     "buyer use cases",
@@ -213,7 +215,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R14", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R15", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -266,6 +268,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises funnel snapshot", hasResourceUri(resourceUris, "/ai/mcp-funnel-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-funnel-snapshot.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises GA4 funnel proof", hasResourceUri(resourceUris, "/ai/mcp-ga4-funnel-proof.json") && hasResourceUri(resourceUris, "/ai/mcp-ga4-funnel-proof.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises source activation queue", hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.html") && hasResourceUri(resourceUris, "/r/activate"), {

@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 
 export interface McpClientConfigRuntime {
@@ -115,7 +115,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R08",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R09",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -132,6 +132,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       prompts_count: runtime.promptsCount,
     },
     config: remoteMcpJson(),
+    cline_config: clineMcpJson(),
     aliases: {
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
@@ -164,7 +165,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
     },
     host_notes: [
       "For Cursor, Windsurf, VS Code, Roo-style hosts, Claude Desktop, and generic MCP clients, use the config.mcpServers.packrift object.",
-      "For Cline and the Cline MCP Marketplace review path, prefer the tracked Cline target at /r/install/{source}/cline and /r/run/{source}/cline.",
+      "For Cline and the Cline MCP Marketplace review path, use cline_config or the tracked Cline target at /r/install/{source}/cline and /r/run/{source}/cline.",
       "If a host asks for transport, choose HTTP or Streamable HTTP.",
       "Do not ask buyers for Packrift API keys; the hosted endpoint requires no buyer-side auth.",
       "After install, run the required post-install verification sequence for SKU 1066; it returns a measured cart URL only and does not place an order.",
@@ -220,6 +221,10 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     "## Copy-Ready MCP JSON",
     "",
     fencedJson(payload.config),
+    "",
+    "## Copy-Ready Cline MCP JSON",
+    "",
+    fencedJson(payload.cline_config),
     "",
     "## Source-Attributed Config Links",
     "",

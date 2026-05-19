@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R07";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R07";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R08";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R08";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -47,6 +47,19 @@ function remoteMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
       [name]: {
         type: "http",
         url: endpoint,
+      },
+    },
+  };
+}
+
+export function clineMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
+  return {
+    mcpServers: {
+      [name]: {
+        type: "streamableHttp",
+        url: endpoint,
+        disabled: false,
+        timeout: 60,
       },
     },
   };
@@ -119,11 +132,12 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     label: "Cline MCP config",
     audience: "Cline users and Cline MCP Marketplace reviewers who need a copy-ready remote MCP config.",
     format: "json",
-    copyText: JSON.stringify(remoteMcpJson(), null, 2),
-    install: remoteMcpJson(),
+    copyText: JSON.stringify(clineMcpJson(), null, 2),
+    install: clineMcpJson(),
     firstTests: ["tools/list", "get_cart_handoff_candidates", "get_pricing", "check_inventory", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: [
       "Use this Cline-specific target for the Cline MCP Marketplace activation row.",
+      "Cline remote server config uses streamableHttp plus the hosted Packrift MCP URL.",
       "This remains a thin remote MCP config for the hosted endpoint, not a separate Packrift CLI.",
     ],
   },
@@ -353,7 +367,7 @@ function mcpCurlScript(endpoint: string, sequence: readonly Record<string, unkno
 
 function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
   const endpoint = sourceAwareMcpEndpoint(source, target.id);
-  const config = remoteMcpJson("packrift", endpoint);
+  const config = target.id === "cline" ? clineMcpJson("packrift", endpoint) : remoteMcpJson("packrift", endpoint);
   const quotedEndpoint = shellQuote(endpoint);
   switch (target.id) {
     case "generic_streamable_http":

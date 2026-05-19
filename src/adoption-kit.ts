@@ -1,3 +1,5 @@
+import { clineMcpJson } from "./install-action.js";
+
 export interface AdoptionKitRuntime {
   serverVersion: string;
   toolsCount: number;
@@ -129,7 +131,7 @@ print(rpc("candidate-1066", "tools/call", {
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R05",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R06",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -170,14 +172,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
           },
         },
       },
-      cline: {
-        mcpServers: {
-          packrift: {
-            type: "http",
-            url: MCP_ENDPOINT,
-          },
-        },
-      },
+      cline: clineMcpJson(),
       glama_connector: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
       marketplace_listing: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
       registry_search: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
