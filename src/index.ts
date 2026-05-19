@@ -280,12 +280,19 @@ interface RpcExecutionContext {
   userAgent?: string;
   sourceSlug?: string;
   installTarget?: string;
+  sourceInference?: string;
   utmMedium?: string;
   utmCampaign?: string;
   utmContent?: string;
 }
 
 type RouteRedirectAction = "product" | "reorder" | "quote" | "cart";
+
+type InferredMcpRuntimeSource = {
+  sourceSlug: string;
+  installTarget?: string;
+  sourceInference: string;
+};
 
 function normalizeMcpRuntimeSlug(value: unknown): string {
   const slug = safeEventText(value, 80)
@@ -304,13 +311,58 @@ function firstRuntimeSlug(url: URL, keys: string[]): string {
   return "";
 }
 
-function mcpSourceContinuityFromUrl(url: URL): RpcExecutionContext {
+function inferredRuntimeSource(sourceSlug: string, installTarget: string | undefined, sourceInference: string): InferredMcpRuntimeSource | null {
+  const normalizedSource = normalizeMcpRuntimeSlug(sourceSlug);
+  if (!normalizedSource) return null;
+  const normalizedTarget = normalizeMcpRuntimeSlug(installTarget);
+  return {
+    sourceSlug: normalizedSource,
+    installTarget: normalizedTarget || undefined,
+    sourceInference,
+  };
+}
+
+function inferMcpRuntimeSourceFromUserAgent(userAgent: string): InferredMcpRuntimeSource | null {
+  const ua = userAgent.toLowerCase();
+  if (!ua) return null;
+  if (ua.includes("cline")) return inferredRuntimeSource("cline_mcp_marketplace", "cline", "user_agent_cline");
+  if (ua.includes("cursor")) return inferredRuntimeSource("cursor_directory", "cursor_windsurf_vscode", "user_agent_cursor");
+  if (ua.includes("windsurf")) return inferredRuntimeSource("windsurf_direct", "cursor_windsurf_vscode", "user_agent_windsurf");
+  if (ua.includes("roo")) return inferredRuntimeSource("roo_direct", "cursor_windsurf_vscode", "user_agent_roo");
+  if (ua.includes("vscode") || ua.includes("vs code")) return inferredRuntimeSource("vscode_direct", "cursor_windsurf_vscode", "user_agent_vscode");
+  if (ua.includes("codex")) return inferredRuntimeSource("codex_remote_mcp", "codex", "user_agent_codex");
+  if (ua.includes("claude")) return inferredRuntimeSource("claude_remote_mcp", "claude_code", "user_agent_claude");
+  if (ua.includes("anthropic")) return inferredRuntimeSource("anthropic_remote_mcp", "claude_code", "user_agent_anthropic");
+  if (ua.includes("glama")) return inferredRuntimeSource("glama_connector", "glama_connector", "user_agent_glama");
+  if (ua.includes("smithery")) return inferredRuntimeSource("smithery", "generic_streamable_http", "user_agent_smithery");
+  if (ua.includes("browserbase") || ua.includes("browse")) return inferredRuntimeSource("browse_sh", "generic_streamable_http", "user_agent_browserbase_browse");
+  if (ua.includes("chatmcp") || ua.includes("mcp.so")) return inferredRuntimeSource("mcp_so", "generic_streamable_http", "user_agent_mcp_so");
+  if (ua.includes("mcp-marketplace") || ua.includes("mcp_marketplace")) return inferredRuntimeSource("mcp_marketplace_io", "mcp_marketplace", "user_agent_mcp_marketplace");
+  if (ua.includes("modelcontextprotocol") || ua.includes("mcp-client") || /\bmcp\b/.test(ua)) {
+    return inferredRuntimeSource("unattributed_mcp_client", "generic_streamable_http", "user_agent_generic_mcp_client");
+  }
+  return null;
+}
+
+function mcpSourceContinuityFromUrl(url: URL, userAgent = ""): RpcExecutionContext {
   const sourceSlug = firstRuntimeSlug(url, [MCP_SOURCE_QUERY_PARAM, "mcp_source", "utm_source"]);
-  if (!sourceSlug) return {};
+  if (!sourceSlug) {
+    const inferred = inferMcpRuntimeSourceFromUserAgent(userAgent);
+    if (!inferred) return {};
+    return {
+      sourceSlug: inferred.sourceSlug,
+      installTarget: inferred.installTarget,
+      sourceInference: inferred.sourceInference,
+      utmMedium: "mcp_runtime_inferred",
+      utmCampaign: "packrift_mcp_runtime",
+      utmContent: inferred.installTarget ?? inferred.sourceSlug,
+    };
+  }
   const installTarget = firstRuntimeSlug(url, [MCP_TARGET_QUERY_PARAM, "mcp_target", "utm_content"]);
   return {
     sourceSlug,
     installTarget: installTarget || undefined,
+    sourceInference: "query_param",
     utmMedium: safeEventText(url.searchParams.get("utm_medium"), 80) || undefined,
     utmCampaign: safeEventText(url.searchParams.get("utm_campaign"), 120) || undefined,
     utmContent: safeEventText(url.searchParams.get("utm_content"), 120) || undefined,
@@ -323,6 +375,7 @@ function rpcContextTelemetry(context: RpcExecutionContext) {
     userAgent: context.userAgent,
     sourceSlug: context.sourceSlug,
     installTarget: context.installTarget,
+    sourceInference: context.sourceInference,
     utmMedium: context.utmMedium,
     utmCampaign: context.utmCampaign,
     utmContent: context.utmContent,
@@ -339,6 +392,8 @@ function mcpContinuityAttribution(meta: RpcExecutionContext, actionLabel: string
   return {
     mcp_source_context: sourceSlug,
     mcp_install_target: target,
+    mcp_source_inference: safeEventText(meta.sourceInference, 80),
+    mcp_source_inference_release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
     packrift_ai_id: id,
     ai_commerce_id: id,
     mcp_key: `runtime:${sourceSlug}`,
@@ -747,6 +802,7 @@ const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TE
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
 const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEMETRY-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
+const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R01";
 const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const MCP_ORDER_ATTRIBUTION_RELEASE = "PACKRIFT-MCP-ORDER-ATTRIBUTION-R01";
@@ -1315,6 +1371,18 @@ function classifyAgentFamily(userAgent: string): string {
   if (ua.includes("bingbot")) return "bingbot";
   if (ua.includes("claudebot")) return "anthropic_claudebot";
   if (ua.includes("anthropic-ai")) return "anthropic_ai";
+  if (ua.includes("cline")) return "cline_mcp_client";
+  if (ua.includes("cursor")) return "cursor_mcp_client";
+  if (ua.includes("windsurf")) return "windsurf_mcp_client";
+  if (ua.includes("roo")) return "roo_mcp_client";
+  if (ua.includes("vscode") || ua.includes("vs code")) return "vscode_mcp_client";
+  if (ua.includes("codex")) return "codex_mcp_client";
+  if (ua.includes("claude")) return "claude_mcp_client";
+  if (ua.includes("browserbase") || ua.includes("browse")) return "browserbase_browse_client";
+  if (ua.includes("glama")) return "glama_mcp_client";
+  if (ua.includes("smithery")) return "smithery_mcp_client";
+  if (ua.includes("chatmcp") || ua.includes("mcp.so")) return "mcp_so_client";
+  if (ua.includes("modelcontextprotocol") || ua.includes("mcp-client") || /\bmcp\b/.test(ua)) return "generic_mcp_client";
   if (ua.includes("bytespider")) return "bytedance_bytespider";
   if (ua.includes("duckduckbot")) return "duckduckbot";
   if (ua.includes("bot") || ua.includes("crawler") || ua.includes("spider")) return "other_bot";
@@ -7403,6 +7471,9 @@ function mcpMarketplaceDiscoveryPayload() {
     },
     signals: {
       category: "Business Tools",
+      runtime_source_inference_release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
+      runtime_source_inference:
+        "MCP calls with packrift_mcp_source, mcp_source, or utm_source keep explicit source attribution. Direct untracked MCP clients are source-attributed from recognizable user-agent families such as Cline, Cursor, Windsurf, Codex, Claude, Glama, Smithery, Browse, MCP.so, and generic MCP clients.",
       tags: [
         "mcp",
         "ecommerce",
@@ -9671,7 +9742,8 @@ app.get("/admin/mcp-stats", async (c) => {
 app.post("/mcp", async (c) => {
   const env = c.env;
   const requestUrl = new URL(c.req.url);
-  const continuity = mcpSourceContinuityFromUrl(requestUrl);
+  const userAgent = c.req.header("User-Agent") ?? "";
+  const continuity = mcpSourceContinuityFromUrl(requestUrl, userAgent);
   let body: unknown;
   try {
     body = await c.req.json();
@@ -9694,7 +9766,6 @@ app.post("/mcp", async (c) => {
     return r;
   };
 
-  const userAgent = c.req.header("User-Agent") ?? "";
   const rpcContext = { sessionId, userAgent, ...continuity };
 
   if (Array.isArray(body)) {

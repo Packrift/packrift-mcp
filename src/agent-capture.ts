@@ -597,7 +597,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R16",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R17",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -652,6 +652,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Use /r/config/{source} for tracked config fetches when a directory or host accepts a direct MCP JSON config URL.",
       "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
       "Use /r/run/{source}/{target} after install to measure first-run intent and push users into create_cart_url.",
+      "When a direct MCP client skips tracked config, infer source attribution from recognizable user-agent families such as Cline, Cursor, Windsurf, Codex, Claude, Glama, Smithery, Browse, MCP.so, or generic MCP clients.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
       "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
     ],
