@@ -79,10 +79,10 @@ const DIRECTORY_TARGETS = [
     id: "mcp_so",
     name: "MCP.so",
     listing_url: "https://mcp.so/servers?keyword=Packrift",
-    refresh_url: "https://mcp.so/submit",
+    refresh_url: "https://github.com/chatmcp/mcpso/issues/2189",
     priority: "high",
     requested_action:
-      "Submit or claim Packrift MCP with the hosted endpoint, tracked start link, and exact-spec packaging category copy.",
+      "Monitor the updated MCP.so submission issue #2189 and wait for listing publication before attempting any duplicate owner-authenticated submission.",
   },
   {
     id: "browse_sh",
@@ -191,7 +191,7 @@ const DIRECTORY_TARGETS = [
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R13",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R14",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",

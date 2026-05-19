@@ -123,16 +123,18 @@ const ACTIONS = [
   {
     id: "mcp_so",
     label: "MCP.so",
-    action_status: "manual_submission_ready",
+    action_status: "submitted_pending",
     directory_status: "unlisted",
     priority: "high",
-    method: "Manual submit form.",
-    evidence: "The public submit form is reachable, but Packrift is not confirmed in listing results.",
+    method: "GitHub issue submission updated after the auth-gated public submit form.",
+    evidence:
+      "chatmcp/mcpso issue #2189 is open and was updated on 2026-05-19 with the current hosted endpoint, 15-tool surface, tracked install page, and MCP.so activation runner.",
     stale_markers: ["Packrift not visible as a confirmed MCP.so server result"],
-    recrawl_subject: "Submit Packrift MCP to MCP.so",
-    next_action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
+    recrawl_subject: "Review MCP.so Packrift MCP submission",
+    next_action:
+      "Monitor issue #2189 and MCP.so search; do not create a duplicate submission unless MCP.so asks for a fresh owner-authenticated form entry.",
     listing_url: "https://mcp.so/servers?keyword=Packrift",
-    submission_url: "https://mcp.so/submit",
+    submission_url: "https://github.com/chatmcp/mcpso/issues/2189",
   },
   {
     id: "browse_sh",
@@ -443,7 +445,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R21",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R22",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

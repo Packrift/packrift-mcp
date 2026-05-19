@@ -129,11 +129,11 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
 
   return {
     mcp_so: {
-      status: "browser_auth_required",
-      submission_url: "https://mcp.so/submit",
+      status: "submitted_pending",
+      submission_url: "https://github.com/chatmcp/mcpso/issues/2189",
       listing_url: "https://mcp.so/servers?keyword=Packrift",
       auth_gate:
-        "MCP.so currently requires a signed-in user before submitting a server. Use this payload in the browser form after sign-in; do not direct-post without an authenticated owner session.",
+        "MCP.so's public form is owner-auth gated, so the existing chatmcp/mcpso issue #2189 was updated with current proof on 2026-05-19. Do not create a duplicate submission unless MCP.so asks for a fresh authenticated form entry.",
       inspected_submit_endpoint: "POST https://mcp.so/api/submit-project",
       fields: {
         name: "Packrift MCP",
@@ -298,7 +298,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R09",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R10",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

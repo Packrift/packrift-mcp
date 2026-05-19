@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R03";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R04";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -354,7 +354,8 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
       try {
         const url = new URL(value);
         const parts = url.pathname.split("/").filter(Boolean);
-        return parts[1] || "";
+        const cartIndex = parts.indexOf("cart");
+        return cartIndex >= 0 ? parts[cartIndex + 1] || "" : "";
       } catch {
         return "";
       }
@@ -393,7 +394,6 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
           utm_content: "cart_ready",
           utm_term: sku,
           cart_url: measuredCartUrl,
-          final_cart_url: measuredCartUrl,
           source_url: window.location.href,
           page_url: window.location.href,
           referrer: document.referrer,
