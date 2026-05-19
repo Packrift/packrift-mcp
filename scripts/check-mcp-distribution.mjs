@@ -618,9 +618,12 @@ async function liveMcpCheck() {
       funnelSnapshot?.source_attribution?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       Array.isArray(funnelSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(funnelSnapshot?.source_attribution?.first_run_intent_sources) &&
+      Array.isArray(funnelSnapshot?.source_attribution?.first_run_intent_targets) &&
       Array.isArray(funnelSnapshot?.source_attribution?.tool_runtime_sources) &&
       Array.isArray(funnelSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
       funnelSnapshot?.links?.cart_activation === "https://mcp.packrift.com/ai/mcp-cart-activation.json" &&
+      funnelSnapshot?.links?.first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
+      funnelSnapshot?.links?.tracked_run_generic === "https://mcp.packrift.com/r/run/generic/generic_streamable_http" &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
       cartActivation?.release === "PACKRIFT-MCP-CART-ACTIVATION-R02" &&
