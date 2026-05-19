@@ -238,8 +238,10 @@ async function liveMcpCheck() {
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R01" &&
       agentCapture?.surfaces?.length >= 20 &&
-      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R01" &&
+      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R02" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
+      adoptionKit?.developer_examples?.length >= 4 &&
+      adoptionKit?.expected_first_flow_outcomes?.some((outcome) => outcome.includes("https://mcp.packrift.com/r/cart/")) &&
       installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R01" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.smoke_tests?.length >= 5 &&
@@ -283,6 +285,7 @@ async function liveMcpCheck() {
       agent_capture_surfaces: agentCapture?.surfaces?.length ?? 0,
       adoption_kit_release: adoptionKit?.release ?? null,
       adoption_kit_steps: adoptionKit?.first_five_minutes?.length ?? 0,
+      adoption_kit_developer_examples: adoptionKit?.developer_examples?.length ?? 0,
       install_matrix_release: installMatrix?.release ?? null,
       install_matrix_hosts: installMatrix?.hosts?.length ?? 0,
       install_matrix_smoke_tests: installMatrix?.smoke_tests?.length ?? 0,

@@ -292,7 +292,7 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-submit-actions.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
-first-five-minute install/test path, copy-ready install matrix, public usage snapshot,
+first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
 buyer workflow map, browser-agent bridge, directory refresh pack, directory submit-action queue,
 and Browserbase Browse candidate lane, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes

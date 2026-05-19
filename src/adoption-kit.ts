@@ -43,10 +43,90 @@ function toolCall(id: string, name: string, args: Record<string, unknown>) {
   };
 }
 
+const DEVELOPER_EXAMPLES = [
+  {
+    id: "curl-tools-list",
+    title: "List tools with curl",
+    language: "sh",
+    purpose: "Confirm the hosted Packrift MCP endpoint is reachable before wiring an agent.",
+    code: `curl -sS ${MCP_ENDPOINT} \\
+  -H 'content-type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":"tools","method":"tools/list"}'`,
+  },
+  {
+    id: "curl-cart-candidate",
+    title: "Fetch a measured cart candidate with curl",
+    language: "sh",
+    purpose: "Get one AI-approved SKU candidate whose cart handoff starts with the MCP measured landing URL.",
+    code: `curl -sS ${MCP_ENDPOINT} \\
+  -H 'content-type: application/json' \\
+  -d '{"jsonrpc":"2.0","id":"candidate-1066","method":"tools/call","params":{"name":"get_cart_handoff_candidates","arguments":{"sku":"1066","limit":1}}}'`,
+  },
+  {
+    id: "javascript-first-flow",
+    title: "Run the first useful flow in JavaScript",
+    language: "js",
+    purpose: "Use fetch to call tools/list, get a cart candidate, and inspect live-check requirements.",
+    code: `const endpoint = "${MCP_ENDPOINT}";
+
+async function rpc(id, method, params) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id, method, ...(params ? { params } : {}) }),
+  });
+  const payload = await response.json();
+  if (payload.error) throw new Error(payload.error.message);
+  return payload.result;
+}
+
+const tools = await rpc("tools", "tools/list");
+const candidate = await rpc("candidate-1066", "tools/call", {
+  name: "get_cart_handoff_candidates",
+  arguments: { sku: "1066", limit: 1 },
+});
+
+console.log(tools.tools.length);
+console.log(candidate.content?.[0]?.text ?? candidate);`,
+  },
+  {
+    id: "python-first-flow",
+    title: "Run the first useful flow in Python",
+    language: "python",
+    purpose: "Use Python's standard library to call the hosted MCP endpoint without installing a Packrift package.",
+    code: `import json
+import urllib.request
+
+ENDPOINT = "${MCP_ENDPOINT}"
+
+def rpc(id, method, params=None):
+    body = {"jsonrpc": "2.0", "id": id, "method": method}
+    if params:
+        body["params"] = params
+    request = urllib.request.Request(
+        ENDPOINT,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"content-type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    if payload.get("error"):
+        raise RuntimeError(payload["error"]["message"])
+    return payload["result"]
+
+print(len(rpc("tools", "tools/list")["tools"]))
+print(rpc("candidate-1066", "tools/call", {
+    "name": "get_cart_handoff_candidates",
+    "arguments": {"sku": "1066", "limit": 1},
+}))`,
+  },
+] as const;
+
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R01",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R02",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -142,6 +222,13 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
         }),
       },
     ],
+    developer_examples: DEVELOPER_EXAMPLES,
+    expected_first_flow_outcomes: [
+      "tools/list returns at least 14 tools.",
+      "get_cart_handoff_candidates returns AI_APPROVE SKU 1066 when requested exactly.",
+      "Cart candidates expose an MCP measured landing URL under https://mcp.packrift.com/r/cart/ before the final Shopify cart URL.",
+      "Agents must call get_product, get_pricing, and check_inventory before presenting create_cart_url output to a buyer.",
+    ],
     useful_workflows: [
       {
         name: "Exact SKU reorder",
@@ -205,6 +292,10 @@ function fencedJson(value: unknown): string {
   return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
 }
 
+function fencedCode(language: string, value: string): string {
+  return [`\`\`\`${language}`, value, "```"].join("\n");
+}
+
 function escapeMarkdown(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
@@ -245,6 +336,16 @@ export function mcpAdoptionKitMarkdown(runtime: AdoptionKitRuntime): string {
     payload.first_five_minutes
       .map((step) => [`### ${step.step}. ${step.name}`, "", step.why, "", fencedJson(step.request)].join("\n"))
       .join("\n\n"),
+    "",
+    "## Developer Examples",
+    "",
+    payload.developer_examples
+      .map((example) => [`### ${example.title}`, "", example.purpose, "", fencedCode(example.language, example.code)].join("\n"))
+      .join("\n\n"),
+    "",
+    "## Expected First Flow Outcomes",
+    "",
+    payload.expected_first_flow_outcomes.map((outcome) => `- ${outcome}`).join("\n"),
     "",
     "## Useful Workflows",
     "",

@@ -52,7 +52,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_or_call:
-        "Use the hosted adoption kit for remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, demo SKUs, and exact-match rules.",
+        "Use the hosted adoption kit for remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, curl/JavaScript/Python examples, demo SKUs, and exact-match rules.",
       proof_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
       fallback_url: "https://mcp.packrift.com/mcp",
       next_action: "Use this as the primary handoff link for anyone trying Packrift MCP for the first time.",
