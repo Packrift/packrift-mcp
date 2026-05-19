@@ -354,15 +354,15 @@ const ACTIONS = [
   {
     id: "mcplist_ai",
     label: "MCPLIST",
-    action_status: "email_submission_ready",
+    action_status: "email_draft_ready",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Directory contact email only; no public submit form found.",
+    method: "Gmail submission draft created; no public submit form found.",
     evidence:
-      "MCPLIST has a public MCP server directory, no public submit form was found, and the About page exposes contact@mcplist.ai for contact.",
+      "A Gmail submission draft is ready for contact@mcplist.ai. MCPLIST has a public MCP server directory, no public submit form was found, and the About page exposes contact@mcplist.ai for contact.",
     stale_markers: ["Packrift not visible in MCPLIST"],
     recrawl_subject: "Submit Packrift MCP to MCPLIST",
-    next_action: "Review and send the contact@mcplist.ai draft with hosted endpoint, marketplace manifest, update card, and first-useful-run proof.",
+    next_action: "Review and send the existing Gmail draft with hosted endpoint, marketplace manifest, update card, and first-useful-run proof.",
     listing_url: "https://www.mcplist.ai/?search=packrift",
     submission_url: "mailto:contact@mcplist.ai",
   },
@@ -473,14 +473,14 @@ const ACTIONS = [
   {
     id: "mcpserverfinder",
     label: "MCP Server Finder",
-    action_status: "monitor_or_submit",
+    action_status: "email_draft_ready",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Directory monitoring and manual submit/contact if available.",
-    evidence: "MCP Server Finder is a public MCP directory; Packrift is not yet visible by name.",
+    method: "Gmail submission draft created via public submit email.",
+    evidence: "A Gmail submission draft is ready for info@mcpserverfinder.com. MCP Server Finder exposes a Submit mailto link and search returned no Packrift result.",
     stale_markers: ["Packrift not visible in MCP Server Finder"],
     recrawl_subject: "Submit Packrift MCP to MCP Server Finder",
-    next_action: "Email the source-specific update card and hosted endpoint proof to the public submit contact.",
+    next_action: "Review and send the existing Gmail draft with the hosted endpoint, marketplace manifest, update card, and first-useful-run proof.",
     listing_url: "https://www.mcpserverfinder.com/?q=packrift",
     submission_url: "mailto:info@mcpserverfinder.com",
   },
@@ -770,7 +770,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R35",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R36",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -821,7 +821,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R07",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R08",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",

@@ -197,7 +197,7 @@ const TARGETS = [
     submission_url: "mailto:contact@mcplist.ai",
     category: "Business",
     priority: "medium",
-    action: "Review and send the contact@mcplist.ai draft with the hosted endpoint, marketplace manifest, and source-specific update card.",
+    action: "Review and send the existing Gmail draft with the hosted endpoint, marketplace manifest, source-specific update card, and first-useful-run proof.",
   },
   {
     name: "mcphubz",
@@ -269,7 +269,7 @@ const TARGETS = [
     submission_url: "mailto:info@mcpserverfinder.com",
     category: "Business",
     priority: "medium",
-    action: "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+    action: "Review and send the existing Gmail draft with the hosted endpoint, marketplace manifest, source-specific update card, and first-useful-run proof.",
   },
   {
     name: "mcpserver_cc",
@@ -735,7 +735,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R07",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R08",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {

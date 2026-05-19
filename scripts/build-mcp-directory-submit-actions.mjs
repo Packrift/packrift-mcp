@@ -121,11 +121,11 @@ const DIRECT_STATUS = {
     next_action: "Monitor after official registry and high-priority directory refreshes propagate.",
   },
   mcplist_ai: {
-    status: "email_submission_ready",
-    method: "Directory contact email only; no public submit form found",
+    status: "email_draft_ready",
+    method: "Gmail submission draft created; no public submit form found",
     evidence:
-      "MCPLIST has a public MCP server directory, no public submit form was found, and the About page exposes contact@mcplist.ai for contact.",
-    next_action: "Review and send the contact@mcplist.ai draft with the hosted endpoint and source-specific update card.",
+      "A Gmail submission draft is ready for contact@mcplist.ai. MCPLIST has a public MCP server directory, no public submit form was found, and the About page exposes contact@mcplist.ai for contact.",
+    next_action: "Review and send the existing Gmail draft with the hosted endpoint and source-specific update card.",
   },
   mcphubz: {
     status: "login_required_contact_broken",
@@ -176,10 +176,10 @@ const DIRECT_STATUS = {
     next_action: "Monitor only until a real submit, contact, or upstream ingestion path appears.",
   },
   mcpserverfinder: {
-    status: "email_submission_ready",
-    method: "Public submit email",
-    evidence: "MCP Server Finder exposes a Submit mailto link and search returned no Packrift result.",
-    next_action: "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+    status: "email_draft_ready",
+    method: "Gmail submission draft created via public submit email",
+    evidence: "A Gmail submission draft is ready for info@mcpserverfinder.com. MCP Server Finder exposes a Submit mailto link and search returned no Packrift result.",
+    next_action: "Review and send the existing Gmail draft with the hosted endpoint, marketplace manifest, and source-specific update card.",
   },
   mcpserver_cc: {
     status: "submitted_pending",

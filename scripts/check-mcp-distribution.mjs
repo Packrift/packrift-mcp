@@ -102,7 +102,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://www.mcplist.ai/?search=packrift",
     submission_url: "mailto:contact@mcplist.ai",
     priority: "medium",
-    follow_up_action: "Review and send the contact@mcplist.ai draft with the hosted endpoint and source-specific update card.",
+    follow_up_action: "Review and send the existing Gmail draft with the hosted endpoint, source-specific update card, and first-useful-run proof.",
   },
   mcphubz: {
     listing_url: "https://mcphubz.com/",
@@ -153,7 +153,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://www.mcpserverfinder.com/?q=packrift",
     submission_url: "mailto:info@mcpserverfinder.com",
     priority: "medium",
-    follow_up_action: "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+    follow_up_action: "Review and send the existing Gmail draft with the hosted endpoint, marketplace manifest, source-specific update card, and first-useful-run proof.",
   },
   mcpserver_cc: {
     listing_url: "https://mcpserver.cc/",
@@ -1118,7 +1118,7 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R25" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R26" &&
       directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directoryRefresh?.live_proof?.tracked_start_partner_demo === "https://mcp.packrift.com/r/start/partner_demo" &&
@@ -1181,19 +1181,21 @@ async function liveMcpCheck() {
       directoryRefresh?.recrawl_request?.includes("mcp-source-activation-queue.json") &&
       directoryRefresh?.recrawl_request?.includes("mcp-source-activation-sitemap.xml") &&
       directoryRefresh?.recrawl_request?.includes(".well-known/mcp-marketplace.json") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R35" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R36" &&
       directorySubmitActions?.actions?.length >= 28 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory" && action.action_status === "auth_gated_manual") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_marketplace_io" && action.action_status === "recrawl_needed") &&
-      directorySubmitActions?.actions?.some((action) => action.id === "mcplist_ai" && action.action_status === "email_submission_ready") &&
+      directorySubmitActions?.actions?.some((action) => action.id === "mcplist_ai" && action.action_status === "email_draft_ready") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcphubz" && action.action_status === "login_required_contact_broken") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_blue" && action.action_status === "parked_domain_blocked") &&
       directorySubmitActions?.actions?.some((action) => action.id === "findmcp_dev" && action.action_status === "submit_cta_broken") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcplane" && action.action_status === "validator_rejected_public_repo") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcpsolutions_dev" && action.action_status === "submitted_pending") &&
-      directorySubmitActions?.actions?.some((action) => action.id === "mcpserverfinder" && action.submission_url === "mailto:info@mcpserverfinder.com") &&
+      directorySubmitActions?.actions?.some(
+        (action) => action.id === "mcpserverfinder" && action.action_status === "email_draft_ready" && action.submission_url === "mailto:info@mcpserverfinder.com"
+      ) &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcpserver_cc" && action.action_status === "submitted_pending") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcpserverspot" && action.action_status === "submitted_pending") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so") &&
@@ -1250,7 +1252,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.marketplace_manifest === "https://mcp.packrift.com/.well-known/mcp-marketplace.json") &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
-      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R07" &&
+      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R08" &&
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
       directoryUpdateCline?.canonical_listing?.endpoint === "https://mcp.packrift.com/mcp" &&
       directoryUpdateCline?.canonical_listing?.authentication === "none_required_for_hosted_endpoint" &&
@@ -1277,12 +1279,13 @@ async function liveMcpCheck() {
       directoryUpdateBrowseMarkdownResult.ok &&
       directoryUpdateBrowseMarkdownResult.text.includes("Browserbase Browse / browse.sh") &&
       directoryUpdateMcplist?.source === "mcplist_ai" &&
-      directoryUpdateMcplist?.directory?.action_status === "email_submission_ready" &&
+      directoryUpdateMcplist?.directory?.action_status === "email_draft_ready" &&
       directoryUpdateMcplist?.tracked_urls?.config?.startsWith("https://mcp.packrift.com/r/config/mcplist_ai") &&
       directoryUpdateMcpBlue?.source === "mcp_blue" &&
       directoryUpdateMcpBlue?.directory?.action_status === "parked_domain_blocked" &&
       directoryUpdateMcpBlue?.tracked_urls?.first_run?.generic_streamable_http?.startsWith("https://mcp.packrift.com/r/run/mcp_blue/generic_streamable_http") &&
       directoryUpdateMcpServerFinder?.source === "mcpserverfinder" &&
+      directoryUpdateMcpServerFinder?.directory?.action_status === "email_draft_ready" &&
       directoryUpdateMcpServerFinder?.directory?.submission_url === "mailto:info@mcpserverfinder.com" &&
       directoryUpdateMcpServerCc?.source === "mcpserver_cc" &&
       directoryUpdateMcpServerCc?.directory?.action_status === "submitted_pending" &&
@@ -1368,11 +1371,11 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.activation_readiness?.suppressions?.some((rule) => String(rule).includes("Do not count Packrift self-checks")) &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Activation proof loop") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R17" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R18" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
-      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R35" &&
+      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R36" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
