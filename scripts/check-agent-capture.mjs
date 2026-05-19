@@ -141,6 +141,7 @@ async function main() {
     "buyer_mcp_use_cases",
     "mcp_cart_activation",
     "mcp_first_run_proof",
+    "mcp_workflow_gallery",
     "browser_agent_bridge",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
@@ -174,6 +175,7 @@ async function main() {
     "buyer use cases",
     "cart activation",
     "first-run proof",
+    "workflow gallery",
     "browser-agent bridge",
     "directory refresh",
     "directory submit actions",
@@ -232,6 +234,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises first-run proof", hasResourceUri(resourceUris, "/ai/mcp-first-run-proof.json") && hasResourceUri(resourceUris, "/ai/mcp-first-run-proof.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises workflow gallery", hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.json") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {

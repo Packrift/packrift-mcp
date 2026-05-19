@@ -11,6 +11,7 @@ import { mcpInstallMatrixMarkdown, mcpInstallMatrixPayload } from "./install-mat
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-activation.js";
 import { mcpFirstRunProofMarkdown, mcpFirstRunProofPayload, type FirstRunProofDemo } from "./first-run-proof.js";
+import { mcpWorkflowGalleryMarkdown, mcpWorkflowGalleryPayload } from "./workflow-gallery.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
 import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
@@ -1787,6 +1788,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_buyer_use_cases",
     "mcp_cart_activation",
     "mcp_first_run_proof",
+    "mcp_workflow_gallery",
     "browser_agent_bridge",
     "mcp_directory_refresh",
     "mcp_directory_submit_actions",
@@ -1795,7 +1797,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R03",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R04",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -1831,6 +1833,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
       cart_activation_resource_events: bySource.mcp_cart_activation ?? 0,
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
+      workflow_gallery_resource_events: bySource.mcp_workflow_gallery ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
       sources: bySource,
     },
@@ -1859,6 +1862,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
+      workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
@@ -1908,6 +1912,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Cart-handoff candidate resource events: ${payload.counts.cart_handoff_candidate_resource_events}`,
     `- Cart activation resource events: ${payload.counts.cart_activation_resource_events}`,
     `- First-run proof resource events: ${payload.counts.first_run_proof_resource_events}`,
+    `- Workflow gallery resource events: ${payload.counts.workflow_gallery_resource_events}`,
     "",
     "## Proof Gate",
     "",
@@ -3167,6 +3172,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-cart-activation.md",
   "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
   "https://mcp.packrift.com/ai/mcp-first-run-proof.md",
+  "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+  "https://mcp.packrift.com/ai/mcp-workflow-gallery.md",
   "https://mcp.packrift.com/ai/browser-agent-bridge.json",
   "https://mcp.packrift.com/ai/browser-agent-bridge.md",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -3258,6 +3265,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-cart-activation.md": "Crawler-readable Packrift MCP cart activation playbook with buyer prompts, JSON-RPC sequences, and measured cart landing rules.",
   "/ai/mcp-first-run-proof.json": "Machine-readable first-run Packrift MCP proof that runs the live exact SKU, price, inventory, and measured cart landing sequence in synthetic read-only mode.",
   "/ai/mcp-first-run-proof.md": "Crawler-readable first-run Packrift MCP proof for external agents and developers evaluating live price, inventory, and cart handoff.",
+  "/ai/mcp-workflow-gallery.json": "Machine-readable Packrift MCP workflow gallery with copy-ready buyer prompts and JSON-RPC sequences for agent hosts, evals, demos, and cart handoff examples.",
+  "/ai/mcp-workflow-gallery.md": "Crawler-readable Packrift MCP workflow gallery for developers and AI-commerce agents building exact SKU, fit-by-dimensions, and no-exact-match flows.",
   "/ai/browser-agent-bridge.json": "Machine-readable bridge for Browserbase Browse, browser-use, Playwright, CUA, and browser agents that should read public Packrift resources and confirm live commerce facts through MCP.",
   "/ai/browser-agent-bridge.md": "Crawler-readable browser-agent bridge that keeps Browse-style workflows routed through the canonical Packrift MCP endpoint.",
   "/ai/mcp-directory-refresh.json": "Machine-readable Packrift MCP directory recrawl pack with listing copy, proof URLs, stale directory targets, and recrawl request text.",
@@ -3446,6 +3455,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-cart-activation.md") return mcpCartActivationMarkdown(cartActivationRuntime());
   if (pathname === "/ai/mcp-first-run-proof.json") return JSON.stringify(mcpFirstRunProofPayload(firstRunProofRuntime(), await firstRunProofDemo(env)), null, 2);
   if (pathname === "/ai/mcp-first-run-proof.md") return mcpFirstRunProofMarkdown(firstRunProofRuntime(), await firstRunProofDemo(env));
+  if (pathname === "/ai/mcp-workflow-gallery.json") return JSON.stringify(mcpWorkflowGalleryPayload(workflowGalleryRuntime()), null, 2);
+  if (pathname === "/ai/mcp-workflow-gallery.md") return mcpWorkflowGalleryMarkdown(workflowGalleryRuntime());
   if (pathname === "/ai/browser-agent-bridge.json") return JSON.stringify(browserAgentBridgePayload(browserAgentBridgeRuntime()), null, 2);
   if (pathname === "/ai/browser-agent-bridge.md") return browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
   if (pathname === "/ai/mcp-directory-refresh.json") return JSON.stringify(mcpDirectoryRefreshPayload(directoryRefreshRuntime()), null, 2);
@@ -3525,6 +3536,7 @@ function mcpManifestPayload() {
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
+    mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
@@ -3577,6 +3589,15 @@ function cartActivationRuntime() {
 }
 
 function firstRunProofRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function workflowGalleryRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -3715,6 +3736,7 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
+      mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
@@ -4733,6 +4755,21 @@ app.get("/ai/mcp-first-run-proof.md", async (c) => {
   const demo = await firstRunProofDemo(c.env);
   const body = mcpFirstRunProofMarkdown(firstRunProofRuntime(), demo);
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-first-run-proof.md", "mcp_first_run_proof", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-workflow-gallery.json", async (c) => {
+  const payload = mcpWorkflowGalleryPayload(workflowGalleryRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-workflow-gallery.json", "mcp_workflow_gallery", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-workflow-gallery.md", async (c) => {
+  const body = mcpWorkflowGalleryMarkdown(workflowGalleryRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-workflow-gallery.md", "mcp_workflow_gallery", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

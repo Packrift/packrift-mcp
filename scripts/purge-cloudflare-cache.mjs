@@ -112,6 +112,8 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/mcp-cart-activation.md",
       "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       "https://mcp.packrift.com/ai/mcp-first-run-proof.md",
+      "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      "https://mcp.packrift.com/ai/mcp-workflow-gallery.md",
       "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       "https://mcp.packrift.com/ai/browser-agent-bridge.md",
       "https://mcp.packrift.com/ai/mcp-directory-refresh.json",

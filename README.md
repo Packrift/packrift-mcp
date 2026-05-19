@@ -95,6 +95,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP first-run proof Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
+- MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
+- MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json

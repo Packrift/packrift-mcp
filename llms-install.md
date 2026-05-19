@@ -35,6 +35,15 @@ Use this when a developer, agent platform, or directory reviewer wants the short
 
 The first-run proof runs a synthetic SKU `1066` sequence against live product, price, inventory, and cart-handoff code with analytics suppressed. It shows the same JSON-RPC calls an external agent should make against `https://mcp.packrift.com/mcp`.
 
+## Workflow Gallery
+
+Use this when an agent host or developer needs copy-ready buyer prompts and JSON-RPC sequences for demos or evals:
+
+- JSON: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
+- Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
+
+The workflow gallery covers exact SKU reorder, label reorder, literature mailer cart handoff, fit-by-dimensions discovery, and no-exact-match quote recovery.
+
 ## Cart Activation
 
 Use this when an agent has exact buyer intent and needs the guarded sequence from live checks to a measured MCP cart landing:

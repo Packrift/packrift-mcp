@@ -11,6 +11,7 @@ const INSTALL_MATRIX_URL = "https://mcp.packrift.com/ai/mcp-install-matrix.json"
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
+const WORKFLOW_GALLERY_URL = "https://mcp.packrift.com/ai/mcp-workflow-gallery.json";
 
 const ACTIONS = [
   {
@@ -115,7 +116,7 @@ const ACTIONS = [
 ] as const;
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. First-run proof is ${FIRST_RUN_PROOF_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. First-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -143,6 +144,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     `- Directory submit actions: ${DIRECTORY_SUBMIT_ACTIONS_URL}`,
     `- First-run proof: ${FIRST_RUN_PROOF_URL}`,
+    `- Workflow gallery: ${WORKFLOW_GALLERY_URL}`,
     `- Cart activation playbook: ${CART_ACTIVATION_URL}`,
     "- Cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     "",
@@ -165,6 +167,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
       cart_activation: CART_ACTIVATION_URL,
       first_run_proof: FIRST_RUN_PROOF_URL,
+      workflow_gallery: WORKFLOW_GALLERY_URL,
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     },
     recrawl_message: recrawlMessage(runtime, action),
