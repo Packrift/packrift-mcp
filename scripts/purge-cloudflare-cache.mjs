@@ -100,6 +100,8 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
       "https://mcp.packrift.com/ai/all-agent-capture.json",
       "https://mcp.packrift.com/ai/all-agent-capture.md",
+      "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      "https://mcp.packrift.com/ai/mcp-install-matrix.md",
       "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
       "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
