@@ -20,6 +20,7 @@ const BROWSER_AGENT_WORKFLOWS = [
       "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
+      "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
     ],
     required_mcp_sequence: ["tools/list", "search_products", "get_product", "get_pricing", "check_inventory"],
     handoff_rule:
@@ -121,11 +122,14 @@ export function browserAgentBridgePayload(runtime: BrowserAgentBridgeRuntime) {
       claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
       codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
       browser_agent_start_here: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
+      browse_skill_pack: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
     },
     workflows: BROWSER_AGENT_WORKFLOWS,
     proof_urls: {
       bridge_json: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       bridge_markdown: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
+      browserbase_browse_skill_pack: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
+      browserbase_browse_skill_pack_markdown: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md",
       mcp_endpoint: MCP_ENDPOINT,
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",

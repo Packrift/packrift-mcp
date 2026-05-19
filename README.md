@@ -99,6 +99,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
+- Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
+- Browserbase Browse skill pack Markdown: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory refresh pack Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json

@@ -189,6 +189,7 @@ async function liveMcpCheck() {
     firstRunProofResult,
     workflowGalleryResult,
     browserAgentBridgeResult,
+    browserbaseBrowseSkillPackResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
     toolsResult,
@@ -206,6 +207,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-first-run-proof.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-workflow-gallery.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
+    fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
     fetchMcp("tools/list"),
@@ -223,6 +225,7 @@ async function liveMcpCheck() {
   const firstRunProof = firstRunProofResult.ok ? JSON.parse(firstRunProofResult.text) : null;
   const workflowGallery = workflowGalleryResult.ok ? JSON.parse(workflowGalleryResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
+  const browserbaseBrowseSkillPack = browserbaseBrowseSkillPackResult.ok ? JSON.parse(browserbaseBrowseSkillPackResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
@@ -278,6 +281,10 @@ async function liveMcpCheck() {
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
+      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R01" &&
+      browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
+      browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
+      browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
       directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
       directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R03" &&
@@ -305,6 +312,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json") &&
@@ -345,6 +354,8 @@ async function liveMcpCheck() {
       workflow_gallery_ids: (workflowGallery?.workflows ?? []).map((workflow) => workflow.id),
       browser_agent_bridge_release: browserAgentBridge?.release ?? null,
       browser_agent_bridge_workflows: browserAgentBridge?.workflows?.length ?? 0,
+      browserbase_browse_skill_pack_release: browserbaseBrowseSkillPack?.release ?? null,
+      browserbase_browse_skill_pack_steps: browserbaseBrowseSkillPack?.demo_sequence?.length ?? 0,
       directory_refresh_release: directoryRefresh?.release ?? null,
       directory_refresh_targets: directoryRefresh?.priority_refresh_targets?.length ?? 0,
       directory_submit_actions_release: directorySubmitActions?.release ?? null,

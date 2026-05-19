@@ -85,6 +85,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
 - Browser-agent bridge JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
+- Browserbase Browse skill pack JSON: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
+- Browserbase Browse skill pack Markdown: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md
 - MCP directory refresh JSON: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory refresh Markdown: https://mcp.packrift.com/ai/mcp-directory-refresh.md
 - Crawler-safe purchase paths: https://mcp.packrift.com/ai/crawler-safe-purchase-paths.md

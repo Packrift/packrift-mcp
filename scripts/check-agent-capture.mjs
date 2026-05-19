@@ -177,6 +177,7 @@ async function main() {
     "first-run proof",
     "workflow gallery",
     "browser-agent bridge",
+    "browserbase-browse-skill-pack",
     "directory refresh",
     "directory submit actions",
     "Browserbase Browse",
@@ -240,6 +241,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises Browserbase Browse skill pack", hasResourceUri(resourceUris, "/ai/browserbase-browse-skill-pack.json") && hasResourceUri(resourceUris, "/ai/browserbase-browse-skill-pack.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises directory refresh pack", hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.json") && hasResourceUri(resourceUris, "/ai/mcp-directory-refresh.md"), {

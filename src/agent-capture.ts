@@ -373,13 +373,13 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: false,
       canonical_url: "https://browse.sh/",
       install_or_call:
-        "Candidate only: create a read-only Packrift Browse skill if Browserbase opens or documents a retailer submission path that fits Packrift product search and cart handoff.",
-      proof_url: "https://www.browserbase.com/browse-cli/",
+        "Candidate only: use the Packrift Browse skill pack as a read-first wrapper around the hosted MCP endpoint if Browserbase opens or documents a retailer submission path that fits product search and cart handoff.",
+      proof_url: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
       fallback_url: "https://mcp.packrift.com/mcp",
       next_action:
-        "Monitor Browse skill submission/packaging options. Do not build a parallel Packrift CLI unless it is a thin wrapper around the hosted MCP endpoint.",
+        "Monitor Browse skill submission/packaging options and keep the browserbase-browse-skill-pack live. Do not build a parallel Packrift CLI unless it is a thin wrapper around the hosted MCP endpoint.",
       notes:
-        "Browse is useful as an agent browser-skill pattern; Packrift's current canonical agent surface remains MCP plus corpus.",
+        "Browse is useful as an agent browser-skill pattern; Packrift's current canonical agent surface remains MCP plus corpus. The Packrift skill pack is a candidate submission artifact, not a live Browse listing.",
     }),
     surface({
       id: "mcp_directory_refreshes",

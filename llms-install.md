@@ -59,6 +59,8 @@ Use this when an agent can read public URLs with a browser but cannot install MC
 
 - JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
+- Browse skill pack JSON: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
+- Browse skill pack Markdown: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md
 
 The bridge is read-first and MCP-confirmed. Browser agents can crawl Packrift resources for discovery, but live price, inventory, shipping, exact product detail, and cart handoff should still come from `https://mcp.packrift.com/mcp`.
 

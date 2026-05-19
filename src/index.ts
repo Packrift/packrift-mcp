@@ -13,6 +13,7 @@ import { mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-acti
 import { mcpFirstRunProofMarkdown, mcpFirstRunProofPayload, type FirstRunProofDemo } from "./first-run-proof.js";
 import { mcpWorkflowGalleryMarkdown, mcpWorkflowGalleryPayload } from "./workflow-gallery.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
+import { browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
 import { mcpDirectorySubmitActionsMarkdown, mcpDirectorySubmitActionsPayload } from "./directory-submit-actions.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
@@ -1790,6 +1791,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_first_run_proof",
     "mcp_workflow_gallery",
     "browser_agent_bridge",
+    "browserbase_browse_skill_pack",
     "mcp_directory_refresh",
     "mcp_directory_submit_actions",
     "mcp_cart_handoff_candidates",
@@ -1835,6 +1837,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
       workflow_gallery_resource_events: bySource.mcp_workflow_gallery ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
+      browserbase_browse_skill_pack_resource_events: bySource.browserbase_browse_skill_pack ?? 0,
       sources: bySource,
     },
     proof_gate: {
@@ -1907,6 +1910,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Install matrix resource events: ${payload.counts.install_matrix_resource_events}`,
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
+    `- Browserbase Browse skill-pack resource events: ${payload.counts.browserbase_browse_skill_pack_resource_events}`,
     `- Directory refresh resource events: ${payload.counts.directory_refresh_resource_events}`,
     `- Directory submit-action resource events: ${payload.counts.directory_submit_action_resource_events}`,
     `- Cart-handoff candidate resource events: ${payload.counts.cart_handoff_candidate_resource_events}`,
@@ -3176,6 +3180,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-workflow-gallery.md",
   "https://mcp.packrift.com/ai/browser-agent-bridge.json",
   "https://mcp.packrift.com/ai/browser-agent-bridge.md",
+  "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
+  "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
   "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
   "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
@@ -3269,6 +3275,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-workflow-gallery.md": "Crawler-readable Packrift MCP workflow gallery for developers and AI-commerce agents building exact SKU, fit-by-dimensions, and no-exact-match flows.",
   "/ai/browser-agent-bridge.json": "Machine-readable bridge for Browserbase Browse, browser-use, Playwright, CUA, and browser agents that should read public Packrift resources and confirm live commerce facts through MCP.",
   "/ai/browser-agent-bridge.md": "Crawler-readable browser-agent bridge that keeps Browse-style workflows routed through the canonical Packrift MCP endpoint.",
+  "/ai/browserbase-browse-skill-pack.json": "Machine-readable Browse/browser-skill starter pack that wraps public Packrift reads around the canonical MCP endpoint without creating a duplicate CLI or buyer surface.",
+  "/ai/browserbase-browse-skill-pack.md": "Crawler-readable Browse/browser-skill starter pack with copy-ready rules, URLs, prompts, and JSON-RPC calls for MCP-confirmed Packrift workflows.",
   "/ai/mcp-directory-refresh.json": "Machine-readable Packrift MCP directory recrawl pack with listing copy, proof URLs, stale directory targets, and recrawl request text.",
   "/ai/mcp-directory-refresh.md": "Crawler-readable Packrift MCP directory recrawl pack for MCP directories, marketplaces, and agent indexes.",
   "/ai/mcp-directory-submit-actions.json": "Machine-readable Packrift MCP directory action queue with stale-surface statuses, proof URLs, and copy-ready recrawl messages.",
@@ -3459,6 +3467,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-workflow-gallery.md") return mcpWorkflowGalleryMarkdown(workflowGalleryRuntime());
   if (pathname === "/ai/browser-agent-bridge.json") return JSON.stringify(browserAgentBridgePayload(browserAgentBridgeRuntime()), null, 2);
   if (pathname === "/ai/browser-agent-bridge.md") return browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
+  if (pathname === "/ai/browserbase-browse-skill-pack.json") return JSON.stringify(browserbaseBrowseSkillPackPayload(browserbaseBrowseSkillPackRuntime()), null, 2);
+  if (pathname === "/ai/browserbase-browse-skill-pack.md") return browserbaseBrowseSkillPackMarkdown(browserbaseBrowseSkillPackRuntime());
   if (pathname === "/ai/mcp-directory-refresh.json") return JSON.stringify(mcpDirectoryRefreshPayload(directoryRefreshRuntime()), null, 2);
   if (pathname === "/ai/mcp-directory-refresh.md") return mcpDirectoryRefreshMarkdown(directoryRefreshRuntime());
   if (pathname === "/ai/mcp-directory-submit-actions.json") return JSON.stringify(mcpDirectorySubmitActionsPayload(directorySubmitActionsRuntime()), null, 2);
@@ -3663,6 +3673,15 @@ async function firstRunProofDemo(env: Env): Promise<FirstRunProofDemo> {
 }
 
 function browserAgentBridgeRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function browserbaseBrowseSkillPackRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -4798,6 +4817,21 @@ app.get("/ai/browser-agent-bridge.json", async (c) => {
 app.get("/ai/browser-agent-bridge.md", async (c) => {
   const body = browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/browser-agent-bridge.md", "browser_agent_bridge", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/browserbase-browse-skill-pack.json", async (c) => {
+  const payload = browserbaseBrowseSkillPackPayload(browserbaseBrowseSkillPackRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/browserbase-browse-skill-pack.json", "browserbase_browse_skill_pack", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/browserbase-browse-skill-pack.md", async (c) => {
+  const body = browserbaseBrowseSkillPackMarkdown(browserbaseBrowseSkillPackRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/browserbase-browse-skill-pack.md", "browserbase_browse_skill_pack", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

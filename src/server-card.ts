@@ -55,6 +55,8 @@ export const serverCard = {
     mcpWorkflowGalleryMarkdown: "https://mcp.packrift.com/ai/mcp-workflow-gallery.md",
     browserAgentBridgeJson: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     browserAgentBridgeMarkdown: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
+    browserbaseBrowseSkillPackJson: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
+    browserbaseBrowseSkillPackMarkdown: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md",
     mcpDirectoryRefreshJson: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     mcpDirectoryRefreshMarkdown: "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
     mcpDirectorySubmitActionsJson: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
