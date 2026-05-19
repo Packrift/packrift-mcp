@@ -387,6 +387,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 
 **Discovery surfaces:**
 
+- MCP start page: https://mcp.packrift.com/start
+- MCP start pack JSON: https://mcp.packrift.com/ai/mcp-start.json
+- MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md

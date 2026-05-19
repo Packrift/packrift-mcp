@@ -32,10 +32,12 @@ Use these as examples of exact product families that converted, not as universal
 ## How agents should use Packrift
 
 - [MCP server](https://mcp.packrift.com/mcp): Streamable HTTP, read-only tools for catalog search, pricing, inventory, recommendations, comparison, pack calculation, shipping estimates, and cart-URL construction
+- [MCP start page](https://mcp.packrift.com/start): shortest public install and first-flow handoff for agents, developers, directory reviewers, and AI-commerce operators
 - Add Packrift MCP through the [Glama hosted connector](https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp), [MCP Marketplace listing](https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp), [Official MCP Registry search](https://registry.modelcontextprotocol.io/v0/servers?search=Packrift), or [GitHub source repository](https://github.com/Packrift/packrift-mcp)
 - Native MCP prompts are available via prompts/list for exact-spec search, item-fit-to-cart, cart candidate review, reorder, no-match quote recovery, and copy-procurement-spec workflows
 - Use \`fit_item_then_prepare_cart\` when the buyer has item dimensions and needs the smallest safe package that can proceed to live checks. Use \`prepare_cart_handoff\` when a client needs a guarded sequence from selected SKU to live confirmation and stamped \`create_cart_url\` handoff.
 - [Machine-readable AI agent instructions](https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
+- [MCP start pack](https://mcp.packrift.com/ai/mcp-start.json): one-link install config, first useful exact-SKU flow, buyer prompts, proof URLs, and measured cart handoff sequence
 - [MCP adoption kit](https://mcp.packrift.com/ai/mcp-adoption-kit.json): install snippets, first-five-minute JSON-RPC calls, curl/JavaScript/Python examples, demo SKUs, useful workflows, proof URLs, and exact-match rules for new agents and developers
 - [MCP install matrix](https://mcp.packrift.com/ai/mcp-install-matrix.json): copy-ready remote MCP setup paths for common agent hosts, smoke tests, and measured cart handoff rules
 - [MCP usage snapshot](https://mcp.packrift.com/ai/mcp-usage-snapshot.json): public aggregate first-party usage proof for MCP discovery, tool calls, cart handoff, and proof-gate iteration

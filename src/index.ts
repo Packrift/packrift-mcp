@@ -3243,6 +3243,7 @@ const FIRST20_EXACT_SPEC_VIEW_SKUS = [
 ] as const;
 
 const AI_DISCOVERY_URLS = [
+  "https://mcp.packrift.com/start",
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
   "https://mcp.packrift.com/manifest",
@@ -3343,6 +3344,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/robots.txt": "MCP subdomain crawler policy and sitemap references.",
   "/sitemap.xml": "MCP discovery sitemap for machine-readable Packrift resources.",
   "/ai/sitemap.xml": "AI corpus sitemap for exact-spec Packrift product data files.",
+  "/start": "Packrift MCP start page for developers, agents, directory reviewers, install snippets, and measured cart handoff.",
   "/manifest": "REST discovery manifest for Packrift MCP tools, prompts, resources, and health endpoints.",
   "/resources": "Paginated REST resource adapter listing Packrift MCP and AI-commerce discovery resources.",
   "/health": "Packrift MCP health check with version, tool count, resource count, and KV status.",
@@ -3543,7 +3545,7 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
       ? "application/xml"
       : pathname.endsWith(".json")
         ? "application/json"
-        : pathname.endsWith(".html")
+        : pathname === "/start" || pathname.endsWith(".html")
           ? "text/html"
         : pathname.endsWith(".md")
           ? "text/markdown"
@@ -3567,6 +3569,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/top-1000-ai-sales-sitemap.xml") return topAiSalesSkuSitemapXml();
   if (pathname === "/ai/all-ai-approved-sku-sitemap.xml") return allAiApprovedSkuSitemapXml();
   if (pathname === "/ai/conversion-route-redirect-sitemap.xml") return routeRedirectSitemapXml();
+  if (pathname === "/start") return mcpStartHtml(mcpStartRuntime());
   if (pathname === "/manifest") return JSON.stringify(mcpManifestPayload(), null, 2);
   if (pathname === "/resources") return JSON.stringify(mcpResourcesPayload(MCP_RESOURCES.length, 0), null, 2);
   if (pathname === "/health") return JSON.stringify(await mcpHealthPayload(env), null, 2);

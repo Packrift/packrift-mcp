@@ -91,6 +91,7 @@ const fileUrls = fromFile
 const purgeUrls = Array.from(new Set(core
   ? [
       "https://mcp.packrift.com/",
+      "https://mcp.packrift.com/start",
       "https://mcp.packrift.com/llms.txt",
       "https://mcp.packrift.com/llms-full.txt",
       "https://mcp.packrift.com/agents.md",
@@ -102,6 +103,9 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/all-agent-capture.md",
       "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       "https://mcp.packrift.com/ai/mcp-install-matrix.md",
+      "https://mcp.packrift.com/ai/mcp-start.json",
+      "https://mcp.packrift.com/ai/mcp-start.md",
+      "https://mcp.packrift.com/ai/mcp-start.html",
       "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
       "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",

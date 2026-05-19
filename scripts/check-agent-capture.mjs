@@ -209,7 +209,7 @@ async function main() {
     check("hosted MCP marked live", coreSurface?.status === "live" && coreSurface?.canonical_url === "https://mcp.packrift.com/mcp", {
       detail: coreSurface?.status,
     }),
-    check("resources/list advertises MCP start", hasResourceUri(resourceUris, "/ai/mcp-start.json") && hasResourceUri(resourceUris, "/ai/mcp-start.md"), {
+    check("resources/list advertises MCP start", hasResourceUri(resourceUris, "/start") && hasResourceUri(resourceUris, "/ai/mcp-start.json") && hasResourceUri(resourceUris, "/ai/mcp-start.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("Browserbase Browse remains candidate", browseSurface?.status === "candidate", {
