@@ -322,6 +322,7 @@ const LIVE_PROOF_URLS = {
   mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
   mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
   mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+  mcp_eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
   browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
   root_browserbase_browse_skill_md: "https://mcp.packrift.com/SKILL.md",
   browserbase_browse_skill_pack: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
@@ -340,6 +341,12 @@ function trackedInstallUrl(source, target) {
 
 function trackedRunUrl(source, target) {
   return TRACKED_RUN_TEMPLATE.replace("{source}", source).replace("{target}", target);
+}
+
+function sourceEvalPackUrl(source) {
+  const url = new URL(LIVE_PROOF_URLS.mcp_eval_pack);
+  url.searchParams.set("source", source);
+  return url.toString();
 }
 
 function cacheBustedUrl(url) {
@@ -735,7 +742,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R08",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R09",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {
@@ -772,10 +779,12 @@ function directoryUpdateCard(payload, target) {
       first_run_live_proof: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
       reviewer_activation: `https://mcp.packrift.com/r/activate/${target.name}`,
       reviewer_activation_html: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+      eval_pack: sourceEvalPackUrl(target.name),
     },
     acceptance_gate: [
       "Install the hosted no-auth Streamable HTTP endpoint.",
       "Run tools/list against the source-aware endpoint.",
+      "Run the source-specific eval pack acceptance cases when a marketplace, MCP host, or reviewer needs host-side proof.",
       "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
       "Treat the listing as activated only when create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
     ],
@@ -788,6 +797,7 @@ function directoryUpdateCard(payload, target) {
       `Tracked config: ${TRACKED_CONFIG_TEMPLATE.replace("{source}", target.name)}`,
       `Live first-run proof: ${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
       `Activation runner: https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+      `Host acceptance eval pack: ${sourceEvalPackUrl(target.name)}`,
       "",
       "Acceptance gate: tools/list -> get_cart_handoff_candidates -> get_pricing -> check_inventory -> create_cart_url.",
     ].join("\n"),
@@ -813,6 +823,7 @@ function directoryUpdateCardMarkdown(card) {
     `Tools: ${card.canonical_listing.tool_count} (${card.canonical_listing.tool_names.join(", ")})`,
     `Marketplace manifest: ${card.canonical_listing.marketplace_manifest}`,
     `Source activation sitemap: ${card.canonical_listing.source_activation_sitemap}`,
+    `Host acceptance eval pack: ${card.tracked_urls.eval_pack}`,
     "",
     "## Directory State",
     "",

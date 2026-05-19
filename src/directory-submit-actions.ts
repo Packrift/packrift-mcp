@@ -32,6 +32,8 @@ const ACTIVATION_EXPERIMENTS_URL = "https://mcp.packrift.com/ai/mcp-activation-e
 const INSTALL_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-install-actions.json";
 const FIRST_RUN_PROOF_URL = "https://mcp.packrift.com/ai/mcp-first-run-proof.json";
 const WORKFLOW_GALLERY_URL = "https://mcp.packrift.com/ai/mcp-workflow-gallery.json";
+const MCP_EVAL_PACK_URL = "https://mcp.packrift.com/ai/mcp-eval-pack.json";
+const MCP_EVAL_PACK_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-eval-pack.md";
 const REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 const MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
 const MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}?format=html";
@@ -573,8 +575,14 @@ function normalizeDirectoryUpdateSource(value: string): string {
     .slice(0, 64);
 }
 
+function sourceEvalPackUrl(source: string, format: "json" | "md" = "json"): string {
+  const url = new URL(format === "json" ? MCP_EVAL_PACK_URL : MCP_EVAL_PACK_MARKDOWN_URL);
+  url.searchParams.set("source", normalizeDirectoryUpdateSource(source));
+  return url.toString();
+}
+
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -594,6 +602,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const trackedRunGenericSh = `${trackedRunGeneric}&format=sh`;
   const reviewerActivation = `https://mcp.packrift.com/r/activate/${action.id}`;
   const reviewerActivationHtml = `${reviewerActivation}?format=html`;
+  const evalPack = sourceEvalPackUrl(action.id);
+  const evalPackMarkdown = sourceEvalPackUrl(action.id, "md");
   return [
     `Subject: ${action.recrawl_subject}`,
     "",
@@ -623,6 +633,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- One-click live proof: ${trackedRunGenericExecute}`,
     `- Reviewer-to-real-MCP activation handoff: ${reviewerActivation}`,
     `- Reviewer activation browser runner: ${reviewerActivationHtml}`,
+    `- Host acceptance eval pack: ${evalPack}`,
+    `- Host acceptance eval pack Markdown: ${evalPackMarkdown}`,
     `- Copy-ready agent prompt: use the Copy agent prompt button at ${trackedRunGenericHtml} or ${reviewerActivationHtml}; it is also exposed as first_useful_run.agent_prompt in this action payload.`,
     `- One-line first-run shell script: curl -sS '${trackedRunGenericSh}' | bash`,
     `- First useful run: open ${trackedRunGenericHtml}, click Run live proof, then use ${reviewerActivationHtml} to run the same sequence through a real MCP client. It reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
@@ -706,6 +718,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       tracked_run_generic_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
       tracked_reviewer_activation: `https://mcp.packrift.com/r/activate/${action.id}`,
       tracked_reviewer_activation_html: `https://mcp.packrift.com/r/activate/${action.id}?format=html`,
+      source_eval_pack: sourceEvalPackUrl(action.id),
+      source_eval_pack_markdown: sourceEvalPackUrl(action.id, "md"),
       tracked_run_codex: trackedRunUrl(action.id, "codex"),
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
@@ -727,6 +741,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
       marketplace_manifest: MARKETPLACE_MANIFEST_URL,
       activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+      eval_pack: MCP_EVAL_PACK_URL,
       first_run_proof: FIRST_RUN_PROOF_URL,
       workflow_gallery: WORKFLOW_GALLERY_URL,
       root_browserbase_browse_skill_md: ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL,
@@ -757,6 +772,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       acceptance_gate: [
         "Install the existing hosted Packrift MCP endpoint only.",
         "Run the source-aware endpoint from a real MCP host, not just a browser proof page.",
+        "Use the source-specific eval pack when host reviewers need copy-ready acceptance cases.",
         "Require tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
         "Accept activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
       ],
@@ -764,13 +780,15 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         marketplace_manifest: MARKETPLACE_MANIFEST_URL,
         source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
         source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+        mcp_eval_pack: MCP_EVAL_PACK_URL,
+        source_eval_pack: sourceEvalPackUrl(action.id),
         ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
       },
     },
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R36",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R37",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -785,10 +803,12 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
     source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
     source_activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+    source_eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
     source_marketplace_manifest: MARKETPLACE_MANIFEST_URL,
     source_usage_snapshot: USAGE_SNAPSHOT_URL,
     source_funnel_snapshot: FUNNEL_SNAPSHOT_URL,
     source_ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
+    source_mcp_eval_pack: MCP_EVAL_PACK_URL,
     source_install_actions: INSTALL_ACTIONS_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
     source_client_config: CLIENT_CONFIG_URL,
@@ -821,7 +841,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R08",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R09",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -861,10 +881,13 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       live_proof: action.tracked_run_urls.generic_streamable_http_execute,
       reviewer_activation: action.proof_urls.tracked_reviewer_activation,
       reviewer_activation_html: action.proof_urls.tracked_reviewer_activation_html,
+      eval_pack: action.proof_urls.source_eval_pack,
+      eval_pack_markdown: action.proof_urls.source_eval_pack_markdown,
     },
     acceptance_gate: [
       "Install the hosted no-auth Streamable HTTP endpoint.",
       "Run tools/list against the source-aware endpoint.",
+      "Run the source-specific eval pack acceptance cases when a marketplace, MCP host, or reviewer needs host-side proof.",
       "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
       "Treat the listing as activated only when create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
     ],
@@ -903,6 +926,7 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Tools: ${payload.canonical_listing.tool_count} (${payload.canonical_listing.tool_names.join(", ")})`,
     `Marketplace manifest: ${payload.canonical_listing.marketplace_manifest}`,
     `Source activation sitemap: ${payload.canonical_listing.source_activation_sitemap}`,
+    `Host acceptance eval pack: ${payload.tracked_urls.eval_pack}`,
     "",
     "## Current Directory State",
     "",

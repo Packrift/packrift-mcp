@@ -4052,6 +4052,8 @@ function sourceActivationUrls(source: string) {
     reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${slug}?format=sh`,
     directory_update_card_json_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.json`,
     directory_update_card_markdown_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.md`,
+    eval_pack_json_url: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${slug}`,
+    eval_pack_markdown_url: `https://mcp.packrift.com/ai/mcp-eval-pack.md?source=${slug}`,
   };
 }
 
@@ -4061,6 +4063,13 @@ function shellQuote(value: string): string {
 
 function sourceActivationShellCommand(url: string): string {
   return `curl -sS ${shellQuote(url)} | bash`;
+}
+
+function sourceActivationEvalPackLines(urls: ReturnType<typeof sourceActivationUrls>): string[] {
+  return [
+    `Host acceptance eval pack: ${urls.eval_pack_json_url}`,
+    `Eval pack Markdown: ${urls.eval_pack_markdown_url}`,
+  ];
 }
 
 function sourceActivationCopyReadyHostConfigs(input: {
@@ -4187,6 +4196,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       cartUrl ? `Measured cart URL to review: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
+      ...sourceActivationEvalPackLines(urls),
       `Install/config handoff: ${urls.tracked_install_url}`,
       "",
       "Please open the measured /r/cart URL from your review environment or MCP host so the source records a real qualified cart landing before Shopify checkout. The shell runner does not follow Shopify checkout and does not place an order.",
@@ -4204,6 +4214,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `First-run prompt: ${urls.tracked_first_run_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
+      ...sourceActivationEvalPackLines(urls),
       "",
       "Please install the hosted Streamable HTTP endpoint in the MCP host and run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066. The shell runner calls the real source-aware endpoint, opens the returned MCP /r/cart landing once, does not follow Shopify checkout, and does not place an order.",
     ].join("\n");
@@ -4218,6 +4229,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
+      ...sourceActivationEvalPackLines(urls),
       `Install/config handoff: ${urls.tracked_install_url}`,
       "",
       "Please run the sequence from an MCP host so the source records tools/list and tools/call events through the hosted endpoint. The shell runner also opens the returned MCP /r/cart landing once without placing an order.",
@@ -4233,6 +4245,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
     `First-run action: ${urls.tracked_first_run_url}`,
     `Shell activation script: ${urls.reviewer_activation_shell_url}`,
     `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
+    ...sourceActivationEvalPackLines(urls),
     "",
     "Use these links in the source, directory listing, reviewer flow, or MCP host instructions so new visitors stay attributed to the source. The shell runner records a real MCP tool-call path and measured cart landing without placing an order.",
   ].join("\n");
@@ -4302,6 +4315,8 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         one_command_external_runner: sourceActivationShellCommand(urls.reviewer_activation_shell_url),
         directory_update_card_json_url: urls.directory_update_card_json_url,
         directory_update_card_markdown_url: urls.directory_update_card_markdown_url,
+        eval_pack_json_url: urls.eval_pack_json_url,
+        eval_pack_markdown_url: urls.eval_pack_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
         copy_ready_host_configs: sourceActivationCopyReadyHostConfigs({
@@ -4314,6 +4329,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         acceptance_criteria: [
           `Source remains attributed as ${row.source}.`,
           `The agent host calls tools/list against ${firstUsefulRun.endpoint}.`,
+          `The reviewer or host can run the source-specific eval pack at ${urls.eval_pack_json_url}.`,
           "The workflow calls get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
           "The returned measured https://mcp.packrift.com/r/cart/1066 URL is opened by an external reviewer, MCP host user, or buyer before any Shopify cart handoff.",
           "The funnel source row moves closer to material MCP tool calls, qualified cart landings, and attributed orders.",
@@ -4350,7 +4366,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R13",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R14",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -4399,6 +4415,8 @@ async function mcpSourceActivationQueuePayload(
         host_install_json_url: row.tracked_install_json_url,
         directory_update_card_json_url: row.directory_update_card_json_url,
         directory_update_card_markdown_url: row.directory_update_card_markdown_url,
+        eval_pack_json_url: row.eval_pack_json_url,
+        eval_pack_markdown_url: row.eval_pack_markdown_url,
         source_aware_endpoint: row.source_aware_endpoint,
         copy_ready_host_configs: row.copy_ready_host_configs,
         cart_landing_action_url: row.cart_landing_action_url,
@@ -4420,6 +4438,7 @@ async function mcpSourceActivationQueuePayload(
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       directory_update_card_template: "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json",
+      eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
     },
     operating_rule:
@@ -4477,6 +4496,7 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Source activation queue HTML: ${payload.links.source_activation_queue_html}`,
     `- Activation experiments: ${payload.links.activation_experiments_json}`,
     `- Activation experiments HTML: ${payload.links.activation_experiments_html}`,
+    `- Source-specific eval pack template: ${payload.links.eval_pack_template}`,
     `- GA4 funnel proof: ${payload.links.ga4_funnel_proof}`,
     "",
   ].join("\n");
@@ -4558,6 +4578,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           <a class="button primary" href="${escapeHtml(row.primary_action_url)}">${primaryLabel}</a>
           ${secondaryCheckLink}
           ${hostConfigLink}
+          <a class="button" href="${escapeHtml(row.eval_pack_json_url)}">Eval pack</a>
           <a class="button" href="${escapeHtml(row.reviewer_activation_shell_url)}">Shell script</a>
           <a class="button" href="${escapeHtml(row.directory_update_card_markdown_url)}">Update card</a>
           <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install path</a>
@@ -4641,6 +4662,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <a href="${escapeHtml(payload.links.source_activation_queue_json)}">JSON</a>
         <a href="${escapeHtml(payload.links.source_activation_queue_markdown)}">Markdown</a>
         <a href="${escapeHtml(payload.links.activation_experiments_html)}">Experiments</a>
+        <a href="${escapeHtml(payload.links.eval_pack_template.replace("{source}", rows[0]?.source ?? "generic"))}">Eval pack</a>
         <a href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel snapshot</a>
         <a href="${escapeHtml(payload.links.usage_snapshot)}">Usage snapshot</a>
       </div>
@@ -4677,6 +4699,8 @@ interface SourceActivationExperimentQueueRow {
   reviewer_activation_shell_url: string;
   directory_update_card_json_url: string;
   directory_update_card_markdown_url: string;
+  eval_pack_json_url: string;
+  eval_pack_markdown_url: string;
   source_aware_endpoint: string;
   copy_ready_host_configs: ReturnType<typeof sourceActivationCopyReadyHostConfigs>;
   agent_prompt: string;
@@ -4792,6 +4816,7 @@ function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRo
     `First-run action: ${row.tracked_first_run_url}`,
     `Activation runner: ${row.reviewer_activation_runner_url}`,
     `Shell activation script: ${row.reviewer_activation_shell_url}`,
+    `Host acceptance eval pack: ${row.eval_pack_json_url}`,
     "",
     "Please install the hosted Streamable HTTP endpoint in a real MCP host and run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066. Use the returned https://mcp.packrift.com/r/cart/ URL as the measured cart handoff.",
   ].join("\n");
@@ -4825,6 +4850,8 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       reviewer_activation_shell_url: row.reviewer_activation_shell_url,
       directory_update_card_json_url: row.directory_update_card_json_url,
       directory_update_card_markdown_url: row.directory_update_card_markdown_url,
+      eval_pack_json_url: row.eval_pack_json_url,
+      eval_pack_markdown_url: row.eval_pack_markdown_url,
       primary_action_url: row.primary_action_url,
       cart_landing_action_url: row.cart_landing_action_url,
       recent_measured_cart_urls: row.recent_measured_cart_urls,
@@ -4841,6 +4868,7 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
         source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
         source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
         directory_update_card: row.directory_update_card_json_url,
+        eval_pack: row.eval_pack_json_url,
         activation_command_center: "https://mcp.packrift.com/r/activate",
         usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
         funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
@@ -4862,7 +4890,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R05",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R06",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -4883,6 +4911,7 @@ async function mcpActivationExperimentsPayload(
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
+      eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
