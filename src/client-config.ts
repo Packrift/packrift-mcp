@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 
 export interface McpClientConfigRuntime {
   serverVersion: string;
@@ -90,11 +90,30 @@ const FIRST_TESTS = [
       required_before_cart: ["get_product", "get_pricing", "check_inventory"],
     },
   },
+  {
+    id: "cart-1066",
+    purpose: "Confirm the MCP cart tool returns a measured /r/cart landing URL after exact SKU, price, and inventory are known.",
+    request: toolCall("cart-1066", "create_cart_url", {
+      sku: "1066",
+      quantity: 1,
+      selected_sku: "1066",
+      selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
+      match_type: "client_config_first_useful_run",
+      source_context: "client_config_first_cart_run",
+      journey_id: "mcp_client_config_1066_53472879935856",
+      result_set_id: "mcp_client_config_first_run",
+      utm_term: "1066",
+    }),
+    expected: {
+      cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
+      order_created: false,
+    },
+  },
 ] as const;
 
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R03",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R04",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -141,6 +160,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       "Use /r/install/{source}/{target} when sharing a target-specific command or config so install-intent can be attributed before tool calls arrive.",
     ],
     first_tests: FIRST_TESTS,
+    first_useful_run: mcpFirstUsefulRun("generic", "client_config"),
     proof_urls: {
       health: "https://mcp.packrift.com/health",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -203,6 +223,14 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     "## First Tests",
     "",
     payload.first_tests.map((test) => [`### ${test.id}`, "", test.purpose, "", fencedJson(test.request)].join("\n")).join("\n\n"),
+    "",
+    "## First Useful Run",
+    "",
+    `Endpoint: \`${payload.first_useful_run.endpoint}\``,
+    "",
+    payload.first_useful_run.buyer_prompt,
+    "",
+    fencedJson(payload.first_useful_run.sequence),
     "",
     "## Proof URLs",
     "",

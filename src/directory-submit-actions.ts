@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 
 export interface DirectorySubmitActionsRuntime {
   serverVersion: string;
@@ -305,7 +305,7 @@ function trackedConfigUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked install actions now include a first_useful_run sequence that reaches create_cart_url after live price and inventory checks.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -333,6 +333,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Tracked MCP JSON config: ${trackedConfig}`,
     `- Tracked Codex install action: ${trackedInstallCodex}`,
     `- Tracked generic install action: ${trackedInstallGeneric}`,
+    `- First useful run: open ${trackedInstallGeneric} and run the first_useful_run JSON-RPC sequence from the source-aware endpoint; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -374,6 +375,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       codex: trackedInstallUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
     },
+    first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
     proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
       start_page: MCP_START_URL,
@@ -403,7 +405,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R15",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R16",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
