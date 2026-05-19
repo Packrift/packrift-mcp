@@ -9,6 +9,7 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_START_URL = "https://mcp.packrift.com/start";
 const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const MCP_TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const DIRECTORY_REFRESH_URL = "https://mcp.packrift.com/ai/mcp-directory-refresh.json";
 const INSTALL_MATRIX_URL = "https://mcp.packrift.com/ai/mcp-install-matrix.json";
 const CLIENT_CONFIG_URL = "https://mcp.packrift.com/ai/mcp-client-config.json";
@@ -273,13 +274,23 @@ function trackedStartUrl(source: string): string {
   return url.toString();
 }
 
+function trackedConfigUrl(source: string): string {
+  const url = new URL(`https://mcp.packrift.com/r/config/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "directory_config");
+  url.searchParams.set("utm_campaign", "packrift_mcp_install");
+  url.searchParams.set("utm_content", "directory_submit_actions");
+  return url.toString();
+}
+
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
   const staleMarkers = "stale_markers" in action && action.stale_markers?.length ? [`Current stale/missing markers: ${action.stale_markers.join(", ")}.`, ""] : [];
   const trackedStart = trackedStartUrl(action.id);
+  const trackedConfig = trackedConfigUrl(action.id);
   return [
     `Subject: ${action.recrawl_subject}`,
     "",
@@ -296,6 +307,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
     `- Tracked start page: ${trackedStart}`,
+    `- Tracked MCP JSON config: ${trackedConfig}`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -304,6 +316,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Start pack: ${MCP_START_JSON_URL}`,
     `- Install matrix: ${INSTALL_MATRIX_URL}`,
     `- Client config: ${CLIENT_CONFIG_URL}`,
+    `- Tracked config template: ${MCP_TRACKED_CONFIG_TEMPLATE}`,
     `- Root MCP JSON config: ${ROOT_MCP_JSON_URL}`,
     `- Well-known MCP JSON config: ${WELL_KNOWN_MCP_JSON_URL}`,
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -325,10 +338,12 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
   const actions = ACTIONS.map((action) => ({
     ...action,
     tracked_start_url: trackedStartUrl(action.id),
+    tracked_config_url: trackedConfigUrl(action.id),
     proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
       start_page: MCP_START_URL,
       tracked_start: trackedStartUrl(action.id),
+      tracked_config: trackedConfigUrl(action.id),
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
       manifest: "https://mcp.packrift.com/manifest",
@@ -354,6 +369,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
     canonical_endpoint: MCP_ENDPOINT,
     tracked_start_template: MCP_TRACKED_START_TEMPLATE,
+    tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
     source_client_config: CLIENT_CONFIG_URL,
@@ -384,7 +400,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -405,9 +421,10 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     "## Action Queue",
     "",
     `Tracked start template: ${payload.tracked_start_template}`,
+    `Tracked config template: ${payload.tracked_config_template}`,
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",

@@ -6,6 +6,7 @@ export interface InstallMatrixRuntime {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 
 function remoteMcpJson(name = "packrift") {
   return {
@@ -229,6 +230,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       "Prefer remote MCP install paths over local self-hosting.",
       "Do not ask buyers for Packrift API keys.",
       "Use browser agents only as read-first discovery bridges; confirm live commerce facts through MCP.",
+      "Use /r/config/{source} when sharing copy-ready MCP JSON config from a directory, partner, campaign, or agent handoff so the fetch is measurable.",
       "Use prepare_purchase_handoff for known exact SKUs when the host needs one compact live-confirmation and guarded cart-handoff tool call.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Route no-exact-match cases to quote recovery instead of forcing nearby substitutes.",
@@ -250,6 +252,8 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       manifest: "https://mcp.packrift.com/manifest",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      tracked_config_template: TRACKED_CONFIG_TEMPLATE,
+      tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",

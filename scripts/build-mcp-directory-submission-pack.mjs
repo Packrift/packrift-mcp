@@ -201,6 +201,7 @@ const LIVE_PROOF_URLS = {
   mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
   mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
   mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+  tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
   root_mcp_json: "https://mcp.packrift.com/mcp.json",
   well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
   mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -217,6 +218,7 @@ const LIVE_PROOF_URLS = {
   docker_mcp_catalog_pr: "https://api.github.com/repos/docker/mcp-registry/pulls/3388",
 };
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
@@ -315,6 +317,8 @@ function canonicalListingCopy(liveProof) {
       "Packrift MCP lets AI agents find exact-spec packaging products, confirm live price and inventory, compare alternatives, estimate shipping, and hand off attributed carts to Packrift.",
     website_url: SERVER_JSON.websiteUrl,
     tracked_start_template: TRACKED_START_TEMPLATE,
+    tracked_config_template: TRACKED_CONFIG_TEMPLATE,
+    tracked_config_generic: TRACKED_CONFIG_TEMPLATE.replace("{source}", "generic"),
     repository_url: SERVER_JSON.repository?.url,
     remote_endpoint: SERVER_JSON.remotes?.[0]?.url,
     install_config: {
@@ -327,7 +331,7 @@ function canonicalListingCopy(liveProof) {
     },
     category: "Business",
     tags: ["mcp", "ecommerce", "packaging", "procurement", "shopify", "cart-handoff", "inventory"],
-    proof_summary: `${toolsCount} tools, ${promptsCount} prompts, ${resourcesCount} resources, direct live MCP introspection, public manifests, valid Glama claim, and MCP-attributed cart handoff candidates.`,
+    proof_summary: `${toolsCount} tools, ${promptsCount} prompts, ${resourcesCount} resources, direct live MCP introspection, public manifests, valid Glama claim, source-attributed /r/config/{source} config links, and MCP-attributed cart handoff candidates.`,
     contact_email: CONTACT_EMAIL_PLACEHOLDER,
   };
 }
@@ -352,6 +356,7 @@ function targetRows(distribution, copy) {
     proof_urls: {
       hosted_endpoint: copy.remote_endpoint,
       tracked_start: TRACKED_START_TEMPLATE.replace("{source}", target.name),
+      tracked_config: TRACKED_CONFIG_TEMPLATE.replace("{source}", target.name),
       live_health: LIVE_PROOF_URLS.health,
       live_manifest: LIVE_PROOF_URLS.manifest,
       mcp_tools_list: `${MCP_ENDPOINT} via JSON-RPC method tools/list`,
@@ -361,6 +366,7 @@ function targetRows(distribution, copy) {
       mcp_adoption_kit: LIVE_PROOF_URLS.mcp_adoption_kit,
       mcp_install_matrix: LIVE_PROOF_URLS.mcp_install_matrix,
       mcp_client_config: LIVE_PROOF_URLS.mcp_client_config,
+      tracked_config_generic: LIVE_PROOF_URLS.tracked_config_generic,
       root_mcp_json: LIVE_PROOF_URLS.root_mcp_json,
       well_known_mcp_json: LIVE_PROOF_URLS.well_known_mcp_json,
       mcp_usage_snapshot: LIVE_PROOF_URLS.mcp_usage_snapshot,
@@ -485,6 +491,13 @@ function liveProofDigest(liveProof) {
       release: liveProof.mcp_client_config.value?.release ?? null,
       canonical_endpoint: liveProof.mcp_client_config.value?.canonical_endpoint ?? null,
       config_endpoint: liveProof.mcp_client_config.value?.config?.mcpServers?.packrift?.url ?? null,
+      tracked_config_template: liveProof.mcp_client_config.value?.aliases?.tracked_config_template ?? null,
+    },
+    tracked_config_generic: {
+      ok: liveProof.tracked_config_generic.ok,
+      status: liveProof.tracked_config_generic.status,
+      url: liveProof.tracked_config_generic.url,
+      config_endpoint: liveProof.tracked_config_generic.value?.mcpServers?.packrift?.url ?? null,
     },
     root_mcp_json: {
       ok: liveProof.root_mcp_json.ok,
@@ -650,6 +663,7 @@ function markdownReport(payload) {
     `Repository: ${payload.copy.repository_url}`,
     `Remote endpoint: ${payload.copy.remote_endpoint}`,
     `Tracked start template: ${payload.copy.tracked_start_template}`,
+    `Tracked config template: ${payload.copy.tracked_config_template}`,
     `Website: ${payload.copy.website_url}`,
     `Tags: ${payload.copy.tags.join(", ")}`,
     `Proof summary: ${payload.copy.proof_summary}`,

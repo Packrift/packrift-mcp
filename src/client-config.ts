@@ -6,6 +6,22 @@ export interface McpClientConfigRuntime {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
+const TRACKED_CONFIG_RECOMMENDED_SOURCES = [
+  "official_registry",
+  "mcpservers_org",
+  "glama_connector",
+  "mcp_directory",
+  "anthropic_connectors_directory",
+  "smithery",
+  "cline_mcp_marketplace",
+  "mcp_so",
+  "mcpmarket_com",
+  "cursor_directory",
+  "mcpcentral",
+  "mcpfinder",
+  "generic",
+] as const;
 
 function remoteMcpJson(name = "packrift") {
   return {
@@ -16,6 +32,15 @@ function remoteMcpJson(name = "packrift") {
       },
     },
   };
+}
+
+function trackedConfigUrl(source: string): string {
+  const url = new URL(`https://mcp.packrift.com/r/config/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "directory_config");
+  url.searchParams.set("utm_campaign", "packrift_mcp_install");
+  url.searchParams.set("utm_content", "client_config");
+  return url.toString();
 }
 
 function toolCall(id: string, name: string, args: Record<string, unknown>) {
@@ -67,7 +92,7 @@ const FIRST_TESTS = [
 
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R01",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R02",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -89,6 +114,9 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       canonical_json: "https://mcp.packrift.com/ai/mcp-client-config.json",
       markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
+      tracked_config_template: TRACKED_CONFIG_TEMPLATE,
+      tracked_config_generic: trackedConfigUrl("generic"),
+      tracked_config_examples: Object.fromEntries(TRACKED_CONFIG_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
     },
     install_commands: {
       claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
@@ -100,6 +128,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       "If a host asks for transport, choose HTTP or Streamable HTTP.",
       "Do not ask buyers for Packrift API keys; the hosted endpoint requires no buyer-side auth.",
       "Use prepare_purchase_handoff for exact SKU prep, then create cart handoffs only after buyer confirmation.",
+      "Use /r/config/{source} when sharing the config from a directory, partner, campaign, or agent workflow so config fetches can be attributed.",
     ],
     first_tests: FIRST_TESTS,
     proof_urls: {
@@ -134,6 +163,14 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     "## Copy-Ready MCP JSON",
     "",
     fencedJson(payload.config),
+    "",
+    "## Source-Attributed Config Links",
+    "",
+    `Template: \`${payload.aliases.tracked_config_template}\``,
+    "",
+    Object.entries(payload.aliases.tracked_config_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
     "",
     "## Install Commands",
     "",

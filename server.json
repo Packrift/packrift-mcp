@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
-  "description": "Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
+  "description": "Hosted no-auth remote MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
   "version": "0.2.10",
   "websiteUrl": "https://packrift.com/pages/packrift-ai-agent-instructions",
   "repository": {
@@ -14,43 +14,6 @@
     {
       "type": "streamable-http",
       "url": "https://mcp.packrift.com/mcp"
-    }
-  ],
-  "packages": [
-    {
-      "registryType": "oci",
-      "identifier": "ghcr.io/packrift/packrift-mcp:latest",
-      "transport": {
-        "type": "streamable-http",
-        "url": "http://localhost:8787/mcp"
-      },
-      "environmentVariables": [
-        {
-          "name": "SHOPIFY_PACKRIFT_TOKEN",
-          "description": "Optional for MCP introspection and directory scanning. Required only when self-hosting live Shopify-backed catalog, pricing, inventory, shipping, and cart tools. The public hosted endpoint at https://mcp.packrift.com/mcp needs no user-supplied token.",
-          "format": "string",
-          "isRequired": false,
-          "isSecret": true
-        },
-        {
-          "name": "SHOPIFY_STORE_DOMAIN",
-          "description": "Packrift Shopify store domain.",
-          "format": "string",
-          "default": "packrift.myshopify.com"
-        },
-        {
-          "name": "STOREFRONT_DOMAIN",
-          "description": "Packrift storefront domain.",
-          "format": "string",
-          "default": "packrift.com"
-        },
-        {
-          "name": "PORT",
-          "description": "HTTP port exposed by the Packrift MCP container.",
-          "format": "number",
-          "default": "8787"
-        }
-      ]
     }
   ]
 }

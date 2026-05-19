@@ -52,10 +52,10 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/start",
       install_or_call:
-        "Open the start page or read /ai/mcp-start.json for remote MCP config, Claude/Codex install commands, first-flow JSON-RPC calls, buyer prompts, proof URLs, and /r/start/{source} tracked start links.",
+        "Open the start page or read /ai/mcp-start.json for remote MCP config, Claude/Codex install commands, first-flow JSON-RPC calls, buyer prompts, proof URLs, /r/start/{source} tracked start links, and /r/config/{source} tracked config links.",
       proof_url: "https://mcp.packrift.com/ai/mcp-start.json",
       fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
-      next_action: "Use source-specific tracked start /r/start/{source} links as the shortest public install link in directory recrawls and external agent handoffs.",
+      next_action: "Use source-specific /r/start/{source} and /r/config/{source} links as the shortest public install paths in directory recrawls and external agent handoffs.",
     }),
     surface({
       id: "mcp_adoption_kit",
@@ -97,7 +97,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-client-config.json",
       install_or_call:
-        "Fetch /mcp.json, /.well-known/mcp.json, or /ai/mcp-client-config.json and install the mcpServers.packrift remote HTTP endpoint.",
+        "Fetch /mcp.json, /.well-known/mcp.json, /ai/mcp-client-config.json, or /r/config/{source} and install the mcpServers.packrift remote HTTP endpoint.",
       proof_url: "https://mcp.packrift.com/ai/mcp-client-config.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       next_action: "Use this as the shortest config file in directory submissions and IDE agent setup docs.",
@@ -473,6 +473,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
@@ -497,6 +498,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Confirm live price, inventory, shipping, and cart eligibility through MCP tools before presenting a cart or checkout action.",
       "When create_cart_url returns an MCP /r/cart landing URL, use that as the primary buyer handoff so cart progression is measurable before Shopify checkout.",
       "When an external directory is stale or blocked, refresh that directory with this matrix, server.json, health, resources/list, tools/list, and cart smoke evidence.",
+      "Use /r/config/{source} for tracked config fetches when a directory or host accepts a direct MCP JSON config URL.",
     ],
     counts: {
       total_surfaces: surfaces.length,
@@ -533,7 +535,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, direct client config, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane with a root SKILL.md.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, direct client config, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a candidate browser-skill lane with a root SKILL.md.",
     "",
     "## Operating Rules",
     "",

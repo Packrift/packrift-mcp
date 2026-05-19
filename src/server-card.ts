@@ -19,6 +19,8 @@ export const serverCard = {
     aiAgentInstructionsMarkdown: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
     mcpStart: "https://mcp.packrift.com/start",
     mcpTrackedStartTemplate: "https://mcp.packrift.com/r/start/{source}",
+    mcpTrackedConfigTemplate: "https://mcp.packrift.com/r/config/{source}",
+    mcpTrackedConfigGeneric: "https://mcp.packrift.com/r/config/generic",
     mcpStartJson: "https://mcp.packrift.com/ai/mcp-start.json",
     mcpStartMarkdown: "https://mcp.packrift.com/ai/mcp-start.md",
     glamaClaim: "https://mcp.packrift.com/.well-known/glama.json",

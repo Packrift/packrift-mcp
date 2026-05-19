@@ -3,7 +3,28 @@
   "version": "0.2.10",
   "description": "MCP server for Packrift exact-spec packaging procurement, live pricing, inventory, reorder, quote, and cart handoff.",
   "private": true,
+  "license": "MIT",
   "type": "module",
+  "homepage": "https://mcp.packrift.com/start",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Packrift/packrift-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Packrift/packrift-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "remote-mcp",
+    "ecommerce",
+    "packaging",
+    "procurement",
+    "shopify",
+    "cart-handoff",
+    "inventory",
+    "ai-commerce"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "wrangler dev",

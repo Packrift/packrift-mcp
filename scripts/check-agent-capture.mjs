@@ -185,6 +185,7 @@ async function main() {
     "directory refresh",
     "directory submit actions",
     "tracked start",
+    "tracked config",
     "Browserbase Browse",
     "SKILL.md",
     "ChatGPT/OpenAI commerce",
@@ -234,7 +235,7 @@ async function main() {
     check("resources/list advertises install matrix", hasResourceUri(resourceUris, "/ai/mcp-install-matrix.json") && hasResourceUri(resourceUris, "/ai/mcp-install-matrix.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {
+    check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/r/config/generic") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises usage snapshot", hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.md"), {

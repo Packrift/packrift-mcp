@@ -9,6 +9,7 @@ const CAPTURE_URL = "https://mcp.packrift.com/ai/all-agent-capture.json";
 const CAPTURE_MD_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const DISTRIBUTION_LATEST = resolve(REPO_ROOT, "outputs/mcp-distribution-check/latest.json");
 const AGENT_CAPTURE_CHECK_LATEST = resolve(REPO_ROOT, "outputs/agent-capture-check/latest.json");
@@ -52,6 +53,7 @@ function directoryActionRows(submitActions, distribution) {
       missing: row.stale_markers ?? [],
       follow_up_action: row.next_action,
       tracked_start_url: row.tracked_start_url,
+      tracked_config_url: row.tracked_config_url,
       proof_urls: row.proof_urls,
       message: row.recrawl_message,
     }));
@@ -63,6 +65,7 @@ function directoryActionRows(submitActions, distribution) {
     action_status: row.status,
     directory_status: row.status,
     tracked_start_url: TRACKED_START_TEMPLATE.replace("{source}", row.name),
+    tracked_config_url: TRACKED_CONFIG_TEMPLATE.replace("{source}", row.name),
     message: directoryRefreshMessage(row),
   }));
 }
@@ -71,11 +74,13 @@ function evidenceLinks(capture) {
   return {
     canonical_mcp_endpoint: MCP_ENDPOINT,
     tracked_start_template: TRACKED_START_TEMPLATE,
+    tracked_config_template: TRACKED_CONFIG_TEMPLATE,
     all_agent_capture_json: CAPTURE_URL,
     all_agent_capture_markdown: CAPTURE_MD_URL,
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+    generic_tracked_config: TRACKED_CONFIG_TEMPLATE.replace("{source}", "generic"),
     root_mcp_json: "https://mcp.packrift.com/mcp.json",
     well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -120,6 +125,7 @@ function directoryRefreshMessage(row, capture = null) {
     `- Title: ${SERVER_JSON.title}`,
     `- Remote endpoint: ${MCP_ENDPOINT}`,
     `- Tracked start page: ${TRACKED_START_TEMPLATE.replace("{source}", row.name ?? "generic")}`,
+    `- Tracked MCP JSON config: ${TRACKED_CONFIG_TEMPLATE.replace("{source}", row.name ?? "generic")}`,
     `- Canonical start page: https://mcp.packrift.com/start`,
     `- Repository: ${SERVER_JSON.repository?.url}`,
     `- Website: ${SERVER_JSON.websiteUrl}`,
@@ -175,6 +181,8 @@ function agentInstallSnippets() {
   return {
     tracked_start_template: TRACKED_START_TEMPLATE,
     generic_tracked_start: TRACKED_START_TEMPLATE.replace("{source}", "generic"),
+    tracked_config_template: TRACKED_CONFIG_TEMPLATE,
+    generic_tracked_config: TRACKED_CONFIG_TEMPLATE.replace("{source}", "generic"),
     generic_mcp_json: {
       mcpServers: {
         packrift: {
@@ -195,7 +203,7 @@ function agentInstallSnippets() {
 
 function markdown(payload) {
   const staleRows = payload.directory_refreshes
-    .map((row) => `| ${row.label ?? row.name} | ${row.action_status} | ${row.directory_status} | ${row.priority ?? ""} | ${row.tracked_start_url ?? ""} | ${row.listing_url ?? row.url ?? ""} | ${row.submission_url ?? ""} |`)
+    .map((row) => `| ${row.label ?? row.name} | ${row.action_status} | ${row.directory_status} | ${row.priority ?? ""} | ${row.tracked_start_url ?? ""} | ${row.tracked_config_url ?? ""} | ${row.listing_url ?? row.url ?? ""} | ${row.submission_url ?? ""} |`)
     .join("\n");
   const messages = payload.directory_refreshes
     .map((row) => [`### ${row.name}`, "", "```text", row.message, "```", ""].join("\n"))
@@ -210,7 +218,7 @@ function markdown(payload) {
     "## Use This For",
     "",
     "- Refresh stale MCP directories with copy-ready proof.",
-    "- Use source-specific tracked start links from the canonical directory submit-action queue.",
+    "- Use source-specific tracked start and tracked config links from the canonical directory submit-action queue.",
     "- Give partners or agent platforms a single evidence bundle.",
     "- Point developers to the install matrix for copy-ready setup and smoke tests.",
     "- Use the live browser-agent bridge for Browse-style agents without creating a duplicate Packrift CLI.",
@@ -225,9 +233,9 @@ function markdown(payload) {
     "",
     "## Directory Refresh Queue",
     "",
-    "| Surface | Action status | Directory status | Priority | Tracked start | Listing | Submission |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
-    staleRows || "| none | pass | pass | | | | |",
+    "| Surface | Action status | Directory status | Priority | Tracked start | Tracked config | Listing | Submission |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    staleRows || "| none | pass | pass | | | | | |",
     "",
     "## Copy-Ready Directory Messages",
     "",
@@ -257,13 +265,17 @@ async function main() {
   ]);
   const rows = directoryActionRows(submitActions, distribution);
   const rowsMissingTrackedStart = rows.filter((row) => !String(row.tracked_start_url ?? "").startsWith("https://mcp.packrift.com/r/start/"));
+  const rowsMissingTrackedConfig = rows.filter((row) => !String(row.tracked_config_url ?? "").startsWith("https://mcp.packrift.com/r/config/"));
   const rowsMissingTrackedMessage = rows.filter((row) => !String(row.message ?? "").includes("/r/start/"));
-  if (rowsMissingTrackedStart.length || rowsMissingTrackedMessage.length) {
+  const rowsMissingTrackedConfigMessage = rows.filter((row) => !String(row.message ?? "").includes("/r/config/"));
+  if (rowsMissingTrackedStart.length || rowsMissingTrackedConfig.length || rowsMissingTrackedMessage.length || rowsMissingTrackedConfigMessage.length) {
     throw new Error(
       [
-        "Directory outreach rows must preserve tracked start URLs from the canonical submit-action queue.",
+        "Directory outreach rows must preserve tracked start and tracked config URLs from the canonical submit-action queue.",
         rowsMissingTrackedStart.length ? `Missing tracked_start_url: ${rowsMissingTrackedStart.map((row) => row.id ?? row.name).join(", ")}` : "",
+        rowsMissingTrackedConfig.length ? `Missing tracked_config_url: ${rowsMissingTrackedConfig.map((row) => row.id ?? row.name).join(", ")}` : "",
         rowsMissingTrackedMessage.length ? `Missing tracked message link: ${rowsMissingTrackedMessage.map((row) => row.id ?? row.name).join(", ")}` : "",
+        rowsMissingTrackedConfigMessage.length ? `Missing tracked config message link: ${rowsMissingTrackedConfigMessage.map((row) => row.id ?? row.name).join(", ")}` : "",
       ]
         .filter(Boolean)
         .join(" ")
@@ -290,6 +302,7 @@ async function main() {
     directory_submit_actions: {
       release: submitActions.release,
       tracked_start_template: submitActions.tracked_start_template,
+      tracked_config_template: submitActions.tracked_config_template,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions?.length ?? 0,
     },

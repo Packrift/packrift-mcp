@@ -42,8 +42,10 @@ Use this when a host, IDE, or directory reviewer wants the smallest copy-ready M
 - Markdown: https://mcp.packrift.com/ai/mcp-client-config.md
 - Root alias: https://mcp.packrift.com/mcp.json
 - Well-known alias: https://mcp.packrift.com/.well-known/mcp.json
+- Source-attributed config template: https://mcp.packrift.com/r/config/{source}
+- Generic source-attributed config: https://mcp.packrift.com/r/config/generic
 
-The root and well-known aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`.
+The root, well-known, and source-attributed aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`.
 
 ## First-Run Proof
 

@@ -13,6 +13,7 @@ The server is designed for buyers and AI agents that need packaging supplies by 
 - `SHOPIFY_PACKRIFT_TOKEN` (optional): Required only if self-hosting live Shopify-backed catalog, pricing, inventory, shipping, and cart tools.
 - `SHOPIFY_STORE_DOMAIN` (optional): Defaults to `packrift.myshopify.com`.
 - `STOREFRONT_DOMAIN` (optional): Defaults to `packrift.com`.
+- Canonical `server.json` is remote-only so crawlers should not classify the public Packrift MCP as token-required.
 
 ## Hosted Connector
 - Primary hosted endpoint: `https://mcp.packrift.com/mcp`

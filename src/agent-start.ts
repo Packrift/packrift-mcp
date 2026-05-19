@@ -11,6 +11,7 @@ const START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const START_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-start.md";
 const START_HTML_RESOURCE_URL = "https://mcp.packrift.com/ai/mcp-start.html";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
 const TRACKED_START_RECOMMENDED_SOURCES = [
   "official_registry",
@@ -71,6 +72,15 @@ function trackedStartUrl(source: string): string {
   url.searchParams.set("utm_source", source);
   url.searchParams.set("utm_medium", "directory_recrawl");
   url.searchParams.set("utm_campaign", "packrift_mcp_start");
+  url.searchParams.set("utm_content", "mcp_start_pack");
+  return url.toString();
+}
+
+function trackedConfigUrl(source: string): string {
+  const url = new URL(`https://mcp.packrift.com/r/config/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "directory_config");
+  url.searchParams.set("utm_campaign", "packrift_mcp_install");
   url.searchParams.set("utm_content", "mcp_start_pack");
   return url.toString();
 }
@@ -161,8 +171,10 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       markdown: START_MARKDOWN_URL,
       html_resource: START_HTML_RESOURCE_URL,
       tracked_start_template: TRACKED_START_TEMPLATE,
+      tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedStartUrl(source)])),
+      tracked_config_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
     },
     runtime: {
       server_version: runtime.serverVersion,
@@ -200,7 +212,8 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use https://mcp.packrift.com/mcp as the canonical endpoint.",
       "Use prepare_purchase_handoff when an agent already has an exact Packrift SKU and needs the fastest safe product, live price, inventory, and cart-handoff prep.",
       "Use /r/start/{source} tracked start links for directories, partners, campaigns, and agent handoffs so start traffic can be attributed by source.",
-      "Custom /r/start/{source} slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
+      "Use /r/config/{source} tracked config links when a directory, partner, campaign, or agent host needs a copy-ready MCP JSON config with source attribution.",
+      "Custom /r/start/{source} and /r/config/{source} slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Use create_cart_url only after buyer confirmation so the returned /r/cart URL keeps MCP attribution measurable.",
@@ -241,11 +254,18 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "## Tracked Start Links",
     "",
     `Template: \`${payload.start_urls.tracked_start_template}\``,
+    `Tracked config template: \`${payload.start_urls.tracked_config_template}\``,
     `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
     `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
     `Custom examples: ${payload.start_urls.source_policy.custom_examples.map((source) => `\`${source}\``).join(", ")}`,
     "",
     Object.entries(payload.start_urls.tracked_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+    "## Source-Attributed Config Links",
+    "",
+    Object.entries(payload.start_urls.tracked_config_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",

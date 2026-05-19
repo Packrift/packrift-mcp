@@ -142,6 +142,15 @@ function trackedStartUrl(source) {
   return url.toString();
 }
 
+function trackedConfigUrl(source) {
+  const url = new URL(`https://mcp.packrift.com/r/config/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "directory_config");
+  url.searchParams.set("utm_campaign", "packrift_mcp_install");
+  url.searchParams.set("utm_content", "directory_submit_actions");
+  return url.toString();
+}
+
 function publicProofLine(pack) {
   const proof = pack.live_proof ?? {};
   const tools = proof.mcp_tools_list?.tools_count ?? pack.copy?.tools_count ?? 14;
@@ -152,13 +161,14 @@ function publicProofLine(pack) {
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R02";
-  const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R01";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
+  const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R02";
+  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
 }
 
 function recrawlMessage(pack, target) {
   const missing = target.missing?.length ? `\nCurrent stale/missing markers: ${target.missing.join(", ")}.\n` : "";
   const trackedStart = trackedStartUrl(target.name);
+  const trackedConfig = trackedConfigUrl(target.name);
   return [
     `Subject: Refresh ${targetLabel(target)} Packrift MCP listing to current hosted endpoint`,
     "",
@@ -174,6 +184,7 @@ function recrawlMessage(pack, target) {
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
     `- Tracked start page: ${trackedStart}`,
+    `- Tracked MCP JSON config: ${trackedConfig}`,
     "- Canonical start page: https://mcp.packrift.com/start",
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -182,6 +193,7 @@ function recrawlMessage(pack, target) {
     "- Start pack: https://mcp.packrift.com/ai/mcp-start.json",
     "- Install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json",
     "- Client config: https://mcp.packrift.com/ai/mcp-client-config.json",
+    "- Tracked config template: https://mcp.packrift.com/r/config/{source}",
     "- Root MCP JSON config: https://mcp.packrift.com/mcp.json",
     "- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json",
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -218,11 +230,13 @@ function buildAction(pack, previousByName, target) {
     listing_url: target.listing_url,
     submission_url: target.submission_url,
     tracked_start_url: trackedStartUrl(target.name),
+    tracked_config_url: trackedConfigUrl(target.name),
     previous_status: previous?.status ?? null,
     form_fields: target.form_fields,
     proof_urls: {
       ...target.proof_urls,
       tracked_start: trackedStartUrl(target.name),
+      tracked_config: trackedConfigUrl(target.name),
     },
     recrawl_message: recrawlMessage(pack, target),
   };
@@ -232,7 +246,7 @@ function markdown(payload) {
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${action.label} | ${action.status} | ${action.current_distribution_status} | ${action.priority} | ${action.tracked_start_url} | ${action.next_action} |`
+        `| ${action.label} | ${action.status} | ${action.current_distribution_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.next_action} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -245,6 +259,7 @@ function markdown(payload) {
     `Generated: ${payload.generated_at}`,
     `Canonical endpoint: ${payload.canonical_endpoint}`,
     `Tracked start template: ${payload.tracked_start_template}`,
+    `Tracked config template: ${payload.tracked_config_template}`,
     `Directory proof: ${payload.directory_refresh_url}`,
     "",
     "## Summary",
@@ -253,8 +268,8 @@ function markdown(payload) {
     "",
     "## Action Queue",
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",
@@ -275,6 +290,7 @@ function main() {
     generated_at: new Date().toISOString(),
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+    tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
     directory_refresh_url: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     source_pack_generated_at: pack.generated_at,
     source_distribution_counts: pack.distribution_counts,

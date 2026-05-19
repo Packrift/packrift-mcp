@@ -9,6 +9,8 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_START_URL = "https://mcp.packrift.com/start";
 const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const MCP_TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
+const MCP_TRACKED_CONFIG_GENERIC_URL = "https://mcp.packrift.com/r/config/generic";
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
@@ -170,7 +172,7 @@ const DIRECTORY_TARGETS = [
 ] as const;
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, copy-ready MCP client config, source-attributed /r/config/{source} config links, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
     release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R08",
     generated_at: new Date().toISOString(),
@@ -188,6 +190,8 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
       start_url: MCP_START_URL,
       tracked_start_template: MCP_TRACKED_START_TEMPLATE,
+      tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
+      tracked_config_generic: MCP_TRACKED_CONFIG_GENERIC_URL,
       tracked_start_source_policy: MCP_TRACKED_START_SOURCE_POLICY,
       repository_url: "https://github.com/Packrift/packrift-mcp",
       remote_endpoint: MCP_ENDPOINT,
@@ -211,6 +215,8 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       mcp_start: MCP_START_JSON_URL,
       tracked_start_template: MCP_TRACKED_START_TEMPLATE,
       tracked_start_partner_demo: "https://mcp.packrift.com/r/start/partner_demo",
+      tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
+      tracked_config_generic: MCP_TRACKED_CONFIG_GENERIC_URL,
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
       glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
@@ -251,7 +257,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
     operating_rules: [
       "The hosted endpoint is the primary listing target; do not require users to self-host or provide a Shopify token for normal MCP use.",
       "Use the official registry name io.github.Packrift/packrift-mcp and the remote endpoint https://mcp.packrift.com/mcp.",
-      "Use /r/start/{source} for directory, partner, campaign, and agent handoff attribution. Custom source slugs are allowed when they match ^[a-z0-9_]{2,64}$.",
+      "Use /r/start/{source} for directory, partner, campaign, and agent handoff attribution; use /r/config/{source} when the directory or host can fetch MCP JSON config directly. Custom source slugs are allowed when they match ^[a-z0-9_]{2,64}$.",
       "Keep stale directory listings separate from the live MCP truth. The live health, server card, tools/list, resources/list, and prompts/list are authoritative.",
       "Discovery is not the final goal. Recrawls should drive external MCP sessions, tool calls, stamped cart landings, and measurable revenue.",
     ],
@@ -296,6 +302,7 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     `Long description: ${payload.canonical_listing.long_description}`,
     `Start page: ${payload.canonical_listing.start_url}`,
     `Tracked start template: ${payload.canonical_listing.tracked_start_template}`,
+    `Tracked config template: ${payload.canonical_listing.tracked_config_template}`,
     `Tracked source format: ${payload.canonical_listing.tracked_start_source_policy.accepted_source_format}`,
     `Repository: ${payload.canonical_listing.repository_url}`,
     `Website: ${payload.canonical_listing.website_url}`,

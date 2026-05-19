@@ -648,6 +648,7 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "quote_click",
   "cart_click",
   "mcp_cart_click",
+  "mcp_cart_landing",
   "copy_procurement_spec",
   "ai_corpus_click",
   "mcp_tool_call",
@@ -1284,6 +1285,13 @@ function routeLandingEventName(url: URL): "product_click" | "reorder_click" | "q
   return "ai_corpus_click";
 }
 
+function hasInternalProofParams(url: URL): boolean {
+  return ["proof", "synthetic", "qa", "smoke", "test"].some((key) => {
+    const value = url.searchParams.get(key);
+    return value !== null && value !== "0" && value.toLowerCase() !== "false";
+  });
+}
+
 function routeLandingHandle(url: URL): string {
   if (!url.pathname.startsWith("/products/")) return "";
   const handle = url.pathname.split("/").filter(Boolean).pop() ?? "";
@@ -1365,6 +1373,29 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
   const quantity = boundedInteger(requestUrl.searchParams.get("qty") ?? requestUrl.searchParams.get("quantity"), 1, 1, 999);
   const finalCartUrl = routeRedirectTargetUrl("cart", item, requestUrl).toString();
   const pageTitle = `Packrift cart for ${item.sku}`;
+  const suppressGa4CartLanding = hasInternalProofParams(requestUrl);
+  const cartLandingScript = suppressGa4CartLanding
+    ? "window.setTimeout(continueToCart, 750);"
+    : `gtag('event', 'mcp_cart_landing', {
+      event_callback: continueToCart,
+      event_timeout: 2500,
+      transport_type: 'beacon',
+      sku: ${JSON.stringify(item.sku)},
+      quantity: ${quantity},
+      page_location: window.location.href,
+      source: ${JSON.stringify(requestUrl.searchParams.get("utm_source") ?? "")},
+      medium: ${JSON.stringify(requestUrl.searchParams.get("utm_medium") ?? "")},
+      campaign: ${JSON.stringify(requestUrl.searchParams.get("utm_campaign") ?? "")},
+      content: ${JSON.stringify(requestUrl.searchParams.get("utm_content") ?? "")},
+      term: ${JSON.stringify(requestUrl.searchParams.get("utm_term") ?? "")},
+      packrift_ai_id: ${JSON.stringify(requestUrl.searchParams.get("packrift_ai_id") ?? "")},
+      ai_commerce_id: ${JSON.stringify(requestUrl.searchParams.get("ai_commerce_id") ?? "")},
+      mcp_key: ${JSON.stringify(requestUrl.searchParams.get("mcp_key") ?? "")},
+      mcp_journey: ${JSON.stringify(requestUrl.searchParams.get("mcp_journey") ?? "")},
+      mcp_result_set: ${JSON.stringify(requestUrl.searchParams.get("mcp_result_set") ?? "")},
+      match_type: ${JSON.stringify(requestUrl.searchParams.get("match_type") ?? "")}
+    });
+    window.setTimeout(continueToCart, 3000);`;
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -1388,26 +1419,7 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
       redirected = true;
       window.location.replace(finalCartUrl);
     }
-    gtag('event', 'mcp_cart_landing', {
-      event_callback: continueToCart,
-      event_timeout: 2500,
-      transport_type: 'beacon',
-      sku: ${JSON.stringify(item.sku)},
-      quantity: ${quantity},
-      page_location: window.location.href,
-      source: ${JSON.stringify(requestUrl.searchParams.get("utm_source") ?? "")},
-      medium: ${JSON.stringify(requestUrl.searchParams.get("utm_medium") ?? "")},
-      campaign: ${JSON.stringify(requestUrl.searchParams.get("utm_campaign") ?? "")},
-      content: ${JSON.stringify(requestUrl.searchParams.get("utm_content") ?? "")},
-      term: ${JSON.stringify(requestUrl.searchParams.get("utm_term") ?? "")},
-      packrift_ai_id: ${JSON.stringify(requestUrl.searchParams.get("packrift_ai_id") ?? "")},
-      ai_commerce_id: ${JSON.stringify(requestUrl.searchParams.get("ai_commerce_id") ?? "")},
-      mcp_key: ${JSON.stringify(requestUrl.searchParams.get("mcp_key") ?? "")},
-      mcp_journey: ${JSON.stringify(requestUrl.searchParams.get("mcp_journey") ?? "")},
-      mcp_result_set: ${JSON.stringify(requestUrl.searchParams.get("mcp_result_set") ?? "")},
-      match_type: ${JSON.stringify(requestUrl.searchParams.get("match_type") ?? "")}
-    });
-    window.setTimeout(continueToCart, 3000);
+    ${cartLandingScript}
   </script>
   <noscript><meta http-equiv="refresh" content="1;url=${escapeHtml(finalCartUrl)}"></noscript>
   <style>
@@ -1530,6 +1542,7 @@ async function recordRouteRedirectTelemetry(
   action: RouteRedirectAction,
   item: ApprovedCatalogItem
 ): Promise<void> {
+  if (action === "cart" && hasInternalProofParams(requestUrl)) return;
   const userAgent = request.headers.get("User-Agent") ?? "";
   if (!shouldRecordRouteLandingTelemetry(env, userAgent)) return;
   const surface = routeLandingTelemetrySurface(requestUrl) || "mcp_route_redirect";
@@ -1539,8 +1552,7 @@ async function recordRouteRedirectTelemetry(
     requestUrl.searchParams.get("ai_commerce_id") ||
     `${surface}_${compactDate()}_${item.sku}_${event}`;
 
-  await recordAiSalesEvent(env, {
-    event,
+  const basePayload = {
     source: surface,
     release: ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE,
     sku: item.sku,
@@ -1564,7 +1576,20 @@ async function recordRouteRedirectTelemetry(
     page_url: requestUrl.toString(),
     referrer: request.headers.get("Referer") ?? "",
     bot_family: classifyAgentFamily(userAgent),
+  };
+
+  await recordAiSalesEvent(env, {
+    event,
+    ...basePayload,
   });
+
+  if (action === "cart") {
+    await recordAiSalesEvent(env, {
+      event: "mcp_cart_landing",
+      ...basePayload,
+      landing_url: requestUrl.toString(),
+    });
+  }
 }
 
 function shouldRecordRouteLandingTelemetry(env: Env, userAgent: string): boolean {
@@ -1666,9 +1691,11 @@ function textFrom(...values: unknown[]): string {
 function buildToolResultAttribution(out: unknown): Record<string, unknown> {
   const row = objectValue(out);
   if (!row) return {};
-  const cartTracking = objectValue(row.cart_tracking);
-  const utm = objectValue(row.utm);
-  const params = urlParamsFromValue(row.url);
+  const nestedCart = objectValue(row.cart);
+  const cartTracking = objectValue(row.cart_tracking) ?? objectValue(nestedCart?.cart_tracking);
+  const utm = objectValue(row.utm) ?? objectValue(nestedCart?.utm);
+  const sourceUrl = typeof row.url === "string" && row.url ? row.url : typeof nestedCart?.url === "string" ? nestedCart.url : "";
+  const params = urlParamsFromValue(sourceUrl);
   return {
     packrift_ai_id: textFrom(cartTracking?.packrift_ai_id, params?.get("packrift_ai_id")),
     ai_commerce_id: textFrom(cartTracking?.ai_commerce_id, params?.get("ai_commerce_id"), cartTracking?.packrift_ai_id),
@@ -1680,7 +1707,7 @@ function buildToolResultAttribution(out: unknown): Record<string, unknown> {
     utm_campaign: textFrom(cartTracking?.utm_campaign, utm?.campaign, params?.get("utm_campaign")),
     utm_content: textFrom(cartTracking?.utm_content, utm?.content, params?.get("utm_content")),
     utm_term: textFrom(cartTracking?.utm_term, utm?.term, params?.get("utm_term")),
-    source_url: safeEventText(row.url, 500),
+    source_url: safeEventText(sourceUrl, 500),
   };
 }
 
@@ -1763,14 +1790,24 @@ async function recordGeneratedAiResourceFetch(
   c: AppContext,
   pathname: string,
   source: string,
-  resultSizeBytes: number
+  resultSizeBytes: number,
+  attribution?: {
+    sourceSlug?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    utmContent?: string;
+    mcpKeyPrefix?: string;
+  }
 ): Promise<void> {
   if (c.env.AI_SALES_SKU_PAGE_TELEMETRY !== "enabled") return;
   const userAgent = c.req.header("User-Agent") ?? "";
   if (shouldSkipInternalTelemetry(userAgent)) return;
-  const format = pathname.split(".").pop() ?? "";
+  const lastPathSegment = pathname.split("/").pop() ?? "";
+  const format = lastPathSegment.includes(".") ? (lastPathSegment.split(".").pop() ?? "") : "json";
   const day = compactDate();
-  const id = `${source}_${day}_http_get_${format}`;
+  const sourceSlug = attribution?.sourceSlug ? attribution.sourceSlug.toLowerCase() : "";
+  const id = sourceSlug ? `${source}_${sourceSlug}_${day}_http_get_${format}` : `${source}_${day}_http_get_${format}`;
+  const mcpKey = sourceSlug ? `${attribution?.mcpKeyPrefix ?? "config"}:${sourceSlug}` : source;
   await recordAiSalesEvent(c.env, {
     event: "mcp_resource_read",
     source,
@@ -1786,13 +1823,13 @@ async function recordGeneratedAiResourceFetch(
     bot_family: classifyAgentFamily(userAgent),
     packrift_ai_id: id,
     ai_commerce_id: id,
-    mcp_key: source,
-    mcp_journey: `${source}:http_get:${format}`,
+    mcp_key: mcpKey,
+    mcp_journey: sourceSlug ? `${source}:${sourceSlug}:http_get:${format}` : `${source}:http_get:${format}`,
     mcp_result_set: `${source}_${day}`,
-    utm_source: source,
-    utm_medium: "ai_resource",
-    utm_campaign: `packrift_${source}_${campaignDate()}`,
-    utm_content: `http_get_${format}`,
+    utm_source: sourceSlug || source,
+    utm_medium: attribution?.utmMedium ?? "ai_resource",
+    utm_campaign: attribution?.utmCampaign ?? `packrift_${source}_${campaignDate()}`,
+    utm_content: attribution?.utmContent ?? `http_get_${format}`,
     source_url: `https://mcp.packrift.com${pathname}`,
     page_url: c.req.url,
     referrer: c.req.header("Referer") ?? "",
@@ -1844,6 +1881,8 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byUtmMedium: Record<string, number> = {};
   const byUtmCampaign: Record<string, number> = {};
   const byUtmContent: Record<string, number> = {};
+  const byEventSource: Record<string, number> = {};
+  const byEventAttribution: Record<string, number> = {};
   const byStartSource: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
   for (const event of events) {
@@ -1862,6 +1901,7 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const utmMedium = String(event.utm_medium ?? "") || "unknown";
     const utmCampaign = String(event.utm_campaign ?? "") || "unknown";
     const utmContent = String(event.utm_content ?? "") || "unknown";
+    const matchType = String(event.match_type ?? "") || "unknown";
     byEvent[eventName] = (byEvent[eventName] ?? 0) + 1;
     bySku[sku] = (bySku[sku] ?? 0) + 1;
     bySource[source] = (bySource[source] ?? 0) + 1;
@@ -1869,6 +1909,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     byUtmMedium[utmMedium] = (byUtmMedium[utmMedium] ?? 0) + 1;
     byUtmCampaign[utmCampaign] = (byUtmCampaign[utmCampaign] ?? 0) + 1;
     byUtmContent[utmContent] = (byUtmContent[utmContent] ?? 0) + 1;
+    byEventSource[`${eventName}|${source}`] = (byEventSource[`${eventName}|${source}`] ?? 0) + 1;
+    byEventAttribution[`${eventName}|${source}|${utmSource}|${utmMedium}|${utmCampaign}|${mcpKey}|${matchType}|${botFamily}`] =
+      (byEventAttribution[`${eventName}|${source}|${utmSource}|${utmMedium}|${utmCampaign}|${mcpKey}|${matchType}|${botFamily}`] ?? 0) + 1;
     if (eventName === "mcp_start_click") {
       const startSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("start:") ? mcpKey.slice("start:".length) : "unknown";
       byStartSource[startSource] = (byStartSource[startSource] ?? 0) + 1;
@@ -1890,10 +1933,10 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     if (mcpKey !== "unknown") byMcpKey[mcpKey] = (byMcpKey[mcpKey] ?? 0) + 1;
     if (mcpJourney !== "unknown") byMcpJourney[mcpJourney] = (byMcpJourney[mcpJourney] ?? 0) + 1;
   }
-  const top = (obj: Record<string, number>) =>
+  const top = (obj: Record<string, number>, limit = 25) =>
     Object.entries(obj)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 25)
+      .slice(0, limit)
       .map(([key, count]) => ({ key, count }));
   const latency = (rows: number[]) => {
     const sorted = [...rows].sort((a, b) => a - b);
@@ -1962,11 +2005,14 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_utm_medium: top(byUtmMedium),
     by_utm_campaign: top(byUtmCampaign),
     by_utm_content: top(byUtmContent),
+    by_event_source: top(byEventSource, 100),
+    by_event_attribution: top(byEventAttribution, 100),
     by_start_source: top(byStartSource),
     recent_start_clicks: recent("mcp_start_click"),
     recent_tool_calls: recent("mcp_tool_call"),
     recent_prompt_gets: recent("mcp_prompt_get"),
     recent_resource_reads: recent("mcp_resource_read"),
+    recent_cart_landings: recent("mcp_cart_landing"),
     recent_no_matches: recent("no_match"),
     recent_exact_matches: recent("exact_match"),
     recent_multi_matches: recent("multi_match"),
@@ -2002,6 +2048,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const mcpToolCalls = byEvent.mcp_tool_call ?? 0;
   const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
   const cartClicks = byEvent.mcp_cart_click ?? 0;
+  const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
@@ -2010,6 +2057,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "all_agent_capture",
     "mcp_adoption_kit",
     "mcp_install_matrix",
+    "mcp_client_config",
     "mcp_usage_snapshot",
     "mcp_buyer_use_cases",
     "mcp_cart_activation",
@@ -2022,7 +2070,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + startClicks + directAgentResourceEvents;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + directAgentResourceEvents;
   return {
     release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R05",
     generated_at: new Date().toISOString(),
@@ -2046,6 +2094,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
       mcp_cart_clicks: cartClicks,
+      mcp_cart_landings: cartLandings,
       mcp_start_clicks: startClicks,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
@@ -2054,6 +2103,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_start_resource_events: bySource.mcp_start ?? 0,
       adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
       install_matrix_resource_events: bySource.mcp_install_matrix ?? 0,
+      client_config_resource_events: bySource.mcp_client_config ?? 0,
       all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,
       buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
       browser_agent_bridge_resource_events: bySource.browser_agent_bridge ?? 0,
@@ -2085,17 +2135,22 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      event_sources: summary.by_event_source,
+      event_attribution: summary.by_event_attribution,
     },
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
+      tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       mcp_start_click_sources: summary.by_start_source,
       utm_sources: summary.by_utm_source,
       utm_campaigns: summary.by_utm_campaign,
       mcp_keys: summary.by_mcp_key,
       mcp_journeys: summary.by_mcp_journey,
       tool_mcp_keys: summary.by_tool_mcp_key,
+      event_attribution: summary.by_event_attribution,
       recent_start_clicks: summary.recent_start_clicks,
       recent_tool_calls: summary.recent_tool_calls,
+      recent_cart_landings: summary.recent_cart_landings,
     },
     links: {
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -2105,6 +2160,10 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
+      root_mcp_json: "https://mcp.packrift.com/mcp.json",
+      well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -2147,6 +2206,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
+    `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
@@ -2154,6 +2214,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP start resource events: ${payload.counts.mcp_start_resource_events}`,
     `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
     `- Install matrix resource events: ${payload.counts.install_matrix_resource_events}`,
+    `- Client config resource events: ${payload.counts.client_config_resource_events}`,
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
     `- Browserbase Browse skill-pack resource events: ${payload.counts.browserbase_browse_skill_pack_resource_events}`,
@@ -2167,6 +2228,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "## Source Attribution",
     "",
     `Tracked start template: \`${payload.source_attribution.tracked_start_template}\``,
+    `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
     "",
     "### MCP Start Click Sources",
     "",
@@ -3408,6 +3470,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-start.json",
   "https://mcp.packrift.com/ai/mcp-start.md",
   "https://mcp.packrift.com/ai/mcp-start.html",
+  "https://mcp.packrift.com/r/config/generic",
   "https://mcp.packrift.com/server-card.json",
   "https://mcp.packrift.com/.well-known/mcp.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -3513,6 +3576,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-start.json": "One-link Packrift MCP start pack for installs, first useful flow, proof URLs, and measured cart handoff.",
   "/ai/mcp-start.md": "Markdown Packrift MCP start guide for humans, agents, and directory reviewers.",
   "/ai/mcp-start.html": "HTML Packrift MCP start page for developers and agent operators.",
+  "/r/config/generic": "Source-attributed remote MCP client config fetch for generic directories and agent handoffs.",
   "/server-card.json": "Root Packrift MCP server discovery card.",
   "/.well-known/mcp.json": "Well-known copy-ready remote MCP client config for installing Packrift MCP.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
@@ -3702,7 +3766,7 @@ const MCP_RESOURCES = [...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_U
       ? "text/markdown"
       : pathname.match(/^\/ai\/sku\/[^/]+\.json$/)
         ? "application/json"
-        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health"
+        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/")
           ? "application/json"
         : pathname.endsWith(".jsonl")
           ? "application/x-ndjson"
@@ -3752,6 +3816,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-start.json") return JSON.stringify(mcpStartPayload(mcpStartRuntime()), null, 2);
   if (pathname === "/ai/mcp-start.md") return mcpStartMarkdown(mcpStartRuntime());
   if (pathname === "/ai/mcp-start.html") return mcpStartHtml(mcpStartRuntime());
+  if (pathname === "/r/config/generic") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
   if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
@@ -3854,6 +3919,8 @@ function mcpManifestPayload() {
     mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
     root_mcp_json: "https://mcp.packrift.com/mcp.json",
     well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+    tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
+    tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -3895,6 +3962,8 @@ function mcpServerCardPayload() {
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       full_bundle: "https://mcp.packrift.com/ai/mcp-client-config.json",
       markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
+      tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
+      tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
     },
     static_server_card: {
       well_known_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -4126,6 +4195,8 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+      tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
+      tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -5643,6 +5714,36 @@ app.get("/r/start/:source", async (c) => {
   const targetUrl = mcpStartRedirectTargetUrl(source, requestUrl);
   await recordMcpStartRedirectTelemetry(c.env, c.req.raw, requestUrl, source, targetUrl);
   return c.redirect(targetUrl.toString(), 302);
+});
+
+app.get("/r/config/:source", async (c) => {
+  const requestUrl = new URL(c.req.url);
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").trim();
+  const source = rawSource.toLowerCase();
+  if (!MCP_START_SOURCE_PATTERN.test(source)) {
+    return c.json(
+      {
+        error: "invalid_mcp_config_source",
+        message: "Use /r/config/{source} with a lowercase source slug containing only letters, numbers, and underscores.",
+        valid_format: MCP_START_SOURCE_POLICY.accepted_source_format,
+        partner_specific_sources_allowed: MCP_START_SOURCE_POLICY.partner_specific_sources_allowed,
+        recommended_sources: MCP_START_SOURCE_POLICY.recommended_sources,
+        custom_examples: MCP_START_SOURCE_POLICY.custom_examples,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+
+  const config = mcpClientConfigPayload(clientConfigRuntime()).config;
+  await recordGeneratedAiResourceFetch(c, `/r/config/${source}`, "mcp_client_config", jsonByteSize(config), {
+    sourceSlug: source,
+    utmMedium: requestUrl.searchParams.get("utm_medium") || "directory_config",
+    utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_install",
+    utmContent: requestUrl.searchParams.get("utm_content") || "tracked_client_config",
+    mcpKeyPrefix: "config",
+  });
+  return c.json(config, 200, RAW_HEADERS);
 });
 
 app.get("/r/*", async (c) => {

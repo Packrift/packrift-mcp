@@ -185,6 +185,8 @@ async function buildFirstPartyMcpSummary() {
   const byEvent = objectFromTopRows(parsed.by_event);
   const byTool = objectFromTopRows(parsed.by_tool);
   const bySource = objectFromTopRows(parsed.by_source);
+  const byEventSource = objectFromTopRows(parsed.by_event_source);
+  const byEventAttribution = objectFromTopRows(parsed.by_event_attribution);
   const mcpDiscoveryEvents = sum([
     byEvent.mcp_tools_list,
     byEvent.mcp_prompt_list,
@@ -210,6 +212,8 @@ async function buildFirstPartyMcpSummary() {
     create_cart_url_calls: Number(byTool.create_cart_url || 0),
     start_clicks: Number(byEvent.mcp_start_click || 0),
     cart_clicks: Number(byEvent.cart_click || 0),
+    mcp_cart_landings: Number(byEvent.mcp_cart_landing || 0),
+    qualified_first_party_mcp_cart_landings: qualifiedFirstPartyCartLandings(byEventAttribution, byEventSource),
     product_clicks: Number(byEvent.product_click || 0),
     quote_clicks: Number(byEvent.quote_click || 0),
     reorder_clicks: Number(byEvent.reorder_click || 0),
@@ -223,6 +227,8 @@ async function buildFirstPartyMcpSummary() {
     top_start_sources: parsed.by_start_source || [],
     top_utm_sources: parsed.by_utm_source || [],
     top_utm_campaigns: parsed.by_utm_campaign || [],
+    top_event_sources: parsed.by_event_source || [],
+    top_event_attribution: parsed.by_event_attribution || [],
     top_sources: parsed.by_source || [],
     top_skus: parsed.by_sku || [],
     top_bot_families: parsed.by_bot_family || [],
@@ -746,6 +752,16 @@ function bucketCount(buckets, name) {
   return Number(buckets?.[name] || 0);
 }
 
+function qualifiedFirstPartyCartLandings(byEventAttribution, byEventSource) {
+  const rows = Object.keys(byEventAttribution || {}).length ? byEventAttribution : byEventSource;
+  return Object.entries(rows || {}).reduce((total, [key, count]) => {
+    const text = String(key || "").toLowerCase();
+    if (!text.startsWith("mcp_cart_landing|")) return total;
+    if (matchesInternalSynthetic(text) || matchesSelfGeneratedDistribution(text)) return total;
+    return matchesExternalQualifiedDemand(text) ? total + Number(count || 0) : total;
+  }, 0);
+}
+
 function classifyFirstPartySource(value) {
   const text = String(value || "").toLowerCase();
   if (matchesInternalSynthetic(text)) return { bucket: "internal_synthetic", reason: "internal_or_synthetic_source" };
@@ -757,7 +773,7 @@ function classifyFirstPartySource(value) {
 
 function classifyFirstPartyEvent(value) {
   const text = String(value || "").toLowerCase();
-  if (/mcp_tool_call|cart_click|product_click|quote_click|reorder_click|exact_match|multi_match|spec_search|copy_procurement_spec/.test(text)) {
+  if (/mcp_tool_call|mcp_cart_landing|cart_click|product_click|quote_click|reorder_click|exact_match|multi_match|spec_search|copy_procurement_spec/.test(text)) {
     return { bucket: "external_qualified_demand", reason: "buyer_or_tool_progression_event_type" };
   }
   if (/mcp_tools_list|mcp_prompt_list|mcp_prompt_get|mcp_resource_list|mcp_resource_templates_list|mcp_resource_read|sku_page_view|ai_corpus_click/.test(text)) {
@@ -795,7 +811,7 @@ function classifyGa4Row(row, options = {}) {
 
 function matchesInternalSynthetic(text) {
   return (
-    /(codex|localhost|packrift-agent|packrift-mcp-funnel|packrift-static|routecatalogqa|packriftqa|criticalpathqa|curl\/|python-urllib|node-fetch|undici)/i.test(text)
+    /(codex|localhost|manual_verify|packrift-agent|packrift-mcp-funnel|packrift-static|routecatalogqa|packriftqa|criticalpathqa|curl\/|python-urllib|node-fetch|undici)/i.test(text)
     || /(^|[^a-z0-9])(qa|smoke|synthetic|eval|test)([^a-z0-9]|$)/i.test(text)
   );
 }
@@ -823,7 +839,9 @@ function applyProofGate(value) {
   const distribution = value.distribution || {};
   const totalMcpSessions = Number(ga4.ai_mcp_events?.mcp_specific_session_start_events || 0);
   const qualifiedExternalMcpSessions = Number(ga4.ai_mcp_events?.traffic_quality?.qualified_external_session_starts || 0);
-  const qualifiedExternalCartLandings = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_events || 0);
+  const qualifiedGa4CartLandings = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_events || 0);
+  const qualifiedFirstPartyCartLandings = Number(firstParty.qualified_first_party_mcp_cart_landings || 0);
+  const qualifiedExternalCartLandings = Math.max(qualifiedGa4CartLandings, qualifiedFirstPartyCartLandings);
   const qualifiedExternalCartRevenue = Number(ga4.mcp_cart_url_landings?.traffic_quality?.qualified_external_revenue || 0);
   const firstPartyMcpOrders = Number(firstPartyOrders.attributed_order_count || 0);
   const firstPartyMcpOrderRevenue = Number(firstPartyOrders.attributed_revenue || 0);
@@ -839,6 +857,9 @@ function applyProofGate(value) {
     raw_mcp_specific_session_starts: totalMcpSessions,
     qualified_external_mcp_session_starts: qualifiedExternalMcpSessions,
     raw_stamped_mcp_cart_landings: Number(ga4.mcp_cart_url_landings?.event_count || 0),
+    raw_first_party_mcp_cart_landings: Number(firstParty.mcp_cart_landings || 0),
+    qualified_ga4_cart_landings: qualifiedGa4CartLandings,
+    qualified_first_party_mcp_cart_landings: qualifiedFirstPartyCartLandings,
     qualified_external_cart_landings: qualifiedExternalCartLandings,
     raw_stamped_mcp_cart_revenue: Number(ga4.mcp_cart_url_landings?.revenue || 0),
     qualified_external_cart_revenue: qualifiedExternalCartRevenue,
@@ -894,7 +915,7 @@ function markdownReport(value) {
     "| Requirement | Proven | Evidence |",
     "| --- | --- | --- |",
     `| Thousands of qualified MCP visitors | ${yesNo(value.proof_gate.thousands_of_qualified_visitors)} | ${proofMetrics.qualified_external_mcp_session_starts ?? 0} qualified external MCP session_start events (${proofMetrics.raw_mcp_specific_session_starts ?? 0} raw MCP-specific) |`,
-    `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${proofMetrics.qualified_external_cart_landings ?? 0} qualified external cart landings (${proofMetrics.raw_stamped_mcp_cart_landings ?? 0} raw stamped) |`,
+    `| Stamped MCP cart landings | ${yesNo(value.proof_gate.stamped_mcp_cart_landings)} | ${proofMetrics.qualified_external_cart_landings ?? 0} qualified external cart landing receipts (${proofMetrics.raw_stamped_mcp_cart_landings ?? 0} raw GA4 stamped; ${proofMetrics.raw_first_party_mcp_cart_landings ?? 0} raw first-party) |`,
     `| Measurable MCP sales | ${yesNo(value.proof_gate.measurable_mcp_sales)} | $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)} qualified GA4 cart revenue; ${proofMetrics.first_party_mcp_orders ?? 0} first-party attributed orders / $${numberValue(proofMetrics.first_party_mcp_order_revenue).toFixed(2)} |`,
     `| Material MCP tool usage | ${yesNo(value.proof_gate.mcp_tool_usage_is_material)} | ${fp.total_tool_calls ?? 0} first-party MCP tool calls for ${fp.date ?? "selected date"} |`,
     `| Root Shopify cart activation live | ${yesNo(value.proof_gate.root_shopify_cart_activation_live)} | ${rootCart.passed_checks ?? 0}/${rootCart.total_checks ?? 0} root-domain and cart-shim checks passed |`,
@@ -913,6 +934,7 @@ function markdownReport(value) {
     `- create_cart_url calls: ${fp.create_cart_url_calls ?? 0}`,
     `- Start clicks: ${fp.start_clicks ?? 0}`,
     `- Cart clicks: ${fp.cart_clicks ?? 0}`,
+    `- MCP cart landings: ${fp.mcp_cart_landings ?? 0}`,
     `- AI corpus clicks: ${fp.ai_corpus_clicks ?? 0}`,
     `- SKU page views: ${fp.sku_page_views ?? 0}`,
     "",
@@ -936,6 +958,8 @@ function markdownReport(value) {
     "",
     `- Qualified external MCP sessions: ${proofMetrics.qualified_external_mcp_session_starts ?? 0}`,
     `- Qualified external cart landings: ${proofMetrics.qualified_external_cart_landings ?? 0}`,
+    `- Qualified GA4 cart landings: ${proofMetrics.qualified_ga4_cart_landings ?? 0}`,
+    `- Qualified first-party MCP cart landings: ${proofMetrics.qualified_first_party_mcp_cart_landings ?? 0}`,
     `- Qualified external cart revenue: $${numberValue(proofMetrics.qualified_external_cart_revenue).toFixed(2)}`,
     `- Excluded internal/synthetic events: ${proofMetrics.excluded_internal_or_synthetic_events ?? 0}`,
     `- Self-generated distribution events: ${proofMetrics.self_generated_distribution_events ?? 0}`,

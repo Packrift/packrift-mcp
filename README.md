@@ -30,6 +30,12 @@ https://mcp.packrift.com/r/start/{source}
 
 Custom partner, campaign, directory, and agent-workflow slugs are allowed without code changes as long as they match `^[a-z0-9_]{2,64}$`. Examples: `mcpservers_org`, `agency_partner`, `browser_agent_demo`, `newsletter_mcp`.
 
+When a directory or agent host wants a source-attributed config file instead of an HTML start page, use:
+
+```text
+https://mcp.packrift.com/r/config/{source}
+```
+
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
 
 ```json
@@ -55,9 +61,10 @@ Use the hosted endpoint above when possible. It requires no buyer-side API key a
 
 ## Container Image
 
-The public hosted endpoint above is the primary integration path. A container
-image is published for MCP directories and local environments that require a
-package-style install surface:
+The public hosted endpoint above is the primary integration path and the
+canonical `server.json` manifest is remote-only. A container image is still
+published for local development and environments that explicitly require a
+self-hosted package-style install surface:
 
 ```sh
 docker pull ghcr.io/packrift/packrift-mcp:latest
@@ -101,6 +108,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
 - MCP tracked start template: https://mcp.packrift.com/r/start/{source}
+- MCP tracked config template: https://mcp.packrift.com/r/config/{source}
 - MCP tracked start source format: `^[a-z0-9_]{2,64}$`; partner-specific slugs are allowed without pre-registration
 - MCP start pack: https://mcp.packrift.com/ai/mcp-start.json
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
