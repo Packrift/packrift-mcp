@@ -206,7 +206,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R08", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R09", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -225,7 +225,7 @@ async function main() {
     check("resources/list advertises MCP start", hasResourceUri(resourceUris, "/start") && hasResourceUri(resourceUris, "/ai/mcp-start.json") && hasResourceUri(resourceUris, "/ai/mcp-start.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("Browserbase Browse is monitored after catalog publication", browseSurface?.status === "monitored", {
+    check("Browserbase Browse is live after verified catalog install", browseSurface?.status === "live", {
       detail: browseSurface?.status,
     }),
     check("markdown contains agent surface labels", mdResult.ok && hasAll(mdResult.text, mdNeedles), {

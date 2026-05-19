@@ -107,7 +107,7 @@ const DEMO_SEQUENCE = [
 
 export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkillPackRuntime) {
   return {
-    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R04",
+    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R05",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -126,7 +126,7 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       skill_md_url: ROOT_BROWSE_SKILL_MD_URL,
       canonical_skill_md_url: BROWSE_SKILL_MD_URL,
       canonical_endpoint: MCP_ENDPOINT,
-      status: "catalog_visible_install_blocked",
+      status: "catalog_live_installable",
       duplicate_surface_guard:
         "This is not a Packrift CLI, checkout, or alternate buyer surface. It is a read-first browser-skill wrapper around https://mcp.packrift.com/mcp.",
       suggested_inputs: ["sku", "product_dimensions", "family", "material", "color", "case_count", "quantity", "required_use"],
@@ -143,17 +143,18 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       ],
     },
     browse_catalog_submission: {
-      status: "catalog_visible_install_blocked",
+      status: "catalog_live_installable",
       check_command: "browse skills find packrift",
       catalog_slug: "packrift.com/exact-spec-packaging-procurement-e4ujmy",
       catalog_source_url: "https://github.com/browserbase/browse.sh/blob/main/skills/packrift.com/exact-spec-packaging-procurement-e4ujmy/SKILL.md",
-      install_check_status: "blocked_github_auth",
+      install_check_status: "pass",
       install_check_command: "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy",
+      installed_local_path: ".agents/skills/exact-spec-packaging-procurement",
       submission_url: "https://browse.sh/",
       tracked_start_url: "https://mcp.packrift.com/r/start/browse_sh",
       tracked_install_codex_url: "https://mcp.packrift.com/r/install/browse_sh/codex",
       positioning:
-        "Browse catalog search now finds Packrift, but public install is blocked until Browserbase exposes the generated source. The fallback skill pack remains a read-first wrapper around the hosted MCP endpoint for live price, inventory, shipping, and cart handoff.",
+        "Browse catalog search finds Packrift and browse skills add installs the verified MCP-first skill. This fallback skill pack remains a read-first wrapper around the hosted MCP endpoint for live price, inventory, shipping, and cart handoff.",
     },
     skill_md: {
       root_url: ROOT_BROWSE_SKILL_MD_URL,

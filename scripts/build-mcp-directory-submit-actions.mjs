@@ -48,12 +48,12 @@ const DIRECT_STATUS = {
     next_action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
   },
   browse_sh: {
-    status: "catalog_visible_install_blocked",
+    status: "catalog_live_installable",
     method: "Browse Add website / catalog skill submission flow",
     evidence:
-      "Browse accepted the Packrift Add website submission on 2026-05-19 and now returns packrift.com/exact-spec-packaging-procurement-e4ujmy, but browse skills add currently fails because the generated Browserbase source repo requires GitHub access.",
+      "Browse accepted and published Packrift on 2026-05-19 as packrift.com/exact-spec-packaging-procurement-e4ujmy. browse skills find returns verified=true, recommendedMethod=mcp, proxies=true, and browse skills add installed the skill locally.",
     next_action:
-      "Ask Browserbase/Browse to publish or expose the generated Packrift skill source so browse skills add works for public agents; keep the hosted MCP endpoint and Packrift SKILL.md as the usable fallback.",
+      "Monitor Browse install count and skill quality, keep the Packrift MCP endpoint current, and update the skill if Browserbase changes the generated source or catalog slug.",
   },
   glama_server_listing: {
     status: "manual_support_refresh_needed",
@@ -171,7 +171,7 @@ function publicProofLine(pack) {
   const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 17;
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
-  const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R04";
+  const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R05";
   const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R02";
   return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}.`;
 }

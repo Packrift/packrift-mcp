@@ -83,7 +83,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://browse.sh/",
     submission_url: "https://browse.sh/",
     priority: "high",
-    follow_up_action: "Browse catalog search now finds Packrift; get Browserbase to expose the generated source so browse skills add works publicly.",
+    follow_up_action: "Browse catalog search finds Packrift and browse skills add installs it; monitor install count and keep the MCP-first skill current.",
   },
   chiark: {
     listing_url: "https://chiark.ai/",
@@ -464,7 +464,7 @@ async function liveMcpCheck() {
       trackedInstallCodexResult.text.includes("codex mcp add packrift --url") &&
       trackedInstallCodexResult.text.includes("https://mcp.packrift.com/mcp") &&
       trackedInstallCodexResult.text.includes("packrift_mcp_source=generic") &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R08" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R09" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_install_actions" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-install-actions.json") &&
@@ -567,7 +567,7 @@ async function liveMcpCheck() {
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
-      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R04" &&
+      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R05" &&
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.browse_skill_candidate?.skill_md_url === "https://mcp.packrift.com/SKILL.md" &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.check_command === "browse skills find packrift" &&
@@ -599,13 +599,13 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.some((target) => target.id === "browse_sh" && target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/browse_sh/codex")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_install_urls?.codex?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directoryRefresh?.recrawl_request?.includes("/r/install/") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R14" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R15" &&
       directorySubmitActions?.actions?.length >= 18 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so") &&
-      directorySubmitActions?.actions?.some((action) => action.id === "browse_sh" && action.action_status === "catalog_visible_install_blocked") &&
+      directorySubmitActions?.actions?.some((action) => action.id === "browse_sh" && action.action_status === "catalog_live_installable") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery" && action.action_status === "api_key_required") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace" && action.action_status === "submitted_pending") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.action_status === "manual_submission_ready") &&
@@ -638,16 +638,16 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.server?.authentication === "none_required_for_hosted_endpoint" &&
       claudeConnectorSubmission?.claude_install?.tracked_config_url?.startsWith("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R05" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R06" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
       agentCaptureOutreach?.agent_install_snippets?.claude_code?.includes(MCP_ENDPOINT) &&
       agentCaptureOutreach?.browser_assisted_submissions?.mcp_so?.submission_url === "https://mcp.so/submit" &&
       agentCaptureOutreach?.browser_assisted_submissions?.browse_sh?.catalog_check_command === "browse skills find packrift" &&
-      agentCaptureOutreach?.browserbase_browse_candidate?.status === "catalog_visible_install_blocked" &&
+      agentCaptureOutreach?.browserbase_browse_candidate?.status === "catalog_live_installable" &&
       agentCaptureOutreach?.browserbase_browse_candidate?.catalog_slug === "packrift.com/exact-spec-packaging-procurement-e4ujmy" &&
-      agentCaptureOutreach?.browserbase_browse_candidate?.install_check?.status === "blocked_github_auth" &&
+      agentCaptureOutreach?.browserbase_browse_candidate?.install_check?.status === "pass" &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/start") &&
@@ -964,17 +964,18 @@ async function browseSkillsFindCheck() {
     });
     const parsed = JSON.parse(stdout);
     const skill = parsed.skills?.find((row) => row.slug === "packrift.com/exact-spec-packaging-procurement-e4ujmy") ?? null;
-    return check("browse_sh", skill ? "pending" : "stale", {
+    const installed = skill?.verified === true && skill?.recommendedMethod === "mcp" && Number(skill?.installCount ?? 0) >= 1;
+    return check("browse_sh", installed ? "pass" : skill ? "pending" : "stale", {
       http_status: null,
       url: skill?.sourceUrl ?? "https://browse.sh/",
       catalog_slug: skill?.slug ?? null,
       recommended_method: skill?.recommendedMethod ?? null,
       verified: skill?.verified ?? null,
       install_count: skill?.installCount ?? null,
-      missing: skill ? ["public browse skills add access"] : ["Packrift Browse skill"],
+      missing: installed ? [] : skill ? ["verified MCP install count"] : ["Packrift Browse skill"],
       error: stderr?.trim() || null,
       install_check_note:
-        "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy failed locally on 2026-05-19 because Browserbase's generated GitHub source required authentication.",
+        "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy succeeded locally on 2026-05-19 and installed .agents/skills/exact-spec-packaging-procurement.",
     });
   } catch (error) {
     return check("browse_sh", "blocked", {
