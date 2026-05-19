@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Env, variantIdToNumeric } from "../shopify.js";
-import { approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
+import { approvalForHandle, approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
 import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
 
 export const createCartUrlSchema = {
@@ -43,8 +43,14 @@ export const createCartUrlSchema = {
       packrift_ai_id: { type: "string" },
       ai_commerce_id: { type: "string" },
       result_set_id: { type: "string" },
-      selected_sku: { type: "string" },
-      selected_handle: { type: "string" },
+      selected_sku: {
+        type: "string",
+        description: "Buyer-confirmed SKU. When provided, it must resolve to the same AI_APPROVE item as the cart variant.",
+      },
+      selected_handle: {
+        type: "string",
+        description: "Buyer-confirmed product handle. When provided, it must resolve to the same AI_APPROVE item as the cart variant.",
+      },
       match_type: { type: "string" },
       reorder_source: { type: "string" },
       utm_term: { type: "string" },
@@ -93,19 +99,78 @@ export const createCartUrlZod = z.object({
   message: "create_cart_url requires either items[{variant_id, qty}] or an exact AI_APPROVE sku.",
 });
 
+function normalizedSku(value: string | undefined): string | null {
+  const normalized = value?.trim().toUpperCase();
+  return normalized ? normalized : null;
+}
+
+function normalizedHandle(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function sameVariant(left: string | null | undefined, right: string | null | undefined): boolean {
+  return Boolean(left && right && variantIdToNumeric(left) === variantIdToNumeric(right));
+}
+
+function cartContinuityError(message: string): never {
+  throw new Error(
+    `AI_APPROVE cart continuity blocked: ${message}. Use get_cart_handoff_candidates, search_products, or get_product to choose one exact approved Packrift SKU before create_cart_url.`
+  );
+}
+
 export async function createCartUrlHandler(env: Env, raw: unknown) {
   const input = createCartUrlZod.parse(raw);
-  const approvedSkuItem = input.sku ? approvalForSku(input.sku) : null;
-  if (input.sku && !approvedSkuItem) {
+  const requestedSku = normalizedSku(input.sku);
+  const selectedSkuInput = normalizedSku(input.selected_sku);
+  if (requestedSku && selectedSkuInput && requestedSku !== selectedSkuInput) {
+    cartContinuityError(`sku ${requestedSku} does not match selected_sku ${selectedSkuInput}`);
+  }
+
+  const skuForApproval = requestedSku ?? selectedSkuInput;
+  const approvedSkuItem = skuForApproval ? approvalForSku(skuForApproval) : null;
+  if (requestedSku && !approvedSkuItem) {
     throw new Error(`AI_APPROVE gate blocked sku: ${input.sku}. Use search_products or find_packaging_for_item to choose approved Packrift SKUs.`);
   }
+  if (selectedSkuInput && !approvedSkuItem) {
+    throw new Error(
+      `AI_APPROVE gate blocked selected_sku: ${input.selected_sku}. Use search_products or find_packaging_for_item to choose approved Packrift SKUs.`
+    );
+  }
+
   const items = input.items?.length ? input.items : [{ variant_id: approvedSkuItem!.variantId, qty: input.quantity ?? 1 }];
-  const inferredVariantItem = items.length === 1 ? approvalForVariantId(items[0]!.variant_id) : null;
-  const resolvedItem = approvedSkuItem ?? inferredVariantItem;
-  const selectedSku = input.selected_sku ?? resolvedItem?.sku;
-  const selectedHandle = input.selected_handle ?? resolvedItem?.handle;
-  const matchType = input.match_type ?? input.source_context ?? (approvedSkuItem ? "buyer_confirmed_exact_sku" : "cart_handoff");
   assertApprovedVariantIds(items.map((it) => it.variant_id));
+
+  const firstItem = items[0] ?? null;
+  const inferredVariantItem = items.length === 1 && firstItem ? approvalForVariantId(firstItem.variant_id) : null;
+  if (approvedSkuItem) {
+    if (items.length !== 1) {
+      cartContinuityError(`sku ${approvedSkuItem.sku} can only be used with one matching cart line`);
+    }
+    if (!sameVariant(firstItem?.variant_id, approvedSkuItem.variantId)) {
+      cartContinuityError(`sku ${approvedSkuItem.sku} resolves to variant ${approvedSkuItem.variantId}, not cart variant ${firstItem?.variant_id ?? "missing"}`);
+    }
+  }
+
+  const selectedHandleInput = normalizedHandle(input.selected_handle);
+  const selectedHandleItem = selectedHandleInput ? approvalForHandle(selectedHandleInput) : null;
+  if (selectedHandleInput && !selectedHandleItem) {
+    throw new Error(
+      `AI_APPROVE gate blocked selected_handle: ${input.selected_handle}. Use search_products or get_product to choose approved Packrift handles.`
+    );
+  }
+  if (selectedHandleItem && approvedSkuItem && !sameVariant(selectedHandleItem.variantId, approvedSkuItem.variantId)) {
+    cartContinuityError(`selected_handle ${selectedHandleInput} does not match sku ${approvedSkuItem.sku}`);
+  }
+  if (selectedHandleItem && firstItem && items.length === 1 && !sameVariant(selectedHandleItem.variantId, firstItem.variant_id)) {
+    cartContinuityError(`selected_handle ${selectedHandleInput} resolves to variant ${selectedHandleItem.variantId}, not cart variant ${firstItem.variant_id}`);
+  }
+
+  const resolvedItem = approvedSkuItem ?? selectedHandleItem ?? inferredVariantItem;
+  const resolvedSource = approvedSkuItem ? "sku" : selectedHandleItem ? "handle" : inferredVariantItem ? "variant_id" : null;
+  const selectedSku = resolvedItem?.sku ?? input.selected_sku ?? input.sku;
+  const selectedHandle = selectedHandleInput ?? resolvedItem?.handle;
+  const matchType = input.match_type ?? input.source_context ?? (approvedSkuItem ? "buyer_confirmed_exact_sku" : "cart_handoff");
   const path = items
     .map((it) => `${variantIdToNumeric(it.variant_id)}:${it.qty}`)
     .join(",");
@@ -173,9 +238,18 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
           handle: resolvedItem.handle,
           variant_id: resolvedItem.variantId,
           family: resolvedItem.family || null,
-          source: approvedSkuItem ? "sku" : "variant_id",
+          source: resolvedSource,
         }
       : null,
+    cart_continuity: {
+      validated: true,
+      mode: approvedSkuItem ? "sku_shortcut" : resolvedItem ? "catalog_resolved_variant" : "approved_variant_ids",
+      selected_sku: selectedSku ?? null,
+      selected_handle: selectedHandle ?? null,
+      cart_line_count: items.length,
+      primary_variant_id: firstItem?.variant_id ?? null,
+      guardrail: "SKU, handle, and variant metadata must resolve to the same AI_APPROVE catalog item.",
+    },
     ref: input.ref,
     utm: {
       source: cartTracking.utm_source,

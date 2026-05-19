@@ -122,6 +122,17 @@ async function main() {
   const candidate = candidateItems(candidates.structured)[0] ?? null;
   const variantId = candidate?.variant_id ?? candidate?.create_cart_url_arguments?.items?.[0]?.variant_id ?? null;
   const handle = candidate?.handle ?? candidate?.selected_handle ?? candidate?.create_cart_url_arguments?.selected_handle ?? null;
+  const skuCartArguments = candidate?.create_cart_url_sku_arguments
+    ? { ...candidate.create_cart_url_sku_arguments, quantity: qty }
+    : null;
+  const explicitCartArguments = variantId
+    ? {
+        items: [{ variant_id: variantId, qty }],
+        selected_sku: sku,
+        selected_handle: handle,
+      }
+    : null;
+  const cartArguments = skuCartArguments ?? explicitCartArguments;
 
   const product = handle ? await callTool("get_product", { handle }) : null;
   const pricing = variantId
@@ -130,11 +141,9 @@ async function main() {
   const inventory = variantId
     ? await callTool("check_inventory", { variant_ids: [variantId], selected_sku: sku, selected_handle: handle })
     : null;
-  const cart = variantId
+  const cart = cartArguments
     ? await callTool("create_cart_url", {
-        items: [{ variant_id: variantId, qty }],
-        selected_sku: sku,
-        selected_handle: handle,
+        ...cartArguments,
         match_type: "smoke_cart_handoff",
         ref: "mcp",
         source_context: "smoke_test",
@@ -170,6 +179,9 @@ async function main() {
       status: cart?.status ?? null,
       url: cartUrl,
       final_cart_url: finalCartUrl,
+    }),
+    check("cart_continuity_ok", Boolean(cart?.structured?.cart_continuity?.validated && cart?.structured?.cart_continuity?.selected_sku === sku), {
+      cart_continuity: cart?.structured?.cart_continuity ?? null,
     }),
     check("cart_landing_ok", Boolean(cartLandingHead?.ok && cartLandingHead.cartLandingShim), cartLandingHead ?? {}),
   ];

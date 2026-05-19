@@ -18,6 +18,7 @@
     "build:directory-submit-actions": "node scripts/build-mcp-directory-submit-actions.mjs",
     "snapshot:funnel": "node scripts/build-mcp-funnel-snapshot.mjs",
     "check:static-availability": "node scripts/check-static-availability.mjs",
+    "check:cart-continuity": "npm run build && node scripts/check-create-cart-continuity.mjs",
     "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
     "refresh:llms-full": "node scripts/refresh-llms-full-priority.mjs",
     "purge:cache": "node scripts/purge-cloudflare-cache.mjs",
