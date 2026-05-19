@@ -229,9 +229,13 @@ Current paid ChatGPT / product-card order families that are represented in the p
 Install Node 24+ and the deps:
 
 ```sh
-cd ~/Downloads/packrift-mcp-server
+cd ~/Downloads/packrift-mcp
 npm install
 ```
+
+Use `/Users/farhan/Downloads/packrift-mcp` as the canonical production worktree. The older
+`/Users/farhan/Downloads/packrift-mcp-server` checkout is a legacy duplicate and must not be
+used for Worker deploys because it can overwrite `mcp.packrift.com` with stale routes/tools.
 
 Local secrets — already created at `.dev.vars` (gitignored):
 
@@ -373,7 +377,7 @@ briefs, proof links, and MCP install snippets under
 The Cloudflare account is being created in a separate process. Once it's ready and `wrangler` is logged in (`wrangler login`), run these in order:
 
 ```sh
-cd ~/Downloads/packrift-mcp-server
+cd ~/Downloads/packrift-mcp
 
 # 1. Create the KV namespace and copy the printed id into wrangler.toml
 #    (replace both `id` and `preview_id` with the same value).
