@@ -404,6 +404,7 @@ async function liveMcpCheck() {
       serverCard?.endpoint_url === MCP_ENDPOINT &&
       serverCard?.client_config?.root_mcp_json === "https://mcp.packrift.com/mcp.json" &&
       serverCard?.client_config?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
+      serverCard?.client_config?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
@@ -466,12 +467,14 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.text.includes("Tracked install source: partner demo") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/config/partner_demo") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/codex") &&
+      trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/run/partner_demo/generic_streamable_http") &&
       trackedStartHtmlPartnerResult.text.includes("Run After Install") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"first_useful_sequence\"") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"first_useful_curl_script\"") &&
       trackedStartHtmlPartnerResult.text.includes("packrift_mcp_source=partner_demo") &&
       trackedStartHtmlPartnerResult.text.includes("mcp_install_copy") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"tracked_config_url\"") &&
+      trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"tracked_run_url\"") &&
       trackedStartHtmlPartnerResult.text.includes("Copy config URL") &&
       invalidStartSourceResult.status === 404 &&
       invalidStartSource?.error === "invalid_mcp_start_source" &&
@@ -555,16 +558,18 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R11" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R12" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_funnel_snapshot") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_actions") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
       typeof usageSnapshot?.counts?.mcp_cart_landings === "number" &&
       typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_intent_events === "number" &&
+      typeof usageSnapshot?.counts?.mcp_first_run_intent_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
@@ -572,25 +577,30 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.post_install_sources_waiting_on_create_cart_url === "number" &&
       typeof usageSnapshot?.proof_gate?.tracked_config_fetch_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.install_intent_seen === "boolean" &&
+      typeof usageSnapshot?.proof_gate?.first_run_intent_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       usageSnapshot?.source_attribution?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       usageSnapshot?.source_attribution?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       usageSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      usageSnapshot?.source_attribution?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       Array.isArray(usageSnapshot?.top?.event_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_start_click_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tracked_config_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_intent_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_intent_targets) &&
+      Array.isArray(usageSnapshot?.source_attribution?.first_run_intent_sources) &&
+      Array.isArray(usageSnapshot?.source_attribution?.first_run_intent_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R04" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R05" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
+      typeof funnelSnapshot?.counts?.mcp_first_run_intent_events === "number" &&
       typeof funnelSnapshot?.counts?.mcp_tool_calls === "number" &&
       typeof funnelSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
       typeof funnelSnapshot?.counts?.external_qualified_create_cart_url_calls === "number" &&
@@ -600,11 +610,14 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.counts?.first_party_mcp_orders === "number" &&
       typeof funnelSnapshot?.counts?.first_party_mcp_order_revenue === "number" &&
       typeof funnelSnapshot?.proof_gate?.thousands_of_qualified_visitors === "boolean" &&
+      typeof funnelSnapshot?.proof_gate?.first_run_intent_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.measurable_mcp_revenue_seen === "boolean" &&
       funnelSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
+      funnelSnapshot?.source_attribution?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       Array.isArray(funnelSnapshot?.source_attribution?.mcp_runtime_sources) &&
+      Array.isArray(funnelSnapshot?.source_attribution?.first_run_intent_sources) &&
       Array.isArray(funnelSnapshot?.source_attribution?.tool_runtime_sources) &&
       Array.isArray(funnelSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
       funnelSnapshot?.links?.cart_activation === "https://mcp.packrift.com/ai/mcp-cart-activation.json" &&
@@ -728,6 +741,7 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-start.html") &&
       resourceUris.has("https://mcp.packrift.com/r/config/generic") &&
       resourceUris.has("https://mcp.packrift.com/r/install/generic/codex") &&
+      resourceUris.has("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-adoption-kit.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-install-matrix.json") &&
@@ -850,14 +864,18 @@ async function liveMcpCheck() {
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
       usage_snapshot_tracked_install_template: usageSnapshot?.source_attribution?.tracked_install_template ?? null,
+      usage_snapshot_tracked_run_template: usageSnapshot?.source_attribution?.tracked_run_template ?? null,
       usage_snapshot_cart_landings: usageSnapshot?.counts?.mcp_cart_landings ?? null,
       usage_snapshot_tracked_config_fetches: usageSnapshot?.counts?.mcp_tracked_config_fetches ?? null,
       usage_snapshot_install_intent_events: usageSnapshot?.counts?.mcp_install_intent_events ?? null,
+      usage_snapshot_first_run_intent_events: usageSnapshot?.counts?.mcp_first_run_intent_events ?? null,
       usage_snapshot_install_copy_events: usageSnapshot?.counts?.mcp_install_copy_events ?? null,
       usage_snapshot_start_sources: usageSnapshot?.source_attribution?.mcp_start_click_sources ?? [],
       usage_snapshot_tracked_config_sources: usageSnapshot?.source_attribution?.tracked_config_sources ?? [],
       usage_snapshot_install_intent_sources: usageSnapshot?.source_attribution?.install_intent_sources ?? [],
       usage_snapshot_install_intent_targets: usageSnapshot?.source_attribution?.install_intent_targets ?? [],
+      usage_snapshot_first_run_intent_sources: usageSnapshot?.source_attribution?.first_run_intent_sources ?? [],
+      usage_snapshot_first_run_intent_targets: usageSnapshot?.source_attribution?.first_run_intent_targets ?? [],
       usage_snapshot_install_copy_sources: usageSnapshot?.source_attribution?.install_copy_sources ?? [],
       usage_snapshot_install_copy_targets: usageSnapshot?.source_attribution?.install_copy_targets ?? [],
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],

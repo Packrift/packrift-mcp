@@ -2327,6 +2327,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const startClicks = byEvent.mcp_start_click ?? 0;
   const trackedConfigFetches = summary.tracked_config_fetches;
   const installIntents = byEvent.mcp_install_intent ?? 0;
+  const firstRunIntents = byEvent.mcp_first_run_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
@@ -2338,6 +2339,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_adoption_kit",
     "mcp_install_matrix",
     "mcp_install_actions",
+    "mcp_first_run_actions",
     "mcp_client_config",
     "mcp_usage_snapshot",
     "mcp_funnel_snapshot",
@@ -2354,9 +2356,9 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + installCopies + directAgentResourceEvents;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + firstRunIntents + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R11",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R12",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2382,6 +2384,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_start_clicks: startClicks,
       mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_intent_events: installIntents,
+      mcp_first_run_intent_events: firstRunIntents,
       mcp_install_copy_events: installCopies,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       exact_match_events: exactMatches,
@@ -2397,6 +2400,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
       install_matrix_resource_events: bySource.mcp_install_matrix ?? 0,
       install_actions_resource_events: bySource.mcp_install_actions ?? 0,
+      first_run_actions_resource_events: bySource.mcp_first_run_actions ?? 0,
       client_config_resource_events: bySource.mcp_client_config ?? 0,
       all_agent_capture_resource_events: bySource.all_agent_capture ?? 0,
       buyer_use_case_resource_events: bySource.mcp_buyer_use_cases ?? 0,
@@ -2416,6 +2420,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       usage_exists: totalMcpSignals > 0,
       tracked_config_fetch_seen: trackedConfigFetches > 0,
       install_intent_seen: installIntents > 0,
+      first_run_intent_seen: firstRunIntents > 0,
       install_copy_seen: installCopies > 0,
       mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
       create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
@@ -2434,6 +2439,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
       install_intent_targets: summary.by_install_intent_target,
+      first_run_intent_sources: summary.by_first_run_intent_source,
+      first_run_intent_targets: summary.by_first_run_intent_target,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       mcp_keys: summary.by_mcp_key,
@@ -2450,10 +2457,13 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
       mcp_start_click_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
       install_intent_targets: summary.by_install_intent_target,
+      first_run_intent_sources: summary.by_first_run_intent_source,
+      first_run_intent_targets: summary.by_first_run_intent_target,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       utm_sources: summary.by_utm_source,
@@ -2468,6 +2478,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       recent_start_clicks: summary.recent_start_clicks,
       recent_tracked_config_fetches: summary.recent_tracked_config_fetches,
       recent_install_intents: summary.recent_install_intents,
+      recent_first_run_intents: summary.recent_first_run_intents,
       recent_install_copies: summary.recent_install_copies,
       recent_tool_calls: summary.recent_tool_calls,
       recent_cart_landings: summary.recent_cart_landings,
@@ -2485,6 +2496,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
       tracked_install_generic_codex: "https://mcp.packrift.com/r/install/generic/codex",
+      first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
+      tracked_run_generic: "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
@@ -2501,7 +2514,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
     next_actions: [
-      "Push directory recrawls and partner installs toward the source-aware first_useful_run sequence, not only tools/list and config fetches.",
+      "Push directory recrawls and partner installs toward /r/run/{source}/{target} first-run actions, not only tools/list and config fetches.",
       "Drive real workflows through get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url; the public post_install_cart_activation_by_source table shows which sources are stuck before cart URL creation.",
       "Do not call the adoption goal complete until material MCP tool usage, stamped cart landings, and MCP-attributed sales are visible.",
     ],
@@ -2538,6 +2551,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
+    `- MCP first-run-intent events: ${payload.counts.mcp_first_run_intent_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
@@ -2547,6 +2561,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
     `- Install matrix resource events: ${payload.counts.install_matrix_resource_events}`,
     `- Install actions resource events: ${payload.counts.install_actions_resource_events}`,
+    `- First-run actions resource events: ${payload.counts.first_run_actions_resource_events}`,
     `- Client config resource events: ${payload.counts.client_config_resource_events}`,
     `- Buyer use-case resource events: ${payload.counts.buyer_use_case_resource_events}`,
     `- Browser-agent bridge resource events: ${payload.counts.browser_agent_bridge_resource_events}`,
@@ -2564,6 +2579,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `Tracked start template: \`${payload.source_attribution.tracked_start_template}\``,
     `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
     `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
+    `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
     "",
     "### MCP Start Click Sources",
     "",
@@ -2588,6 +2604,18 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| Target | Count |",
     "| --- | ---: |",
     table(payload.source_attribution.install_intent_targets),
+    "",
+    "### MCP First-Run Intent Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.first_run_intent_sources),
+    "",
+    "### MCP First-Run Intent Targets",
+    "",
+    "| Target | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.first_run_intent_targets),
     "",
     "### MCP Install Copy Sources",
     "",
@@ -2648,6 +2676,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
     `- Tracked config fetch seen: ${payload.proof_gate.tracked_config_fetch_seen ? "yes" : "no"}`,
     `- Install intent seen: ${payload.proof_gate.install_intent_seen ? "yes" : "no"}`,
+    `- First-run intent seen: ${payload.proof_gate.first_run_intent_seen ? "yes" : "no"}`,
     `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
     `- Runtime source continuity seen: ${payload.proof_gate.mcp_runtime_source_continuity_seen ? "yes" : "no"}`,
     `- External-qualified create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
@@ -2686,7 +2715,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R04";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R05";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -2767,7 +2796,8 @@ function postInstallMissingNextStep(row: {
   create_cart_url_calls: number;
 }) {
   if (row.install_intents === 0 && row.first_run_actions === 0 && row.tracked_config_fetches === 0) return "drive_tracked_install_or_config_fetch";
-  if (row.mcp_tool_calls === 0) return "run_first_useful_run_from_source_aware_endpoint";
+  if (row.first_run_actions === 0) return "open_tracked_first_run_action";
+  if (row.mcp_tool_calls === 0) return "execute_first_run_curl_or_json_rpc_sequence";
   if (row.get_cart_handoff_candidates === 0) return "call_get_cart_handoff_candidates_for_sku_1066";
   if (row.get_pricing === 0) return "call_get_pricing_for_sku_1066";
   if (row.check_inventory === 0) return "call_check_inventory_for_sku_1066";
@@ -2989,6 +3019,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const startClicks = byEvent.mcp_start_click ?? 0;
   const trackedConfigFetches = summary.tracked_config_fetches;
   const installIntents = byEvent.mcp_install_intent ?? 0;
+  const firstRunIntents = byEvent.mcp_first_run_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
@@ -2998,7 +3029,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const attributedRevenue = Number(orderSummary.attributed_revenue || 0);
   const proofGate = {
     usage_exists: events.length > 0,
-    external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + installCopies > 0,
+    external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + firstRunIntents + installCopies > 0,
+    first_run_intent_seen: firstRunIntents > 0,
     mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
     material_tool_usage_50_plus: qualifiedMcpToolCalls >= 50,
     create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
@@ -3042,6 +3074,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_start_clicks: startClicks,
       mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_intent_events: installIntents,
+      mcp_first_run_intent_events: firstRunIntents,
       mcp_install_copy_events: installCopies,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       mcp_tool_calls: mcpToolCalls,
@@ -3064,10 +3097,13 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
       start_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
       install_intent_targets: summary.by_install_intent_target,
+      first_run_intent_sources: summary.by_first_run_intent_source,
+      first_run_intent_targets: summary.by_first_run_intent_target,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       mcp_runtime_sources: summary.by_mcp_source_context,
@@ -3095,10 +3131,12 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+      first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
+      tracked_run_generic: "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     },
     next_actions: [
-      "Use tracked install-action links in every stale directory refresh so starts and installs stay source-attributed.",
+      "Use tracked install-action and first-run links in every stale directory refresh so starts, installs, and first useful runs stay source-attributed.",
       "Push external users from install intent into get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url; use post_install_cart_activation_by_source to see the exact stuck source.",
       "Do not call the MCP goal complete until qualified visitor volume, qualified cart landings, and MCP-attributed revenue are all visible.",
     ],
@@ -3129,6 +3167,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
+    `- MCP first-run-intent events: ${payload.counts.mcp_first_run_intent_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
@@ -3152,6 +3191,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `Tracked start template: \`${payload.source_attribution.tracked_start_template}\``,
     `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
     `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
+    `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
     "",
     "### Start Sources",
     "",
@@ -3164,6 +3204,12 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     "| Source | Count |",
     "| --- | ---: |",
     table(payload.source_attribution.install_intent_sources),
+    "",
+    "### First-Run Intent Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.first_run_intent_sources),
     "",
     "### Tool Calls By MCP Key",
     "",
@@ -4408,6 +4454,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-start.html",
   "https://mcp.packrift.com/r/config/generic",
   "https://mcp.packrift.com/r/install/generic/codex",
+  "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
   "https://mcp.packrift.com/server-card.json",
   "https://mcp.packrift.com/.well-known/mcp.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -4525,6 +4572,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-start.html": "HTML Packrift MCP start page for developers and agent operators.",
   "/r/config/generic": "Source-attributed remote MCP client config fetch for generic directories and agent handoffs.",
   "/r/install/generic/codex": "Source-attributed Codex install-action payload for Packrift MCP.",
+  "/r/run/generic/generic_streamable_http": "Source-attributed first useful Packrift MCP run ending at create_cart_url with no order created.",
   "/server-card.json": "Root Packrift MCP server discovery card.",
   "/.well-known/mcp.json": "Well-known copy-ready remote MCP client config for installing Packrift MCP.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
@@ -4776,6 +4824,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-start.html") return mcpStartHtml(mcpStartRuntime());
   if (pathname === "/r/config/generic") return JSON.stringify(sourceAwareMcpJson("generic"), null, 2);
   if (pathname === "/r/install/generic/codex") return JSON.stringify(mcpInstallActionPayload({ source: "generic", target: "codex" }), null, 2);
+  if (pathname === "/r/run/generic/generic_streamable_http") return JSON.stringify(mcpFirstRunActionPayload({ source: "generic", target: "generic_streamable_http" }), null, 2);
   if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
