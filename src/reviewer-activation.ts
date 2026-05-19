@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -20,6 +20,50 @@ function normalizeSource(value: string, fallback = "generic"): string {
 
 function preferredActivationTarget(source: string): string {
   return source === "cline_mcp_marketplace" ? "cline" : "generic_streamable_http";
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function copyReadyHostConfigs(input: {
+  source: string;
+  preferredTarget: string;
+  sourceAwareEndpoint: string;
+  agentPrompt: string;
+  curlScript: string;
+}) {
+  const genericConfig = {
+    mcpServers: {
+      packrift: {
+        type: "http",
+        url: input.sourceAwareEndpoint,
+      },
+    },
+  };
+  const clineConfig = {
+    mcpServers: {
+      packrift: {
+        type: "streamableHttp",
+        url: input.sourceAwareEndpoint,
+        disabled: false,
+        timeout: 60,
+      },
+    },
+  };
+  return {
+    source: input.source,
+    preferred_target: input.preferredTarget,
+    source_aware_endpoint: input.sourceAwareEndpoint,
+    generic_mcp_json: JSON.stringify(genericConfig, null, 2),
+    cline_mcp_json: JSON.stringify(clineConfig, null, 2),
+    claude_code_command: `claude mcp add --transport http packrift ${shellQuote(input.sourceAwareEndpoint)}`,
+    codex_command: `codex mcp add packrift --url ${shellQuote(input.sourceAwareEndpoint)}`,
+    agent_prompt: input.agentPrompt,
+    curl_script: input.curlScript,
+    success_gate:
+      "After install, run the agent prompt in the real MCP host and require create_cart_url to return a measured https://mcp.packrift.com/r/cart/1066 URL.",
+  };
 }
 
 export function trackedReviewerActivationUrl(source: string): string {
@@ -116,6 +160,13 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
   const target = actions.find((row) => row.id === sourceSlug) ?? genericSourceSummary(sourceSlug);
   const firstUsefulRun = mcpFirstUsefulRun(sourceSlug, target.preferred_target);
   const sourceAwareEndpoint = firstUsefulRun.endpoint;
+  const hostConfigs = copyReadyHostConfigs({
+    source: sourceSlug,
+    preferredTarget: target.preferred_target,
+    sourceAwareEndpoint,
+    agentPrompt: firstUsefulRun.agent_prompt,
+    curlScript: firstUsefulRun.curl_script,
+  });
   return {
     release: MCP_REVIEWER_ACTIVATION_RELEASE,
     generated_at: new Date().toISOString(),
@@ -133,6 +184,10 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
     },
     target_source: target,
     source_aware_endpoint: sourceAwareEndpoint,
+    agent_prompt: firstUsefulRun.agent_prompt,
+    json_rpc_sequence: firstUsefulRun.sequence,
+    curl_script: firstUsefulRun.curl_script,
+    copy_ready_host_configs: hostConfigs,
     real_mcp_client_run: {
       endpoint: sourceAwareEndpoint,
       buyer_prompt: firstUsefulRun.buyer_prompt,
@@ -241,6 +296,10 @@ export function mcpReviewerActivationMarkdown(runtime: ReviewerActivationRuntime
     "",
     `Endpoint: ${payload.real_mcp_client_run.endpoint}`,
     "",
+    "Copy-ready host configs:",
+    "",
+    fencedJson(payload.copy_ready_host_configs),
+    "",
     "Agent prompt:",
     "",
     fencedText(payload.real_mcp_client_run.agent_prompt),
@@ -338,6 +397,10 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     <section class="panel">
       <h2>Source-Aware Endpoint</h2>
       <pre>${escapeHtml(payload.real_mcp_client_run.endpoint)}</pre>
+    </section>
+    <section class="panel">
+      <h2>Copy-Ready Host Configs</h2>
+      <pre>${escapeHtml(JSON.stringify(payload.copy_ready_host_configs, null, 2))}</pre>
     </section>
     <section class="panel">
       <h2>Agent Prompt</h2>

@@ -846,7 +846,9 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R24" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R25" &&
+      usageSnapshot?.runtime?.default_public_event_limit === 500 &&
+      usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=5000") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -936,7 +938,7 @@ async function liveMcpCheck() {
       ) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R18" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       funnelSnapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
@@ -1014,7 +1016,7 @@ async function liveMcpCheck() {
       funnelSnapshot?.links?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       funnelSnapshot?.links?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
       funnelSnapshot?.links?.tracked_run_generic === "https://mcp.packrift.com/r/run/generic/generic_streamable_http" &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R10" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R11" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.links?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       sourceActivationQueue?.links?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
@@ -1066,9 +1068,9 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
-      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R03" &&
+      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R04" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R10" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R11" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       typeof activationExperiments?.experiment_count === "number" &&
@@ -1342,27 +1344,40 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("claude-connector-submission.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("agent-capture-outreach.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
-      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07" &&
+      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08" &&
       reviewerActivation?.target_source?.id === "generic" &&
       reviewerActivation?.target_source?.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/generic") &&
       reviewerActivation?.target_source?.tracked_first_run_live_proof_url?.includes("execute=1") &&
+      reviewerActivation?.copy_ready_host_configs?.source === "generic" &&
+      reviewerActivation?.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+      reviewerActivation?.copy_ready_host_configs?.codex_command?.includes("packrift_mcp_source=generic") &&
+      reviewerActivation?.agent_prompt?.includes("create_cart_url") &&
+      reviewerActivation?.json_rpc_sequence?.some((step) => step?.params?.name === "create_cart_url") &&
+      reviewerActivation?.curl_script?.includes("tools/call") &&
       reviewerActivation?.real_mcp_client_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       reviewerActivation?.real_mcp_client_run?.agent_prompt?.includes("Required tool sequence") &&
       reviewerActivation?.real_mcp_client_run?.browser_executable === true &&
       reviewerActivation?.real_mcp_client_run?.browser_runner_url?.includes("format=html") &&
       reviewerActivation?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
-      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07" &&
+      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08" &&
       trackedReviewerActivationGeneric?.target_source?.id === "generic" &&
       trackedReviewerActivationGeneric?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
+      trackedReviewerActivationGeneric?.copy_ready_host_configs?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
+      trackedReviewerActivationGeneric?.copy_ready_host_configs?.generic_mcp_json?.includes("packrift_mcp_source=generic") &&
+      trackedReviewerActivationGeneric?.copy_ready_host_configs?.agent_prompt?.includes("create_cart_url") &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.required_final_tool === "create_cart_url" &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.agent_prompt?.includes("create_cart_url") &&
-      trackedReviewerActivationCline?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07" &&
+      trackedReviewerActivationCline?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08" &&
       trackedReviewerActivationCline?.target_source?.id === "cline_mcp_marketplace" &&
       trackedReviewerActivationCline?.target_source?.preferred_target === "cline" &&
       trackedReviewerActivationCline?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
+      trackedReviewerActivationCline?.copy_ready_host_configs?.preferred_target === "cline" &&
+      trackedReviewerActivationCline?.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
+      trackedReviewerActivationCline?.copy_ready_host_configs?.claude_code_command?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
       trackedReviewerActivationHtmlResult.ok &&
       trackedReviewerActivationHtmlResult.text.includes("Run real MCP check") &&
       trackedReviewerActivationHtmlResult.text.includes("Copy agent prompt") &&
+      trackedReviewerActivationHtmlResult.text.includes("Copy-Ready Host Configs") &&
       trackedReviewerActivationHtmlResult.text.includes("activation.real_mcp_client_run.endpoint") &&
       trackedReviewerActivationHtmlResult.text.includes("mcp_activation_cart_ready") &&
       trackedReviewerActivationHtmlResult.text.includes("mcp_session_id") &&
