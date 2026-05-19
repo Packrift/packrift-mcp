@@ -18,7 +18,7 @@ Use this as the shortest public handoff for developers, agents, and directory re
 - Markdown: https://mcp.packrift.com/ai/mcp-start.md
 
 The source-aware page shows the matching tracked config URL and copy-ready install controls for the supplied source slug.
-Copy interactions are counted in aggregate as `mcp_install_copy` events so a directory or partner source can be measured before real buyer workflows arrive.
+Source-attributed config fetches are counted as `mcp_tracked_config_fetches`, and copy interactions are counted as `mcp_install_copy` events, so a directory or partner source can be measured before real buyer workflows arrive.
 
 ## Hosted Adoption Kit
 
@@ -49,7 +49,7 @@ Use this when a host, IDE, or directory reviewer wants the smallest copy-ready M
 - Source-attributed config template: https://mcp.packrift.com/r/config/{source}
 - Generic source-attributed config: https://mcp.packrift.com/r/config/generic
 
-The root, well-known, and source-attributed aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`.
+The root, well-known, and source-attributed aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`. Use `/r/config/{source}` for directories and partner handoffs that need install-intent attribution in the public usage snapshot.
 
 ## Claude Connector Submission
 

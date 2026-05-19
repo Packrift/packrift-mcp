@@ -450,18 +450,21 @@ async function liveMcpCheck() {
       rootMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       wellKnownMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       trackedConfigGeneric?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R05" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R06" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
       typeof usageSnapshot?.counts?.mcp_cart_landings === "number" &&
+      typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
+      typeof usageSnapshot?.proof_gate?.tracked_config_fetch_seen === "boolean" &&
       usageSnapshot?.source_attribution?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       usageSnapshot?.source_attribution?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       Array.isArray(usageSnapshot?.top?.event_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_start_click_sources) &&
+      Array.isArray(usageSnapshot?.source_attribution?.tracked_config_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.install_copy_targets) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
@@ -652,8 +655,10 @@ async function liveMcpCheck() {
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
       usage_snapshot_cart_landings: usageSnapshot?.counts?.mcp_cart_landings ?? null,
+      usage_snapshot_tracked_config_fetches: usageSnapshot?.counts?.mcp_tracked_config_fetches ?? null,
       usage_snapshot_install_copy_events: usageSnapshot?.counts?.mcp_install_copy_events ?? null,
       usage_snapshot_start_sources: usageSnapshot?.source_attribution?.mcp_start_click_sources ?? [],
+      usage_snapshot_tracked_config_sources: usageSnapshot?.source_attribution?.tracked_config_sources ?? [],
       usage_snapshot_install_copy_sources: usageSnapshot?.source_attribution?.install_copy_sources ?? [],
       usage_snapshot_install_copy_targets: usageSnapshot?.source_attribution?.install_copy_targets ?? [],
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],

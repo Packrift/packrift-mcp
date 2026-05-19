@@ -1890,9 +1890,21 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byEventSource: Record<string, number> = {};
   const byEventAttribution: Record<string, number> = {};
   const byStartSource: Record<string, number> = {};
+  const byTrackedConfigSource: Record<string, number> = {};
   const byInstallCopySource: Record<string, number> = {};
   const byInstallCopyTarget: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
+  const trackedConfigSourceFromEvent = (event: Record<string, unknown>) => {
+    if (String(event.event ?? "") !== "mcp_resource_read") return "";
+    if (String(event.source ?? "") !== "mcp_client_config") return "";
+    const eventMcpKey = String(event.mcp_key ?? "");
+    if (eventMcpKey.startsWith("config:")) return safeEventText(eventMcpKey.slice("config:".length), 80);
+    const eventResourceUri = String(event.resource_uri ?? "");
+    const match = eventResourceUri.match(/\/r\/config\/([a-z0-9_]{2,64})(?:[/?#]|$)/);
+    if (match?.[1]) return match[1];
+    const eventUtmSource = safeEventText(event.utm_source, 80);
+    return eventUtmSource && eventUtmSource !== "mcp_client_config" ? eventUtmSource : "";
+  };
   for (const event of events) {
     const eventName = String(event.event ?? "unknown");
     const sku = String(event.sku ?? "") || "unknown";
@@ -1923,6 +1935,10 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     if (eventName === "mcp_start_click") {
       const startSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("start:") ? mcpKey.slice("start:".length) : "unknown";
       byStartSource[startSource] = (byStartSource[startSource] ?? 0) + 1;
+    }
+    const trackedConfigSource = trackedConfigSourceFromEvent(event);
+    if (trackedConfigSource) {
+      byTrackedConfigSource[trackedConfigSource] = (byTrackedConfigSource[trackedConfigSource] ?? 0) + 1;
     }
     if (eventName === "mcp_install_copy") {
       const installSource = utmSource !== "unknown" ? utmSource : mcpKey.startsWith("install_copy:") ? mcpKey.split(":")[1] || "unknown" : "unknown";
@@ -1965,9 +1981,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
       .slice(0, 25)
       .map(([toolName, rows]) => [toolName, latency(rows)])
   );
-  const recent = (eventName: string) =>
+  const recent = (eventName: string, predicate?: (event: Record<string, unknown>) => boolean) =>
     events
-      .filter((event) => String(event.event ?? "") === eventName)
+      .filter((event) => String(event.event ?? "") === eventName && (!predicate || predicate(event)))
       .sort((a, b) => String(b.received_at ?? "").localeCompare(String(a.received_at ?? "")))
       .slice(0, 25)
       .map((event) => ({
@@ -2022,9 +2038,12 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     by_event_source: top(byEventSource, 100),
     by_event_attribution: top(byEventAttribution, 100),
     by_start_source: top(byStartSource),
+    by_tracked_config_source: top(byTrackedConfigSource),
+    tracked_config_fetches: Object.values(byTrackedConfigSource).reduce((sum, count) => sum + count, 0),
     by_install_copy_source: top(byInstallCopySource),
     by_install_copy_target: top(byInstallCopyTarget),
     recent_start_clicks: recent("mcp_start_click"),
+    recent_tracked_config_fetches: recent("mcp_resource_read", (event) => Boolean(trackedConfigSourceFromEvent(event))),
     recent_install_copies: recent("mcp_install_copy"),
     recent_tool_calls: recent("mcp_tool_call"),
     recent_prompt_gets: recent("mcp_prompt_get"),
@@ -2067,6 +2086,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const cartClicks = byEvent.mcp_cart_click ?? 0;
   const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
+  const trackedConfigFetches = summary.tracked_config_fetches;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
@@ -2092,7 +2112,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R05",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R06",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2116,6 +2136,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_cart_clicks: cartClicks,
       mcp_cart_landings: cartLandings,
       mcp_start_clicks: startClicks,
+      mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_copy_events: installCopies,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
@@ -2140,6 +2161,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     },
     proof_gate: {
       usage_exists: totalMcpSignals > 0,
+      tracked_config_fetch_seen: trackedConfigFetches > 0,
       install_copy_seen: installCopies > 0,
       create_cart_url_seen: createCartUrlCalls > 0,
       material_tool_usage_50_plus: mcpToolCalls >= 50,
@@ -2154,6 +2176,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_methods: summary.by_mcp_method,
       utm_sources: summary.by_utm_source,
       start_sources: summary.by_start_source,
+      tracked_config_sources: summary.by_tracked_config_source,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       mcp_keys: summary.by_mcp_key,
@@ -2166,6 +2189,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       mcp_start_click_sources: summary.by_start_source,
+      tracked_config_sources: summary.by_tracked_config_source,
       install_copy_sources: summary.by_install_copy_source,
       install_copy_targets: summary.by_install_copy_target,
       utm_sources: summary.by_utm_source,
@@ -2175,6 +2199,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tool_mcp_keys: summary.by_tool_mcp_key,
       event_attribution: summary.by_event_attribution,
       recent_start_clicks: summary.recent_start_clicks,
+      recent_tracked_config_fetches: summary.recent_tracked_config_fetches,
       recent_install_copies: summary.recent_install_copies,
       recent_tool_calls: summary.recent_tool_calls,
       recent_cart_landings: summary.recent_cart_landings,
@@ -2235,6 +2260,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
+    `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
@@ -2263,6 +2289,12 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| Source | Count |",
     "| --- | ---: |",
     table(payload.source_attribution.mcp_start_click_sources),
+    "",
+    "### MCP Tracked Config Sources",
+    "",
+    "| Source | Count |",
+    "| --- | ---: |",
+    table(payload.source_attribution.tracked_config_sources),
     "",
     "### MCP Install Copy Sources",
     "",
@@ -2297,6 +2329,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "## Proof Gate",
     "",
     `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
+    `- Tracked config fetch seen: ${payload.proof_gate.tracked_config_fetch_seen ? "yes" : "no"}`,
     `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
     `- create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
     `- Material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
