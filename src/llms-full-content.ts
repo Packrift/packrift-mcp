@@ -412,6 +412,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP reviewer activation: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
+- MCP eval pack: https://mcp.packrift.com/ai/mcp-eval-pack.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
 - Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json

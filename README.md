@@ -161,6 +161,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP first-run proof Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
+- MCP eval pack: https://mcp.packrift.com/ai/mcp-eval-pack.json
+- MCP eval pack Markdown: https://mcp.packrift.com/ai/mcp-eval-pack.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
@@ -410,10 +412,11 @@ the activation command center at `https://mcp.packrift.com/r/activate`,
 the source activation queue HTML at `https://mcp.packrift.com/ai/mcp-source-activation-queue.html`,
 the browser runner at `https://mcp.packrift.com/r/activate/generic?format=html`, and
 the shell activation script at `https://mcp.packrift.com/r/activate/generic?format=sh`, and
+`https://mcp.packrift.com/ai/mcp-eval-pack.json` and `.md`, and
 `https://mcp.packrift.com/ai/agent-capture-outreach.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
-buyer workflow map, cart activation playbook, browser-agent bridge, directory refresh pack, directory submit-action queue,
+buyer workflow map, cart activation playbook, eval pack, browser-agent bridge, directory refresh pack, directory submit-action queue,
 source activation command center, reviewer activation handoff, agent capture outreach packet, Browserbase Browse candidate lane, and root SKILL.md, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate

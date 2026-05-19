@@ -99,6 +99,15 @@ Use this when an agent host or developer needs copy-ready buyer prompts and JSON
 
 The workflow gallery covers exact SKU reorder, label reorder, literature mailer cart handoff, fit-by-dimensions discovery, and no-exact-match quote recovery.
 
+## Eval Pack
+
+Use this when an MCP host, marketplace, or directory reviewer needs acceptance-test cases for a real Packrift MCP install:
+
+- JSON: https://mcp.packrift.com/ai/mcp-eval-pack.json
+- Markdown: https://mcp.packrift.com/ai/mcp-eval-pack.md
+
+The eval pack includes source-aware install/run URLs, host configs, required JSON-RPC requests, expected assertions, and report fields for proving `tools/list`, `prompts/list`, live price, live inventory, and measured cart handoff through the real host.
+
 ## Cart Activation
 
 Use this when an agent has exact buyer intent and needs the guarded sequence from live checks to a measured MCP cart landing:

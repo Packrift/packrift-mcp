@@ -386,6 +386,7 @@ async function liveMcpCheck() {
     cartActivationResult,
     firstRunProofResult,
     workflowGalleryResult,
+    evalPackResult,
     browserAgentBridgeResult,
     browserbaseBrowseSkillPackResult,
     directoryRefreshResult,
@@ -457,6 +458,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-first-run-proof.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-workflow-gallery.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-eval-pack.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
@@ -516,6 +518,7 @@ async function liveMcpCheck() {
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
   const firstRunProof = firstRunProofResult.ok ? JSON.parse(firstRunProofResult.text) : null;
   const workflowGallery = workflowGalleryResult.ok ? JSON.parse(workflowGalleryResult.text) : null;
+  const evalPack = evalPackResult.ok ? JSON.parse(evalPackResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
   const browserbaseBrowseSkillPack = browserbaseBrowseSkillPackResult.ok ? JSON.parse(browserbaseBrowseSkillPackResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
@@ -716,7 +719,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R19" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R20" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some(
@@ -735,16 +738,19 @@ async function liveMcpCheck() {
       agentCapture?.hub_urls?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
       agentCapture?.hub_urls?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
       agentCapture?.hub_urls?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
+      agentCapture?.hub_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_client_config" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-client-config.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_funnel_snapshot" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_ga4_funnel_proof" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_source_activation_queue" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "mcp_eval_pack" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json" && surface.install_or_call?.includes("create_cart_url")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "agent_capture_outreach_packet" && surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
-      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R07" &&
+      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R08" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
       adoptionKit?.developer_examples?.length >= 4 &&
       adoptionKit?.install?.reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
+      adoptionKit?.proof_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.command === "npx" &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.args?.includes("mcp-remote") &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.args?.includes(MCP_ENDPOINT) &&
@@ -892,7 +898,7 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R25" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R26" &&
       usageSnapshot?.runtime?.default_public_event_limit === 500 &&
       usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=5000") &&
       usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
@@ -909,6 +915,7 @@ async function liveMcpCheck() {
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_reviewer_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_eval_pack") &&
       typeof usageSnapshot?.counts?.mcp_cart_landings === "number" &&
       typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_intent_events === "number" &&
@@ -918,6 +925,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_activation_cart_ready_events === "number" &&
       typeof usageSnapshot?.counts?.reviewer_activation_resource_events === "number" &&
       typeof usageSnapshot?.counts?.activation_experiments_resource_events === "number" &&
+      typeof usageSnapshot?.counts?.eval_pack_resource_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.counts?.unique_mcp_handoff_ids === "number" &&
       typeof usageSnapshot?.counts?.unique_qualified_mcp_identity_signals === "number" &&
@@ -1206,6 +1214,17 @@ async function liveMcpCheck() {
       workflowGallery?.workflows?.some((workflow) => workflow.id === "one_call_purchase_handoff_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "exact_sku_reorder_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
+      evalPack?.release === "PACKRIFT-MCP-EVAL-PACK-R01" &&
+      evalPack?.canonical_endpoint === MCP_ENDPOINT &&
+      evalPack?.acceptance_gate?.real_mcp_host_required === true &&
+      evalPack?.acceptance_gate?.no_order_created === true &&
+      evalPack?.cases?.some((test) => test.id === "host_tools_list") &&
+      evalPack?.cases?.some((test) => test.id === "live_price") &&
+      evalPack?.cases?.some((test) => test.id === "live_inventory") &&
+      evalPack?.cases?.some((test) => test.id === "measured_cart_handoff") &&
+      evalPack?.copy_ready?.one_line_shell?.includes("/r/run/") &&
+      evalPack?.copy_ready?.one_line_shell?.includes("format=sh") &&
+      evalPack?.tracked_actions?.activation_shell?.includes("/r/activate/") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
       browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R05" &&
@@ -1571,6 +1590,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-proof.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
       resourceUris.has("https://mcp.packrift.com/SKILL.md") &&
@@ -1752,6 +1773,7 @@ async function liveMcpCheck() {
       usage_snapshot_install_copy_targets: usageSnapshot?.source_attribution?.install_copy_targets ?? [],
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],
       usage_snapshot_activation_experiments_resource_events: usageSnapshot?.counts?.activation_experiments_resource_events ?? null,
+      usage_snapshot_eval_pack_resource_events: usageSnapshot?.counts?.eval_pack_resource_events ?? null,
       funnel_snapshot_release: funnelSnapshot?.release ?? null,
       funnel_snapshot_status: funnelSnapshot?.status ?? null,
       funnel_snapshot_cart_landings: funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings ?? null,
@@ -1781,6 +1803,10 @@ async function liveMcpCheck() {
       workflow_gallery_release: workflowGallery?.release ?? null,
       workflow_gallery_count: workflowGallery?.workflow_count ?? null,
       workflow_gallery_ids: (workflowGallery?.workflows ?? []).map((workflow) => workflow.id),
+      eval_pack_release: evalPack?.release ?? null,
+      eval_pack_cases: evalPack?.cases?.length ?? 0,
+      eval_pack_no_order_gate: evalPack?.acceptance_gate?.no_order_created ?? null,
+      eval_pack_one_line_shell: evalPack?.copy_ready?.one_line_shell ?? null,
       browser_agent_bridge_release: browserAgentBridge?.release ?? null,
       browser_agent_bridge_workflows: browserAgentBridge?.workflows?.length ?? 0,
       browserbase_browse_skill_pack_release: browserbaseBrowseSkillPack?.release ?? null,

@@ -131,7 +131,7 @@ print(rpc("candidate-1066", "tools/call", {
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R07",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R08",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -293,6 +293,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       root_skill_md: "https://mcp.packrift.com/SKILL.md",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -320,6 +321,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Use only AI_APPROVE exact matches for purchase handoff.",
       "Confirm live price, inventory, shipping, and cart eligibility before presenting cart or checkout actions.",
       "Use the reviewer activation browser runner when a marketplace, directory, or agent host needs to turn proof interest into a real create_cart_url call.",
+      "Use the eval pack when a host or directory needs acceptance-test cases with expected assertions.",
       "Use the source activation queue to prioritize the next external source that needs a real MCP run, measured cart landing, or order.",
       "If any required spec differs, return no exact match and route to bulk quote recovery.",
     ],

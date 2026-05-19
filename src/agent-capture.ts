@@ -286,6 +286,21 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the copy-ready workflow layer for agent platforms after the install matrix and first-run proof.",
     }),
     surface({
+      id: "mcp_eval_pack",
+      name: "Packrift MCP eval pack",
+      agent_type: "host_acceptance_test",
+      audience: "MCP hosts, directories, marketplaces, and AI-commerce builders that need acceptance tests for a real Packrift MCP install.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
+      install_or_call:
+        "Use the eval pack after install to run required tools/list, prompts/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url cases through the real MCP host without placing an order.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-eval-pack.md",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
+      next_action: "Use this as the acceptance-test handoff for agent platforms that need real external tool-call and measured /r/cart proof beyond a browser page or static listing.",
+    }),
+    surface({
       id: "chatgpt_openai_product_cards",
       name: "ChatGPT and OpenAI product-card commerce",
       agent_type: "chat_commerce",
@@ -597,7 +612,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R19",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R20",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -630,6 +645,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
@@ -658,6 +674,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
       "Use /r/activate/{source}?format=sh when an external reviewer or agent host prefers a shell runner that performs real JSON-RPC tools/list and tools/call requests against the hosted MCP endpoint.",
       "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
+      "Use /ai/mcp-eval-pack.json when an MCP host, marketplace, or reviewer needs copy-ready acceptance cases and report fields for real external host validation.",
     ],
     counts: {
       total_surfaces: surfaces.length,
@@ -694,7 +711,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",

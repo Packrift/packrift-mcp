@@ -151,6 +151,7 @@ async function main() {
     "mcp_cart_activation",
     "mcp_first_run_proof",
     "mcp_workflow_gallery",
+    "mcp_eval_pack",
     "browser_agent_bridge",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
@@ -200,6 +201,7 @@ async function main() {
     "cart activation",
     "first-run proof",
     "workflow gallery",
+    "eval pack",
     "browser-agent bridge",
     "Browse skill pack",
     "directory refresh",
@@ -223,7 +225,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R19", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R20", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -308,6 +310,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises workflow gallery", hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.json") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises eval pack", hasResourceUri(resourceUris, "/ai/mcp-eval-pack.json") && hasResourceUri(resourceUris, "/ai/mcp-eval-pack.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {
