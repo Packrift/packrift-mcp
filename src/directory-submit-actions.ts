@@ -1,4 +1,5 @@
 import { TRACKED_INSTALL_TEMPLATE, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 
 export interface DirectorySubmitActionsRuntime {
   serverVersion: string;
@@ -309,7 +310,7 @@ function trackedConfigUrl(source: string): string {
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked install actions now include a first_useful_run sequence that reaches create_cart_url after live price and inventory checks.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; first-run proof is ${FIRST_RUN_PROOF_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions reach create_cart_url after live price and inventory checks.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -319,6 +320,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const trackedInstallCodex = trackedInstallUrl(action.id, "codex");
   const trackedInstallGeneric = trackedInstallUrl(action.id, "generic_streamable_http");
   const trackedInstallGenericMd = `${trackedInstallGeneric}&format=md`;
+  const trackedRunGeneric = trackedRunUrl(action.id, "generic_streamable_http");
+  const trackedRunGenericSh = `${trackedRunGeneric}&format=sh`;
   return [
     `Subject: ${action.recrawl_subject}`,
     "",
@@ -339,7 +342,9 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Tracked Codex install action: ${trackedInstallCodex}`,
     `- Tracked generic install action: ${trackedInstallGeneric}`,
     `- Markdown install action with first-useful-run sequence: ${trackedInstallGenericMd}`,
-    `- First useful run: open ${trackedInstallGenericMd} and run the first_useful_run JSON-RPC sequence from the source-aware endpoint; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
+    `- Tracked first-run action: ${trackedRunGeneric}`,
+    `- One-line first-run shell script: curl -sS '${trackedRunGenericSh}' | bash`,
+    `- First useful run: open ${trackedRunGeneric} or ${trackedInstallGenericMd} and run the first_useful_run JSON-RPC sequence from the source-aware endpoint; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -381,6 +386,12 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       codex: trackedInstallUrl(action.id, "codex"),
       cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
     },
+    tracked_run_urls: {
+      generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
+      claude_code: trackedRunUrl(action.id, "claude_code"),
+      codex: trackedRunUrl(action.id, "codex"),
+      cursor_windsurf_vscode: trackedRunUrl(action.id, "cursor_windsurf_vscode"),
+    },
     first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
     proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
@@ -389,6 +400,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       tracked_config: trackedConfigUrl(action.id),
       tracked_install_codex: trackedInstallUrl(action.id, "codex"),
       tracked_install_claude_code: trackedInstallUrl(action.id, "claude_code"),
+      tracked_run_generic: trackedRunUrl(action.id, "generic_streamable_http"),
+      tracked_run_codex: trackedRunUrl(action.id, "codex"),
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
       manifest: "https://mcp.packrift.com/manifest",
@@ -411,7 +424,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R17",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R18",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -419,6 +432,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     tracked_start_template: MCP_TRACKED_START_TEMPLATE,
     tracked_config_template: MCP_TRACKED_CONFIG_TEMPLATE,
     tracked_install_template: TRACKED_INSTALL_TEMPLATE,
+    tracked_run_template: TRACKED_RUN_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
     source_install_matrix: INSTALL_MATRIX_URL,
     source_client_config: CLIENT_CONFIG_URL,
@@ -449,7 +463,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_install_urls.codex} | ${action.tracked_run_urls.generic_streamable_http} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -472,9 +486,10 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     `Tracked start template: ${payload.tracked_start_template}`,
     `Tracked config template: ${payload.tracked_config_template}`,
     `Tracked install template: ${payload.tracked_install_template}`,
+    `Tracked run template: ${payload.tracked_run_template}`,
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",

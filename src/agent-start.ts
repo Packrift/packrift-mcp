@@ -1,4 +1,5 @@
 import { mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 
 export interface McpStartRuntime {
   serverVersion: string;
@@ -177,7 +178,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R07",
+    release: "PACKRIFT-MCP-START-R08",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -191,9 +192,11 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       tracked_start_template: TRACKED_START_TEMPLATE,
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_install_template: TRACKED_INSTALL_TEMPLATE,
+      tracked_run_template: TRACKED_RUN_TEMPLATE,
       source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedStartUrl(source)])),
       tracked_config_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
+      tracked_run_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedRunUrl(source, "generic_streamable_http")])),
       tracked_install_examples: Object.fromEntries(
         TRACKED_START_RECOMMENDED_SOURCES.map((source) => [
           source,
@@ -226,6 +229,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
+      first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
@@ -295,6 +299,7 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     `Source-aware start page: \`${payload.start_urls.source_aware_html_template}\``,
     `Tracked config template: \`${payload.start_urls.tracked_config_template}\``,
     `Tracked install template: \`${payload.start_urls.tracked_install_template}\``,
+    `Tracked run template: \`${payload.start_urls.tracked_run_template}\``,
     `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
     `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
     `Custom examples: ${payload.start_urls.source_policy.custom_examples.map((source) => `\`${source}\``).join(", ")}`,
@@ -313,6 +318,12 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "",
     Object.entries(payload.start_urls.tracked_install_examples)
       .map(([key, value]) => `- ${key}: codex ${value.codex} | claude_code ${value.claude_code} | generic ${value.generic_streamable_http}`)
+      .join("\n"),
+    "",
+    "## Tracked First-Run Actions",
+    "",
+    Object.entries(payload.start_urls.tracked_run_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",
     "## First Useful Flow",
@@ -391,6 +402,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
     claude_code: trackedInstallUrl(source, "claude_code"),
     codex: trackedInstallUrl(source, "codex"),
   };
+  const sourceRunUrl = trackedRunUrl(source, "generic_streamable_http");
   const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
   const firstUsefulPrompt = `${firstUsefulRun.buyer_prompt}\n\nUse endpoint: ${firstUsefulRun.endpoint}`;
   const firstUsefulSequence = JSON.stringify(firstUsefulRun.sequence, null, 2);
@@ -561,6 +573,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <a class="button" href="${escapeHtml(sourceConfigUrl)}">Tracked config</a>
         ${copyButton(sourceConfigUrl, "Copy config URL", "tracked_config_url")}
         <a class="button" href="${escapeHtml(sourceInstallUrls.codex)}">Tracked Codex install</a>
+        <a class="button" href="${escapeHtml(sourceRunUrl)}">Tracked first run</a>
       </div>
     </header>
     <section>
@@ -611,6 +624,10 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <div class="panel">
           <div class="panel-head"><strong>Source-aware endpoint</strong>${copyButton(firstUsefulRun.endpoint, "Copy", "first_useful_endpoint")}</div>
           <pre>${codeBlock(firstUsefulRun.endpoint)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Tracked run URL</strong>${copyButton(sourceRunUrl, "Copy", "tracked_run_url")}</div>
+          <pre>${codeBlock(sourceRunUrl)}</pre>
         </div>
         <div class="panel">
           <div class="panel-head"><strong>Buyer prompt</strong>${copyButton(firstUsefulPrompt, "Copy", "first_useful_prompt")}</div>

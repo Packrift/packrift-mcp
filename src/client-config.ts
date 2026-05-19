@@ -1,4 +1,5 @@
 import { TRACKED_INSTALL_TEMPLATE, mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 
 export interface McpClientConfigRuntime {
   serverVersion: string;
@@ -114,7 +115,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R05",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R06",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -145,6 +146,13 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
         claude_code: trackedInstallUrl("generic", "claude_code"),
         codex: trackedInstallUrl("generic", "codex"),
         cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
+      },
+      tracked_run_template: TRACKED_RUN_TEMPLATE,
+      tracked_run_examples: {
+        generic_streamable_http: trackedRunUrl("generic", "generic_streamable_http"),
+        claude_code: trackedRunUrl("generic", "claude_code"),
+        codex: trackedRunUrl("generic", "codex"),
+        cursor_windsurf_vscode: trackedRunUrl("generic", "cursor_windsurf_vscode"),
       },
     },
     install_commands: {
@@ -223,6 +231,14 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     `Template: \`${payload.aliases.tracked_install_template}\``,
     "",
     Object.entries(payload.aliases.tracked_install_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+    "## Tracked First-Run Actions",
+    "",
+    `Template: \`${payload.aliases.tracked_run_template}\``,
+    "",
+    Object.entries(payload.aliases.tracked_run_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",
