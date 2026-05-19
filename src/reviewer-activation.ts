@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R02";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R03";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -291,6 +291,8 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     .ok{border-left:4px solid #1f8f55}
     .warn{border-left:4px solid #b86b00}
     .muted{color:#657384}
+    .cart-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .cart-note{flex-basis:100%;margin:0;color:#4f5d6b}
   </style>
 </head>
 <body>
@@ -334,6 +336,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     const output = document.getElementById("output");
     const cart = document.getElementById("cart");
     const resultPanel = document.getElementById("result");
+    let cartReadyRecorded = false;
     function cleanCartUrl(value) {
       if (typeof value !== "string" || !value.startsWith("${cartUrlPattern}")) return null;
       try {
@@ -343,6 +346,60 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
       } catch {
         return null;
       }
+    }
+    function activationSourceId() {
+      return activation && activation.target_source && activation.target_source.id ? activation.target_source.id : "generic";
+    }
+    function skuFromCartUrl(value) {
+      try {
+        const url = new URL(value);
+        const parts = url.pathname.split("/").filter(Boolean);
+        return parts[1] || "";
+      } catch {
+        return "";
+      }
+    }
+    function recordCartReady(measuredCartUrl, results) {
+      if (cartReadyRecorded) return;
+      cartReadyRecorded = true;
+      const source = activationSourceId();
+      const sku = skuFromCartUrl(measuredCartUrl);
+      let params = new URLSearchParams();
+      try {
+        params = new URL(measuredCartUrl).searchParams;
+      } catch {}
+      fetch("/events/ai-sales", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          event: "mcp_activation_cart_ready",
+          source: "mcp_reviewer_activation_runner",
+          tool_name: "create_cart_url",
+          release: activation.release,
+          sku,
+          result_count: Array.isArray(results) ? results.length : 0,
+          match_type: "activation_cart_ready",
+          packrift_ai_id: params.get("packrift_ai_id") || params.get("ai_commerce_id") || params.get("mcp_journey") || "",
+          ai_commerce_id: params.get("ai_commerce_id") || params.get("packrift_ai_id") || params.get("mcp_journey") || "",
+          mcp_key: params.get("mcp_key") || "activation_cart_ready:" + source,
+          mcp_journey: params.get("mcp_journey") || "reviewer_activation:" + source,
+          mcp_result_set: params.get("mcp_result_set") || "",
+          mcp_source_context: source,
+          mcp_install_target: "generic_streamable_http",
+          utm_source: source,
+          utm_medium: "reviewer_activation",
+          utm_campaign: "packrift_mcp_activation",
+          utm_content: "cart_ready",
+          utm_term: sku,
+          cart_url: measuredCartUrl,
+          final_cart_url: measuredCartUrl,
+          source_url: window.location.href,
+          page_url: window.location.href,
+          referrer: document.referrer,
+          user_agent: navigator.userAgent
+        })
+      }).catch(() => {});
     }
     function extractMeasuredCartUrl(results) {
       for (let i = results.length - 1; i >= 0; i -= 1) {
@@ -372,11 +429,28 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
       const measuredCartUrl = extractMeasuredCartUrl(results);
       if (measuredCartUrl) {
         resultPanel.className = "panel ok";
+        recordCartReady(measuredCartUrl, results);
+        const actions = document.createElement("span");
+        actions.className = "cart-actions";
         const link = document.createElement("a");
         link.className = "button";
         link.href = measuredCartUrl;
         link.textContent = "Open measured cart URL";
-        cart.replaceChildren(link);
+        const copy = document.createElement("button");
+        copy.className = "secondary";
+        copy.type = "button";
+        copy.textContent = "Copy URL";
+        copy.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(measuredCartUrl);
+          copy.textContent = "Copied";
+          setTimeout(() => { copy.textContent = "Copy URL"; }, 1600);
+        });
+        const note = document.createElement("span");
+        note.className = "cart-note";
+        note.textContent = "Measured cart URL is ready. This records cart-ready only; it is not counted as a cart landing until the URL is opened.";
+        actions.replaceChildren(link, copy, note);
+        cart.replaceChildren(actions);
+        link.focus();
       } else {
         resultPanel.className = "panel warn";
         cart.textContent = "No measured cart URL returned yet.";
