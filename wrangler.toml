@@ -56,6 +56,10 @@ pattern = "packrift.com/products/*"
 zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
 
 [[routes]]
+pattern = "packrift.com/pages/reorder-packaging-by-sku*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
 pattern = "packrift.com/pages/*"
 zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
 

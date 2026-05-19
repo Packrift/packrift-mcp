@@ -244,7 +244,7 @@ export async function getReorderLinkHandler(env: Env, raw: unknown) {
     utmTerm: item.sku,
   });
   const reorder = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-  reorder.searchParams.set("view", "packrift_ai_reorder_live_r05");
+  reorder.searchParams.set("view", "packrift_ai_reorder_live_r07");
   reorder.hash = `sku-${item.sku.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "packrift"}`;
   await recordProcurementEvent(env, input, {
     event: "reorder_click",

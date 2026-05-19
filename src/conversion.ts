@@ -163,7 +163,7 @@ export function buildConversionActions(input: ProductCardInput) {
     selectedHandle: input.handle,
   });
   const reorder = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-  reorder.searchParams.set("view", "packrift_ai_reorder_live_r05");
+  reorder.searchParams.set("view", "packrift_ai_reorder_live_r07");
   if (input.sku) reorder.searchParams.set("sku", input.sku);
   reorder.hash = skuAnchor(input.sku ?? input.handle);
   const quote = new URL("https://packrift.com/pages/bulk-quote");
@@ -228,7 +228,7 @@ export function buildPostConfirmationHandoff(input: PostConfirmationHandoffInput
       })
     : null;
   const reorder = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-  reorder.searchParams.set("view", "packrift_ai_reorder_live_r05");
+  reorder.searchParams.set("view", "packrift_ai_reorder_live_r07");
   if (input.selectedSku) reorder.searchParams.set("sku", input.selectedSku);
   reorder.hash = skuAnchor(input.selectedSku ?? input.selectedHandle);
   const quote = new URL("https://packrift.com/pages/bulk-quote");

@@ -726,7 +726,9 @@ const PDP_PROCUREMENT_RELEASE = "PACKRIFT-PDP-PROCUREMENT-HANDOFF-2026-05-17-R04
 const PAID_SKU_NOTE_REPAIR_RELEASE = "PACKRIFT-PAID-SKU-NOTE-REPAIR-2026-05-13-R01";
 const PDP_EXACT_SPEC_CARD_EDGE_RELEASE = "PACKRIFT-PDP-EXACT-SPEC-CARD-EDGE-RETIRED-2026-05-17-R02";
 const OWNED_PAGE_PRODUCT_LINKS_RELEASE = "PACKRIFT-OWNED-PAGE-PRODUCT-LINKS-2026-05-16-R02";
-const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-16-R03";
+const REORDER_PAGE_CANONICAL_VIEW = "packrift_ai_reorder_live_r07";
+const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-19-R05";
+const REORDER_PAGE_EDGE_REPAIR_RELEASE = "PACKRIFT-REORDER-PAGE-LIVE-R07-LINK-REPAIR-2026-05-19-R01";
 const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R02";
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
@@ -1451,7 +1453,7 @@ function routeRedirectTargetUrl(action: RouteRedirectAction, item: ApprovedCatal
   }
   if (action === "reorder") {
     const target = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-    target.searchParams.set("view", "packrift_ai_reorder_live_r05");
+    target.searchParams.set("view", "packrift_ai_reorder_live_r07");
     target.searchParams.set("sku", item.sku);
     target.hash = skuAnchor(item.sku);
     return copyRouteTrackingParams(requestUrl, target);
@@ -1573,7 +1575,7 @@ function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: RouteRedirec
   url.searchParams.set("mcp_result_set", `${source}_${day}`);
   url.searchParams.set("match_type", "exact_match");
   if (action === "reorder") {
-    url.searchParams.set("view", "packrift_ai_reorder_live_r05");
+    url.searchParams.set("view", "packrift_ai_reorder_live_r07");
     url.searchParams.set("sku", item.sku);
     url.hash = skuAnchor(item.sku);
   }
@@ -3286,7 +3288,7 @@ function buildPdpProcurementHandoff(html: string, url: URL): string {
   const procurementSpec = `SKU ${safeSku}: ${safeTitle}. Product URL: ${productUrl}`;
   const aiSkuUrl = `https://mcp.packrift.com/ai/sku/${encodeURIComponent(safeSku)}.md`;
   const reorderUrl = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-  reorderUrl.searchParams.set("view", "packrift_ai_reorder_live_r05");
+  reorderUrl.searchParams.set("view", "packrift_ai_reorder_live_r07");
   reorderUrl.searchParams.set("sku", safeSku);
   reorderUrl.hash = skuAnchor(safeSku);
   reorderUrl.searchParams.set("utm_source", "packrift");
@@ -3642,7 +3644,7 @@ function buildOwnedPageProductLinks(block: OwnedPageProductLinkBlock): string {
   const rows = block.items
     .map((item) => {
       const reorderUrl = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-      reorderUrl.searchParams.set("view", "packrift_ai_reorder_live_r05");
+      reorderUrl.searchParams.set("view", "packrift_ai_reorder_live_r07");
       reorderUrl.hash = skuAnchor(item.sku);
       return `<li><a href="${escapeHtml(item.path)}"><strong>${escapeHtml(item.sku)}</strong> - ${escapeHtml(item.title)}</a> <a href="${escapeHtml(reorderUrl.pathname + reorderUrl.search + reorderUrl.hash)}">Reorder by SKU</a></li>`;
     })
@@ -3661,14 +3663,14 @@ function buildOwnedPageProductLinks(block: OwnedPageProductLinkBlock): string {
   <h2>${escapeHtml(block.heading)}</h2>
   <p>${escapeHtml(block.body)}</p>
   <ul>${rows}</ul>
-  <p><a href="/pages/find-packaging-by-exact-spec">Find more exact packaging specs</a> | <a href="/pages/reorder-packaging-by-sku?view=packrift_ai_reorder_live_r05">Reorder by SKU</a> | <a href="/pages/packrift-ai-exact-spec-data">AI exact-spec data</a> | <a href="https://mcp.packrift.com/ai/conversion-route-catalog.json">AI purchase route catalog</a> | <a href="https://mcp.packrift.com/ai/conversion-route-catalog.md">Crawler route guide</a> | <a href="https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml">Top 1,000 AI SKU sitemap</a> | <a href="https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl">AI-approved product JSONL</a></p>
+  <p><a href="/pages/find-packaging-by-exact-spec">Find more exact packaging specs</a> | <a href="/pages/reorder-packaging-by-sku?view=packrift_ai_reorder_live_r07">Reorder by SKU</a> | <a href="/pages/packrift-ai-exact-spec-data">AI exact-spec data</a> | <a href="https://mcp.packrift.com/ai/conversion-route-catalog.json">AI purchase route catalog</a> | <a href="https://mcp.packrift.com/ai/conversion-route-catalog.md">Crawler route guide</a> | <a href="https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml">Top 1,000 AI SKU sitemap</a> | <a href="https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl">AI-approved product JSONL</a></p>
 </section>`;
 }
 
 function buildReorderFeaturedSkuBlock(): string {
   const rows = REORDER_FEATURED_SKUS.map((item) => {
     const reorderUrl = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-    reorderUrl.searchParams.set("view", "packrift_ai_reorder_live_r05");
+    reorderUrl.searchParams.set("view", "packrift_ai_reorder_live_r07");
     reorderUrl.hash = skuAnchor(item.sku);
     reorderUrl.searchParams.set("utm_source", "openai");
     reorderUrl.searchParams.set("utm_medium", "reorder_loop");
@@ -3693,6 +3695,19 @@ function buildReorderFeaturedSkuBlock(): string {
   <table><thead><tr><th>SKU</th><th>Product</th><th>Spec</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>
   <p><a href="/pages/find-packaging-by-exact-spec">Find packaging by exact spec</a> | <a href="/pages/packrift-ai-exact-spec-data">AI exact-spec data</a> | <a href="https://mcp.packrift.com/ai/conversion-route-catalog.json">AI purchase route catalog</a> | <a href="https://mcp.packrift.com/ai/conversion-route-catalog.md">Crawler route guide</a> | <a href="https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml">Top 1,000 AI SKU sitemap</a></p>
 </section>`;
+}
+
+function repairReorderPageHtml(html: string): string {
+  let updated = html
+    .replace(/PACKRIFT-REORDER-PAGE-TOP1000-\d{4}-\d{2}-\d{2}-R\d{2}/g, REORDER_PAGE_FEATURED_RELEASE)
+    .replace(/view=packrift_ai_reorder_v\d+(#sku-)/g, `view=${REORDER_PAGE_CANONICAL_VIEW}$1`)
+    .replace(/view=raw(#sku-)/g, `view=${REORDER_PAGE_CANONICAL_VIEW}$1`);
+
+  if (!updated.includes(REORDER_PAGE_EDGE_REPAIR_RELEASE)) {
+    const marker = `\n<!-- ${REORDER_PAGE_EDGE_REPAIR_RELEASE} -->`;
+    updated = updated.includes("</main>") ? updated.replace("</main>", `${marker}</main>`) : `${updated}${marker}`;
+  }
+  return updated;
 }
 
 function repairPaidSkuInternalNote(html: string, pathname: string): { html: string; repaired: boolean } {
@@ -3790,18 +3805,16 @@ async function storefrontPassThrough(request: Request, env: Env): Promise<Respon
     const html = await response.text();
     const headers = new Headers(response.headers);
     headers.delete("content-length");
-    headers.set("x-packrift-reorder-featured-skus", html.includes(REORDER_PAGE_FEATURED_RELEASE) ? "origin" : "edge");
-    if (html.includes(REORDER_PAGE_FEATURED_RELEASE)) {
-      return new Response(html, { status: response.status, statusText: response.statusText, headers });
+    headers.set("x-packrift-reorder-link-repair", REORDER_PAGE_EDGE_REPAIR_RELEASE);
+    let updated = repairReorderPageHtml(html);
+    const hasFeaturedSection = updated.includes("packrift-reorder-featured-skus--edge");
+    headers.set("x-packrift-reorder-featured-skus", hasFeaturedSection ? "origin-or-existing-edge" : "edge");
+    if (!hasFeaturedSection) {
+      const injection = buildReorderFeaturedSkuBlock();
+      updated = updated.includes("<h2>Top AI-ready reorder SKUs</h2>")
+        ? updated.replace("<h2>Top AI-ready reorder SKUs</h2>", `${injection}<h2>Top AI-ready reorder SKUs</h2>`)
+        : updated.replace("</main>", `${injection}</main>`);
     }
-    const injection = buildReorderFeaturedSkuBlock();
-    const markerUpdated = html.replace(
-      /PACKRIFT-REORDER-PAGE-TOP1000-\d{4}-\d{2}-\d{2}-R\d{2}/,
-      REORDER_PAGE_FEATURED_RELEASE
-    );
-    const updated = markerUpdated.includes("<h2>Top AI-ready reorder SKUs</h2>")
-      ? markerUpdated.replace("<h2>Top AI-ready reorder SKUs</h2>", `${injection}<h2>Top AI-ready reorder SKUs</h2>`)
-      : markerUpdated.replace("</main>", `${injection}</main>`);
     return new Response(updated, { status: response.status, statusText: response.statusText, headers });
   }
   const ownedPageBlock = OWNED_PAGE_PRODUCT_LINK_BLOCKS[url.pathname];
@@ -5123,7 +5136,7 @@ function skuPageTrackingForItem(item: ApprovedCatalogItem) {
 
 function reorderUrlForItem(item: ApprovedCatalogItem): string {
   const url = new URL("https://packrift.com/pages/reorder-packaging-by-sku");
-  url.searchParams.set("view", "packrift_ai_reorder_live_r05");
+  url.searchParams.set("view", "packrift_ai_reorder_live_r07");
   url.searchParams.set("sku", item.sku);
   url.hash = skuAnchor(item.sku);
   return trackedUrl(url.toString(), { ...skuPageTrackingForItem(item), utm_content: "reorder_click" });
