@@ -414,10 +414,12 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R05" &&
+      start?.release === "PACKRIFT-MCP-START-R06" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
+      start?.first_useful_run?.endpoint?.startsWith(`${MCP_ENDPOINT}?`) &&
+      start?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
@@ -445,6 +447,9 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.text.includes("Tracked install source: partner demo") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/config/partner_demo") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/codex") &&
+      trackedStartHtmlPartnerResult.text.includes("Run After Install") &&
+      trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"first_useful_sequence\"") &&
+      trackedStartHtmlPartnerResult.text.includes("packrift_mcp_source=partner_demo") &&
       trackedStartHtmlPartnerResult.text.includes("mcp_install_copy") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"tracked_config_url\"") &&
       trackedStartHtmlPartnerResult.text.includes("Copy config URL") &&

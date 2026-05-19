@@ -1,4 +1,4 @@
-import { trackedInstallUrl } from "./install-action.js";
+import { mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 
 export interface McpStartRuntime {
   serverVersion: string;
@@ -177,7 +177,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R05",
+    release: "PACKRIFT-MCP-START-R06",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -218,6 +218,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       endpoint_only: MCP_ENDPOINT,
     },
     first_flow: FIRST_FLOW,
+    first_useful_run: mcpFirstUsefulRun("generic", "generic_streamable_http"),
     buyer_prompts: BUYER_PROMPTS,
     proof_urls: {
       health: "https://mcp.packrift.com/health",
@@ -324,6 +325,14 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
       )
       .join("\n\n"),
     "",
+    "## Source-Aware First Useful Run",
+    "",
+    `Endpoint: \`${payload.first_useful_run.endpoint}\``,
+    "",
+    payload.first_useful_run.buyer_prompt,
+    "",
+    fencedJson(payload.first_useful_run.sequence),
+    "",
     "## Buyer Prompts",
     "",
     payload.buyer_prompts.map((prompt) => `- ${escapeMarkdown(prompt)}`).join("\n"),
@@ -374,6 +383,9 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
     claude_code: trackedInstallUrl(source, "claude_code"),
     codex: trackedInstallUrl(source, "codex"),
   };
+  const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
+  const firstUsefulPrompt = `${firstUsefulRun.buyer_prompt}\n\nUse endpoint: ${firstUsefulRun.endpoint}`;
+  const firstUsefulSequence = JSON.stringify(firstUsefulRun.sequence, null, 2);
   const remoteConfig = JSON.stringify(payload.install.remote_mcp_json, null, 2);
   const flow = payload.first_flow
     .map(
@@ -381,7 +393,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <div>
           <strong>${step.step}. ${escapeHtml(step.name)}</strong>
           <p>${escapeHtml(step.outcome)}</p>
-          <pre>${step.request ? codeBlock(step.request) : escapeHtml(payload.canonical_endpoint)}</pre>
+          <pre>${step.request ? codeBlock(step.request) : escapeHtml(firstUsefulRun.endpoint)}</pre>
         </div>
       </li>`
     )
@@ -580,6 +592,24 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <div>
           <h3>Config Examples</h3>
           <div class="proof">${trackedConfigs}</div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Run After Install</h2>
+      <p>Copy one source-aware first run into a compatible MCP client after install. It confirms SKU 1066, live price, inventory, and returns a measured Packrift MCP cart URL without placing an order.</p>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><strong>Source-aware endpoint</strong>${copyButton(firstUsefulRun.endpoint, "Copy", "first_useful_endpoint")}</div>
+          <pre>${codeBlock(firstUsefulRun.endpoint)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Buyer prompt</strong>${copyButton(firstUsefulPrompt, "Copy", "first_useful_prompt")}</div>
+          <pre>${codeBlock(firstUsefulPrompt)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>JSON-RPC sequence</strong>${copyButton(firstUsefulSequence, "Copy", "first_useful_sequence")}</div>
+          <pre>${codeBlock(firstUsefulRun.sequence)}</pre>
         </div>
       </div>
     </section>
