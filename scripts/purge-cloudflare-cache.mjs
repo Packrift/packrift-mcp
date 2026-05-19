@@ -3,7 +3,10 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const envPath = resolve(process.cwd(), ".env.cloudflare.local");
+const envPaths = [
+  resolve(process.cwd(), ".env.cloudflare.local"),
+  "/Users/farhan/Downloads/env-cloudflare.txt",
+];
 
 function loadLocalEnv(path) {
   if (!existsSync(path)) return;
@@ -44,7 +47,7 @@ Required env:
 `);
 }
 
-loadLocalEnv(envPath);
+for (const envPath of envPaths) loadLocalEnv(envPath);
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -107,6 +110,8 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/browser-agent-bridge.md",
       "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       "https://mcp.packrift.com/ai/mcp-directory-refresh.md",
+      "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
       "https://mcp.packrift.com/ai/sitemap.xml",
       "https://packrift.com/llms.txt",
       "https://packrift.com/llms-full.txt",
