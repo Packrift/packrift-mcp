@@ -169,6 +169,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP reviewer activation Markdown: https://mcp.packrift.com/ai/mcp-reviewer-activation.md
 - MCP activation command center: https://mcp.packrift.com/r/activate
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
+- MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
 - Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md

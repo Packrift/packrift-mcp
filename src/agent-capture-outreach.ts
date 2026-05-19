@@ -29,6 +29,10 @@ const CAPTURE_MARKDOWN_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
 const SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.md";
+const ACTIVATION_EXPERIMENTS_URL = "https://mcp.packrift.com/ai/mcp-activation-experiments.json";
+const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
+const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
+const GA4_FUNNEL_PROOF_URL = "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
@@ -51,9 +55,13 @@ function agentInstallSnippets() {
   return {
     generic_tracked_start: "https://mcp.packrift.com/r/start/generic",
     generic_tracked_config: "https://mcp.packrift.com/r/config/generic",
+    generic_tracked_install_generic: trackedInstallUrl("generic", "generic_streamable_http"),
     generic_tracked_install_codex: trackedInstallUrl("generic", "codex"),
     generic_tracked_install_claude_code: trackedInstallUrl("generic", "claude_code"),
+    generic_tracked_install_cline: trackedInstallUrl("generic", "cline"),
     generic_tracked_first_run: "https://mcp.packrift.com/r/run/generic/generic_streamable_http",
+    generic_tracked_first_run_claude_code: "https://mcp.packrift.com/r/run/generic/claude_code",
+    generic_tracked_first_run_cline: "https://mcp.packrift.com/r/run/generic/cline",
     generic_tracked_first_run_agent_prompt_page: "https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html",
     generic_agent_prompt: firstUsefulRun.agent_prompt,
     generic_agent_prompt_success_criteria: firstUsefulRun.agent_prompt_success_criteria,
@@ -142,8 +150,14 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
     reviewer_activation_runner: "https://mcp.packrift.com/r/activate/generic?format=html",
     source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
     source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
+    activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+    usage_snapshot: USAGE_SNAPSHOT_URL,
+    funnel_snapshot: FUNNEL_SNAPSHOT_URL,
+    ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
     acceptance_rule:
       "Paste the prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before calling the source activated.",
+    suppression_rule:
+      "Do not count browser-only proof, Packrift self-checks, or duplicate public issue comments as completed source activation.",
   };
 
   return {
@@ -175,7 +189,7 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
       source_packet: "https://mcp.packrift.com/ai/claude-connector-submission.json",
       source_packet_markdown: "https://mcp.packrift.com/ai/claude-connector-submission.md",
       fields_source:
-        "Use suggested_form_fields, allowed_redirect_hosts, live_proof_urls, buyer_safety_rules, and claude_install from the Claude connector submission packet.",
+        "Use suggested_form_fields, allowed_redirect_hosts, live_proof_urls, activation_readiness, buyer_safety_rules, and claude_install from the Claude connector submission packet.",
       high_priority_fields: {
         name: "Packrift MCP",
         category: "Business",
@@ -189,6 +203,15 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
           "Hosted no-auth remote MCP for exact-spec Packrift packaging search with live price, inventory, shipping, cart handoff, and no-match recovery.",
       },
       agent_prompt_support: agentPromptSupport,
+      activation_packet: {
+        tracked_claude_code_install: "https://mcp.packrift.com/r/install/anthropic_connectors_directory/claude_code?format=html",
+        tracked_claude_desktop_install: "https://mcp.packrift.com/r/install/anthropic_connectors_directory/claude_desktop?format=html",
+        tracked_claude_code_first_run: "https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_code?format=html",
+        tracked_claude_desktop_first_run: "https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_desktop?format=html",
+        reviewer_activation_runner: "https://mcp.packrift.com/r/activate/anthropic_connectors_directory?format=html",
+        acceptance_gate:
+          "Review is complete only after a Claude MCP host can install the existing hosted endpoint and reach create_cart_url with source attribution.",
+      },
       ...claude,
     },
     browse_sh: {
@@ -264,7 +287,8 @@ function evidenceLinks() {
     mcp_reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
     mcp_source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
     mcp_source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
-    mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+    mcp_activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+    mcp_usage_snapshot: USAGE_SNAPSHOT_URL,
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -283,6 +307,8 @@ function evidenceLinks() {
     browse_sh: "https://browse.sh/",
     cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
+    mcp_funnel_snapshot: FUNNEL_SNAPSHOT_URL,
+    mcp_ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
     llms_txt: "https://mcp.packrift.com/llms.txt",
   };
 }
@@ -323,7 +349,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R14",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R15",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -354,6 +380,26 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
+    },
+    activation_handoff: {
+      status: "work_the_existing_mcp_endpoint",
+      goal:
+        "Move directory and agent-host attention from listing clicks into real source-attributed MCP runs, measured /r/cart handoffs, and orders.",
+      canonical_endpoint: MCP_ENDPOINT,
+      proof_urls: {
+        source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+        activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+        usage_snapshot: USAGE_SNAPSHOT_URL,
+        funnel_snapshot: FUNNEL_SNAPSHOT_URL,
+        ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
+      },
+      reviewer_acceptance_gate: [
+        "Use the existing hosted MCP endpoint.",
+        "Install with a source-specific /r/install/{source}/{target} link.",
+        "Run a source-specific /r/run/{source}/{target} or /r/activate/{source}?format=html flow.",
+        "Require tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+        "Do not create duplicate CLIs, storefronts, buyer pages, or duplicate public issue comments.",
+      ],
     },
     evidence: evidenceLinks(),
     priority_queue: priorityQueue,
@@ -420,6 +466,10 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
     "| Surface | Action status | Directory status | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner | Next action |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     priorityRows || "| none | pass | pass | | | | | | |",
+    "",
+    "## Activation Handoff",
+    "",
+    fencedJson(payload.activation_handoff),
     "",
     "## All Directory Refreshes",
     "",

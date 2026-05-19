@@ -21,6 +21,7 @@ import {
   mcpFirstUsefulRun,
   normalizeInstallTarget,
   sourceAwareMcpEndpoint,
+  trackedInstallUrl,
 } from "./install-action.js";
 import {
   MCP_FIRST_RUN_ACTION_RELEASE,
@@ -28,6 +29,7 @@ import {
   mcpFirstRunActionPayload,
   mcpFirstRunActionsMarkdown,
   mcpFirstRunActionsPayload,
+  trackedRunUrl,
 } from "./first-run-action.js";
 import { mcpClientConfigMarkdown, mcpClientConfigPayload } from "./client-config.js";
 import { mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
@@ -6178,6 +6180,30 @@ function aiCorpusBodyIsLoaded(route: { key: string }, body: string | null): bool
 
 const AI_SALES_PRIORITY_SKUS = ["1066", "LL251WR", "MFL1295"] as const;
 const AI_SALES_SKU_ROUTE_LIMIT = 1000;
+const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
+const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
+  { source: "official_registry", target: "generic_streamable_http" },
+  { source: "mcpservers_org", target: "generic_streamable_http" },
+  { source: "glama_connector", target: "glama_connector" },
+  { source: "glama_server_listing", target: "generic_streamable_http" },
+  { source: "mcp_directory", target: "generic_streamable_http" },
+  { source: "anthropic_connectors_directory", target: "claude_code" },
+  { source: "smithery", target: "generic_streamable_http" },
+  { source: "cline_mcp_marketplace", target: "cline" },
+  { source: "mcp_so", target: "generic_streamable_http" },
+  { source: "mcpmarket_com", target: "mcp_marketplace" },
+  { source: "cursor_directory", target: "cursor_windsurf_vscode" },
+  { source: "mcpcentral", target: "generic_streamable_http" },
+  { source: "mcpfinder", target: "generic_streamable_http" },
+  { source: "pulsemcp_packrift", target: "generic_streamable_http" },
+  { source: "mcpskills", target: "generic_streamable_http" },
+  { source: "agentndx", target: "generic_streamable_http" },
+  { source: "mcpbench", target: "generic_streamable_http" },
+  { source: "chiark", target: "generic_streamable_http" },
+  { source: "mcp_marketplace_io", target: "mcp_marketplace" },
+  { source: "docker_mcp_catalog", target: "generic_streamable_http" },
+  { source: "generic", target: "generic_streamable_http" },
+] as const;
 const APPROVED_CATALOG_BY_SKU = new Map(
   APPROVED_CATALOG.map((item) => [item.sku.toUpperCase(), item])
 );
@@ -6278,6 +6304,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+  MCP_SOURCE_ACTIVATION_SITEMAP_URL,
   "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
   "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
   "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
@@ -6409,6 +6436,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-source-activation-queue.json": "Machine-readable next-best-action queue that ranks Packrift MCP sources by the event needed to progress toward real tool calls, cart landings, and orders.",
   "/ai/mcp-source-activation-queue.md": "Crawler-readable Packrift MCP source activation queue with source-specific action URLs, target events, and acceptance criteria.",
   "/ai/mcp-source-activation-queue.html": "Human-facing Packrift MCP activation command center that ranks sources and deep-links into the real source-specific MCP runner.",
+  "/ai/mcp-source-activation-sitemap.xml": "Finite crawl map for source-specific Packrift MCP start, install, first-run, and reviewer activation URLs.",
   "/ai/mcp-activation-experiments.json": "Machine-readable Packrift MCP source activation experiments with hypotheses, target events, expected snapshot deltas, and suppression rules.",
   "/ai/mcp-activation-experiments.md": "Crawler-readable Packrift MCP activation experiment plan for turning source activity into measurable tool calls, cart landings, and orders.",
   "/ai/mcp-activation-experiments.html": "Human-facing Packrift MCP activation experiment board with copy-ready external requests and measurement links.",
@@ -6648,6 +6676,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-ga4-funnel-proof.md") return mcpGa4FunnelProofMarkdown(await mcpGa4FunnelProofPayload(env));
   if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await mcpSourceActivationQueuePayload(env), null, 2);
   if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(env));
+  if (pathname === "/ai/mcp-source-activation-sitemap.xml") return sourceActivationSitemapXml();
   if (pathname === "/ai/mcp-activation-experiments.json") return JSON.stringify(await mcpActivationExperimentsPayload(env), null, 2);
   if (pathname === "/ai/mcp-activation-experiments.md") return mcpActivationExperimentsMarkdown(await mcpActivationExperimentsPayload(env));
   if (pathname === "/ai/mcp-activation-experiments.html") return mcpActivationExperimentsHtml(await mcpActivationExperimentsPayload(env));
@@ -6710,6 +6739,29 @@ function aiSitemapXml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
+function sourceActivationSitemapUrls(): string[] {
+  return MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
+    `https://mcp.packrift.com/r/start/${source}`,
+    `https://mcp.packrift.com/start?utm_source=${source}`,
+    `https://mcp.packrift.com/r/config/${source}`,
+    trackedInstallUrl(source, target),
+    `${trackedInstallUrl(source, target)}&format=html`,
+    `${trackedInstallUrl(source, target)}&format=json`,
+    trackedRunUrl(source, target),
+    `${trackedRunUrl(source, target)}&format=html`,
+    `https://mcp.packrift.com/r/activate/${source}`,
+    `https://mcp.packrift.com/r/activate/${source}?format=html`,
+  ]);
+}
+
+function sourceActivationSitemapXml(): string {
+  const now = new Date().toISOString().slice(0, 10);
+  const urls = sourceActivationSitemapUrls()
+    .map((url) => `  <url><loc>${escapeXml(url)}</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq></url>`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
 async function mcpHealthPayload(env: Env) {
   let kvStatus: "ok" | "error" = "ok";
   try {
@@ -6760,6 +6812,7 @@ function mcpManifestPayload() {
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
     mcp_source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+    mcp_source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
     mcp_activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
     mcp_activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
     mcp_activation_command_center: "https://mcp.packrift.com/r/activate",
@@ -6806,6 +6859,7 @@ function mcpServerCardPayload() {
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
       activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
@@ -8132,6 +8186,7 @@ function robotsTxt(): string {
     "Sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml",
     "Sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml",
     "Sitemap: https://mcp.packrift.com/ai/conversion-route-redirect-sitemap.xml",
+    `Sitemap: ${MCP_SOURCE_ACTIVATION_SITEMAP_URL}`,
     "",
   ].join("\n");
 }
@@ -8279,6 +8334,13 @@ app.get("/ai/all-ai-approved-sku-sitemap.xml", (c) =>
 
 app.get("/ai/conversion-route-redirect-sitemap.xml", (c) =>
   c.body(routeRedirectSitemapXml(), 200, {
+    "Content-Type": "application/xml; charset=utf-8",
+    ...RAW_HEADERS,
+  })
+);
+
+app.get("/ai/mcp-source-activation-sitemap.xml", (c) =>
+  c.body(sourceActivationSitemapXml(), 200, {
     "Content-Type": "application/xml; charset=utf-8",
     ...RAW_HEADERS,
   })

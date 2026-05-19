@@ -275,7 +275,7 @@ async function main() {
     check("resources/list advertises GA4 funnel proof", hasResourceUri(resourceUris, "/ai/mcp-ga4-funnel-proof.json") && hasResourceUri(resourceUris, "/ai/mcp-ga4-funnel-proof.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises source activation queue", hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.html") && hasResourceUri(resourceUris, "/r/activate"), {
+    check("resources/list advertises source activation queue", hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.html") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-sitemap.xml") && hasResourceUri(resourceUris, "/r/activate"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises activation experiments", hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.html"), {
