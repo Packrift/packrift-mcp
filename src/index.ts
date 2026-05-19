@@ -3774,9 +3774,11 @@ function normalizedPostInstallMcpSourceContext(value: unknown): string {
   if (!context) return "";
   const attributedSource = sourceFromMcpAttributionText(context);
   if (attributedSource) return attributedSource;
-  const suffixMatch = /^(.+)_(?:first_cart_run|first_run|cart_run|purchase_handoff|activation)$/.exec(context);
-  const source = safeEventText(suffixMatch?.[1], 80);
-  if (source && MCP_START_SOURCE_PATTERN.test(source)) return source;
+  for (const suffix of ["_first_cart_run", "_purchase_handoff", "_activation", "_first_run", "_cart_run"]) {
+    if (!context.endsWith(suffix)) continue;
+    const source = safeEventText(context.slice(0, -suffix.length), 80);
+    if (source && MCP_START_SOURCE_PATTERN.test(source)) return source;
+  }
   return context;
 }
 

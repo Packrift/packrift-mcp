@@ -1091,6 +1091,9 @@ async function liveMcpCheck() {
       sourceActivationQueue?.source_context_normalization?.examples?.some(
         (example) => example.raw === "mcp_so_first_cart_run" && example.normalized === "mcp_so"
       ) &&
+      sourceActivationQueue?.source_context_normalization?.examples?.some(
+        (example) => example.raw === "browse_sh_first_cart_run" && example.normalized === "browse_sh"
+      ) &&
       sourceActivationQueue?.links?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       sourceActivationQueue?.links?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
       sourceActivationQueue?.links?.source_activation_queue_html === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html" &&
