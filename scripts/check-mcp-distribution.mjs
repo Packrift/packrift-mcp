@@ -1119,7 +1119,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R15" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R16" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 5000 &&
       sourceActivationQueue?.source_context_normalization?.release === "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01" &&
@@ -1208,7 +1208,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R07" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R15" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R16" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       typeof activationExperiments?.experiment_count === "number" &&
@@ -1298,7 +1298,7 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R26" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R27" &&
       directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directoryRefresh?.live_proof?.tracked_start_partner_demo === "https://mcp.packrift.com/r/start/partner_demo" &&
@@ -1309,6 +1309,10 @@ async function liveMcpCheck() {
       directoryRefresh?.live_proof?.tracked_run_generic_browser?.includes("format=html") &&
       directoryRefresh?.canonical_listing?.source_activation_queue_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       directoryRefresh?.live_proof?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      directoryRefresh?.canonical_listing?.tool_discovery_json_url === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      directoryRefresh?.canonical_listing?.tool_discovery_markdown_url === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      directoryRefresh?.live_proof?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      directoryRefresh?.live_proof?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       directoryRefresh?.live_proof?.tracked_run_generic_execute?.includes("execute=1") &&
       directoryRefresh?.live_proof?.copy_ready_agent_prompt_locations?.some((location) => String(location).includes("Copy agent prompt")) &&
       directoryRefresh?.live_proof?.tracked_reviewer_activation_html_template === "https://mcp.packrift.com/r/activate/{source}?format=html" &&
@@ -1354,14 +1358,17 @@ async function liveMcpCheck() {
       directoryRefresh?.priority_refresh_targets?.every((target) => target.agent_prompt_acceptance_rule?.includes("create_cart_url")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/")) &&
       directoryRefresh?.priority_refresh_targets?.every((target) => target.tracked_reviewer_activation_html_url?.startsWith("https://mcp.packrift.com/r/activate/") && target.tracked_reviewer_activation_html_url?.includes("format=html")) &&
+      directoryRefresh?.priority_refresh_targets?.every((target) => target.crawler_input_urls?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json") &&
+      directoryRefresh?.priority_refresh_targets?.every((target) => target.crawler_input_urls?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md") &&
       directoryRefresh?.recrawl_request?.includes("/r/install/") &&
       directoryRefresh?.recrawl_request?.includes("execute=1") &&
       directoryRefresh?.recrawl_request?.includes("Copy agent prompt") &&
       directoryRefresh?.recrawl_request?.includes("/r/activate/{source}?format=html") &&
       directoryRefresh?.recrawl_request?.includes("mcp-source-activation-queue.json") &&
       directoryRefresh?.recrawl_request?.includes("mcp-source-activation-sitemap.xml") &&
+      directoryRefresh?.recrawl_request?.includes("mcp-tools.json") &&
       directoryRefresh?.recrawl_request?.includes(".well-known/mcp-marketplace.json") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R37" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R38" &&
       directorySubmitActions?.source_mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       directorySubmitActions?.actions?.length >= 28 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory" && action.action_status === "auth_gated_manual") &&
@@ -1389,6 +1396,8 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       directorySubmitActions?.source_activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       directorySubmitActions?.source_marketplace_manifest === "https://mcp.packrift.com/.well-known/mcp-marketplace.json" &&
+      directorySubmitActions?.source_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      directorySubmitActions?.source_tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       directorySubmitActions?.source_usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
       directorySubmitActions?.source_funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
       directorySubmitActions?.source_ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
@@ -1425,21 +1434,26 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json") &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.marketplace_manifest === "https://mcp.packrift.com/.well-known/mcp-marketplace.json") &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json") &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md") &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json") &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.quickest_install_by_host?.cline?.startsWith("https://mcp.packrift.com/r/install/")) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.quickest_first_run_by_host?.claude_code?.startsWith("https://mcp.packrift.com/r/run/")) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.acceptance_gate?.some((rule) => String(rule).includes("real MCP host"))) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.marketplace_manifest === "https://mcp.packrift.com/.well-known/mcp-marketplace.json") &&
+      directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.live_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json") &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directorySubmitActions?.source_eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
-      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R09" &&
+      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R10" &&
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
       directoryUpdateCline?.canonical_listing?.endpoint === "https://mcp.packrift.com/mcp" &&
       directoryUpdateCline?.canonical_listing?.authentication === "none_required_for_hosted_endpoint" &&
       directoryUpdateCline?.canonical_listing?.tool_names?.includes("prepare_purchase_handoff") &&
       directoryUpdateCline?.canonical_listing?.tool_names?.length >= 15 &&
+      directoryUpdateCline?.canonical_listing?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      directoryUpdateCline?.tracked_urls?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       directoryUpdateCline?.tracked_urls?.config?.startsWith("https://mcp.packrift.com/r/config/cline_mcp_marketplace") &&
       directoryUpdateCline?.tracked_urls?.first_run?.cline?.startsWith("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline") &&
       directoryUpdateCline?.tracked_urls?.reviewer_activation_html === "https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=html" &&
@@ -1447,8 +1461,10 @@ async function liveMcpCheck() {
       directoryUpdateCline?.acceptance_gate?.some((rule) => String(rule).includes("create_cart_url")) &&
       directoryUpdateCline?.acceptance_gate?.some((rule) => String(rule).includes("eval pack")) &&
       directoryUpdateCline?.copy_ready_recrawl_message?.includes(".well-known/mcp-marketplace.json") &&
+      directoryUpdateCline?.copy_ready_recrawl_message?.includes("mcp-tools.json") &&
       directoryUpdateClineMarkdownResult.ok &&
       directoryUpdateClineMarkdownResult.text.includes("Packrift MCP Directory Update Card") &&
+      directoryUpdateClineMarkdownResult.text.includes("Live tool discovery JSON") &&
       directoryUpdateClineMarkdownResult.text.includes("cline_mcp_marketplace") &&
       directoryUpdateMcpSo?.source === "mcp_so" &&
       directoryUpdateMcpSo?.tracked_urls?.config?.startsWith("https://mcp.packrift.com/r/config/mcp_so") &&
@@ -1581,7 +1597,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
-      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R37" &&
+      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R38" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&

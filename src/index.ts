@@ -872,16 +872,16 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
         try {
           const out = await tool.handler(env, args, context);
           if (shouldRecordToolTelemetry) {
-            await recordAiSalesEvent(
-              env,
-              buildMcpToolCallEvent(name, out, {
-                latencyMs: Date.now() - startedAt,
-                resultSizeBytes: jsonByteSize(out),
-                args,
-                ...telemetryContext,
-                ok: true,
-              })
-            );
+            const toolCallEvent = buildMcpToolCallEvent(name, out, {
+              latencyMs: Date.now() - startedAt,
+              resultSizeBytes: jsonByteSize(out),
+              args,
+              ...telemetryContext,
+              ok: true,
+            });
+            await recordAiSalesEvent(env, toolCallEvent);
+            const activationCartReadyEvent = buildMcpActivationCartReadyEvent(toolCallEvent);
+            if (activationCartReadyEvent) await recordAiSalesEvent(env, activationCartReadyEvent);
           }
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
@@ -1128,6 +1128,7 @@ const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEME
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
 const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02";
 const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
+const MCP_ACTIVATION_CART_READY_RELEASE = "PACKRIFT-MCP-ACTIVATION-CART-READY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const MCP_ORDER_ATTRIBUTION_RELEASE = "PACKRIFT-MCP-ORDER-ATTRIBUTION-R01";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
@@ -2464,6 +2465,23 @@ function buildMcpToolCallEvent(
     family: row.family,
     match_type: row.match_type,
     ...attribution,
+  };
+}
+
+function buildMcpActivationCartReadyEvent(toolCallEvent: Record<string, unknown>): Record<string, unknown> | null {
+  if (String(toolCallEvent.event ?? "") !== "mcp_tool_call") return null;
+  if (String(toolCallEvent.tool_name ?? "") !== "create_cart_url") return null;
+  if (toolCallEvent.ok !== true) return null;
+  const cartUrl = measuredCartUrlFromEvent(toolCallEvent);
+  if (!cartUrl) return null;
+  return {
+    ...toolCallEvent,
+    event: "mcp_activation_cart_ready",
+    source: "mcp_activation_cart_ready",
+    release: MCP_ACTIVATION_CART_READY_RELEASE,
+    cart_url: cartUrl,
+    readiness_rule: "create_cart_url returned a measured Packrift MCP /r/cart URL; MCP does not place the order.",
+    no_order_created_by_mcp: true,
   };
 }
 
@@ -4069,6 +4087,8 @@ function sourceActivationUrls(source: string) {
     reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${slug}?format=sh`,
     directory_update_card_json_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.json`,
     directory_update_card_markdown_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.md`,
+    tool_discovery_json_url: MCP_TOOL_DISCOVERY_JSON_URL,
+    tool_discovery_markdown_url: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
     eval_pack_json_url: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${slug}`,
     eval_pack_markdown_url: `https://mcp.packrift.com/ai/mcp-eval-pack.md?source=${slug}`,
   };
@@ -4084,6 +4104,8 @@ function sourceActivationShellCommand(url: string): string {
 
 function sourceActivationEvalPackLines(urls: ReturnType<typeof sourceActivationUrls>): string[] {
   return [
+    `Live tool discovery JSON: ${urls.tool_discovery_json_url}`,
+    `Live tool discovery Markdown: ${urls.tool_discovery_markdown_url}`,
     `Host acceptance eval pack: ${urls.eval_pack_json_url}`,
     `Eval pack Markdown: ${urls.eval_pack_markdown_url}`,
   ];
@@ -4332,6 +4354,8 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         one_command_external_runner: sourceActivationShellCommand(urls.reviewer_activation_shell_url),
         directory_update_card_json_url: urls.directory_update_card_json_url,
         directory_update_card_markdown_url: urls.directory_update_card_markdown_url,
+        tool_discovery_json_url: urls.tool_discovery_json_url,
+        tool_discovery_markdown_url: urls.tool_discovery_markdown_url,
         eval_pack_json_url: urls.eval_pack_json_url,
         eval_pack_markdown_url: urls.eval_pack_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
@@ -4383,7 +4407,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R15",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R16",
     generated_at: new Date().toISOString(),
     date,
     event_read_limit: limit,
@@ -4450,6 +4474,8 @@ async function mcpSourceActivationQueuePayload(
         one_command_external_runner: row.one_command_external_runner,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
+        tool_discovery_json_url: row.tool_discovery_json_url,
+        tool_discovery_markdown_url: row.tool_discovery_markdown_url,
         directory_update_card_json_url: row.directory_update_card_json_url,
         directory_update_card_markdown_url: row.directory_update_card_markdown_url,
         eval_pack_json_url: row.eval_pack_json_url,
@@ -4473,6 +4499,8 @@ async function mcpSourceActivationQueuePayload(
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
+      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       directory_update_card_template: "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json",
       eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
@@ -4736,6 +4764,8 @@ interface SourceActivationExperimentQueueRow {
   reviewer_activation_shell_url: string;
   directory_update_card_json_url: string;
   directory_update_card_markdown_url: string;
+  tool_discovery_json_url: string;
+  tool_discovery_markdown_url: string;
   eval_pack_json_url: string;
   eval_pack_markdown_url: string;
   source_aware_endpoint: string;
@@ -4853,6 +4883,8 @@ function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRo
     `First-run action: ${row.tracked_first_run_url}`,
     `Activation runner: ${row.reviewer_activation_runner_url}`,
     `Shell activation script: ${row.reviewer_activation_shell_url}`,
+    `Live tool discovery JSON: ${row.tool_discovery_json_url}`,
+    `Live tool discovery Markdown: ${row.tool_discovery_markdown_url}`,
     `Host acceptance eval pack: ${row.eval_pack_json_url}`,
     "",
     "Please install the hosted Streamable HTTP endpoint in a real MCP host and run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066. Use the returned https://mcp.packrift.com/r/cart/ URL as the measured cart handoff.",
@@ -4887,6 +4919,8 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       reviewer_activation_shell_url: row.reviewer_activation_shell_url,
       directory_update_card_json_url: row.directory_update_card_json_url,
       directory_update_card_markdown_url: row.directory_update_card_markdown_url,
+      tool_discovery_json_url: row.tool_discovery_json_url,
+      tool_discovery_markdown_url: row.tool_discovery_markdown_url,
       eval_pack_json_url: row.eval_pack_json_url,
       eval_pack_markdown_url: row.eval_pack_markdown_url,
       primary_action_url: row.primary_action_url,
@@ -4905,6 +4939,8 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
         source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
         source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
         directory_update_card: row.directory_update_card_json_url,
+        tool_discovery_json: row.tool_discovery_json_url,
+        tool_discovery_markdown: row.tool_discovery_markdown_url,
         eval_pack: row.eval_pack_json_url,
         activation_command_center: "https://mcp.packrift.com/r/activate",
         usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -4948,6 +4984,8 @@ async function mcpActivationExperimentsPayload(
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
+      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
+      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
@@ -6872,6 +6910,8 @@ function aiCorpusBodyIsLoaded(route: { key: string }, body: string | null): bool
 const AI_SALES_PRIORITY_SKUS = ["1066", "LL251WR", "MFL1295"] as const;
 const AI_SALES_SKU_ROUTE_LIMIT = 1000;
 const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
+const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
+const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
@@ -7572,6 +7612,8 @@ function mcpToolDiscoveryPayload() {
       manifest: "https://mcp.packrift.com/manifest",
       resources: "https://mcp.packrift.com/resources",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
+      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
