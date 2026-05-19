@@ -1765,6 +1765,7 @@ async function recordMcpFirstRunExecutionTelemetry(
   if (!shouldRecordRouteLandingTelemetry(env, userAgent)) return;
   const day = compactDate();
   const id = `mcp_first_run_execution_${meta.source}_${meta.target}_${day}`;
+  const cartParams = urlParamsFromValue(meta.cartUrl);
   await recordAiSalesEvent(env, {
     event: "mcp_first_run_execution",
     source: "mcp_first_run_action",
@@ -1785,6 +1786,7 @@ async function recordMcpFirstRunExecutionTelemetry(
     bot_family: classifyAgentFamily(userAgent),
     packrift_ai_id: id,
     ai_commerce_id: id,
+    mcp_handoff_id: cartParams?.get("mcp_handoff_id") ?? "",
     mcp_key: `first_run_execution:${meta.source}:${meta.target}`,
     mcp_journey: `mcp_first_run_action:${meta.source}:execute:${meta.target}`,
     mcp_result_set: `mcp_first_run_action_${day}`,
@@ -6507,6 +6509,7 @@ async function firstRunActionExecutionDemo(
       pricing: pricing[0] ?? {},
       inventory: inventory[0] ?? {},
       cart: {
+        mcp_handoff_id: cart.mcp_handoff_id,
         url: cart.url,
         final_cart_url: cart.final_cart_url,
         utm: cart.utm,

@@ -15,7 +15,7 @@ export interface FirstRunActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R04";
+export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R05";
 export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R04";
 export const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 

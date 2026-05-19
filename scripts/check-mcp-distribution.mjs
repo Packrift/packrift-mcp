@@ -560,7 +560,7 @@ async function liveMcpCheck() {
       trackedFirstRunHtmlResult.text.includes("create_cart_url") &&
       trackedFirstRunHtmlResult.text.includes("Shell One-Liner") &&
       trackedFirstRunExecuteResult.ok &&
-      trackedFirstRunExecute?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R04" &&
+      trackedFirstRunExecute?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R05" &&
       trackedFirstRunExecute?.status === "ok" &&
       trackedFirstRunExecute?.sku === "1066" &&
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
@@ -642,7 +642,7 @@ async function liveMcpCheck() {
       firstRunActions?.targets?.every((target) => target.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/") && target.tracked_run_html_url?.includes("format=html")) &&
       firstRunActions?.targets?.every((target) => target.tracked_run_execute_url?.includes("execute=1")) &&
       firstRunActions?.targets?.every((target) => target.required_final_tool === "create_cart_url") &&
-      firstRunActions?.first_run?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R04" &&
+      firstRunActions?.first_run?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R05" &&
       firstRunActions?.first_run?.tracked_run_url?.startsWith("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
       firstRunActions?.first_run?.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
       firstRunActions?.first_run?.tracked_run_html_url?.includes("format=html") &&

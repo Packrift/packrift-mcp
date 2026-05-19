@@ -408,6 +408,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
           match_type: "activation_cart_ready",
           packrift_ai_id: params.get("packrift_ai_id") || params.get("ai_commerce_id") || params.get("mcp_journey") || "",
           ai_commerce_id: params.get("ai_commerce_id") || params.get("packrift_ai_id") || params.get("mcp_journey") || "",
+          mcp_handoff_id: params.get("mcp_handoff_id") || "",
           mcp_key: params.get("mcp_key") || "activation_cart_ready:" + source,
           mcp_journey: params.get("mcp_journey") || "reviewer_activation:" + source,
           mcp_result_set: params.get("mcp_result_set") || "",
