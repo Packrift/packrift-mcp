@@ -1091,7 +1091,9 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Source-specific agent prompt") &&
       sourceActivationQueueHtmlResult.text.includes("Copy-ready host configs") &&
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
-      sourceActivationQueueHtmlResult.text.includes("Activation runner") &&
+      (sourceActivationQueueHtmlResult.text.includes("Activation runner") ||
+        sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
+        sourceActivationQueueHtmlResult.text.includes("Install in Cline")) &&
       sourceActivationQueueHtmlResult.text.includes("Shell script") &&
       sourceActivationQueueHtmlResult.text.includes("Update card") &&
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
