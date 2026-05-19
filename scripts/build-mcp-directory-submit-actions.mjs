@@ -8,6 +8,8 @@ const OUT_ROOT = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions");
 const PACK_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submission-pack/latest.json");
 const PREVIOUS_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions/latest.json");
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
+const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
+const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 
 const DIRECT_STATUS = {
   mcpservers_org: {
@@ -42,10 +44,10 @@ const DIRECT_STATUS = {
     next_action: "Monitor for maintainer response and publication; respond with the directory refresh pack only if they ask for more evidence.",
   },
   mcp_so: {
-    status: "manual_submission_ready",
-    method: "Manual MCP.so submit form",
-    evidence: "The submit form is reachable, but Packrift is not confirmed as a listed server.",
-    next_action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
+    status: "submitted_pending",
+    method: "GitHub issue submission updated after auth-gated public submit form",
+    evidence: "MCP.so issue #2189 is open and has current hosted endpoint and 15-tool proof; Packrift is not confirmed as a listed server.",
+    next_action: "Monitor issue #2189 and MCP.so search; avoid a duplicate owner-authenticated submission unless MCP.so requests it.",
   },
   browse_sh: {
     status: "catalog_live_installable",
@@ -115,6 +117,60 @@ const DIRECT_STATUS = {
     evidence: "Chiark methodology indicates upstream crawling rather than direct submissions.",
     next_action: "Monitor after official registry and high-priority directory refreshes propagate.",
   },
+  mcplist_ai: {
+    status: "submit_path_unclear",
+    method: "Directory search plus unclear submit path",
+    evidence: "MCPLIST has a public MCP server directory; its FAQ references submission through a form or GitHub repository, but no clean public submit URL was confirmed.",
+    next_action: "Find the current MCPLIST submission form or repository path, then submit the hosted endpoint and source-specific update card.",
+  },
+  mcphubz: {
+    status: "manual_submission_ready",
+    method: "Manual MCPHubz submit form",
+    evidence: "MCPHubz exposes a public submit page and search returned no Packrift result.",
+    next_action: "Submit Packrift MCP to MCPHubz with the hosted endpoint, tracked start URL, and first-useful-run proof.",
+  },
+  mcp_blue: {
+    status: "manual_pr_ready",
+    method: "MCP Blue submit or registry process",
+    evidence: "MCP Blue exposes a public submit path; Packrift is not visible in the directory.",
+    next_action: "Submit Packrift MCP through MCP Blue with the current hosted endpoint and marketplace manifest.",
+  },
+  findmcp_dev: {
+    status: "manual_submission_ready",
+    method: "Manual FindMCP submit form",
+    evidence: "FindMCP exposes a List Your Server submit route; Packrift is not visible in discovery.",
+    next_action: "Submit Packrift MCP through FindMCP with the source-specific start page and exact-spec packaging copy.",
+  },
+  mcplane: {
+    status: "manual_submission_ready",
+    method: "MCPLane Publish Server flow",
+    evidence: "MCPLane exposes /mcp_servers/new and search returned no Packrift result.",
+    next_action: "Publish Packrift MCP through MCPLane with the hosted endpoint and source-specific activation proof.",
+  },
+  mcpsolutions_dev: {
+    status: "manual_submission_ready",
+    method: "MCP Solutions submit plan flow",
+    evidence: "MCP Solutions exposes a submit page with a visible basic listing option; Packrift is not visible in explore.",
+    next_action: "Submit Packrift MCP as a basic listing first with the hosted no-auth endpoint and update card.",
+  },
+  gpmcp: {
+    status: "manual_contact_or_hosting_evaluation",
+    method: "Manual contact or hosting/provider evaluation",
+    evidence: "GPMCP exposes MCP hosting and browsing, but no public submit/update form was found.",
+    next_action: "Monitor GPMCP for a listing/import/contact path and use the source-specific update card if one opens.",
+  },
+  theresamcpforthat: {
+    status: "monitor_or_submit",
+    method: "Directory monitoring and manual submit/contact if available",
+    evidence: "There's an MCP for That is a public MCP discovery directory; no public submit/update instruction was visible.",
+    next_action: "Monitor for a public submit or repository path and use the source-specific update card when available.",
+  },
+  mcpserverfinder: {
+    status: "email_submission_ready",
+    method: "Public submit email",
+    evidence: "MCP Server Finder exposes a Submit mailto link and search returned no Packrift result.",
+    next_action: "Email MCP Server Finder with the hosted endpoint, marketplace manifest, and source-specific update card.",
+  },
   docker_mcp_catalog: {
     status: "pending_merge",
     method: "GitHub pull request",
@@ -162,6 +218,18 @@ function trackedConfigUrl(source) {
   return url.toString();
 }
 
+function trackedInstallUrl(source, target) {
+  return TRACKED_INSTALL_TEMPLATE.replace("{source}", source).replace("{target}", target);
+}
+
+function trackedRunUrl(source, target) {
+  return TRACKED_RUN_TEMPLATE.replace("{source}", source).replace("{target}", target);
+}
+
+function directoryUpdateCardUrl(source) {
+  return `https://mcp.packrift.com/ai/mcp-directory-update/${source}.json`;
+}
+
 function publicProofLine(pack) {
   const proof = pack.live_proof ?? {};
   const tools = proof.mcp_tools_list?.tools_count ?? pack.copy?.tools_count ?? 14;
@@ -180,6 +248,12 @@ function recrawlMessage(pack, target) {
   const missing = target.missing?.length ? `\nCurrent stale/missing markers: ${target.missing.join(", ")}.\n` : "";
   const trackedStart = trackedStartUrl(target.name);
   const trackedConfig = trackedConfigUrl(target.name);
+  const trackedInstall = trackedInstallUrl(target.name, "generic_streamable_http");
+  const trackedRun = trackedRunUrl(target.name, "generic_streamable_http");
+  const trackedRunHtml = `${trackedRun}?format=html`;
+  const trackedRunExecute = `${trackedRun}?execute=1`;
+  const reviewerActivation = `https://mcp.packrift.com/r/activate/${target.name}?format=html`;
+  const updateCard = directoryUpdateCardUrl(target.name);
   return [
     `Subject: Refresh ${targetLabel(target)} Packrift MCP listing to current hosted endpoint`,
     "",
@@ -195,7 +269,13 @@ function recrawlMessage(pack, target) {
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
     `- Tracked start page: ${trackedStart}`,
+    `- Source-specific update card: ${updateCard}`,
     `- Tracked MCP JSON config: ${trackedConfig}`,
+    `- Tracked generic install action: ${trackedInstall}`,
+    `- Tracked first-run action: ${trackedRun}`,
+    `- Browser first-run page: ${trackedRunHtml}`,
+    `- One-click live proof: ${trackedRunExecute}`,
+    `- Reviewer activation browser runner: ${reviewerActivation}`,
     "- Canonical start page: https://mcp.packrift.com/start",
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -208,6 +288,7 @@ function recrawlMessage(pack, target) {
     "- Root MCP JSON config: https://mcp.packrift.com/mcp.json",
     "- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json",
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+    "- Source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
     "- First-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     "- Workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
     `- Claude connector submission packet: ${CLAUDE_CONNECTOR_SUBMISSION_URL}`,
@@ -243,12 +324,22 @@ function buildAction(pack, previousByName, target) {
     submission_url: target.submission_url,
     tracked_start_url: trackedStartUrl(target.name),
     tracked_config_url: trackedConfigUrl(target.name),
+    directory_update_card_url: directoryUpdateCardUrl(target.name),
+    tracked_install_url: trackedInstallUrl(target.name, "generic_streamable_http"),
+    tracked_first_run_url: trackedRunUrl(target.name, "generic_streamable_http"),
+    tracked_first_run_live_proof_url: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
+    reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
     previous_status: previous?.status ?? null,
     form_fields: target.form_fields,
     proof_urls: {
       ...target.proof_urls,
       tracked_start: trackedStartUrl(target.name),
       tracked_config: trackedConfigUrl(target.name),
+      directory_update_card: directoryUpdateCardUrl(target.name),
+      tracked_install_generic: trackedInstallUrl(target.name, "generic_streamable_http"),
+      tracked_first_run_generic: trackedRunUrl(target.name, "generic_streamable_http"),
+      tracked_first_run_generic_execute: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
+      reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
     },
     recrawl_message: recrawlMessage(pack, target),
@@ -259,7 +350,7 @@ function markdown(payload) {
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${action.label} | ${action.status} | ${action.current_distribution_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.next_action} |`
+        `| ${action.label} | ${action.status} | ${action.current_distribution_status} | ${action.priority} | ${action.directory_update_card_url} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_first_run_live_proof_url} | ${action.next_action} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -281,8 +372,8 @@ function markdown(payload) {
     "",
     "## Action Queue",
     "",
-    "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Update card | Tracked start URL | Tracked config URL | Live proof URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",
