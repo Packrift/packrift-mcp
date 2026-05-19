@@ -140,6 +140,7 @@ async function main() {
     "mcp_usage_snapshot",
     "buyer_mcp_use_cases",
     "mcp_cart_activation",
+    "mcp_first_run_proof",
     "browser_agent_bridge",
     "chatgpt_openai_product_cards",
     "shopify_native_ucp",
@@ -172,6 +173,7 @@ async function main() {
     "usage snapshot",
     "buyer use cases",
     "cart activation",
+    "first-run proof",
     "browser-agent bridge",
     "directory refresh",
     "directory submit actions",
@@ -227,6 +229,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises cart activation", hasResourceUri(resourceUris, "/ai/mcp-cart-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-cart-activation.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises first-run proof", hasResourceUri(resourceUris, "/ai/mcp-first-run-proof.json") && hasResourceUri(resourceUris, "/ai/mcp-first-run-proof.md"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises browser-agent bridge", hasResourceUri(resourceUris, "/ai/browser-agent-bridge.json") && hasResourceUri(resourceUris, "/ai/browser-agent-bridge.md"), {

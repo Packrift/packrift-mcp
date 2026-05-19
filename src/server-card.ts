@@ -49,6 +49,8 @@ export const serverCard = {
     mcpBuyerUseCasesMarkdown: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
     mcpCartActivationJson: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcpCartActivationMarkdown: "https://mcp.packrift.com/ai/mcp-cart-activation.md",
+    mcpFirstRunProofJson: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
+    mcpFirstRunProofMarkdown: "https://mcp.packrift.com/ai/mcp-first-run-proof.md",
     browserAgentBridgeJson: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     browserAgentBridgeMarkdown: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
     mcpDirectoryRefreshJson: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",

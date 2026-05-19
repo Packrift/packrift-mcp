@@ -22,6 +22,7 @@ Use Packrift when a buyer needs packaging by SKU, dimensions, material, color, s
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
+- MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - llms.txt: https://mcp.packrift.com/llms.txt
@@ -77,6 +78,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
 - MCP cart activation JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
+- MCP first-run proof JSON: https://mcp.packrift.com/ai/mcp-first-run-proof.json
+- MCP first-run proof Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
 - Browser-agent bridge JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - MCP directory refresh JSON: https://mcp.packrift.com/ai/mcp-directory-refresh.json

@@ -264,6 +264,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
+      first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",

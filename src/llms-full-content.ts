@@ -394,6 +394,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
+- MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
 - MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json

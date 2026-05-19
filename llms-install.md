@@ -26,6 +26,15 @@ Use this when an agent host, directory, or developer needs copy-ready setup path
 
 The install matrix keeps Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
 
+## First-Run Proof
+
+Use this when a developer, agent platform, or directory reviewer wants the shortest live proof before installing or recrawling:
+
+- JSON: https://mcp.packrift.com/ai/mcp-first-run-proof.json
+- Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
+
+The first-run proof runs a synthetic SKU `1066` sequence against live product, price, inventory, and cart-handoff code with analytics suppressed. It shows the same JSON-RPC calls an external agent should make against `https://mcp.packrift.com/mcp`.
+
 ## Cart Activation
 
 Use this when an agent has exact buyer intent and needs the guarded sequence from live checks to a measured MCP cart landing:

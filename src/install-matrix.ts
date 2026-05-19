@@ -247,6 +247,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
+      first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",

@@ -186,6 +186,7 @@ async function liveMcpCheck() {
     usageSnapshotResult,
     buyerUseCasesResult,
     cartActivationResult,
+    firstRunProofResult,
     browserAgentBridgeResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
@@ -201,6 +202,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-first-run-proof.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
@@ -216,6 +218,7 @@ async function liveMcpCheck() {
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
+  const firstRunProof = firstRunProofResult.ok ? JSON.parse(firstRunProofResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
@@ -250,11 +253,20 @@ async function liveMcpCheck() {
       installMatrix?.smoke_tests?.length >= 5 &&
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R03" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
       cartActivation?.release === "PACKRIFT-MCP-CART-ACTIVATION-R01" &&
       cartActivation?.activation_paths?.length >= 4 &&
       cartActivation?.primary_rule?.includes("https://mcp.packrift.com/r/cart/") &&
+      firstRunProof?.release === "PACKRIFT-MCP-FIRST-RUN-PROOF-R01" &&
+      firstRunProof?.canonical_endpoint === MCP_ENDPOINT &&
+      firstRunProof?.live_demo?.sku === "1066" &&
+      firstRunProof?.live_demo?.pricing?.unit_price != null &&
+      firstRunProof?.live_demo?.pricing?.currency &&
+      firstRunProof?.live_demo?.inventory?.in_stock === true &&
+      firstRunProof?.live_demo?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/") &&
+      hasAll(firstRunProof?.live_demo?.cart?.url ?? "", ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]) &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
       directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R02" &&
@@ -263,6 +275,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.length >= 7 &&
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-cart-activation.json")) &&
+      directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("mcp-first-run-proof.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("Current stale/missing markers")) &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/all-agent-capture.md") &&
@@ -276,6 +289,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-proof.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-proof.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-directory-refresh.json") &&
@@ -307,6 +322,12 @@ async function liveMcpCheck() {
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
       cart_activation_release: cartActivation?.release ?? null,
       cart_activation_paths: cartActivation?.activation_paths?.length ?? 0,
+      first_run_proof_release: firstRunProof?.release ?? null,
+      first_run_proof_mode: firstRunProof?.live_demo?.mode ?? null,
+      first_run_proof_price: firstRunProof?.live_demo?.pricing?.unit_price ?? null,
+      first_run_proof_currency: firstRunProof?.live_demo?.pricing?.currency ?? null,
+      first_run_proof_in_stock: firstRunProof?.live_demo?.inventory?.in_stock ?? null,
+      first_run_proof_cart_url: firstRunProof?.live_demo?.cart?.url ?? null,
       browser_agent_bridge_release: browserAgentBridge?.release ?? null,
       browser_agent_bridge_workflows: browserAgentBridge?.workflows?.length ?? 0,
       directory_refresh_release: directoryRefresh?.release ?? null,
@@ -315,6 +336,9 @@ async function liveMcpCheck() {
       directory_submit_actions_count: directorySubmitActions?.actions?.length ?? 0,
       directory_submit_actions_cart_activation_messages: directorySubmitActions?.actions?.filter((action) =>
         action.recrawl_message?.includes("mcp-cart-activation.json")
+      ).length ?? 0,
+      directory_submit_actions_first_run_proof_messages: directorySubmitActions?.actions?.filter((action) =>
+        action.recrawl_message?.includes("mcp-first-run-proof.json")
       ).length ?? 0,
       first_cart_url_candidate_type: cart?.items?.[0]?.cart_url_candidate_type ?? null,
       first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
