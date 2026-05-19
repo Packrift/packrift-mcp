@@ -260,7 +260,7 @@ async function main() {
     check("resources/list advertises tracked first-run actions", hasResourceUri(resourceUris, "/ai/mcp-first-run-actions.json") && hasResourceUri(resourceUris, "/ai/mcp-first-run-actions.md") && hasResourceUri(resourceUris, "/r/run/generic/generic_streamable_http"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises reviewer activation", hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.md") && hasResourceUri(resourceUris, "/r/activate/generic") && hasResourceUri(resourceUris, "/r/activate/generic?format=html"), {
+    check("resources/list advertises reviewer activation", hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.md") && hasResourceUri(resourceUris, "/r/activate/generic") && hasResourceUri(resourceUris, "/r/activate/generic?format=html") && hasResourceUri(resourceUris, "/r/activate/generic?format=sh"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/r/config/generic") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {

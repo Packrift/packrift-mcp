@@ -86,6 +86,8 @@ export const serverCard = {
     mcpTrackedReviewerActivationTemplate: "https://mcp.packrift.com/r/activate/{source}",
     mcpTrackedReviewerActivationHtmlTemplate: "https://mcp.packrift.com/r/activate/{source}?format=html",
     mcpTrackedReviewerActivationHtmlGeneric: "https://mcp.packrift.com/r/activate/generic?format=html",
+    mcpTrackedReviewerActivationShellTemplate: "https://mcp.packrift.com/r/activate/{source}?format=sh",
+    mcpTrackedReviewerActivationShellGeneric: "https://mcp.packrift.com/r/activate/generic?format=sh",
     shopifyNativeUcpGuide: "https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md",
     agentEndpointsStatus: "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
     conversionStarterRoutesJson: "https://mcp.packrift.com/ai/conversion-starter-routes.json",
@@ -129,6 +131,7 @@ export const serverCard = {
     hostedEndpointRequiresAuth: false,
     hostedEndpoint: "https://mcp.packrift.com/mcp",
     reviewerActivationBrowserRunner: "https://mcp.packrift.com/r/activate/generic?format=html",
+    reviewerActivationShellRunner: "https://mcp.packrift.com/r/activate/generic?format=sh",
     selfHostedTokenNote:
       "SHOPIFY_PACKRIFT_TOKEN is optional for MCP introspection and directory scanning. It is required only for self-hosted live Shopify-backed tool calls.",
   },
