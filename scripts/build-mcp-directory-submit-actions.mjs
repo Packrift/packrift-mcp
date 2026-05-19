@@ -82,7 +82,8 @@ function publicProofLine(pack) {
   const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 7;
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
+  const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R01";
+  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets.`;
 }
 
 function recrawlMessage(pack, target) {
@@ -109,6 +110,7 @@ function recrawlMessage(pack, target) {
     "- Directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     "- First-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     "- Workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+    "- Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
     "- Cart activation playbook: https://mcp.packrift.com/ai/mcp-cart-activation.json",
     "- Cart handoff candidates: https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
     "",
