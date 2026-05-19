@@ -1077,7 +1077,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("claude-connector-submission.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("agent-capture-outreach.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
-      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R06" &&
+      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07" &&
       reviewerActivation?.target_source?.id === "generic" &&
       reviewerActivation?.target_source?.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/generic") &&
       reviewerActivation?.target_source?.tracked_first_run_live_proof_url?.includes("execute=1") &&
@@ -1086,12 +1086,12 @@ async function liveMcpCheck() {
       reviewerActivation?.real_mcp_client_run?.browser_executable === true &&
       reviewerActivation?.real_mcp_client_run?.browser_runner_url?.includes("format=html") &&
       reviewerActivation?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
-      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R06" &&
+      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07" &&
       trackedReviewerActivationGeneric?.target_source?.id === "generic" &&
       trackedReviewerActivationGeneric?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.required_final_tool === "create_cart_url" &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.agent_prompt?.includes("create_cart_url") &&
-      trackedReviewerActivationCline?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R06" &&
+      trackedReviewerActivationCline?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07" &&
       trackedReviewerActivationCline?.target_source?.id === "cline_mcp_marketplace" &&
       trackedReviewerActivationCline?.target_source?.preferred_target === "cline" &&
       trackedReviewerActivationCline?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
@@ -1100,6 +1100,8 @@ async function liveMcpCheck() {
       trackedReviewerActivationHtmlResult.text.includes("Copy agent prompt") &&
       trackedReviewerActivationHtmlResult.text.includes("activation.real_mcp_client_run.endpoint") &&
       trackedReviewerActivationHtmlResult.text.includes("mcp_activation_cart_ready") &&
+      trackedReviewerActivationHtmlResult.text.includes("mcp_session_id") &&
+      trackedReviewerActivationHtmlResult.text.includes("activationSessionId") &&
       trackedReviewerActivationHtmlResult.text.includes("This records cart-ready only") &&
       trackedReviewerActivationHtmlResult.text.includes("create_cart_url") &&
       claudeConnectorSubmission?.release === "PACKRIFT-CLAUDE-CONNECTOR-SUBMISSION-R02" &&

@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R06";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R07";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -362,6 +362,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     const cart = document.getElementById("cart");
     const resultPanel = document.getElementById("result");
     let cartReadyRecorded = false;
+    let activationSessionId = "";
     function cleanCartUrl(value) {
       if (typeof value !== "string" || !value.startsWith("${cartUrlPattern}")) return null;
       try {
@@ -409,6 +410,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
           packrift_ai_id: params.get("packrift_ai_id") || params.get("ai_commerce_id") || params.get("mcp_journey") || "",
           ai_commerce_id: params.get("ai_commerce_id") || params.get("packrift_ai_id") || params.get("mcp_journey") || "",
           mcp_handoff_id: params.get("mcp_handoff_id") || "",
+          mcp_session_id: activationSessionId,
           mcp_key: params.get("mcp_key") || "activation_cart_ready:" + source,
           mcp_journey: params.get("mcp_journey") || "reviewer_activation:" + source,
           mcp_result_set: params.get("mcp_result_set") || "",
@@ -487,6 +489,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
       cart.textContent = "";
       output.textContent = "Running real MCP calls...";
       const sessionId = globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now());
+      activationSessionId = sessionId;
       const results = [];
       for (const request of activation.real_mcp_client_run.sequence) {
         const response = await fetch(activation.real_mcp_client_run.endpoint, {
