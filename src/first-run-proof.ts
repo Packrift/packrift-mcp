@@ -68,7 +68,8 @@ const JSON_RPC_SEQUENCE = [
     params: {
       name: "create_cart_url",
       arguments: {
-        items: [{ variant_id: "53472879935856", qty: 1 }],
+        sku: "1066",
+        quantity: 1,
         selected_sku: "1066",
         selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
         match_type: "first_run_proof",

@@ -214,7 +214,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
         name: "Create measured cart handoff only after confirmation",
         why: "Return an MCP cart landing URL with attribution and exact SKU continuity.",
         request: toolCall("cart-1066", "create_cart_url", {
-          items: [{ variant_id: demo.variant_id, qty: 1 }],
+          sku: demo.sku,
+          quantity: 1,
           selected_sku: demo.sku,
           selected_handle: demo.handle,
           match_type: "adoption_kit_demo",

@@ -52,7 +52,7 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 4. Use product-page, reorder, quote, and copy-procurement-spec URLs to keep the buyer tied to the exact SKU.
 5. Use get_reorder_link when the buyer knows a Packrift SKU and wants a repeat purchase path.
 6. Use get_bulk_quote_link or explain_no_exact_match when no exact approved match exists or when the buyer needs bulk/procurement review.
-7. Use get_cart_handoff_candidates, the cart candidate file, or the MCP cart activation playbook to discover priority exact SKUs with ready create_cart_url arguments; use create_cart_url only after live price and inventory are confirmed and the buyer selects the exact SKU and quantity.
+7. Use get_cart_handoff_candidates, the cart candidate file, or the MCP cart activation playbook to discover priority exact SKUs with ready create_cart_url arguments. After live price and inventory are confirmed and the buyer selects the exact SKU and quantity, prefer create_cart_url_sku_arguments or call create_cart_url with \`sku\` plus \`quantity\`; the tool blocks SKU, handle, and variant mismatches.
 8. Prefer the returned MCP cart landing URL that starts with \`https://mcp.packrift.com/r/cart/\`; it forwards to Shopify while preserving \`utm_source=chatgpt-mcp\`, \`utm_medium=mcp_tool\`, and \`utm_campaign=create_cart_url\` so GA4 can isolate MCP-driven cart landings.
 9. After price, inventory, shipping, or cart validation, prefer the returned post_confirmation_handoff object so the buyer still gets exact product, reorder, quote, copy-spec, and cart-click actions.
 10. Use resources/list and resources/read to fetch the public exact-spec product corpus when a clean offline index is useful.

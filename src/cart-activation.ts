@@ -50,7 +50,8 @@ function exactSkuSequence(sku: (typeof STARTER_SKUS)[number]) {
     toolCall(`price-${sku.sku}`, "get_pricing", { variant_ids: [sku.variant_id], quantity: 1 }),
     toolCall(`inventory-${sku.sku}`, "check_inventory", { variant_ids: [sku.variant_id] }),
     toolCall(`cart-${sku.sku}`, "create_cart_url", {
-      items: [{ variant_id: sku.variant_id, qty: 1 }],
+      sku: sku.sku,
+      quantity: 1,
       selected_sku: sku.sku,
       selected_handle: sku.handle,
       match_type: "buyer_confirmed_exact_sku",

@@ -377,7 +377,7 @@ Packrift exposes a public MCP server for AI agents that need real-time catalog a
 - \`pack_calculator(item dimensions, weight, padding, use_case)\` — calculated inside dimensions, fitted box/mailer candidates, and void-fill guidance
 - \`inventory_status(variant_ids, sku, handle, quantity)\` — live Shopify total and location-level inventory status where Shopify exposes location quantities
 - \`get_shipping_estimate(zip, country, items)\` — carrier rates and totals for a destination zip and cart contents
-- \`create_cart_url(items)\` — build a packrift.com/cart/... URL with \`?ref=mcp\` plus \`utm_source=chatgpt-mcp&utm_medium=mcp_tool&utm_campaign=create_cart_url\` attribution for hand-off to checkout
+- \`create_cart_url({ sku, quantity })\` or \`create_cart_url({ items })\` — build a measured MCP cart landing plus final packrift.com/cart/... URL with \`?ref=mcp\` and \`utm_source=chatgpt-mcp&utm_medium=mcp_tool&utm_campaign=create_cart_url\` attribution; SKU, handle, and variant metadata are continuity-checked against AI_APPROVE catalog records before hand-off to checkout
 
 Cart handoff candidates for priority SKUs are available at https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md. The cart activation playbook is available at https://mcp.packrift.com/ai/mcp-cart-activation.json and https://mcp.packrift.com/ai/mcp-cart-activation.md. Use these as structured examples for the required sequence: exact SKU retrieval, \`get_product\`, \`get_pricing\`, \`check_inventory\`, then \`create_cart_url\`, with the returned MCP \`/r/cart\` landing URL as the primary buyer handoff.
 

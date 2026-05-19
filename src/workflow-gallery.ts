@@ -47,7 +47,8 @@ const EXACT_SKU_WORKFLOWS = [
         match_type: "workflow_gallery_exact_sku",
       }),
       toolCall("cart-1066", "create_cart_url", {
-        items: [{ variant_id: "53472879935856", qty: 1 }],
+        sku: "1066",
+        quantity: 1,
         selected_sku: "1066",
         selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
         match_type: "workflow_gallery_exact_sku",
@@ -128,7 +129,8 @@ const EXACT_SKU_WORKFLOWS = [
         match_type: "workflow_gallery_mailer_cart",
       }),
       toolCall("cart-mfl1295", "create_cart_url", {
-        items: [{ variant_id: "53472994427248", qty: 1 }],
+        sku: "MFL1295",
+        quantity: 1,
         selected_sku: "MFL1295",
         selected_handle: "12-1-8-x-9-1-4-x-5-white-corrugated-literature-mailer-self-seal-50-pack",
         match_type: "workflow_gallery_mailer_cart",
