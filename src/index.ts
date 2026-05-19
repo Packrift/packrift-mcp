@@ -4220,7 +4220,7 @@ function sourceActivationOperatorSafetyRule(row: PostInstallActivationRow): stri
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) {
     return "Do not treat browser first-run execution as source activation. Convert it into a real MCP client run before counting the source as activated.";
   }
-  return "Use source-aware links and only count proof created by a real MCP host, external reviewer, buyer, or directory surface.";
+  return "Do not count Packrift self-checks as activation proof; use source-aware links and only count proof created by a real MCP host, external reviewer, buyer, or directory surface.";
 }
 
 function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
