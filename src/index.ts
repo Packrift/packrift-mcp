@@ -3563,7 +3563,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
       const urls = sourceActivationUrls(row.source);
       const score = sourceActivationPriorityScore(row);
       const priority = score >= 110 ? "critical" : score >= 80 ? "high" : score >= 50 ? "medium" : "watch";
-      const firstUsefulRun = mcpFirstUsefulRun(row.source, "generic_streamable_http");
+      const firstUsefulRun = mcpFirstUsefulRun(row.source, urls.preferred_target);
       return {
         source: row.source,
         priority,
@@ -3584,10 +3584,11 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         tracked_first_run_execute_url: urls.tracked_first_run_execute_url,
         reviewer_activation_url: urls.reviewer_activation_url,
         reviewer_activation_runner_url: urls.reviewer_activation_runner_url,
+        source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
         acceptance_criteria: [
           `Source remains attributed as ${row.source}.`,
-          "The agent host calls tools/list against https://mcp.packrift.com/mcp.",
+          `The agent host calls tools/list against ${firstUsefulRun.endpoint}.`,
           "The workflow calls get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066.",
           "The returned measured https://mcp.packrift.com/r/cart/1066 URL is opened before any Shopify cart handoff.",
           "The funnel source row moves closer to material MCP tool calls, qualified cart landings, and attributed orders.",
@@ -3618,7 +3619,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R04",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R05",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -3656,6 +3657,7 @@ async function mcpSourceActivationQueuePayload(env: Env, date = todayUtc(), limi
         run_real_mcp_check_url: row.reviewer_activation_runner_url,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
+        source_aware_endpoint: row.source_aware_endpoint,
         cart_landing_action_url: row.cart_landing_action_url,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
         primary_action_url: row.primary_action_url,
@@ -3753,6 +3755,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           ? `<a class="button" href="${escapeHtml(row.tracked_install_json_url)}">Copy host config</a>`
           : "";
       const firstRecentCartUrl = row.recent_measured_cart_urls[0] ?? "";
+      const agentPrompt = row.agent_prompt || "";
       const recentCartUrls = firstRecentCartUrl
         ? `<p class="cart-url">Returned cart URL: <a href="${escapeHtml(firstRecentCartUrl)}">${escapeHtml(firstRecentCartUrl)}</a></p>`
         : "";
@@ -3766,6 +3769,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         </div>
         <p class="stage">${escapeHtml(row.current_stage)}</p>
         <p>${escapeHtml(row.recommended_action)}</p>
+        <p class="endpoint">Source-aware endpoint: <code>${escapeHtml(row.source_aware_endpoint)}</code></p>
         ${recentCartUrls}
         <div class="metrics">
           <span>starts ${counts.starts}</span>
@@ -3784,6 +3788,10 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <details>
           <summary>Acceptance criteria</summary>
           <ul>${row.acceptance_criteria.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+        </details>
+        <details>
+          <summary>Source-specific agent prompt</summary>
+          <pre>${escapeHtml(agentPrompt)}</pre>
         </details>
       </article>`;
     })
@@ -3817,6 +3825,9 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
     .target{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:.86rem;color:var(--green);white-space:nowrap}
     .stage{font-weight:650;color:var(--ink);margin:10px 0 4px}
     .cart-url{margin-top:8px;overflow-wrap:anywhere}
+    .endpoint{margin-top:8px;overflow-wrap:anywhere}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
     .metrics{margin:12px 0}
     .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
