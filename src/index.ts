@@ -1753,6 +1753,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
   const byMcpMethod: Record<string, number> = {};
   const byBotFamily: Record<string, number> = {};
   const byPackriftAiId: Record<string, number> = {};
+  const byMcpKey: Record<string, number> = {};
+  const byMcpJourney: Record<string, number> = {};
+  const byToolMcpKey: Record<string, number> = {};
   const latencyByTool: Record<string, number[]> = {};
   for (const event of events) {
     const eventName = String(event.event ?? "unknown");
@@ -1764,6 +1767,8 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     const mcpMethod = String(event.mcp_method ?? "") || "unknown";
     const botFamily = String(event.bot_family ?? "") || "unknown";
     const packriftAiId = String(event.packrift_ai_id ?? event.ai_commerce_id ?? "") || "unknown";
+    const mcpKey = String(event.mcp_key ?? "") || "unknown";
+    const mcpJourney = String(event.mcp_journey ?? "") || "unknown";
     byEvent[eventName] = (byEvent[eventName] ?? 0) + 1;
     bySku[sku] = (bySku[sku] ?? 0) + 1;
     bySource[source] = (bySource[source] ?? 0) + 1;
@@ -1772,12 +1777,17 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     if (mcpMethod !== "unknown") byMcpMethod[mcpMethod] = (byMcpMethod[mcpMethod] ?? 0) + 1;
     if (eventName === "mcp_tool_call") {
       byTool[toolName] = (byTool[toolName] ?? 0) + 1;
+      if (mcpKey !== "unknown") {
+        byToolMcpKey[`${toolName} | ${mcpKey}`] = (byToolMcpKey[`${toolName} | ${mcpKey}`] ?? 0) + 1;
+      }
       if (typeof event.latency_ms === "number" && Number.isFinite(event.latency_ms)) {
         latencyByTool[toolName] = [...(latencyByTool[toolName] ?? []), event.latency_ms];
       }
     }
     byBotFamily[botFamily] = (byBotFamily[botFamily] ?? 0) + 1;
     byPackriftAiId[packriftAiId] = (byPackriftAiId[packriftAiId] ?? 0) + 1;
+    if (mcpKey !== "unknown") byMcpKey[mcpKey] = (byMcpKey[mcpKey] ?? 0) + 1;
+    if (mcpJourney !== "unknown") byMcpJourney[mcpJourney] = (byMcpJourney[mcpJourney] ?? 0) + 1;
   }
   const top = (obj: Record<string, number>) =>
     Object.entries(obj)
@@ -1823,6 +1833,14 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
         match_type: safeEventText(event.match_type, 80) || null,
         bot_family: safeEventText(event.bot_family, 80) || null,
         packrift_ai_id: safeEventText(event.packrift_ai_id ?? event.ai_commerce_id, 160) || null,
+        mcp_key: safeEventText(event.mcp_key, 120) || null,
+        mcp_journey: safeEventText(event.mcp_journey, 160) || null,
+        mcp_result_set: safeEventText(event.mcp_result_set, 160) || null,
+        utm_source: safeEventText(event.utm_source, 80) || null,
+        utm_medium: safeEventText(event.utm_medium, 80) || null,
+        utm_campaign: safeEventText(event.utm_campaign, 120) || null,
+        utm_content: safeEventText(event.utm_content, 120) || null,
+        utm_term: safeEventText(event.utm_term, 160) || null,
       }));
   return {
     total_events: events.length,
@@ -1836,6 +1854,9 @@ function summarizeAiSalesEvents(events: Array<Record<string, unknown>>) {
     tool_latency_ms: toolLatency,
     by_bot_family: top(byBotFamily),
     by_packrift_ai_id: top(byPackriftAiId),
+    by_mcp_key: top(byMcpKey),
+    by_mcp_journey: top(byMcpJourney),
+    by_tool_mcp_key: top(byToolMcpKey),
     recent_tool_calls: recent("mcp_tool_call"),
     recent_prompt_gets: recent("mcp_prompt_get"),
     recent_resource_reads: recent("mcp_resource_read"),

@@ -222,6 +222,11 @@ async function buildFirstPartyMcpSummary() {
     top_sources: parsed.by_source || [],
     top_skus: parsed.by_sku || [],
     top_bot_families: parsed.by_bot_family || [],
+    top_packrift_ai_ids: parsed.by_packrift_ai_id || [],
+    top_mcp_keys: parsed.by_mcp_key || [],
+    top_mcp_journeys: parsed.by_mcp_journey || [],
+    top_tool_mcp_keys: parsed.by_tool_mcp_key || [],
+    recent_tool_calls: parsed.recent_tool_calls || [],
     traffic_quality: summarizeFirstPartyTrafficQuality(parsed),
   };
 }
