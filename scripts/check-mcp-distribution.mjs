@@ -502,7 +502,7 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R09" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R10" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -514,6 +514,8 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
+      typeof usageSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
+      typeof usageSnapshot?.counts?.external_qualified_create_cart_url_calls === "number" &&
       typeof usageSnapshot?.proof_gate?.tracked_config_fetch_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.install_intent_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
@@ -530,11 +532,13 @@ async function liveMcpCheck() {
       Array.isArray(usageSnapshot?.source_attribution?.tool_mcp_keys) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_runtime_sources) &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R02" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R03" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof funnelSnapshot?.counts?.mcp_tool_calls === "number" &&
+      typeof funnelSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
+      typeof funnelSnapshot?.counts?.external_qualified_create_cart_url_calls === "number" &&
       typeof funnelSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === "number" &&
       typeof funnelSnapshot?.counts?.first_party_mcp_orders === "number" &&

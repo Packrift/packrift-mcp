@@ -1304,10 +1304,7 @@ function shouldSkipInternalTelemetry(userAgent: string): boolean {
     ua.includes("packriftmcp") ||
     ua.includes("routecatalogqa") ||
     ua.includes("packriftqa") ||
-    ua.includes("codex") ||
-    ua.includes("criticalpathqa") ||
-    ua.includes("curl/") ||
-    ua.includes("python-urllib")
+    ua.includes("criticalpathqa")
   );
 }
 
@@ -2297,7 +2294,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R09",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R10",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2466,6 +2463,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP discovery events: ${payload.counts.mcp_discovery_events}`,
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
+    `- External-qualified MCP tool calls: ${payload.counts.external_qualified_mcp_tool_calls}`,
+    `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
@@ -2571,8 +2570,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Install intent seen: ${payload.proof_gate.install_intent_seen ? "yes" : "no"}`,
     `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
     `- Runtime source continuity seen: ${payload.proof_gate.mcp_runtime_source_continuity_seen ? "yes" : "no"}`,
-    `- create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
-    `- Material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
+    `- External-qualified create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
+    `- External-qualified material tool usage 50+: ${payload.proof_gate.material_tool_usage_50_plus ? "yes" : "no"}`,
     `- Thousands of qualified visitors: ${payload.proof_gate.thousands_of_qualified_visitors ? "yes" : "no"}`,
     `- Measurable MCP sales: ${payload.proof_gate.measurable_mcp_sales ? "yes" : "no"}`,
     "",
@@ -2607,11 +2606,11 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R02";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R03";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
-    /(codex|localhost|manual_verify|packrift-agent|packrift-mcp-funnel|packrift-static|routecatalogqa|packriftqa|criticalpathqa|curl\/|python-urllib|node-fetch|undici)/i.test(text) ||
+    /(localhost|manual_verify|codex_probe|runtime_probe|first_useful_run_probe|mcp_cart_handoff_smoke|packrift-agent|packrift-mcp-funnel|packrift-mcp-cart-handoff-smoke|packrift-static|packrift-conversion-gap-audit|packrift-reorder-route-sanity|routecatalogqa|packriftqa|criticalpathqa)/i.test(text) ||
     /(^|[^a-z0-9])(qa|smoke|synthetic|eval|test)([^a-z0-9]|$)/i.test(text)
   );
 }
@@ -2928,6 +2927,8 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
+    `- External-qualified MCP tool calls: ${payload.counts.external_qualified_mcp_tool_calls}`,
+    `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- Raw first-party MCP cart landings: ${payload.counts.raw_first_party_mcp_cart_landings}`,
     `- Qualified first-party MCP cart landings: ${payload.counts.qualified_first_party_mcp_cart_landings}`,
