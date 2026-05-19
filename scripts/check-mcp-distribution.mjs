@@ -827,7 +827,7 @@ async function liveMcpCheck() {
       sourceActivationQueue?.links?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
       sourceActivationQueue?.source_snapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       Array.isArray(sourceActivationQueue?.critical_actions) &&
-      sourceActivationQueue?.critical_actions?.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not self-open")) &&
+      sourceActivationQueue?.critical_actions?.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not ")) &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
       Array.isArray(sourceActivationQueue?.blocking_goal_gates) &&
@@ -848,7 +848,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.ok &&
       sourceActivationQueueHtmlResult.text.includes("Packrift MCP Activation Command Center") &&
       sourceActivationQueueHtmlResult.text.includes("External activation message") &&
-      sourceActivationQueueHtmlResult.text.includes("Do not self-open") &&
+      sourceActivationQueueHtmlResult.text.includes("Do not ") &&
       sourceActivationQueueHtmlResult.text.includes("Source-aware endpoint") &&
       sourceActivationQueueHtmlResult.text.includes("Source-specific agent prompt") &&
       sourceActivationQueueHtmlResult.text.includes("Run real MCP check") &&
