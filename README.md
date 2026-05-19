@@ -173,6 +173,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
+- MCP reviewer activation shell script: https://mcp.packrift.com/r/activate/generic?format=sh
 - Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
@@ -402,6 +403,7 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 the activation command center at `https://mcp.packrift.com/r/activate`,
 the source activation queue HTML at `https://mcp.packrift.com/ai/mcp-source-activation-queue.html`,
 the browser runner at `https://mcp.packrift.com/r/activate/generic?format=html`, and
+the shell activation script at `https://mcp.packrift.com/r/activate/generic?format=sh`, and
 `https://mcp.packrift.com/ai/agent-capture-outreach.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,

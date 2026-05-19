@@ -571,6 +571,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_html_template === "https://mcp.packrift.com/r/activate/{source}?format=html" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_html_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
+      serverCard?.registry_distribution?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
+      serverCard?.registry_distribution?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
@@ -618,6 +620,8 @@ async function liveMcpCheck() {
       marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R01" &&
       marketplaceManifest?.discovery?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
+      marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
+      marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
@@ -1565,6 +1569,7 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/r/activate") &&
       resourceUris.has("https://mcp.packrift.com/r/activate/generic") &&
       resourceUris.has("https://mcp.packrift.com/r/activate/generic?format=html") &&
+      resourceUris.has("https://mcp.packrift.com/r/activate/generic?format=sh") &&
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/claude-connector-submission.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
