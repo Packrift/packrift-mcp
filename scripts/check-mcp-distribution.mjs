@@ -292,6 +292,8 @@ async function liveMcpCheck() {
     trackedConfigGenericResult,
     trackedInstallCodexResult,
     trackedFirstRunGenericResult,
+    trackedFirstRunHtmlResult,
+    trackedFirstRunExecuteResult,
     usageSnapshotResult,
     funnelSnapshotResult,
     buyerUseCasesResult,
@@ -331,6 +333,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/r/config/generic?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=text&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=sh&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?execute=1&format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-funnel-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
@@ -368,6 +372,7 @@ async function liveMcpCheck() {
   const rootMcpJson = rootMcpJsonResult.ok ? JSON.parse(rootMcpJsonResult.text) : null;
   const wellKnownMcpJson = wellKnownMcpJsonResult.ok ? JSON.parse(wellKnownMcpJsonResult.text) : null;
   const trackedConfigGeneric = trackedConfigGenericResult.ok ? JSON.parse(trackedConfigGenericResult.text) : null;
+  const trackedFirstRunExecute = trackedFirstRunExecuteResult.ok ? JSON.parse(trackedFirstRunExecuteResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
   const funnelSnapshot = funnelSnapshotResult.ok ? JSON.parse(funnelSnapshotResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
@@ -500,6 +505,17 @@ async function liveMcpCheck() {
       trackedFirstRunGenericResult.text.includes("create_cart_url") &&
       trackedFirstRunGenericResult.text.includes("packrift_mcp_source=generic") &&
       trackedFirstRunGenericResult.text.includes("MCP-First-Run/1.0") &&
+      trackedFirstRunHtmlResult.ok &&
+      trackedFirstRunHtmlResult.text.includes("Packrift MCP First Run") &&
+      trackedFirstRunHtmlResult.text.includes("Run live proof") &&
+      trackedFirstRunHtmlResult.text.includes("create_cart_url") &&
+      trackedFirstRunHtmlResult.text.includes("Shell One-Liner") &&
+      trackedFirstRunExecuteResult.ok &&
+      trackedFirstRunExecute?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R02" &&
+      trackedFirstRunExecute?.status === "ok" &&
+      trackedFirstRunExecute?.sku === "1066" &&
+      trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
+      trackedFirstRunExecute?.no_order_created === true &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R10" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
@@ -529,13 +545,18 @@ async function liveMcpCheck() {
       installActions?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       installActions?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       installActions?.required_post_install_verification?.required_final_tool === "create_cart_url" &&
-      firstRunActions?.release === "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R01" &&
+      firstRunActions?.release === "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R02" &&
       firstRunActions?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       firstRunActions?.targets?.length >= 7 &&
       firstRunActions?.targets?.every((target) => target.tracked_run_url?.startsWith("https://mcp.packrift.com/r/run/generic/")) &&
+      firstRunActions?.targets?.every((target) => target.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/") && target.tracked_run_html_url?.includes("format=html")) &&
+      firstRunActions?.targets?.every((target) => target.tracked_run_execute_url?.includes("execute=1")) &&
       firstRunActions?.targets?.every((target) => target.required_final_tool === "create_cart_url") &&
-      firstRunActions?.first_run?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R01" &&
+      firstRunActions?.first_run?.release === "PACKRIFT-MCP-FIRST-RUN-ACTION-R02" &&
       firstRunActions?.first_run?.tracked_run_url?.startsWith("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
+      firstRunActions?.first_run?.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/generic_streamable_http") &&
+      firstRunActions?.first_run?.tracked_run_html_url?.includes("format=html") &&
+      firstRunActions?.first_run?.tracked_run_execute_url?.includes("execute=1") &&
       firstRunActions?.first_run?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       firstRunActions?.first_run?.shell_one_liner?.includes("format=sh") &&
       clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R06" &&
@@ -558,7 +579,7 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R12" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R13" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -570,6 +591,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_first_run_intent_events === "number" &&
+      typeof usageSnapshot?.counts?.mcp_first_run_execution_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
@@ -578,6 +600,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.proof_gate?.tracked_config_fetch_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.install_intent_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.first_run_intent_seen === "boolean" &&
+      typeof usageSnapshot?.proof_gate?.first_run_execution_seen === "boolean" &&
       typeof usageSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       usageSnapshot?.source_attribution?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       usageSnapshot?.source_attribution?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
@@ -596,11 +619,12 @@ async function liveMcpCheck() {
       Array.isArray(usageSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R05" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R06" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof funnelSnapshot?.counts?.mcp_first_run_intent_events === "number" &&
+      typeof funnelSnapshot?.counts?.mcp_first_run_execution_events === "number" &&
       typeof funnelSnapshot?.counts?.mcp_tool_calls === "number" &&
       typeof funnelSnapshot?.counts?.external_qualified_mcp_tool_calls === "number" &&
       typeof funnelSnapshot?.counts?.external_qualified_create_cart_url_calls === "number" &&
@@ -611,6 +635,7 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.counts?.first_party_mcp_order_revenue === "number" &&
       typeof funnelSnapshot?.proof_gate?.thousands_of_qualified_visitors === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.first_run_intent_seen === "boolean" &&
+      typeof funnelSnapshot?.proof_gate?.first_run_execution_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.measurable_mcp_revenue_seen === "boolean" &&
@@ -863,6 +888,12 @@ async function liveMcpCheck() {
       first_run_actions_release: firstRunActions?.release ?? null,
       first_run_actions_targets: firstRunActions?.targets?.length ?? 0,
       tracked_first_run_generic_status: trackedFirstRunGenericResult.status,
+      tracked_first_run_html_status: trackedFirstRunHtmlResult.status,
+      tracked_first_run_html_has_button: trackedFirstRunHtmlResult.text.includes("Run live proof"),
+      tracked_first_run_execute_status: trackedFirstRunExecuteResult.status,
+      tracked_first_run_execute_ok: trackedFirstRunExecute?.status ?? null,
+      tracked_first_run_execute_sku: trackedFirstRunExecute?.sku ?? null,
+      tracked_first_run_execute_cart_url: trackedFirstRunExecute?.cart?.url ?? null,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
@@ -872,6 +903,7 @@ async function liveMcpCheck() {
       usage_snapshot_tracked_config_fetches: usageSnapshot?.counts?.mcp_tracked_config_fetches ?? null,
       usage_snapshot_install_intent_events: usageSnapshot?.counts?.mcp_install_intent_events ?? null,
       usage_snapshot_first_run_intent_events: usageSnapshot?.counts?.mcp_first_run_intent_events ?? null,
+      usage_snapshot_first_run_execution_events: usageSnapshot?.counts?.mcp_first_run_execution_events ?? null,
       usage_snapshot_install_copy_events: usageSnapshot?.counts?.mcp_install_copy_events ?? null,
       usage_snapshot_start_sources: usageSnapshot?.source_attribution?.mcp_start_click_sources ?? [],
       usage_snapshot_tracked_config_sources: usageSnapshot?.source_attribution?.tracked_config_sources ?? [],

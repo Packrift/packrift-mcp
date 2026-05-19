@@ -771,6 +771,7 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "mcp_start_click",
   "mcp_install_intent",
   "mcp_first_run_intent",
+  "mcp_first_run_execution",
   "mcp_install_copy",
   "spec_search",
   "exact_match",
@@ -1729,6 +1730,64 @@ async function recordMcpFirstRunIntentTelemetry(
   });
 }
 
+async function recordMcpFirstRunExecutionTelemetry(
+  env: Env,
+  request: Request,
+  requestUrl: URL,
+  meta: {
+    source: string;
+    target: string;
+    ok: boolean;
+    sku?: string;
+    handle?: string;
+    variantId?: string;
+    cartUrl?: string;
+    finalCartUrl?: string;
+    error?: string;
+    latencyMs?: number;
+  }
+): Promise<void> {
+  const userAgent = request.headers.get("User-Agent") ?? "";
+  if (!shouldRecordRouteLandingTelemetry(env, userAgent)) return;
+  const day = compactDate();
+  const id = `mcp_first_run_execution_${meta.source}_${meta.target}_${day}`;
+  await recordAiSalesEvent(env, {
+    event: "mcp_first_run_execution",
+    source: "mcp_first_run_action",
+    release: MCP_FIRST_RUN_ACTION_RELEASE,
+    ok: meta.ok,
+    mcp_method: "http_get_execute",
+    tool_name: safeEventText(meta.target, 80),
+    sku: safeEventText(meta.sku, 80),
+    handle: safeEventText(meta.handle, 180),
+    variant_id: safeEventText(meta.variantId, 80),
+    match_type: "first_run_action_browser_execution",
+    resource_uri: `https://mcp.packrift.com/r/run/${meta.source}/${meta.target}`,
+    format: "browser_execute",
+    result_count: meta.ok ? 1 : 0,
+    latency_ms: meta.latencyMs ?? null,
+    transport: "http_get",
+    user_agent: safeEventText(userAgent, 240),
+    bot_family: classifyAgentFamily(userAgent),
+    packrift_ai_id: id,
+    ai_commerce_id: id,
+    mcp_key: `first_run_execution:${meta.source}:${meta.target}`,
+    mcp_journey: `mcp_first_run_action:${meta.source}:execute:${meta.target}`,
+    mcp_result_set: `mcp_first_run_action_${day}`,
+    utm_source: meta.source,
+    utm_medium: requestUrl.searchParams.get("utm_medium") || "first_run_action",
+    utm_campaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_activation",
+    utm_content: requestUrl.searchParams.get("utm_content") || meta.target,
+    utm_term: meta.sku ?? "1066",
+    source_url: `https://mcp.packrift.com/r/run/${meta.source}/${meta.target}`,
+    page_url: requestUrl.toString(),
+    referrer: request.headers.get("Referer") ?? "",
+    cart_url: safeEventText(meta.cartUrl, 500),
+    final_cart_url: safeEventText(meta.finalCartUrl, 500),
+    error: safeEventText(meta.error, 240),
+  });
+}
+
 async function recordRouteRedirectTelemetry(
   env: Env,
   request: Request,
@@ -2328,6 +2387,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const trackedConfigFetches = summary.tracked_config_fetches;
   const installIntents = byEvent.mcp_install_intent ?? 0;
   const firstRunIntents = byEvent.mcp_first_run_intent ?? 0;
+  const firstRunExecutions = byEvent.mcp_first_run_execution ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
@@ -2356,9 +2416,9 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + firstRunIntents + installCopies + directAgentResourceEvents;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + firstRunIntents + firstRunExecutions + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R12",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R13",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2385,6 +2445,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_intent_events: installIntents,
       mcp_first_run_intent_events: firstRunIntents,
+      mcp_first_run_execution_events: firstRunExecutions,
       mcp_install_copy_events: installCopies,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       exact_match_events: exactMatches,
@@ -2421,6 +2482,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_config_fetch_seen: trackedConfigFetches > 0,
       install_intent_seen: installIntents > 0,
       first_run_intent_seen: firstRunIntents > 0,
+      first_run_execution_seen: firstRunExecutions > 0,
       install_copy_seen: installCopies > 0,
       mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
       create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
@@ -2552,6 +2614,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
     `- MCP first-run-intent events: ${payload.counts.mcp_first_run_intent_events}`,
+    `- MCP first-run execution events: ${payload.counts.mcp_first_run_execution_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
@@ -2661,15 +2724,15 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "",
     "### Post-Install Cart Activation By Source",
     "",
-    "| Source | Starts | Config fetches | Installs | First-run actions | Tool calls | Candidates | Price | Inventory | Cart URLs | External-qualified cart URLs | Missing next step |",
-    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+    "| Source | Starts | Config fetches | Installs | First-run actions | Browser executions | Tool calls | Candidates | Price | Inventory | Cart URLs | External-qualified cart URLs | Missing next step |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     payload.source_attribution.post_install_cart_activation_by_source
       .slice(0, 10)
       .map(
         (row) =>
-          `| ${row.source} | ${row.starts} | ${row.tracked_config_fetches} | ${row.install_intents} | ${row.first_run_actions} | ${row.mcp_tool_calls} | ${row.get_cart_handoff_candidates} | ${row.get_pricing} | ${row.check_inventory} | ${row.create_cart_url_calls} | ${row.external_qualified_create_cart_url_calls} | ${row.missing_next_step} |`
+          `| ${row.source} | ${row.starts} | ${row.tracked_config_fetches} | ${row.install_intents} | ${row.first_run_actions} | ${row.first_run_executions} | ${row.mcp_tool_calls} | ${row.get_cart_handoff_candidates} | ${row.get_pricing} | ${row.check_inventory} | ${row.create_cart_url_calls} | ${row.external_qualified_create_cart_url_calls} | ${row.missing_next_step} |`
       )
-      .join("\n") || "| none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | none |",
+      .join("\n") || "| none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | none |",
     "",
     "## Proof Gate",
     "",
@@ -2677,6 +2740,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Tracked config fetch seen: ${payload.proof_gate.tracked_config_fetch_seen ? "yes" : "no"}`,
     `- Install intent seen: ${payload.proof_gate.install_intent_seen ? "yes" : "no"}`,
     `- First-run intent seen: ${payload.proof_gate.first_run_intent_seen ? "yes" : "no"}`,
+    `- First-run execution seen: ${payload.proof_gate.first_run_execution_seen ? "yes" : "no"}`,
     `- Install copy seen: ${payload.proof_gate.install_copy_seen ? "yes" : "no"}`,
     `- Runtime source continuity seen: ${payload.proof_gate.mcp_runtime_source_continuity_seen ? "yes" : "no"}`,
     `- External-qualified create_cart_url seen: ${payload.proof_gate.create_cart_url_seen ? "yes" : "no"}`,
@@ -2715,7 +2779,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R05";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R06";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -2782,12 +2846,14 @@ function postInstallActivationSource(event: Record<string, unknown>): string {
   if (mcpKey.startsWith("config:")) return safeEventText(mcpKey.slice("config:".length), 80);
   if (mcpKey.startsWith("install_intent:") || mcpKey.startsWith("install_copy:")) return safeEventText(mcpKey.split(":")[1], 80);
   if (mcpKey.startsWith("first_run:")) return safeEventText(mcpKey.split(":")[1], 80);
+  if (mcpKey.startsWith("first_run_execution:")) return safeEventText(mcpKey.split(":")[1], 80);
   return "";
 }
 
 function postInstallMissingNextStep(row: {
   install_intents: number;
   first_run_actions: number;
+  first_run_executions: number;
   tracked_config_fetches: number;
   mcp_tool_calls: number;
   get_cart_handoff_candidates: number;
@@ -2797,7 +2863,8 @@ function postInstallMissingNextStep(row: {
 }) {
   if (row.install_intents === 0 && row.first_run_actions === 0 && row.tracked_config_fetches === 0) return "drive_tracked_install_or_config_fetch";
   if (row.first_run_actions === 0) return "open_tracked_first_run_action";
-  if (row.mcp_tool_calls === 0) return "execute_first_run_curl_or_json_rpc_sequence";
+  if (row.first_run_executions === 0 && row.mcp_tool_calls === 0) return "execute_first_run_browser_or_curl_sequence";
+  if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return "convert_browser_execution_into_real_mcp_tool_call_or_cart_landing";
   if (row.get_cart_handoff_candidates === 0) return "call_get_cart_handoff_candidates_for_sku_1066";
   if (row.get_pricing === 0) return "call_get_pricing_for_sku_1066";
   if (row.check_inventory === 0) return "call_check_inventory_for_sku_1066";
@@ -2814,6 +2881,7 @@ function postInstallCartActivationBySource(events: Array<Record<string, unknown>
       tracked_config_fetches: number;
       install_intents: number;
       first_run_actions: number;
+      first_run_executions: number;
       install_copies: number;
       mcp_tool_calls: number;
       get_cart_handoff_candidates: number;
@@ -2834,6 +2902,7 @@ function postInstallCartActivationBySource(events: Array<Record<string, unknown>
       tracked_config_fetches: 0,
       install_intents: 0,
       first_run_actions: 0,
+      first_run_executions: 0,
       install_copies: 0,
       mcp_tool_calls: 0,
       get_cart_handoff_candidates: 0,
@@ -2856,8 +2925,9 @@ function postInstallCartActivationBySource(events: Array<Record<string, unknown>
     if (eventName === "mcp_resource_read" && String(event.mcp_key ?? "").startsWith("config:")) row.tracked_config_fetches += 1;
     if (eventName === "mcp_install_intent") row.install_intents += 1;
     if (eventName === "mcp_first_run_intent") row.first_run_actions += 1;
+    if (eventName === "mcp_first_run_execution") row.first_run_executions += 1;
     if (eventName === "mcp_install_copy") row.install_copies += 1;
-    if (eventName === "mcp_install_intent" || eventName === "mcp_first_run_intent" || eventName === "mcp_install_copy" || eventName === "mcp_tool_call") {
+    if (eventName === "mcp_install_intent" || eventName === "mcp_first_run_intent" || eventName === "mcp_first_run_execution" || eventName === "mcp_install_copy" || eventName === "mcp_tool_call") {
       const target = safeEventText(event.mcp_install_target || event.tool_name || event.utm_content, 80);
       if (target) row.install_targets[target] = (row.install_targets[target] ?? 0) + 1;
     }
@@ -2884,6 +2954,7 @@ function postInstallCartActivationBySource(events: Array<Record<string, unknown>
       (a, b) =>
         b.external_qualified_create_cart_url_calls - a.external_qualified_create_cart_url_calls ||
         b.create_cart_url_calls - a.create_cart_url_calls ||
+        b.first_run_executions - a.first_run_executions ||
         b.first_run_actions - a.first_run_actions ||
         b.install_intents - a.install_intents ||
         b.tracked_config_fetches - a.tracked_config_fetches ||
@@ -3020,6 +3091,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const trackedConfigFetches = summary.tracked_config_fetches;
   const installIntents = byEvent.mcp_install_intent ?? 0;
   const firstRunIntents = byEvent.mcp_first_run_intent ?? 0;
+  const firstRunExecutions = byEvent.mcp_first_run_execution ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
   const postInstallCartActivation = postInstallCartActivationBySource(events);
@@ -3029,8 +3101,9 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const attributedRevenue = Number(orderSummary.attributed_revenue || 0);
   const proofGate = {
     usage_exists: events.length > 0,
-    external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + firstRunIntents + installCopies > 0,
+    external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + firstRunIntents + firstRunExecutions + installCopies > 0,
     first_run_intent_seen: firstRunIntents > 0,
+    first_run_execution_seen: firstRunExecutions > 0,
     mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
     material_tool_usage_50_plus: qualifiedMcpToolCalls >= 50,
     create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
@@ -3075,6 +3148,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_tracked_config_fetches: trackedConfigFetches,
       mcp_install_intent_events: installIntents,
       mcp_first_run_intent_events: firstRunIntents,
+      mcp_first_run_execution_events: firstRunExecutions,
       mcp_install_copy_events: installCopies,
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       mcp_tool_calls: mcpToolCalls,
@@ -3168,6 +3242,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- MCP tracked config fetches: ${payload.counts.mcp_tracked_config_fetches}`,
     `- MCP install-intent events: ${payload.counts.mcp_install_intent_events}`,
     `- MCP first-run-intent events: ${payload.counts.mcp_first_run_intent_events}`,
+    `- MCP first-run execution events: ${payload.counts.mcp_first_run_execution_events}`,
     `- MCP install-copy events: ${payload.counts.mcp_install_copy_events}`,
     `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
@@ -5164,6 +5239,194 @@ async function firstRunProofDemo(env: Env): Promise<FirstRunProofDemo> {
   };
 }
 
+async function firstRunActionExecutionDemo(
+  env: Env,
+  request: Request,
+  requestUrl: URL,
+  source: string,
+  target: string
+): Promise<Record<string, unknown>> {
+  const startedAt = Date.now();
+  const sku = "1066";
+  const variantId = "53472879935856";
+  const handle = "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle";
+  const title = "10x6x6 ECT-32 Kraft Long Corrugated Boxes - 25 Bundle";
+  const quantity = 1;
+  const day = compactDate();
+  const runId = `mcp_first_run_action_${source}_${target}_${sku}_${day}`;
+  const userAgent = request.headers.get("User-Agent") ?? "";
+  const suppressCartAnalytics = !shouldRecordRouteLandingTelemetry(env, userAgent);
+  const common = {
+    selected_sku: sku,
+    selected_handle: handle,
+    match_type: "first_run_action_browser_execution",
+    journey_id: runId,
+    result_set_id: `mcp_first_run_action_${source}_${day}`,
+    packrift_ai_id: runId,
+    ai_commerce_id: runId,
+    source_context: `mcp_first_run_action_${source}`,
+    utm_term: sku,
+  };
+  try {
+    const [product, pricing, inventory] = await Promise.all([
+      getProductHandler(env, { handle }) as Promise<Record<string, unknown>>,
+      getPricingHandler(env, { variant_ids: [variantId], quantity, ...common }) as Promise<Array<Record<string, unknown>>>,
+      checkInventoryHandler(env, { variant_ids: [variantId], ...common }) as Promise<Array<Record<string, unknown>>>,
+    ]);
+    const cart = (await createCartUrlHandler(env, {
+      sku,
+      quantity,
+      ...common,
+      suppress_analytics: suppressCartAnalytics,
+    })) as Record<string, unknown>;
+    const payload = {
+      release: MCP_FIRST_RUN_ACTION_RELEASE,
+      generated_at: new Date().toISOString(),
+      mode: "browser_executable_first_run",
+      status: "ok",
+      source,
+      target,
+      no_order_created: true,
+      canonical_endpoint: "https://mcp.packrift.com/mcp",
+      sku,
+      title,
+      variant_id: variantId,
+      handle,
+      quantity,
+      analytics_recorded: !suppressCartAnalytics,
+      product: {
+        handle: product.handle,
+        title: product.title,
+        url: product.url,
+        ai_status: product.ai_status,
+        approval_gate: product.approval_gate,
+        primary_variant_id: variantId,
+        dimensions: product.dimensions,
+      },
+      pricing: pricing[0] ?? {},
+      inventory: inventory[0] ?? {},
+      cart: {
+        url: cart.url,
+        final_cart_url: cart.final_cart_url,
+        utm: cart.utm,
+        items: cart.items,
+      },
+      success_signals: [
+        "Product lookup returned the expected AI_APPROVE SKU 1066.",
+        "Live pricing returned before cart handoff.",
+        "Live inventory returned before cart handoff.",
+        "create_cart_url returned a measured https://mcp.packrift.com/r/cart/1066 URL.",
+        "No order was placed.",
+      ],
+    };
+    await recordMcpFirstRunExecutionTelemetry(env, request, requestUrl, {
+      source,
+      target,
+      ok: true,
+      sku,
+      handle,
+      variantId,
+      cartUrl: String(cart.url ?? ""),
+      finalCartUrl: String(cart.final_cart_url ?? ""),
+      latencyMs: Date.now() - startedAt,
+    });
+    return payload;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await recordMcpFirstRunExecutionTelemetry(env, request, requestUrl, {
+      source,
+      target,
+      ok: false,
+      sku,
+      handle,
+      variantId,
+      error: message,
+      latencyMs: Date.now() - startedAt,
+    });
+    return {
+      release: MCP_FIRST_RUN_ACTION_RELEASE,
+      generated_at: new Date().toISOString(),
+      mode: "browser_executable_first_run",
+      status: "error",
+      source,
+      target,
+      no_order_created: true,
+      sku,
+      title,
+      variant_id: variantId,
+      handle,
+      quantity,
+      error: message,
+    };
+  }
+}
+
+function mcpFirstRunActionHtml(payload: ReturnType<typeof mcpFirstRunActionPayload>, execution?: Record<string, unknown>): string {
+  const executionCart = execution && typeof execution.cart === "object" ? (execution.cart as Record<string, unknown>) : null;
+  const cartUrl = typeof executionCart?.url === "string" ? executionCart.url : "";
+  const status = typeof execution?.status === "string" ? execution.status : "";
+  const executeUrl = new URL(payload.tracked_run_execute_url);
+  executeUrl.searchParams.set("format", "html");
+  const markdownUrl = payload.tracked_run_markdown_url;
+  const shellUrl = payload.tracked_run_shell_url;
+  const executionJson = execution ? JSON.stringify(execution, null, 2) : "";
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP First Run</title>
+  <style>
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f6f3;color:#1b2533}
+    main{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+    h1{font-size:1.7rem;margin:0 0 8px}
+    h2{font-size:1rem;margin:22px 0 8px}
+    p{line-height:1.5;color:#4f5d6b}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+    a.button,button{display:inline-flex;align-items:center;border:1px solid #1b2533;border-radius:6px;background:#1b2533;color:#fff;padding:9px 12px;text-decoration:none;font:inherit}
+    a.secondary{background:#fff;color:#1b2533}
+    .panel{background:#fff;border:1px solid #dfd9ce;border-radius:8px;padding:14px;margin:14px 0}
+    .pill{display:inline-block;border:1px solid #d4cec3;border-radius:999px;padding:4px 8px;margin:2px 4px 2px 0;font-size:.84rem;background:#fff}
+    pre{white-space:pre-wrap;word-break:break-word;background:#101820;color:#f4f8fb;border-radius:8px;padding:12px;overflow:auto}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .ok{border-left:4px solid #1f8f55}
+    .warn{border-left:4px solid #b86b00}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Packrift MCP First Run</h1>
+    <p>${escapeHtml(payload.purpose)}</p>
+    <div>
+      <span class="pill">Source: ${escapeHtml(payload.source)}</span>
+      <span class="pill">Target: ${escapeHtml(payload.target)}</span>
+      <span class="pill">Final tool: create_cart_url</span>
+      <span class="pill">No order created</span>
+    </div>
+    <div class="bar">
+      <a class="button" href="${escapeHtml(executeUrl.toString())}">Run live proof</a>
+      ${cartUrl ? `<a class="button secondary" href="${escapeHtml(cartUrl)}">Open measured cart URL</a>` : ""}
+      <a class="button secondary" href="${escapeHtml(markdownUrl)}">Markdown</a>
+      <a class="button secondary" href="${escapeHtml(shellUrl)}">Shell script</a>
+    </div>
+    ${execution ? `<section class="panel ${status === "ok" ? "ok" : "warn"}"><h2>Live Result</h2><pre>${escapeHtml(executionJson)}</pre></section>` : ""}
+    <section class="panel">
+      <h2>Endpoint</h2>
+      <pre>${escapeHtml(payload.first_useful_run.endpoint)}</pre>
+    </section>
+    <section class="panel">
+      <h2>Shell One-Liner</h2>
+      <pre>${escapeHtml(payload.shell_one_liner)}</pre>
+    </section>
+    <section class="panel">
+      <h2>JSON-RPC Sequence</h2>
+      <pre>${escapeHtml(JSON.stringify(payload.first_useful_run.sequence, null, 2))}</pre>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
 function browserAgentBridgeRuntime() {
   return {
     serverVersion: serverCard.version,
@@ -7035,6 +7298,31 @@ app.get("/r/run/:source/:target", async (c) => {
 
   const payload = mcpFirstRunActionPayload({ source, target: target.id });
   const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
+  const accept = c.req.header("Accept") ?? "";
+  const wantsHtml = format === "html" || (!format && accept.toLowerCase().includes("text/html") && !wantsJson(accept));
+  const shouldExecute = requestUrl.searchParams.get("execute") === "1" || format === "result";
+  if (shouldExecute) {
+    const execution = await firstRunActionExecutionDemo(c.env, c.req.raw, requestUrl, source, payload.target);
+    if (format === "json" || wantsJson(accept)) {
+      return c.json(execution, String(execution.status ?? "") === "ok" ? 200 : 502, {
+        ...RAW_HEADERS,
+        "Cache-Control": "no-store, max-age=0",
+      });
+    }
+    return c.body(mcpFirstRunActionHtml(payload, execution), String(execution.status ?? "") === "ok" ? 200 : 502, {
+      "Content-Type": "text/html; charset=utf-8",
+      ...RAW_HEADERS,
+      "Cache-Control": "no-store, max-age=0",
+    });
+  }
+  if (wantsHtml) {
+    const body = mcpFirstRunActionHtml(payload);
+    await recordMcpFirstRunIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target, jsonByteSize(body));
+    return c.body(body, 200, {
+      "Content-Type": "text/html; charset=utf-8",
+      ...RAW_HEADERS,
+    });
+  }
   if (format === "sh" || format === "shell") {
     const body = `${payload.first_useful_run.curl_script}\n`;
     await recordMcpFirstRunIntentTelemetry(c.env, c.req.raw, requestUrl, source, payload.target, jsonByteSize(body));

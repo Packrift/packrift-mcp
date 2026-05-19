@@ -15,8 +15,8 @@ export interface FirstRunActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R01";
-export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R01";
+export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R02";
+export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R02";
 export const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 
 function normalizeRunSlug(value: string, fallback: string): string {
@@ -58,6 +58,8 @@ export function mcpFirstRunActionPayload(input: { source: string; target: string
       "Source-attributed Packrift MCP first-run action. Use this after install to prove the hosted endpoint reaches live SKU checks and a measured cart URL without creating an order.",
     canonical_endpoint: MCP_ENDPOINT,
     tracked_run_url: trackedRun,
+    tracked_run_html_url: `${trackedRun}&format=html`,
+    tracked_run_execute_url: `${trackedRun}&execute=1`,
     tracked_run_markdown_url: `${trackedRun}&format=md`,
     tracked_run_shell_url: `${trackedRun}&format=sh`,
     tracked_config_url: trackedConfigUrl(source),
@@ -105,6 +107,8 @@ export function mcpFirstRunActionsPayload(runtime: FirstRunActionRuntime, source
       label: target.label,
       audience: target.audience,
       tracked_run_url: trackedRunUrl(sourceSlug, target.id),
+      tracked_run_html_url: `${trackedRunUrl(sourceSlug, target.id)}&format=html`,
+      tracked_run_execute_url: `${trackedRunUrl(sourceSlug, target.id)}&execute=1`,
       tracked_install_url: trackedInstallUrl(sourceSlug, target.id),
       tracked_config_url: trackedConfigUrl(sourceSlug),
       source_aware_endpoint: mcpFirstUsefulRun(sourceSlug, target.id).endpoint,
@@ -146,6 +150,8 @@ export function mcpFirstRunActionMarkdown(payload: ReturnType<typeof mcpFirstRun
     "## Run Now",
     "",
     `Tracked run URL: ${payload.tracked_run_url}`,
+    `Browser run URL: ${payload.tracked_run_html_url}`,
+    `Live proof URL: ${payload.tracked_run_execute_url}`,
     "",
     "Shell one-liner:",
     "",
@@ -175,7 +181,7 @@ export function mcpFirstRunActionMarkdown(payload: ReturnType<typeof mcpFirstRun
 export function mcpFirstRunActionsMarkdown(runtime: FirstRunActionRuntime): string {
   const payload = mcpFirstRunActionsPayload(runtime);
   const rows = payload.targets
-    .map((target) => `| ${target.id} | ${target.tracked_run_url} | ${target.tracked_install_url} |`)
+    .map((target) => `| ${target.id} | ${target.tracked_run_url} | ${target.tracked_run_execute_url} | ${target.tracked_install_url} |`)
     .join("\n");
   return [
     "# Packrift MCP First Run Actions",
@@ -188,8 +194,8 @@ export function mcpFirstRunActionsMarkdown(runtime: FirstRunActionRuntime): stri
     "",
     `Tracked run template: ${payload.tracked_run_template}`,
     "",
-    "| Target | Tracked run URL | Tracked install URL |",
-    "| --- | --- | --- |",
+    "| Target | Tracked run URL | Live proof URL | Tracked install URL |",
+    "| --- | --- | --- | --- |",
     rows,
     "",
     "## Default First Run",
