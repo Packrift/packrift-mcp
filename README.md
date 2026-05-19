@@ -341,6 +341,18 @@ endpoint, scans recent Shopify orders for MCP cart attributes such as
 attributed order count and revenue beside GA4 cart-landing evidence. The admin
 endpoint requires `MCP_STATS_TOKEN` and does not expose customer PII.
 
+Publish the sanitized GA4 visitor proof from that local snapshot to the public
+Worker surface:
+
+```sh
+npm run publish:ga4-funnel-proof -- --publish-kv
+```
+
+This updates `https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json` and `.md`
+without exposing local paths, raw CSV rows, order rows, or credentials. The
+public funnel snapshot also reads this proof for the thousands-of-qualified-
+visitors gate when it is available.
+
 Refresh MCP directory evidence:
 
 ```sh

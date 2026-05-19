@@ -299,6 +299,7 @@ async function liveMcpCheck() {
     trackedFirstRunExecuteResult,
     usageSnapshotResult,
     funnelSnapshotResult,
+    ga4FunnelProofResult,
     sourceActivationQueueResult,
     sourceActivationQueueHtmlResult,
     activationCommandCenterResult,
@@ -351,6 +352,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?execute=1&format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-funnel-snapshot.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-queue.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-queue.html"),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
@@ -397,6 +399,7 @@ async function liveMcpCheck() {
   const trackedFirstRunExecute = trackedFirstRunExecuteResult.ok ? JSON.parse(trackedFirstRunExecuteResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
   const funnelSnapshot = funnelSnapshotResult.ok ? JSON.parse(funnelSnapshotResult.text) : null;
+  const ga4FunnelProof = ga4FunnelProofResult.ok ? JSON.parse(ga4FunnelProofResult.text) : null;
   const sourceActivationQueue = sourceActivationQueueResult.ok ? JSON.parse(sourceActivationQueueResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
@@ -461,6 +464,8 @@ async function liveMcpCheck() {
       resourcesCount >= 65 &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-funnel-snapshot.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.md") &&
       promptsCount >= 7 &&
@@ -727,8 +732,12 @@ async function liveMcpCheck() {
       ) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R14" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R15" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
+      funnelSnapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
+      ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
+      typeof ga4FunnelProof?.visitor_goal?.qualified_external_mcp_session_starts === "number" &&
+      typeof ga4FunnelProof?.cart_and_revenue_proof?.first_party_mcp_orders === "number" &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
       typeof funnelSnapshot?.counts?.mcp_first_run_intent_events === "number" &&
@@ -744,6 +753,8 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.counts?.monthly_qualified_visitor_signals === "number" &&
       typeof funnelSnapshot?.counts?.monthly_qualified_visitor_threshold === "number" &&
       typeof funnelSnapshot?.counts?.monthly_qualified_visitor_remaining === "number" &&
+      typeof funnelSnapshot?.counts?.ga4_qualified_external_mcp_session_starts === "number" &&
+      typeof funnelSnapshot?.counts?.ga4_qualified_external_mcp_session_threshold === "number" &&
       typeof funnelSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === "number" &&
       (funnelSnapshot?.counts?.qualified_first_party_mcp_cart_landings === 0 ||

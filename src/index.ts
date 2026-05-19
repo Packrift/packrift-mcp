@@ -2501,6 +2501,73 @@ async function monthlyQualifiedVisitorProofForDate(env: Env, date: string) {
   );
 }
 
+function missingMcpGa4FunnelProof(status: "missing" | "invalid", error?: string): PublicMcpGa4FunnelProof {
+  return {
+    release: MCP_GA4_FUNNEL_PROOF_RELEASE,
+    generated_at: null,
+    status,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    privacy: "Public aggregate proof only. No buyer identifiers, order rows, raw CSV rows, local paths, or credentials are exposed.",
+    error,
+    links: {
+      live_worker_funnel_snapshot_json: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      activation_command_center: "https://mcp.packrift.com/r/activate",
+    },
+    next_actions: [
+      "Run npm run snapshot:funnel, then npm run publish:ga4-funnel-proof -- --publish-kv to refresh the public GA4 proof.",
+    ],
+  };
+}
+
+function mcpGa4FunnelProofLooksSafe(value: PublicMcpGa4FunnelProof): boolean {
+  return !/(\/Users\/|Downloads|env-|\.csv|ga4-pull|MCP_STATS_TOKEN|CLOUDFLARE_API_TOKEN)/i.test(JSON.stringify(value));
+}
+
+function normalizeMcpGa4FunnelProof(value: unknown): PublicMcpGa4FunnelProof | null {
+  if (!value || typeof value !== "object") return null;
+  const proof = value as Partial<PublicMcpGa4FunnelProof>;
+  if (proof.release !== MCP_GA4_FUNNEL_PROOF_RELEASE) return null;
+  if (proof.status !== "proven" && proof.status !== "not_proven") return null;
+  const normalized: PublicMcpGa4FunnelProof = {
+    release: MCP_GA4_FUNNEL_PROOF_RELEASE,
+    generated_at: typeof proof.generated_at === "string" ? proof.generated_at : null,
+    source_snapshot_generated_at:
+      typeof proof.source_snapshot_generated_at === "string" ? proof.source_snapshot_generated_at : null,
+    source_snapshot_status: typeof proof.source_snapshot_status === "string" ? proof.source_snapshot_status : "unknown",
+    status: proof.status,
+    canonical_endpoint: typeof proof.canonical_endpoint === "string" ? proof.canonical_endpoint : "https://mcp.packrift.com/mcp",
+    privacy:
+      typeof proof.privacy === "string"
+        ? proof.privacy
+        : "Public aggregate proof only. No buyer identifiers, order rows, raw CSV rows, local paths, or credentials are exposed.",
+    measurement_window: proof.measurement_window,
+    proof_gate: proof.proof_gate,
+    visitor_goal: proof.visitor_goal,
+    cart_and_revenue_proof: proof.cart_and_revenue_proof,
+    first_party_mcp: proof.first_party_mcp,
+    traffic_quality: proof.traffic_quality,
+    distribution_counts: proof.distribution_counts,
+    blockers: Array.isArray(proof.blockers) ? proof.blockers : [],
+    next_actions: Array.isArray(proof.next_actions) ? proof.next_actions : [],
+    links: proof.links,
+  };
+  return mcpGa4FunnelProofLooksSafe(normalized) ? normalized : null;
+}
+
+async function mcpGa4FunnelProofPayload(env: Env): Promise<PublicMcpGa4FunnelProof> {
+  try {
+    const text = await env.CATALOG_CACHE.get(MCP_GA4_FUNNEL_PROOF_KV_KEY, "text");
+    if (!text) return missingMcpGa4FunnelProof("missing", "No public GA4 funnel proof is published in KV yet.");
+    const normalized = normalizeMcpGa4FunnelProof(JSON.parse(text) as unknown);
+    if (!normalized) return missingMcpGa4FunnelProof("invalid", "Published GA4 funnel proof is missing required fields or contains non-public references.");
+    return normalized;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return missingMcpGa4FunnelProof("invalid", message);
+  }
+}
+
 async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000) {
   const events = await readAiSalesEvents(env, date, limit);
   const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
@@ -2996,7 +3063,56 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R14";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R15";
+const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
+const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
+
+type PublicMcpGa4FunnelProof = {
+  release: string;
+  generated_at: string | null;
+  source_snapshot_generated_at?: string | null;
+  source_snapshot_status?: string;
+  status: "available" | "missing" | "invalid" | "not_proven" | "proven";
+  canonical_endpoint?: string;
+  privacy?: string;
+  measurement_window?: {
+    ga4_range?: {
+      start_date?: string | null;
+      end_date?: string | null;
+    };
+    first_party_mcp_date?: string | null;
+    shopify_order_lookback_days?: number | null;
+    shopify_orders_scanned?: number | null;
+  };
+  proof_gate?: Record<string, boolean>;
+  visitor_goal?: {
+    basis?: string;
+    threshold?: number;
+    qualified_external_mcp_session_starts?: number;
+    remaining_to_threshold?: number;
+    progress_pct?: number;
+    raw_mcp_specific_session_starts?: number;
+    raw_ai_mcp_session_starts?: number;
+  };
+  cart_and_revenue_proof?: {
+    raw_stamped_mcp_cart_landings?: number;
+    raw_first_party_mcp_cart_landings?: number;
+    qualified_ga4_cart_landings?: number;
+    qualified_first_party_mcp_cart_landings?: number;
+    qualified_external_cart_landings?: number;
+    qualified_external_cart_revenue?: number;
+    first_party_mcp_orders?: number;
+    first_party_mcp_order_revenue?: number;
+    currency?: string;
+  };
+  first_party_mcp?: Record<string, unknown>;
+  traffic_quality?: Record<string, unknown>;
+  distribution_counts?: Record<string, unknown>;
+  blockers?: string[];
+  next_actions?: string[];
+  links?: Record<string, string>;
+  error?: string;
+};
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3808,6 +3924,13 @@ async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
 async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 5000, orderDays = 90, orderLimit = 250) {
   const events = await readAiSalesEvents(env, date, limit);
   const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
+  const ga4CanonicalProof = await mcpGa4FunnelProofPayload(env);
+  const ga4CanonicalVisitorProofIsAvailable =
+    ga4CanonicalProof.status === "proven" || ga4CanonicalProof.status === "not_proven";
+  const ga4QualifiedMcpSessions = Number(ga4CanonicalProof.visitor_goal?.qualified_external_mcp_session_starts ?? 0);
+  const ga4QualifiedMcpSessionThreshold = Number(
+    ga4CanonicalProof.visitor_goal?.threshold ?? MONTHLY_QUALIFIED_VISITOR_THRESHOLD
+  );
   const summary = summarizeAiSalesEvents(events);
   const byEvent = topRowsToRecord(summary.by_event);
   const mcpDiscoveryEvents =
@@ -3849,7 +3972,9 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     qualified_first_party_cart_landing_seen: qualifiedCartLandings > 0,
     first_party_mcp_order_seen: attributedOrderCount > 0,
     measurable_mcp_revenue_seen: attributedRevenue > 0,
-    thousands_of_qualified_visitors: monthlyVisitorProof.qualified_external_mcp_event_signals >= monthlyVisitorProof.threshold,
+    thousands_of_qualified_visitors: ga4CanonicalVisitorProofIsAvailable
+      ? ga4QualifiedMcpSessions >= ga4QualifiedMcpSessionThreshold
+      : monthlyVisitorProof.qualified_external_mcp_event_signals >= monthlyVisitorProof.threshold,
   };
   const status =
     proofGate.thousands_of_qualified_visitors &&
@@ -3873,7 +3998,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     privacy:
       "Aggregated counts only. Raw event bodies, buyer identifiers, order rows, and private admin tokens are not exposed.",
     scope_note:
-      "This public snapshot uses first-party MCP telemetry plus aggregate Shopify order attribution. Monthly qualified visitor proof is a first-party MCP signal proxy; GA4 visitor/session proof remains stronger in the local full funnel artifact.",
+      "This public snapshot uses first-party MCP telemetry plus aggregate Shopify order attribution. When available, the thousands-of-qualified-visitors gate uses the sanitized public GA4 proof published from the local full funnel artifact; the monthly first-party event proof remains a directional proxy.",
     runtime: {
       server_version: serverCard.version,
       tools_count: TOOLS.length,
@@ -3909,6 +4034,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       monthly_qualified_visitor_lookback_days: monthlyVisitorProof.lookback_days,
       monthly_qualified_visitor_events_scanned: monthlyVisitorProof.events_scanned,
       monthly_qualified_visitor_read_limit: monthlyVisitorProof.read_limit,
+      ga4_qualified_external_mcp_session_starts: ga4QualifiedMcpSessions,
+      ga4_qualified_external_mcp_session_threshold: ga4QualifiedMcpSessionThreshold,
       mcp_cart_clicks: cartClicks,
       raw_first_party_mcp_cart_landings: cartLandings,
       qualified_first_party_mcp_cart_landings: qualifiedCartLandings,
@@ -3919,6 +4046,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     proof_gate: proofGate,
     traffic_quality: publicFunnelTrafficBuckets(summary),
     monthly_qualified_visitor_proof: monthlyVisitorProof,
+    ga4_canonical_visitor_proof: ga4CanonicalProof,
     source_activation_priority_queue: sourceActivationPriorityQueue,
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
@@ -3956,6 +4084,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     links: {
       funnel_snapshot_json: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
       funnel_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+      ga4_funnel_proof_json: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      ga4_funnel_proof_markdown: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.md",
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       usage_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -4018,6 +4148,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- Critical source activation priorities: ${payload.counts.source_activation_priority_critical}`,
     `- Monthly qualified visitor signals: ${payload.counts.monthly_qualified_visitor_signals} / ${payload.counts.monthly_qualified_visitor_threshold}`,
     `- Monthly qualified visitor gap: ${payload.counts.monthly_qualified_visitor_remaining}`,
+    `- GA4 qualified external MCP sessions: ${payload.counts.ga4_qualified_external_mcp_session_starts} / ${payload.counts.ga4_qualified_external_mcp_session_threshold}`,
     `- Post-install sources waiting on cart landing: ${payload.counts.post_install_sources_waiting_on_cart_landing}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- Raw first-party MCP cart landings: ${payload.counts.raw_first_party_mcp_cart_landings}`,
@@ -4044,6 +4175,17 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- Read limit: ${payload.monthly_qualified_visitor_proof.read_limit}`,
     `- Truncated by read limit: ${payload.monthly_qualified_visitor_proof.truncated_by_read_limit ? "yes" : "no"}`,
     `- Note: ${payload.monthly_qualified_visitor_proof.canonical_note}`,
+    "",
+    "## GA4 Canonical Visitor Proof",
+    "",
+    `- Status: ${payload.ga4_canonical_visitor_proof.status}`,
+    `- Proof generated: ${payload.ga4_canonical_visitor_proof.generated_at || "not published"}`,
+    `- Source snapshot: ${payload.ga4_canonical_visitor_proof.source_snapshot_generated_at || "not published"}`,
+    `- Basis: ${payload.ga4_canonical_visitor_proof.visitor_goal?.basis || "not published"}`,
+    `- Qualified external MCP sessions: ${payload.ga4_canonical_visitor_proof.visitor_goal?.qualified_external_mcp_session_starts ?? 0} / ${payload.ga4_canonical_visitor_proof.visitor_goal?.threshold ?? 1000}`,
+    `- Remaining to threshold: ${payload.ga4_canonical_visitor_proof.visitor_goal?.remaining_to_threshold ?? 1000}`,
+    `- Qualified external cart landings: ${payload.ga4_canonical_visitor_proof.cart_and_revenue_proof?.qualified_external_cart_landings ?? 0}`,
+    `- First-party MCP orders: ${payload.ga4_canonical_visitor_proof.cart_and_revenue_proof?.first_party_mcp_orders ?? 0}`,
     "",
     "## Source Attribution",
     "",
@@ -4136,6 +4278,56 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     "## Next Actions",
     "",
     payload.next_actions.map((item) => `- ${item}`).join("\n"),
+    "",
+  ].join("\n");
+}
+
+function mcpGa4FunnelProofMarkdown(payload: PublicMcpGa4FunnelProof): string {
+  const gateRows = Object.entries(payload.proof_gate ?? {})
+    .map(([key, value]) => `| ${key} | ${value ? "yes" : "no"} |`)
+    .join("\n") || "| not_published | no |";
+  const blockers = payload.blockers?.length ? payload.blockers.map((item) => `- ${item}`).join("\n") : "- none";
+  const nextActions = payload.next_actions?.length ? payload.next_actions.map((item) => `- ${item}`).join("\n") : "- Refresh and publish the GA4 proof.";
+  const currency = payload.cart_and_revenue_proof?.currency || "USD";
+  return [
+    "# Packrift MCP GA4 Funnel Proof",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at || "not published"}`,
+    `Source snapshot: ${payload.source_snapshot_generated_at || "not published"}`,
+    `Status: ${payload.status}`,
+    `Canonical endpoint: ${payload.canonical_endpoint || "https://mcp.packrift.com/mcp"}`,
+    "",
+    payload.privacy || "Public aggregate proof only.",
+    "",
+    "## Visitor Goal",
+    "",
+    `- Basis: ${payload.visitor_goal?.basis || "GA4 qualified external MCP session_start events"}`,
+    `- Qualified external MCP sessions: ${payload.visitor_goal?.qualified_external_mcp_session_starts ?? 0} / ${payload.visitor_goal?.threshold ?? 1000}`,
+    `- Remaining: ${payload.visitor_goal?.remaining_to_threshold ?? 1000}`,
+    `- Progress: ${payload.visitor_goal?.progress_pct ?? 0}%`,
+    `- Raw MCP-specific sessions: ${payload.visitor_goal?.raw_mcp_specific_session_starts ?? 0}`,
+    "",
+    "## Cart And Revenue Proof",
+    "",
+    `- Qualified external cart landings: ${payload.cart_and_revenue_proof?.qualified_external_cart_landings ?? 0}`,
+    `- Qualified external cart revenue: ${payload.cart_and_revenue_proof?.qualified_external_cart_revenue ?? 0} ${currency}`,
+    `- First-party MCP orders: ${payload.cart_and_revenue_proof?.first_party_mcp_orders ?? 0}`,
+    `- First-party MCP order revenue: ${payload.cart_and_revenue_proof?.first_party_mcp_order_revenue ?? 0} ${currency}`,
+    "",
+    "## Proof Gate",
+    "",
+    "| Gate | Proven |",
+    "| --- | --- |",
+    gateRows,
+    "",
+    "## Blockers",
+    "",
+    blockers,
+    "",
+    "## Next Actions",
+    "",
+    nextActions,
     "",
   ].join("\n");
 }
@@ -5393,6 +5585,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-usage-snapshot.md",
   "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
   "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+  "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+  "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.md",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
@@ -5519,6 +5713,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-usage-snapshot.md": "Crawler-readable Packrift MCP usage snapshot for agents, directory reviewers, and proof-driven iteration.",
   "/ai/mcp-funnel-snapshot.json": "Machine-readable public aggregate MCP funnel snapshot with starts, installs, tool calls, qualified cart landings, and order proof gates.",
   "/ai/mcp-funnel-snapshot.md": "Crawler-readable Packrift MCP funnel proof gate for directory reviewers, agents, and Packrift operators.",
+  "/ai/mcp-ga4-funnel-proof.json": "Machine-readable sanitized GA4 canonical MCP funnel proof with qualified external sessions, cart landings, and MCP-attributed order progress.",
+  "/ai/mcp-ga4-funnel-proof.md": "Crawler-readable sanitized GA4 canonical MCP funnel proof for reviewers, agents, and Packrift operators.",
   "/ai/mcp-source-activation-queue.json": "Machine-readable next-best-action queue that ranks Packrift MCP sources by the event needed to progress toward real tool calls, cart landings, and orders.",
   "/ai/mcp-source-activation-queue.md": "Crawler-readable Packrift MCP source activation queue with source-specific action URLs, target events, and acceptance criteria.",
   "/ai/mcp-source-activation-queue.html": "Human-facing Packrift MCP activation command center that ranks sources and deep-links into the real source-specific MCP runner.",
@@ -5754,6 +5950,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-usage-snapshot.md") return mcpUsageSnapshotMarkdown(await mcpUsageSnapshotPayload(env));
   if (pathname === "/ai/mcp-funnel-snapshot.json") return JSON.stringify(await mcpFunnelSnapshotPayload(env), null, 2);
   if (pathname === "/ai/mcp-funnel-snapshot.md") return mcpFunnelSnapshotMarkdown(await mcpFunnelSnapshotPayload(env));
+  if (pathname === "/ai/mcp-ga4-funnel-proof.json") return JSON.stringify(await mcpGa4FunnelProofPayload(env), null, 2);
+  if (pathname === "/ai/mcp-ga4-funnel-proof.md") return mcpGa4FunnelProofMarkdown(await mcpGa4FunnelProofPayload(env));
   if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await mcpSourceActivationQueuePayload(env), null, 2);
   if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
@@ -7560,6 +7758,21 @@ app.get("/ai/mcp-funnel-snapshot.md", async (c) => {
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
   const body = mcpFunnelSnapshotMarkdown(await mcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-funnel-snapshot.md", "mcp_funnel_snapshot", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ga4-funnel-proof.json", async (c) => {
+  const payload = await mcpGa4FunnelProofPayload(c.env);
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ga4-funnel-proof.json", "mcp_ga4_funnel_proof", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ga4-funnel-proof.md", async (c) => {
+  const body = mcpGa4FunnelProofMarkdown(await mcpGa4FunnelProofPayload(c.env));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ga4-funnel-proof.md", "mcp_ga4_funnel_proof", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,
