@@ -129,7 +129,7 @@ print(rpc("candidate-1066", "tools/call", {
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R02",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R03",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -161,6 +161,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
       start_page: "https://mcp.packrift.com/start",
       start_pack: "https://mcp.packrift.com/ai/mcp-start.json",
+      reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       cursor_windsurf_vscode: {
         mcpServers: {
           packrift: {
@@ -246,6 +247,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "get_cart_handoff_candidates returns AI_APPROVE SKU 1066 when requested exactly.",
       "Cart candidates expose an MCP measured landing URL under https://mcp.packrift.com/r/cart/ before the final Shopify cart URL.",
       "Agents must call get_product, get_pricing, and check_inventory before presenting create_cart_url output to a buyer.",
+      "Directory reviewers can use https://mcp.packrift.com/r/activate/generic?format=html to run the real MCP sequence in a browser.",
     ],
     useful_workflows: [
       {
@@ -281,6 +283,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
+      reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       root_skill_md: "https://mcp.packrift.com/SKILL.md",
@@ -307,6 +311,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Do not build or promote a duplicate Packrift CLI; use only thin wrappers around the hosted MCP endpoint when needed.",
       "Use only AI_APPROVE exact matches for purchase handoff.",
       "Confirm live price, inventory, shipping, and cart eligibility before presenting cart or checkout actions.",
+      "Use the reviewer activation browser runner when a marketplace, directory, or agent host needs to turn proof interest into a real create_cart_url call.",
       "If any required spec differs, return no exact match and route to bulk quote recovery.",
     ],
   };
@@ -352,6 +357,8 @@ export function mcpAdoptionKitMarkdown(runtime: AdoptionKitRuntime): string {
     `Codex: \`${payload.install.codex}\``,
     "",
     `Start page: ${payload.install.start_page}`,
+    "",
+    `Reviewer activation runner: ${payload.install.reviewer_activation_runner_generic}`,
     "",
     `Glama connector: ${payload.install.glama_connector}`,
     "",

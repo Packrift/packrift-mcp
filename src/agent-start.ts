@@ -16,6 +16,8 @@ const START_HTML_RESOURCE_URL = "https://mcp.packrift.com/ai/mcp-start.html";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
+const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
+const TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}?format=html";
 const TRACKED_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
 const TRACKED_START_RECOMMENDED_SOURCES = [
   "official_registry",
@@ -178,7 +180,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R08",
+    release: "PACKRIFT-MCP-START-R09",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -193,10 +195,14 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_install_template: TRACKED_INSTALL_TEMPLATE,
       tracked_run_template: TRACKED_RUN_TEMPLATE,
+      tracked_reviewer_activation_template: TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
+      tracked_reviewer_activation_html_template: TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
       source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedStartUrl(source)])),
       tracked_config_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
       tracked_run_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedRunUrl(source, "generic_streamable_http")])),
+      tracked_reviewer_activation_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, `https://mcp.packrift.com/r/activate/${source}`])),
+      tracked_reviewer_activation_html_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, `https://mcp.packrift.com/r/activate/${source}?format=html`])),
       tracked_install_examples: Object.fromEntries(
         TRACKED_START_RECOMMENDED_SOURCES.map((source) => [
           source,
@@ -230,6 +236,8 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
+      reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
+      reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
@@ -251,7 +259,8 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use /start?utm_source={source} when a handoff should render the same source-specific tracked config URL and copy controls on the start page.",
       "Use /r/config/{source} tracked config links when a directory, partner, campaign, or agent host needs a copy-ready MCP JSON config with source attribution.",
       "Use /r/install/{source}/{target} tracked install-action links when a directory, partner, or agent host needs one target-specific install command or config plus install-intent attribution.",
-      "Custom /r/start/{source}, /r/config/{source}, and /r/install/{source}/{target} source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
+      "Use /r/activate/{source}?format=html tracked reviewer activation browser runners when a proof click needs to become a real MCP call sequence ending in create_cart_url.",
+      "Custom /r/start/{source}, /r/config/{source}, /r/install/{source}/{target}, and /r/activate/{source}?format=html source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Use create_cart_url only after buyer confirmation so the returned /r/cart URL keeps MCP attribution measurable.",
@@ -300,6 +309,8 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     `Tracked config template: \`${payload.start_urls.tracked_config_template}\``,
     `Tracked install template: \`${payload.start_urls.tracked_install_template}\``,
     `Tracked run template: \`${payload.start_urls.tracked_run_template}\``,
+    `Tracked reviewer activation template: \`${payload.start_urls.tracked_reviewer_activation_template}\``,
+    `Tracked reviewer activation browser runner template: \`${payload.start_urls.tracked_reviewer_activation_html_template}\``,
     `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
     `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
     `Custom examples: ${payload.start_urls.source_policy.custom_examples.map((source) => `\`${source}\``).join(", ")}`,
@@ -323,6 +334,12 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "## Tracked First-Run Actions",
     "",
     Object.entries(payload.start_urls.tracked_run_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+    "## Tracked Reviewer Activation Runners",
+    "",
+    Object.entries(payload.start_urls.tracked_reviewer_activation_html_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",
@@ -403,6 +420,8 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
     codex: trackedInstallUrl(source, "codex"),
   };
   const sourceRunUrl = trackedRunUrl(source, "generic_streamable_http");
+  const sourceActivationUrl = `https://mcp.packrift.com/r/activate/${source}`;
+  const sourceActivationRunnerUrl = `${sourceActivationUrl}?format=html`;
   const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
   const firstUsefulPrompt = `${firstUsefulRun.buyer_prompt}\n\nUse endpoint: ${firstUsefulRun.endpoint}`;
   const firstUsefulSequence = JSON.stringify(firstUsefulRun.sequence, null, 2);
@@ -564,6 +583,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <a class="button primary" href="${escapeHtml(payload.canonical_endpoint)}">MCP endpoint</a>
         <a class="button" href="${escapeHtml(START_JSON_URL)}">JSON start pack</a>
         <a class="button" href="${escapeHtml(payload.proof_urls.workflow_gallery)}">Workflow gallery</a>
+        <a class="button" href="${escapeHtml(sourceActivationRunnerUrl)}">Run real MCP check</a>
       </div>
       <div class="source-banner">
         <div>
@@ -574,6 +594,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         ${copyButton(sourceConfigUrl, "Copy config URL", "tracked_config_url")}
         <a class="button" href="${escapeHtml(sourceInstallUrls.codex)}">Tracked Codex install</a>
         <a class="button" href="${escapeHtml(sourceRunUrl)}">Tracked first run</a>
+        <a class="button" href="${escapeHtml(sourceActivationRunnerUrl)}">Activation runner</a>
       </div>
     </header>
     <section>
@@ -605,6 +626,8 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
             <a href="${escapeHtml(sourceInstallUrls.generic_streamable_http)}">install json: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceInstallUrls.claude_code)}">install claude: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceInstallUrls.codex)}">install codex: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceActivationUrl)}">activation handoff: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceActivationRunnerUrl)}">activation runner: ${escapeHtml(sourceLabel)}</a>
           </div>
         </div>
         <div>
