@@ -411,6 +411,79 @@ function mcpContinuityAttribution(meta: RpcExecutionContext, actionLabel: string
   };
 }
 
+function inferredToolArgSource(value: unknown, allowDirect = false): string {
+  const text = safeEventText(value, 240).toLowerCase();
+  if (!text) return "";
+  const suffixMatch = /^(.+)_(?:first_cart_run|first_run|cart_run|purchase_handoff|activation)$/.exec(text);
+  if (suffixMatch?.[1]) return normalizeMcpRuntimeSlug(suffixMatch[1]);
+  if (text.startsWith("mcp_install_first_run_")) return normalizeMcpRuntimeSlug(text.slice("mcp_install_first_run_".length));
+  if (text.startsWith("mcp_install_")) {
+    const parts = text.slice("mcp_install_".length).split("_").filter(Boolean);
+    if (parts.length >= 3 && /^\d{6,}$/.test(parts.at(-1) ?? "")) {
+      return normalizeMcpRuntimeSlug(parts.slice(0, -2).join("_"));
+    }
+  }
+  if (allowDirect) {
+    const direct = normalizeMcpRuntimeSlug(text);
+    if (direct && direct === text) return direct;
+  }
+  return "";
+}
+
+function firstToolArgSource(row: Record<string, unknown>): string {
+  const explicitCandidates = [
+    row.mcp_source_context,
+    row.packrift_mcp_source,
+    row.mcp_source,
+    row.source_slug,
+  ];
+  for (const candidate of explicitCandidates) {
+    const source = inferredToolArgSource(candidate, true);
+    if (source) return source;
+  }
+  const derivedCandidates = [
+    row.source_context,
+    row.result_set_id,
+    row.journey_id,
+    row.packrift_ai_id,
+    row.ai_commerce_id,
+  ];
+  for (const candidate of derivedCandidates) {
+    const source = inferredToolArgSource(candidate);
+    if (source) return source;
+  }
+  return "";
+}
+
+function mcpToolArgsAttribution(args: unknown): Record<string, unknown> {
+  if (!args || typeof args !== "object") return {};
+  const row = args as Record<string, unknown>;
+  const sourceSlug = firstToolArgSource(row);
+  const installTarget = normalizeMcpRuntimeSlug(row.mcp_install_target ?? row.packrift_mcp_target ?? row.mcp_target);
+  const attribution: Record<string, unknown> = {};
+  if (sourceSlug) {
+    attribution.mcp_source_context = sourceSlug;
+    attribution.mcp_source_inference = "tool_arguments";
+    attribution.mcp_source_inference_release = MCP_RUNTIME_SOURCE_INFERENCE_RELEASE;
+    attribution.utm_source = sourceSlug;
+    attribution.utm_medium = "mcp_tool_arguments";
+    attribution.utm_campaign = "packrift_mcp_runtime";
+  }
+  if (installTarget) {
+    attribution.mcp_install_target = installTarget;
+    attribution.utm_content = installTarget;
+  }
+  const packriftAiId = safeEventText(row.packrift_ai_id, 160) || safeEventText(row.journey_id, 160);
+  const aiCommerceId = safeEventText(row.ai_commerce_id, 160) || packriftAiId;
+  if (packriftAiId) attribution.packrift_ai_id = packriftAiId;
+  if (aiCommerceId) attribution.ai_commerce_id = aiCommerceId;
+  if (row.journey_id) attribution.mcp_journey = safeEventText(row.journey_id, 160);
+  if (row.result_set_id) attribution.mcp_result_set = safeEventText(row.result_set_id, 160);
+  if (row.sku) attribution.mcp_key = `tool_arg_sku:${safeEventText(row.sku, 80).toUpperCase()}`;
+  if (row.utm_term) attribution.utm_term = safeEventText(row.utm_term, 160);
+  return attribution;
+}
+
 function mergeNonEmptyAttribution(...rows: Array<Record<string, unknown>>): Record<string, unknown> {
   const merged: Record<string, unknown> = {};
   for (const row of rows) {
@@ -560,6 +633,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
               buildMcpToolCallEvent(name, out, {
                 latencyMs: Date.now() - startedAt,
                 resultSizeBytes: jsonByteSize(out),
+                args,
                 ...telemetryContext,
                 ok: true,
               })
@@ -577,6 +651,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
               buildMcpToolCallEvent(name, { error: msg }, {
                 latencyMs: Date.now() - startedAt,
                 resultSizeBytes: jsonByteSize({ error: msg }),
+                args,
                 ...telemetryContext,
                 ok: false,
                 errorMessage: msg,
@@ -2110,12 +2185,17 @@ function buildMcpToolCallEvent(
     utmMedium?: string;
     utmCampaign?: string;
     utmContent?: string;
+    args?: unknown;
     ok: boolean;
     errorMessage?: string;
   }
 ): Record<string, unknown> {
   const row = summarizeToolResult(out);
-  const attribution = mergeNonEmptyAttribution(mcpContinuityAttribution(meta, name), buildToolResultAttribution(out));
+  const attribution = mergeNonEmptyAttribution(
+    mcpToolArgsAttribution(meta.args),
+    mcpContinuityAttribution(meta, name),
+    buildToolResultAttribution(out)
+  );
   const userAgent = meta.userAgent ?? "";
   return {
     event: "mcp_tool_call",
