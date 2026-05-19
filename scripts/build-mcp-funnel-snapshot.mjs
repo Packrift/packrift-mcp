@@ -220,6 +220,9 @@ async function buildFirstPartyMcpSummary() {
     top_prompts: parsed.by_prompt || [],
     top_resources: parsed.by_resource || [],
     top_mcp_methods: parsed.by_mcp_method || [],
+    top_start_sources: parsed.by_start_source || [],
+    top_utm_sources: parsed.by_utm_source || [],
+    top_utm_campaigns: parsed.by_utm_campaign || [],
     top_sources: parsed.by_source || [],
     top_skus: parsed.by_sku || [],
     top_bot_families: parsed.by_bot_family || [],
@@ -913,6 +916,14 @@ function markdownReport(value) {
     `- AI corpus clicks: ${fp.ai_corpus_clicks ?? 0}`,
     `- SKU page views: ${fp.sku_page_views ?? 0}`,
     "",
+    "## First-Party Source Attribution",
+    "",
+    `- Start click sources: ${topRowsSummary(fp.top_start_sources)}`,
+    `- UTM sources: ${topRowsSummary(fp.top_utm_sources)}`,
+    `- UTM campaigns: ${topRowsSummary(fp.top_utm_campaigns)}`,
+    `- MCP keys: ${topRowsSummary(fp.top_mcp_keys)}`,
+    `- Tool MCP keys: ${topRowsSummary(fp.top_tool_mcp_keys)}`,
+    "",
     "## First-Party MCP Orders",
     "",
     `- Status: ${orders.ok == null ? "not checked" : yesNo(orders.ok)}`,
@@ -1099,6 +1110,14 @@ function trafficBucketSummary(buckets) {
   if (!buckets) return "not available";
   return Object.entries(buckets)
     .map(([key, value]) => `${key}=${numberValue(value)}`)
+    .join(", ");
+}
+
+function topRowsSummary(rows, limit = 5) {
+  if (!Array.isArray(rows) || rows.length === 0) return "none";
+  return rows
+    .slice(0, limit)
+    .map((row) => `${row.key}=${numberValue(row.count)}`)
     .join(", ");
 }
 
