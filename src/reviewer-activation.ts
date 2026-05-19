@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R09";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -99,6 +99,7 @@ function sourceSummary(action: ReturnType<typeof mcpDirectorySubmitActionsPayloa
     tracked_first_run_live_proof_url: `${trackedRunUrl(source, preferredTarget)}&execute=1`,
     tracked_reviewer_activation_url: trackedReviewerActivationUrl(source),
     tracked_reviewer_activation_html_url: `${trackedReviewerActivationUrl(source)}&format=html`,
+    tracked_reviewer_activation_shell_url: `${trackedReviewerActivationUrl(source)}&format=sh`,
     next_action: action.next_action,
     missing_next_step:
       "Convert browser proof or install intent into a real MCP client call against https://mcp.packrift.com/mcp and a create_cart_url result.",
@@ -128,6 +129,7 @@ function genericSourceSummary(source: string) {
     tracked_first_run_live_proof_url: `${trackedRunUrl(sourceSlug, preferredTarget)}&execute=1`,
     tracked_reviewer_activation_url: trackedReviewerActivationUrl(sourceSlug),
     tracked_reviewer_activation_html_url: `${trackedReviewerActivationUrl(sourceSlug)}&format=html`,
+    tracked_reviewer_activation_shell_url: `${trackedReviewerActivationUrl(sourceSlug)}&format=sh`,
     next_action: "Install Packrift MCP from the hosted endpoint, then run the real MCP sequence below.",
     missing_next_step:
       "Convert browser proof or install intent into a real MCP client call against https://mcp.packrift.com/mcp and a create_cart_url result.",
@@ -140,6 +142,7 @@ function copyReadyMessage(summary: ReturnType<typeof sourceSummary> | ReturnType
     "",
     `Endpoint: ${MCP_ENDPOINT}`,
     `Tracked activation handoff: ${summary.tracked_reviewer_activation_url}`,
+    `Shell activation script: ${summary.tracked_reviewer_activation_shell_url}`,
     `Tracked config: ${summary.tracked_config_url}`,
     `Tracked first-run proof: ${summary.tracked_first_run_live_proof_url}`,
     "",
@@ -225,6 +228,7 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
       reviewer_activation_markdown: MCP_REVIEWER_ACTIVATION_MD_URL,
       tracked_reviewer_activation: target.tracked_reviewer_activation_url,
       tracked_reviewer_activation_html: target.tracked_reviewer_activation_html_url,
+      tracked_reviewer_activation_shell: target.tracked_reviewer_activation_shell_url,
       tracked_first_run_live_proof: target.tracked_first_run_live_proof_url,
       tracked_first_run_browser: target.tracked_first_run_browser_url,
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
@@ -289,6 +293,7 @@ export function mcpReviewerActivationMarkdown(runtime: ReviewerActivationRuntime
     `- Directory status: ${target.directory_status}`,
     `- Tracked activation handoff: ${target.tracked_reviewer_activation_url}`,
     `- Browser runner: ${target.tracked_reviewer_activation_html_url}`,
+    `- Shell script URL: ${target.tracked_reviewer_activation_shell_url}`,
     `- Tracked first-run proof: ${target.tracked_first_run_live_proof_url}`,
     `- Tracked config: ${target.tracked_config_url}`,
     "",
@@ -385,6 +390,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     <div class="bar">
       <button id="run">Run real MCP check</button>
       <button id="copy-agent-prompt" class="secondary" type="button">Copy agent prompt</button>
+      <a class="button secondary" href="${escapeHtml(target.tracked_reviewer_activation_shell_url)}">Shell script</a>
       <a class="button secondary" href="${escapeHtml(target.tracked_first_run_live_proof_url)}">Open live proof</a>
       <a class="button secondary" href="${escapeHtml(payload.markdown_url)}?source=${escapeHtml(target.id)}">Markdown</a>
       <a class="button secondary" href="${escapeHtml(payload.machine_readable_url)}?source=${escapeHtml(target.id)}">JSON</a>

@@ -9878,6 +9878,22 @@ app.get("/r/activate/:source", async (c) => {
       ...RAW_HEADERS,
     });
   }
+  if (format === "sh" || format === "shell") {
+    const payload = mcpReviewerActivationPayload(reviewerActivationRuntime(), source);
+    const body = `${payload.real_mcp_client_run.curl_script}\n`;
+    await recordGeneratedAiResourceFetch(c, `/r/activate/${source}`, "mcp_reviewer_activation", jsonByteSize(body), {
+      sourceSlug: source,
+      utmMedium: requestUrl.searchParams.get("utm_medium") || "reviewer_activation",
+      utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_activation",
+      utmContent: requestUrl.searchParams.get("utm_content") || "real_mcp_shell_script",
+      mcpKeyPrefix: "activation",
+    });
+    return c.body(body, 200, {
+      "Content-Type": "text/x-shellscript; charset=utf-8",
+      ...RAW_HEADERS,
+      Link: `<${trackedReviewerActivationUrl(source)}>; rel="canonical"`,
+    });
+  }
   if (wantsHtml) {
     const body = mcpReviewerActivationHtml(reviewerActivationRuntime(), source);
     await recordGeneratedAiResourceFetch(c, `/r/activate/${source}`, "mcp_reviewer_activation", jsonByteSize(body), {

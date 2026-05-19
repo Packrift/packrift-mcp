@@ -404,6 +404,7 @@ async function liveMcpCheck() {
     reviewerActivationResult,
     trackedReviewerActivationGenericResult,
     trackedReviewerActivationHtmlResult,
+    trackedReviewerActivationShellResult,
     trackedReviewerActivationClineResult,
     claudeConnectorSubmissionResult,
     agentCaptureOutreachResult,
@@ -474,6 +475,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-reviewer-activation.json"),
     fetchText("https://mcp.packrift.com/r/activate/generic?format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/activate/generic?format=html&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/activate/generic?format=sh&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/claude-connector-submission.json"),
     fetchText("https://mcp.packrift.com/ai/agent-capture-outreach.json"),
@@ -1345,10 +1347,11 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("claude-connector-submission.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("agent-capture-outreach.json")) &&
       directorySubmitActions?.actions?.some((action) => action.recrawl_message?.includes("browserbase-browse-skill-pack.json")) &&
-      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08" &&
+      reviewerActivation?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R09" &&
       reviewerActivation?.target_source?.id === "generic" &&
       reviewerActivation?.target_source?.tracked_reviewer_activation_url?.startsWith("https://mcp.packrift.com/r/activate/generic") &&
       reviewerActivation?.target_source?.tracked_first_run_live_proof_url?.includes("execute=1") &&
+      reviewerActivation?.target_source?.tracked_reviewer_activation_shell_url?.includes("format=sh") &&
       reviewerActivation?.copy_ready_host_configs?.source === "generic" &&
       reviewerActivation?.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
       reviewerActivation?.copy_ready_host_configs?.codex_command?.includes("packrift_mcp_source=generic") &&
@@ -1359,8 +1362,9 @@ async function liveMcpCheck() {
       reviewerActivation?.real_mcp_client_run?.agent_prompt?.includes("Required tool sequence") &&
       reviewerActivation?.real_mcp_client_run?.browser_executable === true &&
       reviewerActivation?.real_mcp_client_run?.browser_runner_url?.includes("format=html") &&
+      reviewerActivation?.proof_urls?.tracked_reviewer_activation_shell?.includes("format=sh") &&
       reviewerActivation?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
-      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08" &&
+      trackedReviewerActivationGeneric?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R09" &&
       trackedReviewerActivationGeneric?.target_source?.id === "generic" &&
       trackedReviewerActivationGeneric?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
       trackedReviewerActivationGeneric?.copy_ready_host_configs?.source_aware_endpoint?.includes("packrift_mcp_source=generic") &&
@@ -1368,16 +1372,23 @@ async function liveMcpCheck() {
       trackedReviewerActivationGeneric?.copy_ready_host_configs?.agent_prompt?.includes("create_cart_url") &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.required_final_tool === "create_cart_url" &&
       trackedReviewerActivationGeneric?.real_mcp_client_run?.agent_prompt?.includes("create_cart_url") &&
-      trackedReviewerActivationCline?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R08" &&
+      trackedReviewerActivationGeneric?.proof_urls?.tracked_reviewer_activation_shell?.includes("format=sh") &&
+      trackedReviewerActivationShellResult.ok &&
+      trackedReviewerActivationShellResult.text.includes("tools/call") &&
+      trackedReviewerActivationShellResult.text.includes("packrift_mcp_source=generic") &&
+      trackedReviewerActivationShellResult.text.includes("create_cart_url") &&
+      trackedReviewerActivationCline?.release === "PACKRIFT-MCP-REVIEWER-ACTIVATION-R09" &&
       trackedReviewerActivationCline?.target_source?.id === "cline_mcp_marketplace" &&
       trackedReviewerActivationCline?.target_source?.preferred_target === "cline" &&
       trackedReviewerActivationCline?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
       trackedReviewerActivationCline?.copy_ready_host_configs?.preferred_target === "cline" &&
       trackedReviewerActivationCline?.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
       trackedReviewerActivationCline?.copy_ready_host_configs?.claude_code_command?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+      trackedReviewerActivationCline?.proof_urls?.tracked_reviewer_activation_shell?.includes("format=sh") &&
       trackedReviewerActivationHtmlResult.ok &&
       trackedReviewerActivationHtmlResult.text.includes("Run real MCP check") &&
       trackedReviewerActivationHtmlResult.text.includes("Copy agent prompt") &&
+      trackedReviewerActivationHtmlResult.text.includes("Shell script") &&
       trackedReviewerActivationHtmlResult.text.includes("Copy-Ready Host Configs") &&
       trackedReviewerActivationHtmlResult.text.includes("activation.real_mcp_client_run.endpoint") &&
       trackedReviewerActivationHtmlResult.text.includes("mcp_activation_cart_ready") &&
@@ -1745,6 +1756,8 @@ async function liveMcpCheck() {
       tracked_reviewer_activation_target: trackedReviewerActivationGeneric?.target_source?.id ?? null,
       tracked_reviewer_activation_html_status: trackedReviewerActivationHtmlResult.status,
       tracked_reviewer_activation_html_has_runner: trackedReviewerActivationHtmlResult.text.includes("Run real MCP check"),
+      tracked_reviewer_activation_shell_status: trackedReviewerActivationShellResult.status,
+      tracked_reviewer_activation_shell_has_cart: trackedReviewerActivationShellResult.text.includes("create_cart_url"),
       agent_capture_outreach_release: agentCaptureOutreach?.release ?? null,
       agent_capture_outreach_priority_queue: agentCaptureOutreach?.priority_queue?.length ?? 0,
       agent_capture_outreach_directory_refreshes: agentCaptureOutreach?.directory_refreshes?.length ?? 0,
