@@ -107,10 +107,12 @@ const ACTIONS = [
     directory_status: "pending",
     priority: "high",
     method: "GitHub issue submission.",
-    evidence: "Cline MCP Marketplace issue #1610 is open for Packrift MCP.",
+    evidence:
+      "Cline MCP Marketplace issue #1610 is open; the latest proof comment now includes R11/R04 snapshots and the source-aware first_useful_run sequence.",
     stale_markers: ["Packrift not yet visible as a published Cline marketplace listing"],
     recrawl_subject: "Review Cline MCP Marketplace Packrift MCP submission",
-    next_action: "Keep the Cline submission issue current and respond if maintainers ask for endpoint proof.",
+    next_action:
+      "Monitor for marketplace publication; reviewers can use the linked first_useful_run sequence, and further comments should only respond to maintainer requests.",
     listing_url: "https://github.com/cline/mcp-marketplace/issues/1610",
     submission_url: "https://github.com/cline/mcp-marketplace/issues/new?template=mcp-server-submission.yml",
   },
@@ -278,9 +280,11 @@ const ACTIONS = [
     directory_status: "pending",
     priority: "medium",
     method: "GitHub pull request.",
-    evidence: "Docker MCP Catalog PR #3388 is open and mergeable.",
+    evidence:
+      "Docker MCP Catalog PR #3388 is open and mergeable; the latest proof comment now includes R11/R04 snapshots and the source-aware first_useful_run sequence.",
     recrawl_subject: "Refresh Docker MCP Catalog Packrift entry to current hosted endpoint",
-    next_action: "Keep the PR mergeable and respond if Docker review requests changes.",
+    next_action:
+      "Monitor for Docker review and publication; reviewers can use the linked first_useful_run sequence, and further comments should only respond to maintainer requests.",
     listing_url: "https://github.com/docker/mcp-registry/pull/3388",
     submission_url: "https://github.com/docker/mcp-registry/pull/3388",
   },
@@ -314,6 +318,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const trackedConfig = trackedConfigUrl(action.id);
   const trackedInstallCodex = trackedInstallUrl(action.id, "codex");
   const trackedInstallGeneric = trackedInstallUrl(action.id, "generic_streamable_http");
+  const trackedInstallGenericMd = `${trackedInstallGeneric}&format=md`;
   return [
     `Subject: ${action.recrawl_subject}`,
     "",
@@ -325,7 +330,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "It requires no buyer-side API key and exposes exact-spec packaging search, live price, live inventory, no-match handling, and measured cart handoff.",
     "",
     ...staleMarkers,
-    "Please recrawl/update Packrift using:",
+    "Please recrawl/update Packrift and run the post-install cart verification using:",
     "- Server name: io.github.Packrift/packrift-mcp",
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
@@ -333,7 +338,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Tracked MCP JSON config: ${trackedConfig}`,
     `- Tracked Codex install action: ${trackedInstallCodex}`,
     `- Tracked generic install action: ${trackedInstallGeneric}`,
-    `- First useful run: open ${trackedInstallGeneric} and run the first_useful_run JSON-RPC sequence from the source-aware endpoint; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
+    `- Markdown install action with first-useful-run sequence: ${trackedInstallGenericMd}`,
+    `- First useful run: open ${trackedInstallGenericMd} and run the first_useful_run JSON-RPC sequence from the source-aware endpoint; it reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -405,7 +411,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R16",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R17",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

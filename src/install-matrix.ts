@@ -96,6 +96,35 @@ const SMOKE_TESTS = [
       variant_id: "53472879935856",
     },
   },
+  {
+    id: "cart-1066",
+    name: "Create measured cart handoff URL",
+    purpose:
+      "Confirm the post-install path reaches a measured MCP /r/cart URL for a known exact SKU. This creates a URL only; it does not place an order.",
+    request: {
+      jsonrpc: "2.0",
+      id: "cart-1066",
+      method: "tools/call",
+      params: {
+        name: "create_cart_url",
+        arguments: {
+          sku: "1066",
+          quantity: 1,
+          selected_sku: "1066",
+          selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
+          match_type: "install_matrix_first_useful_run",
+          source_context: "install_matrix_first_cart_run",
+          journey_id: "mcp_install_matrix_1066_53472879935856",
+          result_set_id: "mcp_install_matrix_first_run",
+          utm_term: "1066",
+        },
+      },
+    },
+    expected: {
+      cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
+      order_created: false,
+    },
+  },
 ] as const;
 
 const HOSTS = [
@@ -106,7 +135,7 @@ const HOSTS = [
     status: "ready",
     preferred: true,
     install: remoteMcpJson(),
-    first_test_ids: ["tools-list", "prompts-list", "candidate-1066"],
+    first_test_ids: ["tools-list", "prompts-list", "candidate-1066", "cart-1066"],
     notes: ["Use this when the host can read MCP JSON config.", "No buyer-side Packrift API key is required for the hosted endpoint."],
   },
   {
@@ -118,7 +147,7 @@ const HOSTS = [
     install: {
       command: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
     },
-    first_test_ids: ["tools-list", "candidate-1066", "price-1066", "inventory-1066"],
+    first_test_ids: ["tools-list", "candidate-1066", "price-1066", "inventory-1066", "cart-1066"],
     notes: ["Use the remote endpoint, not a local Packrift CLI.", "Restart the host if MCP server changes are not visible immediately."],
   },
   {
@@ -131,7 +160,7 @@ const HOSTS = [
       command: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
       config: remoteMcpJson(),
     },
-    first_test_ids: ["tools-list", "prompts-list", "candidate-1066"],
+    first_test_ids: ["tools-list", "prompts-list", "candidate-1066", "cart-1066"],
     notes: ["Keep this as a thin remote endpoint install path.", "Do not fork a separate Packrift CLI surface."],
   },
   {
@@ -141,7 +170,7 @@ const HOSTS = [
     status: "ready",
     preferred: true,
     install: remoteMcpJson(),
-    first_test_ids: ["tools-list", "candidate-1066"],
+    first_test_ids: ["tools-list", "candidate-1066", "cart-1066"],
     notes: ["Add the JSON under the host's MCP server configuration.", "Restart Claude Desktop after editing config."],
   },
   {
@@ -151,7 +180,7 @@ const HOSTS = [
     status: "ready",
     preferred: true,
     install: remoteMcpJson(),
-    first_test_ids: ["tools-list", "prompts-list", "candidate-1066"],
+    first_test_ids: ["tools-list", "prompts-list", "candidate-1066", "cart-1066"],
     notes: ["Use only the hosted HTTP endpoint unless doing local Packrift MCP development.", "If the IDE asks for transport, choose HTTP or Streamable HTTP."],
   },
   {
@@ -163,7 +192,7 @@ const HOSTS = [
     install: {
       url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     },
-    first_test_ids: ["tools-list", "candidate-1066"],
+    first_test_ids: ["tools-list", "candidate-1066", "cart-1066"],
     notes: ["The Glama hosted connector should show the current 15-tool remote endpoint.", "The stale Glama source listing is a separate directory refresh issue."],
   },
   {
@@ -176,7 +205,7 @@ const HOSTS = [
       url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
       command: `claude mcp add --transport http io-github-packrift-packrift-mcp ${MCP_ENDPOINT}`,
     },
-    first_test_ids: ["tools-list", "candidate-1066"],
+    first_test_ids: ["tools-list", "candidate-1066", "cart-1066"],
     notes: ["Use marketplace discovery for install; the canonical runtime endpoint remains Packrift MCP."],
   },
   {
@@ -191,7 +220,7 @@ const HOSTS = [
       canonical_skill_md: "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md",
       confirmation_endpoint: MCP_ENDPOINT,
     },
-    first_test_ids: ["candidate-1066", "price-1066", "inventory-1066"],
+    first_test_ids: ["candidate-1066", "price-1066", "inventory-1066", "cart-1066"],
     notes: [
       "Browser reading is discovery only.",
       "Live price, inventory, shipping, exact product detail, and cart handoff must be confirmed through MCP.",
@@ -216,7 +245,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R02",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R03",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -236,6 +265,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       "Use /r/install/{source}/{target} when a directory, partner, or agent handoff needs a target-specific install command or config and install-intent attribution.",
       "Use prepare_purchase_handoff for known exact SKUs when the host needs one compact live-confirmation and guarded cart-handoff tool call.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
+      "Run the cart-1066 smoke test after install; it returns a measured cart URL only and does not place an order.",
       "Route no-exact-match cases to quote recovery instead of forcing nearby substitutes.",
     ],
     tracked_install_template: TRACKED_INSTALL_TEMPLATE,
@@ -253,7 +283,8 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       "For a known exact SKU, call prepare_purchase_handoff with buyer_confirmed=false first; call again with buyer_confirmed=true only after the buyer confirms SKU and quantity.",
       "Call get_cart_handoff_candidates for a known SKU or search_products for the buyer request.",
       "Call get_product, get_pricing, and check_inventory for the exact selected SKU.",
-      "Call create_cart_url only after buyer confirmation.",
+      "For first-run verification, call create_cart_url for the known SKU 1066 demo after live checks; it returns a URL only and does not place an order.",
+      "For real buyer workflows, call create_cart_url only after buyer confirmation.",
       "Use the returned MCP cart landing URL so ref=mcp and mcp_tool attribution stay measurable.",
     ],
     proof_urls: {

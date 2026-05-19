@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R03";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R03";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R04";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R04";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -61,7 +61,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     format: "json",
     copyText: JSON.stringify(remoteMcpJson(), null, 2),
     install: remoteMcpJson(),
-    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates"],
+    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Use this when the host can read MCP JSON config.", "No buyer-side Packrift API key is required."],
   },
   {
@@ -74,7 +74,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     install: {
       command: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
     },
-    firstTests: ["tools/list", "get_cart_handoff_candidates", "get_pricing", "check_inventory"],
+    firstTests: ["tools/list", "get_cart_handoff_candidates", "get_pricing", "check_inventory", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Use the hosted remote endpoint, not a local Packrift CLI.", "Restart Claude Code if MCP server changes are not visible immediately."],
   },
   {
@@ -88,7 +88,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
       command: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
       config: remoteMcpJson(),
     },
-    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates"],
+    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Keep this as a thin remote endpoint install path.", "Do not fork a separate Packrift CLI surface."],
   },
   {
@@ -99,7 +99,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     format: "json",
     copyText: JSON.stringify(remoteMcpJson(), null, 2),
     install: remoteMcpJson(),
-    firstTests: ["tools/list", "get_cart_handoff_candidates"],
+    firstTests: ["tools/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Add the JSON under the host MCP server configuration.", "Restart Claude Desktop after editing config."],
   },
   {
@@ -110,7 +110,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     format: "json",
     copyText: JSON.stringify(remoteMcpJson(), null, 2),
     install: remoteMcpJson(),
-    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates"],
+    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["If the IDE asks for transport, choose HTTP or Streamable HTTP.", "Confirm live price and inventory through MCP before cart handoff."],
   },
   {
@@ -123,7 +123,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     install: {
       url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     },
-    firstTests: ["tools/list", "get_cart_handoff_candidates"],
+    firstTests: ["tools/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Use the hosted Glama connector if the directory install UX is preferred.", "The canonical runtime endpoint remains Packrift MCP."],
   },
   {
@@ -137,7 +137,7 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
       url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
       command: `claude mcp add --transport http io-github-packrift-packrift-mcp ${MCP_ENDPOINT}`,
     },
-    firstTests: ["tools/list", "get_cart_handoff_candidates"],
+    firstTests: ["tools/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Marketplace discovery can vary by host.", "The canonical runtime endpoint remains Packrift MCP."],
   },
 ];
@@ -196,45 +196,49 @@ const FIRST_USEFUL_RUN_SKU = {
 export function mcpFirstUsefulRun(source = "generic", target = "generic_streamable_http") {
   const sourceSlug = normalizeRuntimeSlug(source, "generic");
   const targetSlug = normalizeRuntimeSlug(target, "runtime");
+  const endpoint = sourceAwareMcpEndpoint(sourceSlug, targetSlug);
   const sourceContext = `${sourceSlug}_first_cart_run`.slice(0, 80);
   const journeyId = `mcp_install_${sourceSlug}_${FIRST_USEFUL_RUN_SKU.sku}_${FIRST_USEFUL_RUN_SKU.variantId}`;
   const resultSetId = `mcp_install_first_run_${sourceSlug}`.slice(0, 120);
+  const sequence = [
+    { jsonrpc: "2.0", id: "tools", method: "tools/list" },
+    toolCall("candidate-1066", "get_cart_handoff_candidates", { sku: FIRST_USEFUL_RUN_SKU.sku, limit: 1 }),
+    toolCall("price-1066", "get_pricing", {
+      variant_ids: [FIRST_USEFUL_RUN_SKU.variantId],
+      quantity: 1,
+      selected_sku: FIRST_USEFUL_RUN_SKU.sku,
+      selected_handle: FIRST_USEFUL_RUN_SKU.handle,
+      match_type: "install_first_useful_run",
+    }),
+    toolCall("inventory-1066", "check_inventory", {
+      variant_ids: [FIRST_USEFUL_RUN_SKU.variantId],
+      selected_sku: FIRST_USEFUL_RUN_SKU.sku,
+      selected_handle: FIRST_USEFUL_RUN_SKU.handle,
+      match_type: "install_first_useful_run",
+    }),
+    toolCall("cart-1066", "create_cart_url", {
+      sku: FIRST_USEFUL_RUN_SKU.sku,
+      quantity: 1,
+      selected_sku: FIRST_USEFUL_RUN_SKU.sku,
+      selected_handle: FIRST_USEFUL_RUN_SKU.handle,
+      match_type: "install_first_useful_run",
+      source_context: sourceContext,
+      journey_id: journeyId,
+      result_set_id: resultSetId,
+      utm_term: FIRST_USEFUL_RUN_SKU.sku,
+    }),
+  ];
   return {
     purpose:
       "After installing Packrift MCP, run this exact source-aware workflow to prove the endpoint can progress from install to live SKU checks and a measured MCP cart handoff.",
-    endpoint: sourceAwareMcpEndpoint(sourceSlug, targetSlug),
+    endpoint,
     buyer_prompt:
       "Reorder Packrift SKU 1066. Confirm the exact product, live price, and inventory, then prepare a measured cart handoff for quantity 1.",
     run_rule:
       "Use the source-aware endpoint above. The final create_cart_url call only creates a cart URL string; it does not place an order.",
-    sequence: [
-      { jsonrpc: "2.0", id: "tools", method: "tools/list" },
-      toolCall("candidate-1066", "get_cart_handoff_candidates", { sku: FIRST_USEFUL_RUN_SKU.sku, limit: 1 }),
-      toolCall("price-1066", "get_pricing", {
-        variant_ids: [FIRST_USEFUL_RUN_SKU.variantId],
-        quantity: 1,
-        selected_sku: FIRST_USEFUL_RUN_SKU.sku,
-        selected_handle: FIRST_USEFUL_RUN_SKU.handle,
-        match_type: "install_first_useful_run",
-      }),
-      toolCall("inventory-1066", "check_inventory", {
-        variant_ids: [FIRST_USEFUL_RUN_SKU.variantId],
-        selected_sku: FIRST_USEFUL_RUN_SKU.sku,
-        selected_handle: FIRST_USEFUL_RUN_SKU.handle,
-        match_type: "install_first_useful_run",
-      }),
-      toolCall("cart-1066", "create_cart_url", {
-        sku: FIRST_USEFUL_RUN_SKU.sku,
-        quantity: 1,
-        selected_sku: FIRST_USEFUL_RUN_SKU.sku,
-        selected_handle: FIRST_USEFUL_RUN_SKU.handle,
-        match_type: "install_first_useful_run",
-        source_context: sourceContext,
-        journey_id: journeyId,
-        result_set_id: resultSetId,
-        utm_term: FIRST_USEFUL_RUN_SKU.sku,
-      }),
-    ],
+    sequence,
+    curl_commands: sequence.map((request) => mcpCurlCommand(endpoint, request)),
+    curl_script: mcpCurlScript(endpoint, sequence),
     success_signals: [
       "tools/list returns the current Packrift tool surface",
       "get_cart_handoff_candidates returns SKU 1066",
@@ -248,6 +252,35 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
 
 function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function mcpCurlCommand(endpoint: string, request: Record<string, unknown>): string {
+  return [
+    `curl -sS ${shellQuote(endpoint)} \\`,
+    "  -H 'content-type: application/json' \\",
+    "  -H 'user-agent: MCP-First-Run/1.0 (+https://mcp.packrift.com/start)' \\",
+    `  -d ${shellQuote(JSON.stringify(request))}`,
+  ].join("\n");
+}
+
+function mcpCurlScript(endpoint: string, sequence: readonly Record<string, unknown>[]): string {
+  return [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    "",
+    `PACKRIFT_MCP_ENDPOINT=${shellQuote(endpoint)}`,
+    "",
+    "rpc() {",
+    '  curl -sS "$PACKRIFT_MCP_ENDPOINT" \\',
+    "    -H 'content-type: application/json' \\",
+    "    -H 'user-agent: MCP-First-Run/1.0 (+https://mcp.packrift.com/start)' \\",
+    '    -d "$1"',
+    "  printf '\\n'",
+    "}",
+    "",
+    ...sequence.map((request) => `rpc ${shellQuote(JSON.stringify(request))}`),
+    "",
+  ].join("\n");
 }
 
 function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
@@ -320,6 +353,7 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
   const target = normalizeInstallTarget(input.target);
   if (!target) return null;
   const sourceAware = sourceAwareInstallForTarget(target, input.source);
+  const firstUsefulRun = mcpFirstUsefulRun(input.source, target.id);
   return {
     release: MCP_INSTALL_ACTION_RELEASE,
     generated_at: new Date().toISOString(),
@@ -338,7 +372,16 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
     copy_text: sourceAware.copyText,
     install: sourceAware.install,
     first_tests: target.firstTests,
-    first_useful_run: mcpFirstUsefulRun(input.source, target.id),
+    required_post_install_verification: {
+      required: true,
+      no_order_created: true,
+      endpoint: firstUsefulRun.endpoint,
+      run: "After install, run the first_useful_run sequence through this source-aware endpoint. The cart step returns a measured /r/cart URL only; it does not place an order.",
+      required_final_tool: "create_cart_url",
+      required_sku: FIRST_USEFUL_RUN_SKU.sku,
+      success_signal: "create_cart_url returns a URL starting with https://mcp.packrift.com/r/cart/1066",
+    },
+    first_useful_run: firstUsefulRun,
     notes: target.notes,
     proof_urls: {
       health: "https://mcp.packrift.com/health",
@@ -354,6 +397,7 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
 }
 
 export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, source = "generic") {
+  const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
   return {
     release: MCP_INSTALL_ACTIONS_RELEASE,
     generated_at: new Date().toISOString(),
@@ -378,8 +422,18 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       aliases: target.aliases,
       first_tests: target.firstTests,
       first_useful_run_endpoint: sourceAwareMcpEndpoint(source, target.id),
+      required_post_install_final_tool: "create_cart_url",
     })),
-    first_useful_run: mcpFirstUsefulRun(source, "generic_streamable_http"),
+    required_post_install_verification: {
+      required: true,
+      no_order_created: true,
+      endpoint: firstUsefulRun.endpoint,
+      run: "Installers and directory reviewers should run the first_useful_run sequence after adding Packrift MCP. It confirms exact SKU, live price, live inventory, and a measured cart handoff URL.",
+      required_final_tool: "create_cart_url",
+      required_sku: FIRST_USEFUL_RUN_SKU.sku,
+      success_signal: "create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL",
+    },
+    first_useful_run: firstUsefulRun,
     recommended_directory_targets: ["generic_streamable_http", "claude_code", "codex", "cursor_windsurf_vscode"],
     proof_urls: {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -392,6 +446,10 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
 
 function fencedJson(value: unknown): string {
   return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
+}
+
+function fencedShell(value: string): string {
+  return ["```sh", value, "```"].join("\n");
 }
 
 export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof mcpInstallActionPayload>>): string {
@@ -414,6 +472,12 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
     "",
     payload.first_tests.map((test) => `- ${test}`).join("\n"),
     "",
+    "## Required Post-Install Verification",
+    "",
+    `${payload.required_post_install_verification.run}`,
+    "",
+    `Required final tool: \`${payload.required_post_install_verification.required_final_tool}\``,
+    "",
     "## First Useful Run",
     "",
     `Endpoint: \`${payload.first_useful_run.endpoint}\``,
@@ -421,6 +485,10 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
     payload.first_useful_run.buyer_prompt,
     "",
     fencedJson(payload.first_useful_run.sequence),
+    "",
+    "Pasteable curl script:",
+    "",
+    fencedShell(payload.first_useful_run.curl_script),
     "",
     "Success signals:",
     "",
@@ -454,11 +522,17 @@ export function mcpInstallActionsMarkdown(runtime: McpInstallActionRuntime): str
     "",
     "## First Useful Run",
     "",
+    payload.required_post_install_verification.run,
+    "",
     `Endpoint: \`${payload.first_useful_run.endpoint}\``,
     "",
     payload.first_useful_run.buyer_prompt,
     "",
     fencedJson(payload.first_useful_run.sequence),
+    "",
+    "Pasteable curl script:",
+    "",
+    fencedShell(payload.first_useful_run.curl_script),
     "",
     "| Target | Format | Generic tracked install URL |",
     "| --- | --- | --- |",

@@ -2268,6 +2268,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const installIntents = byEvent.mcp_install_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
+  const postInstallCartActivation = postInstallCartActivationBySource(events);
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
   const directAgentResourceSources = [
@@ -2294,7 +2295,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R10",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R11",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2326,6 +2327,9 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       no_match_events: noMatches,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
       external_qualified_create_cart_url_calls: qualifiedCreateCartUrlCalls,
+      post_install_sources_waiting_on_create_cart_url: postInstallCartActivation.filter(
+        (row) => row.install_intents + row.tracked_config_fetches > 0 && row.create_cart_url_calls === 0
+      ).length,
       direct_agent_resource_events: directAgentResourceEvents,
       direct_agent_resource_sources: directAgentResourceSources,
       mcp_start_resource_events: bySource.mcp_start ?? 0,
@@ -2379,6 +2383,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tool_runtime_sources: summary.by_tool_mcp_source_context,
       event_sources: summary.by_event_source,
       event_attribution: summary.by_event_attribution,
+      post_install_cart_activation_by_source: postInstallCartActivation,
     },
     source_attribution: {
       tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
@@ -2405,6 +2410,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       recent_install_copies: summary.recent_install_copies,
       recent_tool_calls: summary.recent_tool_calls,
       recent_cart_landings: summary.recent_cart_landings,
+      post_install_cart_activation_by_source: postInstallCartActivation,
     },
     links: {
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -2434,8 +2440,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
     },
     next_actions: [
-      "Push directory recrawls and partner installs toward tools/list, prompts/list, and resources/list.",
-      "Drive real workflows through get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Push directory recrawls and partner installs toward the source-aware first_useful_run sequence, not only tools/list and config fetches.",
+      "Drive real workflows through get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url; the public post_install_cart_activation_by_source table shows which sources are stuck before cart URL creation.",
       "Do not call the adoption goal complete until material MCP tool usage, stamped cart landings, and MCP-attributed sales are visible.",
     ],
   };
@@ -2465,6 +2471,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
     `- External-qualified MCP tool calls: ${payload.counts.external_qualified_mcp_tool_calls}`,
     `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
+    `- Post-install sources waiting on create_cart_url: ${payload.counts.post_install_sources_waiting_on_create_cart_url}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
     `- MCP cart landings: ${payload.counts.mcp_cart_landings}`,
     `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
@@ -2563,6 +2570,18 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     "| --- | ---: |",
     table(payload.source_attribution.tool_runtime_sources),
     "",
+    "### Post-Install Cart Activation By Source",
+    "",
+    "| Source | Starts | Config fetches | Installs | Tool calls | Candidates | Price | Inventory | Cart URLs | External-qualified cart URLs | Missing next step |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+    payload.source_attribution.post_install_cart_activation_by_source
+      .slice(0, 10)
+      .map(
+        (row) =>
+          `| ${row.source} | ${row.starts} | ${row.tracked_config_fetches} | ${row.install_intents} | ${row.mcp_tool_calls} | ${row.get_cart_handoff_candidates} | ${row.get_pricing} | ${row.check_inventory} | ${row.create_cart_url_calls} | ${row.external_qualified_create_cart_url_calls} | ${row.missing_next_step} |`
+      )
+      .join("\n") || "| none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | none |",
+    "",
     "## Proof Gate",
     "",
     `- Usage exists: ${payload.proof_gate.usage_exists ? "yes" : "no"}`,
@@ -2606,7 +2625,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R03";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R04";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -2660,6 +2679,121 @@ function countQualifiedPublicMcpToolCalls(events: Array<Record<string, unknown>>
     if (toolName && String(event.tool_name ?? "") !== toolName) return false;
     return isQualifiedPublicFunnelEvent(event);
   }).length;
+}
+
+function postInstallActivationSource(event: Record<string, unknown>): string {
+  const eventName = String(event.event ?? "");
+  const mcpSource = safeEventText(event.mcp_source_context, 80);
+  if (eventName === "mcp_tool_call" && mcpSource) return mcpSource;
+  const utmSource = safeEventText(event.utm_source, 80);
+  if (utmSource && utmSource !== "unknown") return utmSource;
+  const mcpKey = safeEventText(event.mcp_key, 120);
+  if (mcpKey.startsWith("start:")) return safeEventText(mcpKey.slice("start:".length), 80);
+  if (mcpKey.startsWith("config:")) return safeEventText(mcpKey.slice("config:".length), 80);
+  if (mcpKey.startsWith("install_intent:") || mcpKey.startsWith("install_copy:")) return safeEventText(mcpKey.split(":")[1], 80);
+  return "";
+}
+
+function postInstallMissingNextStep(row: {
+  install_intents: number;
+  tracked_config_fetches: number;
+  mcp_tool_calls: number;
+  get_cart_handoff_candidates: number;
+  get_pricing: number;
+  check_inventory: number;
+  create_cart_url_calls: number;
+}) {
+  if (row.install_intents === 0 && row.tracked_config_fetches === 0) return "drive_tracked_install_or_config_fetch";
+  if (row.mcp_tool_calls === 0) return "run_first_useful_run_from_source_aware_endpoint";
+  if (row.get_cart_handoff_candidates === 0) return "call_get_cart_handoff_candidates_for_sku_1066";
+  if (row.get_pricing === 0) return "call_get_pricing_for_sku_1066";
+  if (row.check_inventory === 0) return "call_check_inventory_for_sku_1066";
+  if (row.create_cart_url_calls === 0) return "call_create_cart_url_for_sku_1066_no_order_created";
+  return "monitor_cart_landing_and_order_progression";
+}
+
+function postInstallCartActivationBySource(events: Array<Record<string, unknown>>) {
+  const rows = new Map<
+    string,
+    {
+      source: string;
+      starts: number;
+      tracked_config_fetches: number;
+      install_intents: number;
+      install_copies: number;
+      mcp_tool_calls: number;
+      get_cart_handoff_candidates: number;
+      get_pricing: number;
+      check_inventory: number;
+      create_cart_url_calls: number;
+      external_qualified_create_cart_url_calls: number;
+      install_targets: Record<string, number>;
+    }
+  >();
+  const ensure = (source: string) => {
+    const key = source || "unknown";
+    const existing = rows.get(key);
+    if (existing) return existing;
+    const row = {
+      source: key,
+      starts: 0,
+      tracked_config_fetches: 0,
+      install_intents: 0,
+      install_copies: 0,
+      mcp_tool_calls: 0,
+      get_cart_handoff_candidates: 0,
+      get_pricing: 0,
+      check_inventory: 0,
+      create_cart_url_calls: 0,
+      external_qualified_create_cart_url_calls: 0,
+      install_targets: {} as Record<string, number>,
+    };
+    rows.set(key, row);
+    return row;
+  };
+  for (const event of events) {
+    const source = postInstallActivationSource(event);
+    if (!source) continue;
+    const row = ensure(source);
+    const eventName = String(event.event ?? "");
+    const toolName = String(event.tool_name ?? "");
+    if (eventName === "mcp_start_click") row.starts += 1;
+    if (eventName === "mcp_resource_read" && String(event.mcp_key ?? "").startsWith("config:")) row.tracked_config_fetches += 1;
+    if (eventName === "mcp_install_intent") row.install_intents += 1;
+    if (eventName === "mcp_install_copy") row.install_copies += 1;
+    if (eventName === "mcp_install_intent" || eventName === "mcp_install_copy" || eventName === "mcp_tool_call") {
+      const target = safeEventText(event.mcp_install_target || event.tool_name || event.utm_content, 80);
+      if (target) row.install_targets[target] = (row.install_targets[target] ?? 0) + 1;
+    }
+    if (eventName !== "mcp_tool_call") continue;
+    row.mcp_tool_calls += 1;
+    if (toolName === "get_cart_handoff_candidates") row.get_cart_handoff_candidates += 1;
+    if (toolName === "get_pricing") row.get_pricing += 1;
+    if (toolName === "check_inventory") row.check_inventory += 1;
+    if (toolName === "create_cart_url") {
+      row.create_cart_url_calls += 1;
+      if (isQualifiedPublicFunnelEvent(event)) row.external_qualified_create_cart_url_calls += 1;
+    }
+  }
+  return [...rows.values()]
+    .map((row) => ({
+      ...row,
+      install_targets: Object.entries(row.install_targets)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 5)
+        .map(([key, count]) => ({ key, count })),
+      missing_next_step: postInstallMissingNextStep(row),
+    }))
+    .sort(
+      (a, b) =>
+        b.external_qualified_create_cart_url_calls - a.external_qualified_create_cart_url_calls ||
+        b.create_cart_url_calls - a.create_cart_url_calls ||
+        b.install_intents - a.install_intents ||
+        b.tracked_config_fetches - a.tracked_config_fetches ||
+        b.starts - a.starts ||
+        a.source.localeCompare(b.source)
+    )
+    .slice(0, 25);
 }
 
 function qualifiedFirstPartyCartLandingsFromSummary(summary: ReturnType<typeof summarizeAiSalesEvents>): number {
@@ -2790,6 +2924,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
   const installIntents = byEvent.mcp_install_intent ?? 0;
   const installCopies = byEvent.mcp_install_copy ?? 0;
   const mcpSourceAttributedRuntimeEvents = (summary.by_mcp_source_context ?? []).reduce((total, row) => total + row.count, 0);
+  const postInstallCartActivation = postInstallCartActivationBySource(events);
   const qualifiedCartLandings = qualifiedFirstPartyCartLandingsFromSummary(summary);
   const orderSummary = await publicMcpOrderSummary(env, orderDays, orderLimit);
   const attributedOrderCount = Number(orderSummary.attributed_order_count || 0);
@@ -2846,6 +2981,9 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       create_cart_url_calls: createCartUrlCalls,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
       external_qualified_create_cart_url_calls: qualifiedCreateCartUrlCalls,
+      post_install_sources_waiting_on_create_cart_url: postInstallCartActivation.filter(
+        (row) => row.install_intents + row.tracked_config_fetches > 0 && row.create_cart_url_calls === 0
+      ).length,
       mcp_cart_clicks: cartClicks,
       raw_first_party_mcp_cart_landings: cartLandings,
       qualified_first_party_mcp_cart_landings: qualifiedCartLandings,
@@ -2869,6 +3007,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_install_targets: summary.by_mcp_install_target,
       tool_mcp_keys: summary.by_tool_mcp_key,
       tool_runtime_sources: summary.by_tool_mcp_source_context,
+      post_install_cart_activation_by_source: postInstallCartActivation,
       order_attribution_sources: orderSummary.top_attribution_sources,
     },
     top: {
@@ -2893,7 +3032,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     },
     next_actions: [
       "Use tracked install-action links in every stale directory refresh so starts and installs stay source-attributed.",
-      "Push external users from install intent into get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Push external users from install intent into get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url; use post_install_cart_activation_by_source to see the exact stuck source.",
       "Do not call the MCP goal complete until qualified visitor volume, qualified cart landings, and MCP-attributed revenue are all visible.",
     ],
   };

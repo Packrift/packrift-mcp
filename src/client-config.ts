@@ -112,8 +112,9 @@ const FIRST_TESTS = [
 ] as const;
 
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
+  const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R04",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R05",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -155,12 +156,23 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       "For Cursor, Windsurf, VS Code, Cline, Roo-style hosts, Claude Desktop, and generic MCP clients, use the config.mcpServers.packrift object.",
       "If a host asks for transport, choose HTTP or Streamable HTTP.",
       "Do not ask buyers for Packrift API keys; the hosted endpoint requires no buyer-side auth.",
-      "Use prepare_purchase_handoff for exact SKU prep, then create cart handoffs only after buyer confirmation.",
+      "After install, run the required post-install verification sequence for SKU 1066; it returns a measured cart URL only and does not place an order.",
+      "For real buyer workflows, use prepare_purchase_handoff for exact SKU prep, then create cart handoffs only after buyer confirmation.",
       "Use /r/config/{source} when sharing the config from a directory, partner, campaign, or agent workflow so config fetches can be attributed.",
       "Use /r/install/{source}/{target} when sharing a target-specific command or config so install-intent can be attributed before tool calls arrive.",
     ],
+    required_post_install_verification: {
+      required: true,
+      no_order_created: true,
+      endpoint: firstUsefulRun.endpoint,
+      run: "Run the first_useful_run sequence after adding Packrift MCP. It confirms exact SKU, live price, live inventory, and a measured cart handoff URL.",
+      required_final_tool: "create_cart_url",
+      required_sku: "1066",
+      success_signal: "create_cart_url returns a URL starting with https://mcp.packrift.com/r/cart/1066",
+      sequence: firstUsefulRun.sequence,
+    },
     first_tests: FIRST_TESTS,
-    first_useful_run: mcpFirstUsefulRun("generic", "client_config"),
+    first_useful_run: firstUsefulRun,
     proof_urls: {
       health: "https://mcp.packrift.com/health",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -176,6 +188,10 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
 
 function fencedJson(value: unknown): string {
   return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
+}
+
+function fencedShell(value: string): string {
+  return ["```sh", value, "```"].join("\n");
 }
 
 export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string {
@@ -220,6 +236,20 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     "",
     payload.host_notes.map((note) => `- ${note}`).join("\n"),
     "",
+    "## Required Post-Install Verification",
+    "",
+    payload.required_post_install_verification.run,
+    "",
+    `Endpoint: \`${payload.required_post_install_verification.endpoint}\``,
+    "",
+    `Required final tool: \`${payload.required_post_install_verification.required_final_tool}\``,
+    "",
+    fencedJson(payload.required_post_install_verification.sequence),
+    "",
+    "Pasteable curl script:",
+    "",
+    fencedShell(payload.first_useful_run.curl_script),
+    "",
     "## First Tests",
     "",
     payload.first_tests.map((test) => [`### ${test.id}`, "", test.purpose, "", fencedJson(test.request)].join("\n")).join("\n\n"),
@@ -231,6 +261,10 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     payload.first_useful_run.buyer_prompt,
     "",
     fencedJson(payload.first_useful_run.sequence),
+    "",
+    "Pasteable curl script:",
+    "",
+    fencedShell(payload.first_useful_run.curl_script),
     "",
     "## Proof URLs",
     "",

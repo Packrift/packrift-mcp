@@ -177,7 +177,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R06",
+    release: "PACKRIFT-MCP-START-R07",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -260,6 +260,10 @@ function fencedJson(value: unknown): string {
   return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
 }
 
+function fencedShell(value: string): string {
+  return ["```sh", value, "```"].join("\n");
+}
+
 function escapeMarkdown(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
@@ -333,6 +337,10 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "",
     fencedJson(payload.first_useful_run.sequence),
     "",
+    "Pasteable curl script:",
+    "",
+    fencedShell(payload.first_useful_run.curl_script),
+    "",
     "## Buyer Prompts",
     "",
     payload.buyer_prompts.map((prompt) => `- ${escapeMarkdown(prompt)}`).join("\n"),
@@ -386,6 +394,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
   const firstUsefulPrompt = `${firstUsefulRun.buyer_prompt}\n\nUse endpoint: ${firstUsefulRun.endpoint}`;
   const firstUsefulSequence = JSON.stringify(firstUsefulRun.sequence, null, 2);
+  const firstUsefulCurlScript = firstUsefulRun.curl_script;
   const remoteConfig = JSON.stringify(payload.install.remote_mcp_json, null, 2);
   const flow = payload.first_flow
     .map(
@@ -610,6 +619,10 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <div class="panel">
           <div class="panel-head"><strong>JSON-RPC sequence</strong>${copyButton(firstUsefulSequence, "Copy", "first_useful_sequence")}</div>
           <pre>${codeBlock(firstUsefulRun.sequence)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Curl script</strong>${copyButton(firstUsefulCurlScript, "Copy", "first_useful_curl_script")}</div>
+          <pre>${codeBlock(firstUsefulCurlScript)}</pre>
         </div>
       </div>
     </section>
