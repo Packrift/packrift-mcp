@@ -247,6 +247,19 @@ async function main() {
     Promise.resolve(readJsonIfExists(AGENT_CAPTURE_CHECK_LATEST)),
   ]);
   const rows = directoryActionRows(submitActions, distribution);
+  const rowsMissingTrackedStart = rows.filter((row) => !String(row.tracked_start_url ?? "").startsWith("https://mcp.packrift.com/r/start/"));
+  const rowsMissingTrackedMessage = rows.filter((row) => !String(row.message ?? "").includes("/r/start/"));
+  if (rowsMissingTrackedStart.length || rowsMissingTrackedMessage.length) {
+    throw new Error(
+      [
+        "Directory outreach rows must preserve tracked start URLs from the canonical submit-action queue.",
+        rowsMissingTrackedStart.length ? `Missing tracked_start_url: ${rowsMissingTrackedStart.map((row) => row.id ?? row.name).join(", ")}` : "",
+        rowsMissingTrackedMessage.length ? `Missing tracked message link: ${rowsMissingTrackedMessage.map((row) => row.id ?? row.name).join(", ")}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
   const payload = {
     generated_at: new Date().toISOString(),
     capture: {
