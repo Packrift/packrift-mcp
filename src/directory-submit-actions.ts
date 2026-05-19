@@ -354,17 +354,17 @@ const ACTIONS = [
   {
     id: "mcplist_ai",
     label: "MCPLIST",
-    action_status: "submit_path_unclear",
+    action_status: "email_submission_ready",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Directory search plus unclear submit path.",
+    method: "Directory contact email only; no public submit form found.",
     evidence:
-      "MCPLIST has a public MCP server directory; its FAQ references submission through a form or GitHub repository, but no clean public submit URL was confirmed.",
+      "MCPLIST has a public MCP server directory, no public submit form was found, and the About page exposes contact@mcplist.ai for contact.",
     stale_markers: ["Packrift not visible in MCPLIST"],
     recrawl_subject: "Submit Packrift MCP to MCPLIST",
-    next_action: "Find the current submission form or repository path, then submit the hosted endpoint, marketplace manifest, update card, and first-useful-run proof.",
+    next_action: "Review and send the contact@mcplist.ai draft with hosted endpoint, marketplace manifest, update card, and first-useful-run proof.",
     listing_url: "https://www.mcplist.ai/?search=packrift",
-    submission_url: "https://www.mcplist.ai/",
+    submission_url: "mailto:contact@mcplist.ai",
   },
   {
     id: "mcphubz",
@@ -443,28 +443,30 @@ const ACTIONS = [
   {
     id: "gpmcp",
     label: "GPMCP",
-    action_status: "manual_contact_or_hosting_evaluation",
+    action_status: "support_email_only",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Manual contact or hosting/provider evaluation.",
-    evidence: "GPMCP exposes MCP hosting and directory-style discovery; Packrift is not yet visible by name.",
+    method: "Support email only; no real no-login submit path found.",
+    evidence:
+      "GPMCP has placeholder product links, no public marketplace/search API, /api returns 404, and support@gpmcp.com is the only usable contact path found.",
     stale_markers: ["Packrift not visible in GPMCP"],
     recrawl_subject: "Evaluate GPMCP listing or hosting path for Packrift MCP",
-    next_action: "Use the hosted Packrift endpoint and source-specific update card if GPMCP offers a listing, contact, or import path.",
+    next_action: "Review the existing support@gpmcp.com draft or hold until GPMCP exposes a real submit/import path.",
     listing_url: "https://www.gpmcp.com/",
     submission_url: "https://www.gpmcp.com/",
   },
   {
     id: "theresamcpforthat",
     label: "There's an MCP for That",
-    action_status: "monitor_or_submit",
+    action_status: "static_directory_no_submit",
     directory_status: "unlisted",
     priority: "medium",
-    method: "Directory monitoring and manual submit/contact if available.",
-    evidence: "There's an MCP for That is a public MCP discovery directory; Packrift is not yet visible by name.",
+    method: "Static directory monitoring; no submit/contact path found.",
+    evidence:
+      "There's an MCP for That has a public static directory search showing no Packrift result, but no public submit, contact, or repository path was found.",
     stale_markers: ["Packrift not visible in There's an MCP for That"],
     recrawl_subject: "Submit Packrift MCP to There's an MCP for That",
-    next_action: "Monitor for a submit or repository path and use the directory update card as the current hosted endpoint proof.",
+    next_action: "Monitor only until a real submit, contact, or upstream ingestion path appears.",
     listing_url: "https://theresamcpforthat.com/directory?search=packrift",
     submission_url: "https://theresamcpforthat.com/",
   },
@@ -768,7 +770,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R34",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R35",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -819,7 +821,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R06",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R07",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",

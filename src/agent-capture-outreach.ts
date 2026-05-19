@@ -68,7 +68,11 @@ function agentPromptSupport(source: string, target: string) {
     target,
     source_aware_endpoint: firstUsefulRun.endpoint,
     copy_ready_agent_prompt: firstUsefulRun.agent_prompt,
+    copy_ready_curl_script: firstUsefulRun.curl_script,
+    json_rpc_sequence: firstUsefulRun.sequence,
+    required_success_signals: firstUsefulRun.success_signals,
     agent_prompt_page: `https://mcp.packrift.com/r/run/${source}/${target}?format=html`,
+    first_run_execute_url: `https://mcp.packrift.com/r/run/${source}/${target}?execute=1`,
     reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${source}?format=html`,
     generic_mcp_json: sourceAwareMcpJson(source, target),
     claude_code_command: `claude mcp add --transport http packrift "${firstUsefulRun.endpoint}"`,
@@ -377,7 +381,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R16",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R17",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

@@ -194,10 +194,10 @@ const TARGETS = [
     name: "mcplist_ai",
     label: "MCPLIST",
     listing_url: "https://www.mcplist.ai/?search=packrift",
-    submission_url: "https://www.mcplist.ai/",
+    submission_url: "mailto:contact@mcplist.ai",
     category: "Business",
     priority: "medium",
-    action: "Find the current MCPLIST submission form or repository path, then submit Packrift with the hosted endpoint and source-specific update card.",
+    action: "Review and send the contact@mcplist.ai draft with the hosted endpoint, marketplace manifest, and source-specific update card.",
   },
   {
     name: "mcphubz",
@@ -251,7 +251,7 @@ const TARGETS = [
     submission_url: "https://www.gpmcp.com/",
     category: "Business",
     priority: "medium",
-    action: "Monitor GPMCP for a listing/import/contact path and use the source-specific update card if a submission path opens.",
+    action: "Review the existing support@gpmcp.com draft or hold until GPMCP exposes a real submit/import path.",
   },
   {
     name: "theresamcpforthat",
@@ -260,7 +260,7 @@ const TARGETS = [
     submission_url: "https://theresamcpforthat.com/",
     category: "Business",
     priority: "medium",
-    action: "Monitor for a public submit or repository path and use the source-specific update card when a path is available.",
+    action: "Monitor only until a real submit, contact, or upstream ingestion path appears.",
   },
   {
     name: "mcpserverfinder",
@@ -735,7 +735,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R06",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R07",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {

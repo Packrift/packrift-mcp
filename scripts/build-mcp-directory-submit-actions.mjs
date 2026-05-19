@@ -121,10 +121,11 @@ const DIRECT_STATUS = {
     next_action: "Monitor after official registry and high-priority directory refreshes propagate.",
   },
   mcplist_ai: {
-    status: "submit_path_unclear",
-    method: "Directory search plus unclear submit path",
-    evidence: "MCPLIST has a public MCP server directory; its FAQ references submission through a form or GitHub repository, but no clean public submit URL was confirmed.",
-    next_action: "Find the current MCPLIST submission form or repository path, then submit the hosted endpoint and source-specific update card.",
+    status: "email_submission_ready",
+    method: "Directory contact email only; no public submit form found",
+    evidence:
+      "MCPLIST has a public MCP server directory, no public submit form was found, and the About page exposes contact@mcplist.ai for contact.",
+    next_action: "Review and send the contact@mcplist.ai draft with the hosted endpoint and source-specific update card.",
   },
   mcphubz: {
     status: "login_required_contact_broken",
@@ -161,16 +162,18 @@ const DIRECT_STATUS = {
     next_action: "Monitor MCP Solutions explore/search for publication; use the source-specific update card if review asks for current endpoint proof.",
   },
   gpmcp: {
-    status: "manual_contact_or_hosting_evaluation",
-    method: "Manual contact or hosting/provider evaluation",
-    evidence: "GPMCP exposes MCP hosting and browsing, but no public submit/update form was found.",
-    next_action: "Monitor GPMCP for a listing/import/contact path and use the source-specific update card if one opens.",
+    status: "support_email_only",
+    method: "Support email only; no real no-login submit path found",
+    evidence:
+      "GPMCP has placeholder product links, no public marketplace/search API, /api returns 404, and support@gpmcp.com is the only usable contact path found.",
+    next_action: "Review the existing support@gpmcp.com draft or hold until GPMCP exposes a real submit/import path.",
   },
   theresamcpforthat: {
-    status: "monitor_or_submit",
-    method: "Directory monitoring and manual submit/contact if available",
-    evidence: "There's an MCP for That is a public MCP discovery directory; no public submit/update instruction was visible.",
-    next_action: "Monitor for a public submit or repository path and use the source-specific update card when available.",
+    status: "static_directory_no_submit",
+    method: "Static directory monitoring; no submit/contact path found",
+    evidence:
+      "There's an MCP for That has a public static directory search showing no Packrift result, but no public submit, contact, or repository path was found.",
+    next_action: "Monitor only until a real submit, contact, or upstream ingestion path appears.",
   },
   mcpserverfinder: {
     status: "email_submission_ready",
