@@ -289,6 +289,7 @@ async function liveMcpCheck() {
     clientConfigResult,
     rootMcpJsonResult,
     wellKnownMcpJsonResult,
+    marketplaceManifestResult,
     trackedConfigGenericResult,
     trackedInstallCodexResult,
     trackedInstallCodexHtmlResult,
@@ -347,6 +348,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-client-config.json"),
     fetchText("https://mcp.packrift.com/mcp.json"),
     fetchText("https://mcp.packrift.com/.well-known/mcp.json"),
+    fetchText("https://mcp.packrift.com/.well-known/mcp-marketplace.json"),
     fetchText("https://mcp.packrift.com/r/config/generic?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=text&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=html&utm_content=distribution_check"),
@@ -405,6 +407,7 @@ async function liveMcpCheck() {
   const clientConfig = clientConfigResult.ok ? JSON.parse(clientConfigResult.text) : null;
   const rootMcpJson = rootMcpJsonResult.ok ? JSON.parse(rootMcpJsonResult.text) : null;
   const wellKnownMcpJson = wellKnownMcpJsonResult.ok ? JSON.parse(wellKnownMcpJsonResult.text) : null;
+  const marketplaceManifest = marketplaceManifestResult.ok ? JSON.parse(marketplaceManifestResult.text) : null;
   const trackedConfigGeneric = trackedConfigGenericResult.ok ? JSON.parse(trackedConfigGenericResult.text) : null;
   const trackedFirstRunExecute = trackedFirstRunExecuteResult.ok ? JSON.parse(trackedFirstRunExecuteResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
@@ -501,6 +504,13 @@ async function liveMcpCheck() {
       start?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       start?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       start?.first_useful_run?.curl_commands?.length >= 5 &&
+      marketplaceManifest?.mcp_server?.tools?.length >= 15 &&
+      marketplaceManifest?.mcp_server?.tools?.some((tool) => tool?.name === "prepare_purchase_handoff") &&
+      marketplaceManifest?.signals?.tool_count >= 15 &&
+      marketplaceManifest?.signals?.tool_names?.includes("prepare_purchase_handoff") &&
+      marketplaceManifest?.signals?.required_current_tools?.length >= 15 &&
+      marketplaceManifest?.discovery?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
+      marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
@@ -1277,6 +1287,11 @@ async function liveMcpCheck() {
         endpoint: clientConfig?.canonical_endpoint ?? null,
         root_mcp_json_status: rootMcpJsonResult.status,
         well_known_mcp_json_status: wellKnownMcpJsonResult.status,
+        marketplace_manifest_status: marketplaceManifestResult.status,
+        marketplace_manifest_tool_count: marketplaceManifest?.signals?.tool_count ?? null,
+        marketplace_manifest_has_prepare_purchase_handoff: Boolean(
+          marketplaceManifest?.signals?.tool_names?.includes("prepare_purchase_handoff")
+        ),
         tracked_config_generic_status: trackedConfigGenericResult.status,
         tracked_install_codex_status: trackedInstallCodexResult.status,
       },

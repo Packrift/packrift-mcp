@@ -21,6 +21,8 @@ The server is designed for buyers and AI agents that need packaging supplies by 
 - MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
 - Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
+- MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
+- MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - Source repository: https://github.com/Packrift/packrift-mcp
 
 ## Category
@@ -47,17 +49,24 @@ Business Tools
 - "Show priority Packrift cart handoff candidates for AI procurement agents."
 - "Show the Packrift MCP install matrix for Claude, Codex, IDE agents, Glama, and browser agents."
 - "Show buyer use cases for Packrift MCP and the best tool flow for each."
+
+Current hosted tool count: 15.
+
 - Tool: `search_products` — Find matching Packrift packaging products from natural-language specs.
 - Tool: `get_product` — Retrieve full detail for a specific AI-approved SKU or handle.
 - Tool: `get_pricing` — Confirm live price for a specific SKU.
 - Tool: `check_inventory` — Confirm availability for a specific SKU.
 - Tool: `get_shipping_estimate` — Estimate shipping for a Packrift packaging order.
 - Tool: `find_packaging_for_item` — Recommend packaging from item dimensions or use case.
+- Tool: `get_cart_handoff_candidates` — Return priority MCP cart handoff candidates.
 - Tool: `compare_alternatives` — Compare viable Packrift packaging alternatives.
 - Tool: `pack_calculator` — Calculate a recommended packaging fit.
 - Tool: `inventory_status` — Summarize inventory status for buyer handoff.
 - Tool: `create_cart_url` — Generate an attributed Packrift checkout handoff.
-- Tool: `get_cart_handoff_candidates` — Return priority MCP cart handoff candidates.
+- Tool: `prepare_purchase_handoff` — One-call exact-SKU confirmation path that checks product, price, inventory, and guarded cart handoff.
+- Tool: `get_reorder_link` — Return reorder and product URLs for repeat procurement.
+- Tool: `get_bulk_quote_link` — Route large-volume or no-exact-match requests to tracked bulk quote recovery.
+- Tool: `explain_no_exact_match` — Explain exact-match gaps and prevent nearby products from being presented as exact.
 
 ## Tags
 mcp, ecommerce, packaging, procurement, shopify, inventory, shipping, cart-handoff, remote-mcp, business-tools, exact-spec, ai-commerce
