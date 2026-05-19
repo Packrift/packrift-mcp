@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R10";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R10";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R11";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R11";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -52,6 +52,17 @@ function remoteMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
   };
 }
 
+export function stdioMcpRemoteJson(name = "packrift", endpoint = MCP_ENDPOINT) {
+  return {
+    mcpServers: {
+      [name]: {
+        command: "npx",
+        args: ["-y", "mcp-remote", endpoint],
+      },
+    },
+  };
+}
+
 export function clineMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
   return {
     mcpServers: {
@@ -76,6 +87,21 @@ export const INSTALL_TARGETS: readonly InstallTarget[] = [
     install: remoteMcpJson(),
     firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates", 'create_cart_url({ sku:"1066", quantity:1 })'],
     notes: ["Use this when the host can read MCP JSON config.", "No buyer-side Packrift API key is required."],
+  },
+  {
+    id: "stdio_mcp_remote",
+    aliases: ["stdio", "stdio_bridge", "mcp_remote", "mcp-remote", "legacy_stdio", "desktop_stdio", "local_stdio_bridge"],
+    label: "Stdio MCP bridge with mcp-remote",
+    audience: "MCP hosts that only accept a local stdio command and cannot connect to remote HTTP directly.",
+    format: "json",
+    copyText: JSON.stringify(stdioMcpRemoteJson(), null, 2),
+    install: stdioMcpRemoteJson(),
+    firstTests: ["tools/list", "prompts/list", "get_cart_handoff_candidates", "get_pricing", "check_inventory", 'create_cart_url({ sku:"1066", quantity:1 })'],
+    notes: [
+      "Use this only when the host cannot accept remote HTTP or Streamable HTTP directly.",
+      "The bridge runs npx mcp-remote and forwards calls to the hosted Packrift MCP endpoint.",
+      "This is a compatibility bridge, not a Packrift CLI or local buyer surface.",
+    ],
   },
   {
     id: "claude_code",
@@ -317,7 +343,7 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
       "Reorder Packrift SKU 1066. Confirm the exact product, live price, and inventory, then prepare a measured cart handoff for quantity 1.",
     agent_prompt: agentPrompt,
     run_rule:
-      "Use the source-aware endpoint above. The final create_cart_url call only creates a cart URL string; it does not place an order.",
+      "Use the source-aware endpoint above. The final create_cart_url call only creates a cart URL string; shell runners fetch the returned /r/cart landing once to record the handoff, but do not place an order.",
     sequence,
     curl_commands: sequence.map((request) => mcpCurlCommand(endpoint, request)),
     curl_script: mcpCurlScript(endpoint, sequence),
@@ -327,6 +353,7 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
       "get_pricing returns a live unit price and currency",
       "check_inventory returns in_stock before cart handoff",
       "create_cart_url returns a URL starting with https://mcp.packrift.com/r/cart/1066",
+      "curl shell runners open the returned /r/cart URL once to record mcp_cart_landing without following Shopify checkout",
       "Every tool call carries source_context, journey_id, and result_set_id so source attribution survives MCP hosts that strip endpoint query parameters",
       "usage snapshot records a source-attributed create_cart_url tool call when the workflow is run from a tracked install",
     ],
@@ -346,7 +373,7 @@ function mcpCurlCommand(endpoint: string, request: Record<string, unknown>): str
   return [
     `curl -sS ${shellQuote(endpoint)} \\`,
     "  -H 'content-type: application/json' \\",
-    "  -H 'user-agent: MCP-First-Run/1.0 (+https://mcp.packrift.com/start)' \\",
+    "  -H 'user-agent: MCP-First-Run/1.1 (+https://mcp.packrift.com/start)' \\",
     `  -d ${shellQuote(JSON.stringify(request))}`,
   ].join("\n");
 }
@@ -357,26 +384,53 @@ function mcpCurlScript(endpoint: string, sequence: readonly Record<string, unkno
     "set -euo pipefail",
     "",
     `PACKRIFT_MCP_ENDPOINT=${shellQuote(endpoint)}`,
+    "PACKRIFT_MCP_USER_AGENT='MCP-First-Run/1.1 (+https://mcp.packrift.com/start)'",
+    'PACKRIFT_MCP_SESSION_ID="${PACKRIFT_MCP_SESSION_ID:-mcp-first-run-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM}"',
+    "PACKRIFT_MCP_LAST_RESPONSE=''",
     "",
     "rpc() {",
-    '  curl -sS "$PACKRIFT_MCP_ENDPOINT" \\',
+    '  PACKRIFT_MCP_LAST_RESPONSE="$(curl -sS "$PACKRIFT_MCP_ENDPOINT" \\',
     "    -H 'content-type: application/json' \\",
-    "    -H 'user-agent: MCP-First-Run/1.0 (+https://mcp.packrift.com/start)' \\",
-    '    -d "$1"',
-    "  printf '\\n'",
+    '    -H "Mcp-Session-Id: $PACKRIFT_MCP_SESSION_ID" \\',
+    '    -H "user-agent: $PACKRIFT_MCP_USER_AGENT" \\',
+    '    -d "$1")"',
+    '  printf "%s\\n" "$PACKRIFT_MCP_LAST_RESPONSE"',
+    "}",
+    "",
+    "extract_measured_cart_url() {",
+    '  printf "%s\\n" "$PACKRIFT_MCP_LAST_RESPONSE" | grep -Eo \'https://mcp\\.packrift\\.com/r/cart/[^"[:space:]<>\\\\]+\' | tail -n 1 || true',
+    "}",
+    "",
+    "touch_measured_cart_landing() {",
+    '  local cart_url="${PACKRIFT_MCP_CART_URL:-$(extract_measured_cart_url)}"',
+    '  if [ -z "$cart_url" ]; then',
+    '    printf "No measured Packrift MCP /r/cart URL found in the final response.\\n" >&2',
+    "    return 1",
+    "  fi",
+    '  printf "Opening measured Packrift MCP cart landing: %s\\n" "$cart_url"',
+    '  curl -sS -o /dev/null "$cart_url" \\',
+    '    -H "user-agent: $PACKRIFT_MCP_USER_AGENT"',
+    '  printf "Recorded mcp_cart_landing. No order was placed.\\n"',
     "}",
     "",
     ...sequence.map((request) => `rpc ${shellQuote(JSON.stringify(request))}`),
+    "touch_measured_cart_landing",
     "",
   ].join("\n");
 }
 
 function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
   const endpoint = sourceAwareMcpEndpoint(source, target.id);
-  const config = target.id === "cline" ? clineMcpJson("packrift", endpoint) : remoteMcpJson("packrift", endpoint);
+  const config =
+    target.id === "cline"
+      ? clineMcpJson("packrift", endpoint)
+      : target.id === "stdio_mcp_remote"
+        ? stdioMcpRemoteJson("packrift", endpoint)
+        : remoteMcpJson("packrift", endpoint);
   const quotedEndpoint = shellQuote(endpoint);
   switch (target.id) {
     case "generic_streamable_http":
+    case "stdio_mcp_remote":
     case "claude_desktop":
     case "cursor_windsurf_vscode":
     case "cline":
@@ -439,6 +493,15 @@ function sourceAwareInstallForTarget(target: InstallTarget, source: string) {
 }
 
 function hostInstallSteps(target: InstallTarget, source: string, endpoint: string): string[] {
+  if (target.id === "stdio_mcp_remote") {
+    return [
+      "Use this path only when the MCP host cannot install remote HTTP or Streamable HTTP directly.",
+      "Add the copied stdio MCP JSON config so the host runs npx -y mcp-remote against the source-aware Packrift endpoint.",
+      `Confirm the bridge exposes Packrift tools for source ${source} and forwards calls to ${endpoint}.`,
+      "Paste the agent prompt from this page into the host and let the host call the Packrift MCP tools through the bridge.",
+      "Count activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ];
+  }
   if (target.id === "cline") {
     return [
       "Open Cline's MCP Servers settings or the Cline MCP Marketplace review flow.",
@@ -578,7 +641,7 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       success_signal: "create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL",
     },
     first_useful_run: firstUsefulRun,
-    recommended_directory_targets: ["generic_streamable_http", "claude_code", "codex", "cursor_windsurf_vscode", "cline"],
+    recommended_directory_targets: ["generic_streamable_http", "stdio_mcp_remote", "claude_code", "codex", "cursor_windsurf_vscode", "cline"],
     proof_urls: {
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",

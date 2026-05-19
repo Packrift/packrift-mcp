@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R09";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R10";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";

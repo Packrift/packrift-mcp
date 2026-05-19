@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, mcpFirstUsefulRun, sourceAwareMcpEndpoint, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, mcpFirstUsefulRun, sourceAwareMcpEndpoint, stdioMcpRemoteJson, trackedInstallUrl } from "./install-action.js";
 import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 
 export interface McpClientConfigRuntime {
@@ -63,24 +63,29 @@ function sourceAwareInstallExample(source: string) {
   const claudeCodeEndpoint = sourceAwareMcpEndpoint(source, "claude_code");
   const codexEndpoint = sourceAwareMcpEndpoint(source, "codex");
   const clineEndpoint = sourceAwareMcpEndpoint(source, "cline");
+  const stdioEndpoint = sourceAwareMcpEndpoint(source, "stdio_mcp_remote");
   return {
     start_url: `https://mcp.packrift.com/start?utm_source=${source}`,
     tracked_config_url: trackedConfigUrl(source),
     tracked_install_urls: {
       generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
+      stdio_mcp_remote: trackedInstallUrl(source, "stdio_mcp_remote"),
       claude_code: trackedInstallUrl(source, "claude_code"),
       codex: trackedInstallUrl(source, "codex"),
       cline: trackedInstallUrl(source, "cline"),
     },
     source_aware_endpoints: {
       generic_streamable_http: genericEndpoint,
+      stdio_mcp_remote: stdioEndpoint,
       claude_code: claudeCodeEndpoint,
       codex: codexEndpoint,
       cline: clineEndpoint,
     },
     remote_mcp_json: remoteMcpJson("packrift", genericEndpoint),
+    stdio_mcp_remote_json: stdioMcpRemoteJson("packrift", stdioEndpoint),
     cline_mcp_json: clineMcpJson("packrift", clineEndpoint),
     commands: {
+      stdio_mcp_remote: `npx -y mcp-remote ${shellQuote(stdioEndpoint)}`,
       claude_code: `claude mcp add --transport http packrift ${shellQuote(claudeCodeEndpoint)}`,
       codex: `codex mcp add packrift --url ${shellQuote(codexEndpoint)}`,
     },
@@ -160,7 +165,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R10",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R11",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -177,6 +182,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       prompts_count: runtime.promptsCount,
     },
     config: remoteMcpJson(),
+    stdio_mcp_remote_config: stdioMcpRemoteJson(),
     cline_config: clineMcpJson(),
     aliases: {
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
@@ -191,6 +197,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       tracked_install_template: TRACKED_INSTALL_TEMPLATE,
       tracked_install_examples: {
         generic_streamable_http: trackedInstallUrl("generic", "generic_streamable_http"),
+        stdio_mcp_remote: trackedInstallUrl("generic", "stdio_mcp_remote"),
         claude_code: trackedInstallUrl("generic", "claude_code"),
         codex: trackedInstallUrl("generic", "codex"),
         cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
@@ -199,6 +206,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       tracked_run_template: TRACKED_RUN_TEMPLATE,
       tracked_run_examples: {
         generic_streamable_http: trackedRunUrl("generic", "generic_streamable_http"),
+        stdio_mcp_remote: trackedRunUrl("generic", "stdio_mcp_remote"),
         claude_code: trackedRunUrl("generic", "claude_code"),
         codex: trackedRunUrl("generic", "codex"),
         cursor_windsurf_vscode: trackedRunUrl("generic", "cursor_windsurf_vscode"),
@@ -206,12 +214,14 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       },
     },
     install_commands: {
+      stdio_mcp_remote: `npx -y mcp-remote ${MCP_ENDPOINT}`,
       claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
       codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
       endpoint_only: MCP_ENDPOINT,
     },
     host_notes: [
       "For Cursor, Windsurf, VS Code, Roo-style hosts, Claude Desktop, and generic MCP clients, use the config.mcpServers.packrift object.",
+      "For stdio-only MCP hosts that cannot call remote HTTP directly, use stdio_mcp_remote_config; it runs npx mcp-remote and still forwards every call to the hosted Packrift MCP endpoint.",
       "For Cline and the Cline MCP Marketplace review path, use cline_config or the tracked Cline target at /r/install/{source}/cline and /r/run/{source}/cline.",
       "If a host asks for transport, choose HTTP or Streamable HTTP.",
       "Do not ask buyers for Packrift API keys; the hosted endpoint requires no buyer-side auth.",
@@ -274,6 +284,10 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     "",
     fencedJson(payload.cline_config),
     "",
+    "## Copy-Ready Stdio Bridge MCP JSON",
+    "",
+    fencedJson(payload.stdio_mcp_remote_config),
+    "",
     "## Source-Attributed Config Links",
     "",
     `Template: \`${payload.aliases.tracked_config_template}\``,
@@ -305,6 +319,8 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
       .join("\n"),
     "",
     "## Install Commands",
+    "",
+    `Stdio bridge: \`${payload.install_commands.stdio_mcp_remote}\``,
     "",
     `Claude Code: \`${payload.install_commands.claude_code}\``,
     "",

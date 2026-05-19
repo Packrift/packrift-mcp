@@ -82,7 +82,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       install_or_call:
-        "Use the install matrix for generic remote MCP JSON, Claude, Codex, IDE-host, Glama, marketplace, browser-agent, and optional container install paths plus smoke-test JSON-RPC calls.",
+        "Use the install matrix for generic remote MCP JSON, mcp-remote stdio bridge, Claude, Codex, IDE-host, Glama, marketplace, browser-agent, and optional container install paths plus smoke-test JSON-RPC calls.",
       proof_url: "https://mcp.packrift.com/ai/mcp-install-matrix.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       next_action: "Use this as the copy-ready setup layer when asking agent platforms, directories, and developers to try Packrift MCP.",
@@ -97,7 +97,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-install-actions.json",
       install_or_call:
-        "Use /r/install/{source}/{target} for generic MCP JSON, Claude Code, Codex, Claude Desktop, IDE hosts, Glama, and marketplace install handoffs that count as install intent.",
+        "Use /r/install/{source}/{target} for generic MCP JSON, stdio_mcp_remote bridge config, Claude Code, Codex, Claude Desktop, IDE hosts, Glama, and marketplace install handoffs that count as install intent.",
       proof_url: "https://mcp.packrift.com/ai/mcp-install-actions.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       next_action: "Use tracked install actions when a directory or partner can link directly to a client-specific setup path.",
@@ -142,7 +142,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-client-config.json",
       install_or_call:
-        "Fetch /mcp.json, /.well-known/mcp.json, /ai/mcp-client-config.json, or /r/config/{source} and install the mcpServers.packrift remote HTTP endpoint.",
+        "Fetch /mcp.json, /.well-known/mcp.json, /ai/mcp-client-config.json, or /r/config/{source} and install the mcpServers.packrift remote HTTP endpoint; use the stdio_mcp_remote mcp-remote bridge only for hosts that cannot call remote HTTP directly.",
       proof_url: "https://mcp.packrift.com/ai/mcp-client-config.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       next_action: "Use this as the shortest config file in directory submissions and IDE agent setup docs.",
@@ -597,7 +597,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R18",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R19",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -652,6 +652,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "When an external directory is stale or blocked, refresh that directory with this matrix, server.json, health, resources/list, tools/list, and cart smoke evidence.",
       "Use /r/config/{source} for tracked config fetches when a directory or host accepts a direct MCP JSON config URL.",
       "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
+      "Use stdio_mcp_remote with npx mcp-remote only as a thin bridge for MCP hosts that cannot connect to remote HTTP directly.",
       "Use /r/run/{source}/{target} after install to measure first-run intent and push users into create_cart_url.",
       "When a direct MCP client skips tracked config, infer source attribution from recognizable user-agent families such as Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, or generic MCP clients.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",

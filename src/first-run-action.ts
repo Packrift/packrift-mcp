@@ -15,8 +15,8 @@ export interface FirstRunActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R06";
-export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R05";
+export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R07";
+export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R06";
 export const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 
 function normalizeRunSlug(value: string, fallback: string): string {
@@ -115,7 +115,7 @@ export function mcpFirstRunActionsPayload(runtime: FirstRunActionRuntime, source
       required_final_tool: "create_cart_url",
       no_order_created: true,
     })),
-    recommended_targets: ["generic_streamable_http", "claude_code", "codex", "cursor_windsurf_vscode", "cline"],
+    recommended_targets: ["generic_streamable_http", "stdio_mcp_remote", "claude_code", "codex", "cursor_windsurf_vscode", "cline"],
     first_run: mcpFirstRunActionPayload({ source: sourceSlug, target: "generic_streamable_http" }),
     proof_urls: {
       start: "https://mcp.packrift.com/start",

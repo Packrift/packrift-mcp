@@ -36,7 +36,7 @@ Use this when an agent host, directory, or developer needs copy-ready setup path
 - JSON: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - Markdown: https://mcp.packrift.com/ai/mcp-install-matrix.md
 
-The install matrix keeps Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
+The install matrix keeps remote HTTP, stdio bridge, Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
 
 ## Client Config
 
@@ -59,7 +59,7 @@ Use this when a directory, partner, or agent host needs one target-specific inst
 https://mcp.packrift.com/r/install/{source}/{target}
 ```
 
-Common targets are `generic_streamable_http`, `claude_code`, `codex`, `claude_desktop`, and `cursor_windsurf_vscode`. The install-action index is available at https://mcp.packrift.com/ai/mcp-install-actions.json.
+Common targets are `generic_streamable_http`, `stdio_mcp_remote`, `claude_code`, `codex`, `claude_desktop`, `cursor_windsurf_vscode`, and `cline`. The install-action index is available at https://mcp.packrift.com/ai/mcp-install-actions.json.
 
 ## Claude Connector Submission
 
@@ -137,6 +137,19 @@ Use this configuration in MCP clients that support remote HTTP or Streamable HTT
 ```
 
 If your client uses a UI instead of JSON, add a remote MCP server named `packrift` with URL `https://mcp.packrift.com/mcp`.
+
+For clients that only support local stdio MCP commands, use `mcp-remote` as a thin bridge. This is not a Packrift CLI; every call still reaches the hosted Packrift MCP endpoint:
+
+```json
+{
+  "mcpServers": {
+    "packrift": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.packrift.com/mcp"]
+    }
+  }
+}
+```
 
 ## Hosted Connector Listings
 

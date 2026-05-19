@@ -1,4 +1,4 @@
-import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, trackedInstallUrl } from "./install-action.js";
+import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, stdioMcpRemoteJson, trackedInstallUrl } from "./install-action.js";
 
 export interface InstallMatrixRuntime {
   serverVersion: string;
@@ -139,6 +139,20 @@ const HOSTS = [
     notes: ["Use this when the host can read MCP JSON config.", "No buyer-side Packrift API key is required for the hosted endpoint."],
   },
   {
+    id: "stdio_mcp_remote",
+    name: "Stdio MCP bridge with mcp-remote",
+    audience: "Legacy MCP hosts that only accept a local stdio command and cannot connect to remote HTTP directly.",
+    status: "ready",
+    preferred: true,
+    install: stdioMcpRemoteJson(),
+    first_test_ids: ["tools-list", "prompts-list", "candidate-1066", "price-1066", "inventory-1066", "cart-1066"],
+    notes: [
+      "Use this only when the host cannot accept remote HTTP or Streamable HTTP directly.",
+      "The bridge runs npx mcp-remote and forwards calls to the hosted Packrift MCP endpoint.",
+      "This is a compatibility bridge, not a Packrift CLI or local buyer surface.",
+    ],
+  },
+  {
     id: "claude_code",
     name: "Claude Code",
     audience: "Developers adding Packrift to Claude Code as a remote MCP server.",
@@ -259,7 +273,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R06",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R07",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -273,6 +287,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
     install_principles: [
       "Use https://mcp.packrift.com/mcp as the canonical runtime endpoint.",
       "Prefer remote MCP install paths over local self-hosting.",
+      "For stdio-only hosts, use the mcp-remote bridge as a thin compatibility wrapper around the hosted endpoint.",
       "Do not ask buyers for Packrift API keys.",
       "Use browser agents only as read-first discovery bridges; confirm live commerce facts through MCP.",
       "Use /r/config/{source} when sharing copy-ready MCP JSON config from a directory, partner, campaign, or agent handoff so the fetch is measurable.",
@@ -285,6 +300,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
     tracked_install_template: TRACKED_INSTALL_TEMPLATE,
     tracked_install_examples: {
       generic_streamable_http: trackedInstallUrl("generic", "generic_streamable_http"),
+      stdio_mcp_remote: trackedInstallUrl("generic", "stdio_mcp_remote"),
       claude_code: trackedInstallUrl("generic", "claude_code"),
       codex: trackedInstallUrl("generic", "codex"),
       cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
@@ -366,6 +382,10 @@ export function mcpInstallMatrixMarkdown(runtime: InstallMatrixRuntime): string 
     "## Copy-Ready Generic Config",
     "",
     fencedJson(remoteMcpJson()),
+    "",
+    "## Copy-Ready Stdio Bridge Config",
+    "",
+    fencedJson(stdioMcpRemoteJson()),
     "",
     "## Copy-Ready Cline Config",
     "",

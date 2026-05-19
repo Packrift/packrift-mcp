@@ -52,7 +52,7 @@ For a target-specific tracked install action, use:
 https://mcp.packrift.com/r/install/{source}/{target}
 ```
 
-Common targets include `generic_streamable_http`, `claude_code`, `codex`, `claude_desktop`, `cursor_windsurf_vscode`, and `cline`.
+Common targets include `generic_streamable_http`, `stdio_mcp_remote`, `claude_code`, `codex`, `claude_desktop`, `cursor_windsurf_vscode`, and `cline`.
 
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
 
@@ -71,6 +71,12 @@ Cline users should use the tracked Cline target, which returns Cline-native `str
 
 ```text
 https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=json
+```
+
+Hosts that only accept local stdio MCP commands can use the tracked `stdio_mcp_remote` target. It runs `npx mcp-remote` as a thin bridge and still forwards every call to the hosted Packrift endpoint:
+
+```text
+https://mcp.packrift.com/r/install/{source}/stdio_mcp_remote?format=json
 ```
 
 ## Hosted connector and directory listings

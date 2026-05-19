@@ -1,4 +1,4 @@
-import { clineMcpJson } from "./install-action.js";
+import { clineMcpJson, stdioMcpRemoteJson } from "./install-action.js";
 
 export interface AdoptionKitRuntime {
   serverVersion: string;
@@ -131,7 +131,7 @@ print(rpc("candidate-1066", "tools/call", {
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R06",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R07",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -161,6 +161,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       },
       claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
       codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
+      stdio_mcp_remote: stdioMcpRemoteJson(),
+      stdio_mcp_remote_command: `npx -y mcp-remote ${MCP_ENDPOINT}`,
       start_page: "https://mcp.packrift.com/start",
       start_pack: "https://mcp.packrift.com/ai/mcp-start.json",
       reviewer_activation_runner_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
@@ -251,6 +253,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Cart candidates expose an MCP measured landing URL under https://mcp.packrift.com/r/cart/ before the final Shopify cart URL.",
       "Agents must call get_product, get_pricing, and check_inventory before presenting create_cart_url output to a buyer.",
       "Directory reviewers can use https://mcp.packrift.com/r/activate/generic?format=html to run the real MCP sequence in a browser.",
+      "Stdio-only hosts can use npx mcp-remote as a thin bridge to the hosted endpoint; this is not a Packrift CLI.",
     ],
     useful_workflows: [
       {
@@ -313,6 +316,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
     rules: [
       "Use https://mcp.packrift.com/mcp as the canonical endpoint.",
       "Do not build or promote a duplicate Packrift CLI; use only thin wrappers around the hosted MCP endpoint when needed.",
+      "Use the mcp-remote bridge only for hosts that cannot connect to remote HTTP directly.",
       "Use only AI_APPROVE exact matches for purchase handoff.",
       "Confirm live price, inventory, shipping, and cart eligibility before presenting cart or checkout actions.",
       "Use the reviewer activation browser runner when a marketplace, directory, or agent host needs to turn proof interest into a real create_cart_url call.",
@@ -356,6 +360,12 @@ export function mcpAdoptionKitMarkdown(runtime: AdoptionKitRuntime): string {
     "## Install",
     "",
     fencedJson(payload.install.generic_remote_mcp_json),
+    "",
+    "Stdio bridge for hosts without remote HTTP support:",
+    "",
+    fencedJson(payload.install.stdio_mcp_remote),
+    "",
+    `Stdio command: \`${payload.install.stdio_mcp_remote_command}\``,
     "",
     `Claude Code: \`${payload.install.claude_code}\``,
     "",
