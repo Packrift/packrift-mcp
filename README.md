@@ -1,5 +1,6 @@
 # Packrift MCP Server
 
+[![SafeSkill 85/100](https://img.shields.io/badge/SafeSkill-85%2F100_Passes%20with%20Notes-yellow)](https://safeskill.dev/scan/packrift-packrift-mcp)
 Production MCP (Model Context Protocol) server for Packrift exact-spec packaging procurement. Hero use case: find the right packaging supply for a given item, SKU, or reorder need, then confirm live price, inventory, shipping, and cart handoff.
 
 - **Stack**: Cloudflare Workers, TypeScript (strict), Hono, Zod, Streamable HTTP transport
