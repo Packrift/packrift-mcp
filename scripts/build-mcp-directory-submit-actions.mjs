@@ -73,12 +73,21 @@ function targetLabel(target) {
   return target.label ?? target.name;
 }
 
+function trackedStartUrl(source) {
+  const url = new URL(`https://mcp.packrift.com/r/start/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "directory_recrawl");
+  url.searchParams.set("utm_campaign", "packrift_mcp_start");
+  url.searchParams.set("utm_content", "directory_submit_actions");
+  return url.toString();
+}
+
 function publicProofLine(pack) {
   const proof = pack.live_proof ?? {};
   const tools = proof.mcp_tools_list?.tools_count ?? pack.copy?.tools_count ?? 14;
   const resources = proof.mcp_resources_list?.resources_count ?? proof.health?.resources_count ?? 83;
   const prompts = proof.mcp_prompts_list?.prompts_count ?? 9;
-  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R04";
+  const directoryRelease = proof.mcp_directory_refresh?.release ?? "PACKRIFT-MCP-DIRECTORY-REFRESH-R05";
   const directoryTargets = proof.mcp_directory_refresh?.targets_count ?? 7;
   const firstRunRelease = proof.mcp_first_run_proof?.release ?? "PACKRIFT-MCP-FIRST-RUN-PROOF-R01";
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
@@ -88,6 +97,7 @@ function publicProofLine(pack) {
 
 function recrawlMessage(pack, target) {
   const missing = target.missing?.length ? `\nCurrent stale/missing markers: ${target.missing.join(", ")}.\n` : "";
+  const trackedStart = trackedStartUrl(target.name);
   return [
     `Subject: Refresh ${targetLabel(target)} Packrift MCP listing to current hosted endpoint`,
     "",
@@ -102,7 +112,8 @@ function recrawlMessage(pack, target) {
     "- Server name: io.github.Packrift/packrift-mcp",
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
-    "- Start page: https://mcp.packrift.com/start",
+    `- Tracked start page: ${trackedStart}`,
+    "- Canonical start page: https://mcp.packrift.com/start",
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
     "- Description: Exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
@@ -140,9 +151,13 @@ function buildAction(pack, previousByName, target) {
     next_action: defaults.next_action,
     listing_url: target.listing_url,
     submission_url: target.submission_url,
+    tracked_start_url: trackedStartUrl(target.name),
     previous_status: previous?.status ?? null,
     form_fields: target.form_fields,
-    proof_urls: target.proof_urls,
+    proof_urls: {
+      ...target.proof_urls,
+      tracked_start: trackedStartUrl(target.name),
+    },
     recrawl_message: recrawlMessage(pack, target),
   };
 }
@@ -151,7 +166,7 @@ function markdown(payload) {
   const rows = payload.actions
     .map(
       (action) =>
-        `| ${action.label} | ${action.status} | ${action.current_distribution_status} | ${action.priority} | ${action.next_action} |`
+        `| ${action.label} | ${action.status} | ${action.current_distribution_status} | ${action.priority} | ${action.tracked_start_url} | ${action.next_action} |`
     )
     .join("\n");
   const messages = payload.actions
@@ -163,6 +178,7 @@ function markdown(payload) {
     "",
     `Generated: ${payload.generated_at}`,
     `Canonical endpoint: ${payload.canonical_endpoint}`,
+    `Tracked start template: ${payload.tracked_start_template}`,
     `Directory proof: ${payload.directory_refresh_url}`,
     "",
     "## Summary",
@@ -171,8 +187,8 @@ function markdown(payload) {
     "",
     "## Action Queue",
     "",
-    "| Target | Action status | Directory status | Priority | Next action |",
-    "| --- | --- | --- | --- | --- |",
+    "| Target | Action status | Directory status | Priority | Tracked start URL | Next action |",
+    "| --- | --- | --- | --- | --- | --- |",
     rows,
     "",
     "## Copy-Ready Recrawl Messages",
@@ -192,6 +208,7 @@ function main() {
   const payload = {
     generated_at: new Date().toISOString(),
     canonical_endpoint: "https://mcp.packrift.com/mcp",
+    tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
     directory_refresh_url: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
     source_pack_generated_at: pack.generated_at,
     source_distribution_counts: pack.distribution_counts,

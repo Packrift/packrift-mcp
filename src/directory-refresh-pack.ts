@@ -8,6 +8,7 @@ export interface DirectoryRefreshRuntime {
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_START_URL = "https://mcp.packrift.com/start";
 const MCP_START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
+const MCP_TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 
 const DIRECTORY_TARGETS = [
@@ -73,7 +74,7 @@ const DIRECTORY_TARGETS = [
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R04",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R05",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -88,6 +89,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       tags: ["mcp", "ecommerce", "packaging", "procurement", "shopify", "cart-handoff", "inventory"],
       website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
       start_url: MCP_START_URL,
+      tracked_start_template: MCP_TRACKED_START_TEMPLATE,
       repository_url: "https://github.com/Packrift/packrift-mcp",
       remote_endpoint: MCP_ENDPOINT,
       contact_email: "farhan@packrift.com",
@@ -105,6 +107,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       health: "https://mcp.packrift.com/health",
       manifest: "https://mcp.packrift.com/manifest",
       mcp_start: MCP_START_JSON_URL,
+      tracked_start_template: MCP_TRACKED_START_TEMPLATE,
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
       glama_claim: "https://mcp.packrift.com/.well-known/glama.json",

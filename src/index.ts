@@ -629,6 +629,7 @@ const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-16-
 const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R02";
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
+const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEMETRY-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
 const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
@@ -653,12 +654,27 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "mcp_resource_list",
   "mcp_resource_templates_list",
   "mcp_resource_read",
+  "mcp_start_click",
   "spec_search",
   "exact_match",
   "multi_match",
   "no_match",
   "sku_page_view",
 ]);
+
+const MCP_START_REDIRECT_SOURCE_EXAMPLES = [
+  "official_registry",
+  "mcpservers_org",
+  "glama_connector",
+  "glama_server_listing",
+  "mcp_directory",
+  "pulsemcp_packrift",
+  "mcpbench",
+  "chiark",
+  "mcp_marketplace_io",
+  "docker_mcp_catalog",
+  "generic",
+] as const;
 
 type OwnedPageProductLink = { sku: string; title: string; path: string };
 type OwnedPageProductLinkBlock = { heading: string; body: string; items: OwnedPageProductLink[] };
@@ -1439,6 +1455,52 @@ function routeRedirectUrlForItem(item: ApprovedCatalogItem, action: RouteRedirec
   return url.toString();
 }
 
+function mcpStartRedirectTargetUrl(source: string, requestUrl: URL): URL {
+  const day = compactDate();
+  const url = new URL("https://mcp.packrift.com/start");
+  const content = requestUrl.searchParams.get("utm_content") || "start_page";
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", requestUrl.searchParams.get("utm_medium") || "directory_recrawl");
+  url.searchParams.set("utm_campaign", requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_start");
+  url.searchParams.set("utm_content", content);
+  url.searchParams.set("packrift_ai_id", `mcp_start_${source}_${day}`);
+  url.searchParams.set("ai_commerce_id", `mcp_start_${source}_${day}`);
+  url.searchParams.set("mcp_key", `start:${source}`);
+  url.searchParams.set("mcp_journey", `directory_recrawl:${source}:start`);
+  url.searchParams.set("mcp_result_set", `mcp_start_${day}`);
+  return url;
+}
+
+async function recordMcpStartRedirectTelemetry(
+  env: Env,
+  request: Request,
+  requestUrl: URL,
+  source: string,
+  targetUrl: URL
+): Promise<void> {
+  const userAgent = request.headers.get("User-Agent") ?? "";
+  if (!shouldRecordRouteLandingTelemetry(env, userAgent)) return;
+  const packriftAiId = targetUrl.searchParams.get("packrift_ai_id") || `mcp_start_${source}_${compactDate()}`;
+  await recordAiSalesEvent(env, {
+    event: "mcp_start_click",
+    source: "mcp_start_redirect",
+    release: MCP_START_REDIRECT_TELEMETRY_RELEASE,
+    packrift_ai_id: packriftAiId,
+    ai_commerce_id: targetUrl.searchParams.get("ai_commerce_id") || packriftAiId,
+    mcp_key: targetUrl.searchParams.get("mcp_key") ?? `start:${source}`,
+    mcp_journey: targetUrl.searchParams.get("mcp_journey") ?? `directory_recrawl:${source}:start`,
+    mcp_result_set: targetUrl.searchParams.get("mcp_result_set") ?? `mcp_start_${compactDate()}`,
+    utm_source: targetUrl.searchParams.get("utm_source") ?? source,
+    utm_medium: targetUrl.searchParams.get("utm_medium") ?? "directory_recrawl",
+    utm_campaign: targetUrl.searchParams.get("utm_campaign") ?? "packrift_mcp_start",
+    utm_content: targetUrl.searchParams.get("utm_content") ?? "start_page",
+    source_url: requestUrl.toString(),
+    page_url: targetUrl.toString(),
+    referrer: request.headers.get("Referer") ?? "",
+    bot_family: classifyAgentFamily(userAgent),
+  });
+}
+
 async function recordRouteRedirectTelemetry(
   env: Env,
   request: Request,
@@ -1895,6 +1957,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const mcpToolCalls = byEvent.mcp_tool_call ?? 0;
   const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
   const cartClicks = byEvent.mcp_cart_click ?? 0;
+  const startClicks = byEvent.mcp_start_click ?? 0;
   const noMatches = byEvent.no_match ?? 0;
   const exactMatches = byEvent.exact_match ?? 0;
   const directAgentResourceSources = [
@@ -1914,7 +1977,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     "mcp_cart_handoff_candidates",
   ];
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
-  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + directAgentResourceEvents;
+  const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + startClicks + directAgentResourceEvents;
   return {
     release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R04",
     generated_at: new Date().toISOString(),
@@ -1938,6 +2001,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
       mcp_cart_clicks: cartClicks,
+      mcp_start_clicks: startClicks,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
       direct_agent_resource_events: directAgentResourceEvents,
@@ -2022,6 +2086,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
     `- MCP cart clicks: ${payload.counts.mcp_cart_clicks}`,
+    `- MCP start clicks: ${payload.counts.mcp_start_clicks}`,
     `- Exact-match events: ${payload.counts.exact_match_events}`,
     `- No-match events: ${payload.counts.no_match_events}`,
     `- Direct agent resource events: ${payload.counts.direct_agent_resource_events}`,
@@ -5338,6 +5403,26 @@ app.get("/ai/*", async (c) => {
     "Content-Type": route.contentType,
     ...RAW_HEADERS,
   });
+});
+
+app.get("/r/start/:source", async (c) => {
+  const requestUrl = new URL(c.req.url);
+  const source = decodeURIComponent(c.req.param("source") ?? "").toLowerCase();
+  if (!/^[a-z0-9_]{2,64}$/.test(source)) {
+    return c.json(
+      {
+        error: "invalid_mcp_start_source",
+        message: "Use /r/start/{source} with a lowercase source slug containing only letters, numbers, and underscores.",
+        examples: MCP_START_REDIRECT_SOURCE_EXAMPLES,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+
+  const targetUrl = mcpStartRedirectTargetUrl(source, requestUrl);
+  await recordMcpStartRedirectTelemetry(c.env, c.req.raw, requestUrl, source, targetUrl);
+  return c.redirect(targetUrl.toString(), 302);
 });
 
 app.get("/r/*", async (c) => {

@@ -22,6 +22,12 @@ Fast start page for developers, agents, and directory reviewers:
 https://mcp.packrift.com/start
 ```
 
+Directory and partner handoffs can use tracked start links without changing the MCP endpoint. Use a lowercase source slug with letters, numbers, and underscores:
+
+```text
+https://mcp.packrift.com/r/start/{source}
+```
+
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
 
 ```json
@@ -89,6 +95,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
+- MCP tracked start template: https://mcp.packrift.com/r/start/{source}
 - MCP start pack: https://mcp.packrift.com/ai/mcp-start.json
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json

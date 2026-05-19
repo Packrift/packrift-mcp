@@ -33,6 +33,7 @@ Use these as examples of exact product families that converted, not as universal
 
 - [MCP server](https://mcp.packrift.com/mcp): Streamable HTTP, read-only tools for catalog search, pricing, inventory, recommendations, comparison, pack calculation, shipping estimates, and cart-URL construction
 - [MCP start page](https://mcp.packrift.com/start): shortest public install and first-flow handoff for agents, developers, directory reviewers, and AI-commerce operators
+- [Tracked MCP start template](https://mcp.packrift.com/r/start/generic): use \`https://mcp.packrift.com/r/start/{source}\` for directories and partner handoffs so start traffic is measurable by source
 - Add Packrift MCP through the [Glama hosted connector](https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp), [MCP Marketplace listing](https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp), [Official MCP Registry search](https://registry.modelcontextprotocol.io/v0/servers?search=Packrift), or [GitHub source repository](https://github.com/Packrift/packrift-mcp)
 - Native MCP prompts are available via prompts/list for exact-spec search, item-fit-to-cart, cart candidate review, reorder, no-match quote recovery, and copy-procurement-spec workflows
 - Use \`fit_item_then_prepare_cart\` when the buyer has item dimensions and needs the smallest safe package that can proceed to live checks. Use \`prepare_cart_handoff\` when a client needs a guarded sequence from selected SKU to live confirmation and stamped \`create_cart_url\` handoff.
@@ -48,7 +49,7 @@ Use these as examples of exact product families that converted, not as universal
 - [Browser-agent bridge](https://mcp.packrift.com/ai/browser-agent-bridge.json): read-first bridge for Browse-style, browser-use, Playwright, CUA, and other browser agents that must route live price, inventory, and cart handoff through MCP
 - [Browserbase Browse skill pack](https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json): candidate Browse/browser-skill wrapper with start URLs, rules, prompts, and JSON-RPC calls that keep Packrift live commerce facts routed through MCP
 - [MCP directory refresh pack](https://mcp.packrift.com/ai/mcp-directory-refresh.json): current listing copy, proof URLs, recrawl request, and stale-directory targets for MCP directories and agent indexes
-- [MCP directory submit actions](https://mcp.packrift.com/ai/mcp-directory-submit-actions.json): per-directory action queue, proof URLs, and copy-ready recrawl messages for stale MCP listings
+- [MCP directory submit actions](https://mcp.packrift.com/ai/mcp-directory-submit-actions.json): per-directory action queue, proof URLs, tracked start URLs, and copy-ready recrawl messages for stale MCP listings
 - [Root-domain agent instructions](https://packrift.com/agents.md): Packrift exact-spec MCP, corpus, prompt, reorder, and quote handoff guide
 - [Full reference corpus (llms-full.txt)](https://mcp.packrift.com/llms-full.txt): dense citation-worthy content covering categories, sizing, comparisons, use cases, fulfillment, and integration
 - MCP product results include tracked product URLs, reorder URLs, quote URLs, copy-procurement-spec text, and cart URL candidates. Confirm live price and inventory before presenting a cart handoff.

@@ -121,6 +121,7 @@ const LIVE_PROOF_URLS = {
   mcp_directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
   docker_mcp_catalog_pr: "https://api.github.com/repos/docker/mcp-registry/pulls/3388",
 };
+const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
@@ -218,6 +219,7 @@ function canonicalListingCopy(liveProof) {
     long_description:
       "Packrift MCP lets AI agents find exact-spec packaging products, confirm live price and inventory, compare alternatives, estimate shipping, and hand off attributed carts to Packrift.",
     website_url: SERVER_JSON.websiteUrl,
+    tracked_start_template: TRACKED_START_TEMPLATE,
     repository_url: SERVER_JSON.repository?.url,
     remote_endpoint: SERVER_JSON.remotes?.[0]?.url,
     install_config: {
@@ -254,6 +256,7 @@ function targetRows(distribution, copy) {
     },
     proof_urls: {
       hosted_endpoint: copy.remote_endpoint,
+      tracked_start: TRACKED_START_TEMPLATE.replace("{source}", target.name),
       live_health: LIVE_PROOF_URLS.health,
       live_manifest: LIVE_PROOF_URLS.manifest,
       mcp_tools_list: `${MCP_ENDPOINT} via JSON-RPC method tools/list`,
@@ -526,6 +529,7 @@ function markdownReport(payload) {
     `Long description: ${payload.copy.long_description}`,
     `Repository: ${payload.copy.repository_url}`,
     `Remote endpoint: ${payload.copy.remote_endpoint}`,
+    `Tracked start template: ${payload.copy.tracked_start_template}`,
     `Website: ${payload.copy.website_url}`,
     `Tags: ${payload.copy.tags.join(", ")}`,
     `Proof summary: ${payload.copy.proof_summary}`,

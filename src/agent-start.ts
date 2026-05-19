@@ -10,6 +10,7 @@ const START_HTML_URL = "https://mcp.packrift.com/start";
 const START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const START_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-start.md";
 const START_HTML_RESOURCE_URL = "https://mcp.packrift.com/ai/mcp-start.html";
+const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 
 function remoteMcpJson() {
   return {
@@ -32,6 +33,15 @@ function toolCall(id: string, name: string, args: Record<string, unknown>) {
       arguments: args,
     },
   };
+}
+
+function trackedStartUrl(source: string): string {
+  const url = new URL(`https://mcp.packrift.com/r/start/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "directory_recrawl");
+  url.searchParams.set("utm_campaign", "packrift_mcp_start");
+  url.searchParams.set("utm_content", "mcp_start_pack");
+  return url.toString();
 }
 
 const FIRST_FLOW = [
@@ -97,7 +107,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R01",
+    release: "PACKRIFT-MCP-START-R02",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -107,6 +117,20 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       json: START_JSON_URL,
       markdown: START_MARKDOWN_URL,
       html_resource: START_HTML_RESOURCE_URL,
+      tracked_start_template: TRACKED_START_TEMPLATE,
+      tracked_examples: {
+        official_registry: trackedStartUrl("official_registry"),
+        mcpservers_org: trackedStartUrl("mcpservers_org"),
+        glama_connector: trackedStartUrl("glama_connector"),
+        glama_server_listing: trackedStartUrl("glama_server_listing"),
+        mcp_directory: trackedStartUrl("mcp_directory"),
+        pulsemcp_packrift: trackedStartUrl("pulsemcp_packrift"),
+        mcpbench: trackedStartUrl("mcpbench"),
+        chiark: trackedStartUrl("chiark"),
+        mcp_marketplace_io: trackedStartUrl("mcp_marketplace_io"),
+        docker_mcp_catalog: trackedStartUrl("docker_mcp_catalog"),
+        generic: trackedStartUrl("generic"),
+      },
     },
     runtime: {
       server_version: runtime.serverVersion,
@@ -138,6 +162,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "This start surface is useful only if it drives external installs, tools/list calls, get_cart_handoff_candidates calls, measured /r/cart landings, and MCP-attributed orders. It is not proof that the adoption goal is complete.",
     operating_rules: [
       "Use https://mcp.packrift.com/mcp as the canonical endpoint.",
+      "Use /r/start/{source} tracked start links for directories and partner handoffs so start traffic can be attributed by source.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Use create_cart_url only after buyer confirmation so the returned /r/cart URL keeps MCP attribution measurable.",
@@ -174,6 +199,14 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     `Claude Code: \`${payload.install.claude_code}\``,
     "",
     `Codex: \`${payload.install.codex}\``,
+    "",
+    "## Tracked Start Links",
+    "",
+    `Template: \`${payload.start_urls.tracked_start_template}\``,
+    "",
+    Object.entries(payload.start_urls.tracked_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
     "",
     "## First Useful Flow",
     "",
@@ -238,6 +271,9 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
     )
     .join("");
   const prompts = payload.buyer_prompts.map((prompt) => `<li>${escapeHtml(prompt)}</li>`).join("");
+  const trackedStarts = Object.entries(payload.start_urls.tracked_examples)
+    .map(([key, value]) => `<a href="${escapeHtml(value)}">${escapeHtml(key.replace(/_/g, " "))}</a>`)
+    .join("");
   const proofLinks = Object.entries(payload.proof_urls)
     .map(([key, value]) => `<a href="${escapeHtml(value)}">${escapeHtml(key.replace(/_/g, " "))}</a>`)
     .join("");
@@ -361,6 +397,11 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
           <pre>${codeBlock(payload.install.codex)}</pre>
         </div>
       </div>
+    </section>
+    <section>
+      <h2>Tracked Start Links</h2>
+      <p>Use source-specific start links in directories and partner handoffs so MCP start traffic is measurable by source.</p>
+      <div class="proof">${trackedStarts}</div>
     </section>
     <section>
       <h2>First Useful Flow</h2>

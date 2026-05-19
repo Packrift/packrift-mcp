@@ -52,10 +52,10 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/start",
       install_or_call:
-        "Open the start page or read /ai/mcp-start.json for remote MCP config, Claude/Codex install commands, first-flow JSON-RPC calls, buyer prompts, and proof URLs.",
+        "Open the start page or read /ai/mcp-start.json for remote MCP config, Claude/Codex install commands, first-flow JSON-RPC calls, buyer prompts, proof URLs, and /r/start/{source} tracked start links.",
       proof_url: "https://mcp.packrift.com/ai/mcp-start.json",
       fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
-      next_action: "Use this as the shortest public install link in directory recrawls and external agent handoffs.",
+      next_action: "Use source-specific tracked start /r/start/{source} links as the shortest public install link in directory recrawls and external agent handoffs.",
     }),
     surface({
       id: "mcp_adoption_kit",
@@ -420,11 +420,11 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       install_or_call:
-        "Use the public submit-action queue for per-directory status, proof URLs, and copy-ready recrawl messages.",
+        "Use the public submit-action queue for per-directory status, proof URLs, tracked start URLs, and copy-ready recrawl messages.",
       proof_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       next_action:
-        "Use this to keep mcpservers.org, MCP.Directory, Glama source listing, PulseMCP, MCPBench, Chiark, and Docker MCP Catalog moving without losing the current proof bundle.",
+        "Use this to keep mcpservers.org, MCP.Directory, Glama source listing, PulseMCP, MCPBench, Chiark, and Docker MCP Catalog moving with tracked start /r/start/{source} links and current proof.",
     }),
     surface({
       id: "search_and_answer_crawlers",
@@ -444,7 +444,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R02",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R03",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
