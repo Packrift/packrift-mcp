@@ -106,7 +106,10 @@ def rpc(id, method, params=None):
     request = urllib.request.Request(
         ENDPOINT,
         data=json.dumps(body).encode("utf-8"),
-        headers={"content-type": "application/json"},
+        headers={
+            "content-type": "application/json",
+            "user-agent": "Packrift-MCP-Example/1.0",
+        },
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=20) as response:
