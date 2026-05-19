@@ -2420,7 +2420,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
   const directAgentResourceEvents = directAgentResourceSources.reduce((total, source) => total + (bySource[source] ?? 0), 0);
   const totalMcpSignals = mcpDiscoveryEvents + mcpToolCalls + cartClicks + cartLandings + startClicks + trackedConfigFetches + installIntents + firstRunIntents + firstRunExecutions + installCopies + directAgentResourceEvents;
   return {
-    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R14",
+    release: "PACKRIFT-MCP-USAGE-SNAPSHOT-R15",
     generated_at: new Date().toISOString(),
     date,
     limit,
@@ -2523,6 +2523,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
+      tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
       mcp_start_click_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
@@ -2649,6 +2650,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
     `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
     `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
+    `Tracked reviewer activation template: \`${payload.source_attribution.tracked_reviewer_activation_template}\``,
     "",
     "### MCP Start Click Sources",
     "",
@@ -2785,7 +2787,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R06";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R07";
 
 function matchesPublicFunnelInternalSynthetic(text: string): boolean {
   return (
@@ -3178,6 +3180,7 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
       tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
+      tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
       start_sources: summary.by_start_source,
       tracked_config_sources: summary.by_tracked_config_source,
       install_intent_sources: summary.by_install_intent_source,
@@ -3275,6 +3278,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `Tracked config template: \`${payload.source_attribution.tracked_config_template}\``,
     `Tracked install template: \`${payload.source_attribution.tracked_install_template}\``,
     `Tracked first-run template: \`${payload.source_attribution.tracked_run_template}\``,
+    `Tracked reviewer activation template: \`${payload.source_attribution.tracked_reviewer_activation_template}\``,
     "",
     "### Start Sources",
     "",

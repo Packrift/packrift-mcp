@@ -593,7 +593,7 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=generic") &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
-      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R14" &&
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R15" &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
@@ -622,6 +622,7 @@ async function liveMcpCheck() {
       usageSnapshot?.source_attribution?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       usageSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       usageSnapshot?.source_attribution?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      usageSnapshot?.source_attribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       Array.isArray(usageSnapshot?.top?.event_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.mcp_start_click_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tracked_config_sources) &&
@@ -635,7 +636,7 @@ async function liveMcpCheck() {
       Array.isArray(usageSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.tool_runtime_sources) &&
       Array.isArray(usageSnapshot?.source_attribution?.post_install_cart_activation_by_source) &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R06" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R07" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       typeof funnelSnapshot?.counts?.mcp_start_clicks === "number" &&
       typeof funnelSnapshot?.counts?.mcp_install_intent_events === "number" &&
@@ -657,6 +658,7 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.proof_gate?.measurable_mcp_revenue_seen === "boolean" &&
       funnelSnapshot?.source_attribution?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       funnelSnapshot?.source_attribution?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      funnelSnapshot?.source_attribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       Array.isArray(funnelSnapshot?.source_attribution?.mcp_runtime_sources) &&
       Array.isArray(funnelSnapshot?.source_attribution?.first_run_intent_sources) &&
       Array.isArray(funnelSnapshot?.source_attribution?.first_run_intent_targets) &&
@@ -951,6 +953,7 @@ async function liveMcpCheck() {
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,
       usage_snapshot_tracked_install_template: usageSnapshot?.source_attribution?.tracked_install_template ?? null,
       usage_snapshot_tracked_run_template: usageSnapshot?.source_attribution?.tracked_run_template ?? null,
+      usage_snapshot_tracked_reviewer_activation_template: usageSnapshot?.source_attribution?.tracked_reviewer_activation_template ?? null,
       usage_snapshot_cart_landings: usageSnapshot?.counts?.mcp_cart_landings ?? null,
       usage_snapshot_tracked_config_fetches: usageSnapshot?.counts?.mcp_tracked_config_fetches ?? null,
       usage_snapshot_install_intent_events: usageSnapshot?.counts?.mcp_install_intent_events ?? null,
