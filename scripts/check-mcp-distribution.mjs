@@ -568,8 +568,12 @@ async function liveMcpCheck() {
       serverCard?.authentication?.required === false &&
       serverCard?.endpoint_url === MCP_ENDPOINT &&
       serverCard?.client_config?.root_mcp_json === "https://mcp.packrift.com/mcp.json" &&
+      serverCard?.client_config?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      serverCard?.client_config?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       serverCard?.client_config?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       serverCard?.client_config?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      serverCard?.registry_distribution?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      serverCard?.registry_distribution?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       serverCard?.registry_distribution?.reviewer_activation === "https://mcp.packrift.com/ai/mcp-reviewer-activation.json" &&
       serverCard?.registry_distribution?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       serverCard?.registry_distribution?.source_activation_queue_html === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html" &&
@@ -586,6 +590,8 @@ async function liveMcpCheck() {
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
       serverCard.tools.some((tool) => tool?.name === "prepare_purchase_handoff" && tool?.inputSchema) &&
+      serverCard?.tool_discovery?.json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      serverCard?.tool_discovery?.markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       Array.isArray(serverCard?.resources) &&
       serverCard.resources.length >= 68 &&
       Array.isArray(serverCard?.prompts) &&
@@ -624,6 +630,8 @@ async function liveMcpCheck() {
       marketplaceManifest?.mcp_server?.tools?.length >= 15 &&
       marketplaceManifest?.mcp_server?.tools?.some((tool) => tool?.name === "prepare_purchase_handoff") &&
       marketplaceManifest?.signals?.tool_count >= 15 &&
+      marketplaceManifest?.signals?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      marketplaceManifest?.signals?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       marketplaceManifest?.signals?.tool_names?.includes("prepare_purchase_handoff") &&
       marketplaceManifest?.signals?.required_current_tools?.length >= 15 &&
       mcpToolsDiscoveryResult.ok &&
@@ -663,6 +671,8 @@ async function liveMcpCheck() {
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "mcp_inspector") &&
       marketplaceManifest?.discovery?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
+      marketplaceManifest?.discovery?.mcp_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      marketplaceManifest?.discovery?.mcp_tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
@@ -892,7 +902,7 @@ async function liveMcpCheck() {
       firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("source_context") &&
       firstRunActions?.first_run?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       firstRunActions?.first_run?.shell_one_liner?.includes("format=sh") &&
-      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R11" &&
+      clientConfig?.release === "PACKRIFT-MCP-CLIENT-CONFIG-R12" &&
       clientConfig?.canonical_endpoint === MCP_ENDPOINT &&
       clientConfig?.stdio_mcp_remote_config?.mcpServers?.packrift?.command === "npx" &&
       clientConfig?.stdio_mcp_remote_config?.mcpServers?.packrift?.args?.includes("mcp-remote") &&
@@ -904,6 +914,8 @@ async function liveMcpCheck() {
       clientConfig?.aliases?.tracked_run_examples?.stdio_mcp_remote?.startsWith("https://mcp.packrift.com/r/run/generic/stdio_mcp_remote") &&
       clientConfig?.aliases?.tracked_install_examples?.cline?.startsWith("https://mcp.packrift.com/r/install/generic/cline") &&
       clientConfig?.aliases?.tracked_run_examples?.cline?.startsWith("https://mcp.packrift.com/r/run/generic/cline") &&
+      clientConfig?.aliases?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      clientConfig?.aliases?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       clientConfig?.aliases?.source_aware_endpoint_template === "https://mcp.packrift.com/mcp?packrift_mcp_source={source}&packrift_mcp_target={target}" &&
       clientConfig?.aliases?.source_aware_examples?.browse_sh?.commands?.codex?.includes("packrift_mcp_source=browse_sh") &&
       clientConfig?.aliases?.source_aware_examples?.browse_sh?.commands?.codex?.includes("packrift_mcp_target=codex") &&
@@ -928,6 +940,9 @@ async function liveMcpCheck() {
       clientConfig?.aliases?.tracked_run_examples?.codex?.startsWith("https://mcp.packrift.com/r/run/generic/codex") &&
       clientConfig?.authentication?.required === false &&
       clientConfig?.first_tests?.some((test) => test.id === "tools-list") &&
+      clientConfig?.proof_urls?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
+      clientConfig?.proof_urls?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      clientConfig?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       rootMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       wellKnownMcpJson?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       trackedConfigGeneric?.mcpServers?.packrift?.url?.startsWith(`${MCP_ENDPOINT}?`) &&

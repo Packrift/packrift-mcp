@@ -9,6 +9,9 @@ export interface McpClientConfigRuntime {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
+const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
+const MCP_SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_CONFIG_RECOMMENDED_SOURCES = [
   "official_registry",
@@ -165,7 +168,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R11",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R12",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -189,6 +192,8 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       canonical_json: "https://mcp.packrift.com/ai/mcp-client-config.json",
       markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
+      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
+      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_config_generic: trackedConfigUrl("generic"),
       tracked_config_examples: Object.fromEntries(TRACKED_CONFIG_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
@@ -248,6 +253,9 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       start: "https://mcp.packrift.com/start",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
+      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       browse_skill_md: "https://mcp.packrift.com/SKILL.md",
