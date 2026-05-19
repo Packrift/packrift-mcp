@@ -104,6 +104,20 @@ async function fetchText(url) {
   }
 }
 
+async function fetchRedirect(url) {
+  try {
+    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "manual" });
+    return {
+      ok: response.status >= 300 && response.status < 400,
+      status: response.status,
+      url: response.url,
+      location: response.headers.get("location") ?? "",
+    };
+  } catch (error) {
+    return { ok: false, status: 0, url, location: "", error: error.message };
+  }
+}
+
 async function fetchMcp(method, params = undefined) {
   try {
     const response = await fetch(MCP_ENDPOINT, {
@@ -137,6 +151,22 @@ async function fetchMcp(method, params = undefined) {
 
 function hasAll(text, needles) {
   return needles.every((needle) => text.includes(needle));
+}
+
+function parseJsonOrNull(text) {
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseUrlOrNull(value) {
+  try {
+    return value ? new URL(value) : null;
+  } catch {
+    return null;
+  }
 }
 
 function check(name, status, details = {}) {
@@ -193,6 +223,8 @@ async function liveMcpCheck() {
     browserbaseBrowseSkillPackResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
+    trackedStartPartnerResult,
+    invalidStartSourceResult,
     toolsResult,
     resourcesResult,
     promptsResult,
@@ -212,6 +244,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-submit-actions.json"),
+    fetchRedirect("https://mcp.packrift.com/r/start/partner_demo?utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/start/bad-source"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("prompts/list"),
@@ -231,6 +265,8 @@ async function liveMcpCheck() {
   const browserbaseBrowseSkillPack = browserbaseBrowseSkillPackResult.ok ? JSON.parse(browserbaseBrowseSkillPackResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
   const directorySubmitActions = directorySubmitActionsResult.ok ? JSON.parse(directorySubmitActionsResult.text) : null;
+  const trackedStartTarget = parseUrlOrNull(trackedStartPartnerResult.location);
+  const invalidStartSource = parseJsonOrNull(invalidStartSourceResult.text);
   const firstCartUrl = cart?.items?.[0]?.cart_url_qty_1_candidate ?? "";
   const firstFinalCartUrl = cart?.items?.[0]?.final_shopify_cart_url_candidate ?? "";
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
@@ -251,13 +287,26 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R02" &&
+      start?.release === "PACKRIFT-MCP-START-R03" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
+      start?.start_urls?.source_policy?.partner_specific_sources_allowed === true &&
+      start?.start_urls?.source_policy?.accepted_source_format === "^[a-z0-9_]{2,64}$" &&
       start?.start_urls?.tracked_examples?.mcpservers_org?.startsWith("https://mcp.packrift.com/r/start/mcpservers_org") &&
       start?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
+      trackedStartPartnerResult.status === 302 &&
+      trackedStartTarget?.origin === PACKRIFT_ORIGIN &&
+      trackedStartTarget?.pathname === "/start" &&
+      trackedStartTarget?.searchParams?.get("utm_source") === "partner_demo" &&
+      trackedStartTarget?.searchParams?.get("utm_content") === "distribution_check" &&
+      trackedStartTarget?.searchParams?.get("mcp_key") === "start:partner_demo" &&
+      trackedStartTarget?.searchParams?.get("mcp_journey") === "directory_recrawl:partner_demo:start" &&
+      invalidStartSourceResult.status === 404 &&
+      invalidStartSource?.error === "invalid_mcp_start_source" &&
+      invalidStartSource?.valid_format === "^[a-z0-9_]{2,64}$" &&
+      invalidStartSource?.partner_specific_sources_allowed === true &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R03" &&
       agentCapture?.surfaces?.length >= 21 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
@@ -300,9 +349,11 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R05" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R06" &&
       directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
+      directoryRefresh?.live_proof?.tracked_start_partner_demo === "https://mcp.packrift.com/r/start/partner_demo" &&
+      directoryRefresh?.canonical_listing?.tracked_start_source_policy?.partner_specific_sources_allowed === true &&
       directoryRefresh?.live_proof?.browserbase_browse_skill_pack === "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json" &&
       directoryRefresh?.priority_refresh_targets?.length >= 5 &&
       directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R06" &&
@@ -356,6 +407,18 @@ async function liveMcpCheck() {
       health,
       start_release: start?.release ?? null,
       start_tracked_template: start?.start_urls?.tracked_start_template ?? null,
+      start_source_policy: start?.start_urls?.source_policy ?? null,
+      tracked_start_partner_demo: {
+        status: trackedStartPartnerResult.status,
+        location: trackedStartPartnerResult.location,
+        target_utm_source: trackedStartTarget?.searchParams?.get("utm_source") ?? null,
+        target_mcp_key: trackedStartTarget?.searchParams?.get("mcp_key") ?? null,
+      },
+      invalid_start_source: {
+        status: invalidStartSourceResult.status,
+        valid_format: invalidStartSource?.valid_format ?? null,
+        partner_specific_sources_allowed: invalidStartSource?.partner_specific_sources_allowed ?? null,
+      },
       start_flow_steps: start?.first_flow?.length ?? 0,
       cart_release: cart?.release ?? null,
       cart_items: cart?.items?.length ?? 0,

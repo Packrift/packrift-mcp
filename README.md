@@ -28,6 +28,8 @@ Directory and partner handoffs can use tracked start links without changing the 
 https://mcp.packrift.com/r/start/{source}
 ```
 
+Custom partner, campaign, directory, and agent-workflow slugs are allowed without code changes as long as they match `^[a-z0-9_]{2,64}$`. Examples: `mcpservers_org`, `agency_partner`, `browser_agent_demo`, `newsletter_mcp`.
+
 MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift with:
 
 ```json
@@ -96,6 +98,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - All-agent capture matrix: https://mcp.packrift.com/ai/all-agent-capture.json
 - All-agent capture matrix Markdown: https://mcp.packrift.com/ai/all-agent-capture.md
 - MCP tracked start template: https://mcp.packrift.com/r/start/{source}
+- MCP tracked start source format: `^[a-z0-9_]{2,64}$`; partner-specific slugs are allowed without pre-registration
 - MCP start pack: https://mcp.packrift.com/ai/mcp-start.json
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json

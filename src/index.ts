@@ -662,7 +662,9 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
   "sku_page_view",
 ]);
 
-const MCP_START_REDIRECT_SOURCE_EXAMPLES = [
+const MCP_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
+const MCP_START_SOURCE_PATTERN = /^[a-z0-9_]{2,64}$/;
+const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "official_registry",
   "mcpservers_org",
   "glama_connector",
@@ -675,6 +677,13 @@ const MCP_START_REDIRECT_SOURCE_EXAMPLES = [
   "docker_mcp_catalog",
   "generic",
 ] as const;
+const MCP_START_SOURCE_POLICY = {
+  accepted_source_format: MCP_START_SOURCE_FORMAT,
+  partner_specific_sources_allowed: true,
+  normalization: "Source slugs are lowercased before attribution. Use lowercase source labels to preserve exact reporting.",
+  recommended_sources: MCP_START_REDIRECT_RECOMMENDED_SOURCES,
+  custom_examples: ["agency_partner", "browser_agent_demo", "newsletter_mcp"],
+} as const;
 
 type OwnedPageProductLink = { sku: string; title: string; path: string };
 type OwnedPageProductLinkBlock = { heading: string; body: string; items: OwnedPageProductLink[] };
@@ -5474,13 +5483,17 @@ app.get("/ai/*", async (c) => {
 
 app.get("/r/start/:source", async (c) => {
   const requestUrl = new URL(c.req.url);
-  const source = decodeURIComponent(c.req.param("source") ?? "").toLowerCase();
-  if (!/^[a-z0-9_]{2,64}$/.test(source)) {
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").trim();
+  const source = rawSource.toLowerCase();
+  if (!MCP_START_SOURCE_PATTERN.test(source)) {
     return c.json(
       {
         error: "invalid_mcp_start_source",
         message: "Use /r/start/{source} with a lowercase source slug containing only letters, numbers, and underscores.",
-        examples: MCP_START_REDIRECT_SOURCE_EXAMPLES,
+        valid_format: MCP_START_SOURCE_POLICY.accepted_source_format,
+        partner_specific_sources_allowed: MCP_START_SOURCE_POLICY.partner_specific_sources_allowed,
+        recommended_sources: MCP_START_SOURCE_POLICY.recommended_sources,
+        custom_examples: MCP_START_SOURCE_POLICY.custom_examples,
       },
       404,
       RAW_HEADERS

@@ -11,6 +11,27 @@ const START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const START_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-start.md";
 const START_HTML_RESOURCE_URL = "https://mcp.packrift.com/ai/mcp-start.html";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const TRACKED_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
+const TRACKED_START_RECOMMENDED_SOURCES = [
+  "official_registry",
+  "mcpservers_org",
+  "glama_connector",
+  "glama_server_listing",
+  "mcp_directory",
+  "pulsemcp_packrift",
+  "mcpbench",
+  "chiark",
+  "mcp_marketplace_io",
+  "docker_mcp_catalog",
+  "generic",
+] as const;
+const TRACKED_START_SOURCE_POLICY = {
+  accepted_source_format: TRACKED_START_SOURCE_FORMAT,
+  partner_specific_sources_allowed: true,
+  normalization: "The redirect lowercases source slugs before attribution. Use lowercase source labels to keep reporting clean.",
+  recommended_sources: TRACKED_START_RECOMMENDED_SOURCES,
+  custom_examples: ["agency_partner", "browser_agent_demo", "newsletter_mcp"],
+} as const;
 
 function remoteMcpJson() {
   return {
@@ -107,7 +128,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R02",
+    release: "PACKRIFT-MCP-START-R03",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -118,6 +139,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       markdown: START_MARKDOWN_URL,
       html_resource: START_HTML_RESOURCE_URL,
       tracked_start_template: TRACKED_START_TEMPLATE,
+      source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: {
         official_registry: trackedStartUrl("official_registry"),
         mcpservers_org: trackedStartUrl("mcpservers_org"),
@@ -162,7 +184,8 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "This start surface is useful only if it drives external installs, tools/list calls, get_cart_handoff_candidates calls, measured /r/cart landings, and MCP-attributed orders. It is not proof that the adoption goal is complete.",
     operating_rules: [
       "Use https://mcp.packrift.com/mcp as the canonical endpoint.",
-      "Use /r/start/{source} tracked start links for directories and partner handoffs so start traffic can be attributed by source.",
+      "Use /r/start/{source} tracked start links for directories, partners, campaigns, and agent handoffs so start traffic can be attributed by source.",
+      "Custom /r/start/{source} slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Use create_cart_url only after buyer confirmation so the returned /r/cart URL keeps MCP attribution measurable.",
@@ -203,6 +226,9 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "## Tracked Start Links",
     "",
     `Template: \`${payload.start_urls.tracked_start_template}\``,
+    `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
+    `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
+    `Custom examples: ${payload.start_urls.source_policy.custom_examples.map((source) => `\`${source}\``).join(", ")}`,
     "",
     Object.entries(payload.start_urls.tracked_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
@@ -400,7 +426,7 @@ export function mcpStartHtml(runtime: McpStartRuntime): string {
     </section>
     <section>
       <h2>Tracked Start Links</h2>
-      <p>Use source-specific start links in directories and partner handoffs so MCP start traffic is measurable by source.</p>
+      <p>Use source-specific start links in directories, partner handoffs, campaigns, and agent workflows so MCP start traffic is measurable by source. Custom lowercase slugs are allowed when they match ${escapeHtml(payload.start_urls.source_policy.accepted_source_format)}.</p>
       <div class="proof">${trackedStarts}</div>
     </section>
     <section>
