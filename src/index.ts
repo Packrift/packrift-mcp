@@ -478,10 +478,11 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
         if (!tool) {
           return rpcError(id, -32602, `Unknown tool: ${name}`);
         }
+        const shouldRecordToolTelemetry = !isSyntheticToolCall(args) && !shouldSkipInternalTelemetry(context.userAgent ?? "");
         const startedAt = Date.now();
         try {
           const out = await tool.handler(env, args);
-          if (!isSyntheticToolCall(args)) {
+          if (shouldRecordToolTelemetry) {
             await recordAiSalesEvent(
               env,
               buildMcpToolCallEvent(name, out, {
@@ -498,7 +499,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          if (!isSyntheticToolCall(args)) {
+          if (shouldRecordToolTelemetry) {
             await recordAiSalesEvent(
               env,
               buildMcpToolCallEvent(name, { error: msg }, {
@@ -2261,6 +2262,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
     (byEvent.mcp_resource_read ?? 0);
   const mcpToolCalls = byEvent.mcp_tool_call ?? 0;
   const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
+  const qualifiedMcpToolCalls = countQualifiedPublicMcpToolCalls(events);
+  const qualifiedCreateCartUrlCalls = countQualifiedPublicMcpToolCalls(events, "create_cart_url");
   const cartClicks = byEvent.mcp_cart_click ?? 0;
   const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
@@ -2324,6 +2327,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       exact_match_events: exactMatches,
       no_match_events: noMatches,
+      external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
+      external_qualified_create_cart_url_calls: qualifiedCreateCartUrlCalls,
       direct_agent_resource_events: directAgentResourceEvents,
       direct_agent_resource_sources: directAgentResourceSources,
       mcp_start_resource_events: bySource.mcp_start ?? 0,
@@ -2351,8 +2356,8 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = 1000
       install_intent_seen: installIntents > 0,
       install_copy_seen: installCopies > 0,
       mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
-      create_cart_url_seen: createCartUrlCalls > 0,
-      material_tool_usage_50_plus: mcpToolCalls >= 50,
+      create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
+      material_tool_usage_50_plus: qualifiedMcpToolCalls >= 50,
       thousands_of_qualified_visitors: false,
       measurable_mcp_sales: false,
     },
@@ -2619,6 +2624,45 @@ function matchesPublicFunnelQualifiedDemand(text: string): boolean {
   return /(chatgpt-mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
 }
 
+function publicFunnelEventText(event: Record<string, unknown>): string {
+  return [
+    event.event,
+    event.source,
+    event.tool_name,
+    event.mcp_source_context,
+    event.mcp_install_target,
+    event.user_agent,
+    event.packrift_ai_id,
+    event.ai_commerce_id,
+    event.mcp_key,
+    event.mcp_journey,
+    event.mcp_result_set,
+    event.utm_source,
+    event.utm_medium,
+    event.utm_campaign,
+    event.utm_content,
+    event.match_type,
+    event.bot_family,
+  ]
+    .map((value) => safeEventText(value, 240).toLowerCase())
+    .filter(Boolean)
+    .join("|");
+}
+
+function isQualifiedPublicFunnelEvent(event: Record<string, unknown>): boolean {
+  const text = publicFunnelEventText(event);
+  if (matchesPublicFunnelInternalSynthetic(text) || matchesPublicFunnelSelfGenerated(text)) return false;
+  return matchesPublicFunnelQualifiedDemand(text);
+}
+
+function countQualifiedPublicMcpToolCalls(events: Array<Record<string, unknown>>, toolName?: string): number {
+  return events.filter((event) => {
+    if (String(event.event ?? "") !== "mcp_tool_call") return false;
+    if (toolName && String(event.tool_name ?? "") !== toolName) return false;
+    return isQualifiedPublicFunnelEvent(event);
+  }).length;
+}
+
 function qualifiedFirstPartyCartLandingsFromSummary(summary: ReturnType<typeof summarizeAiSalesEvents>): number {
   const rows = (summary.by_event_attribution ?? []).length ? summary.by_event_attribution : summary.by_event_source;
   return (rows ?? []).reduce((total, row) => {
@@ -2738,6 +2782,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     (byEvent.mcp_resource_read ?? 0);
   const mcpToolCalls = byEvent.mcp_tool_call ?? 0;
   const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
+  const qualifiedMcpToolCalls = countQualifiedPublicMcpToolCalls(events);
+  const qualifiedCreateCartUrlCalls = countQualifiedPublicMcpToolCalls(events, "create_cart_url");
   const cartClicks = (byEvent.cart_click ?? 0) + (byEvent.mcp_cart_click ?? 0);
   const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
@@ -2753,8 +2799,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
     usage_exists: events.length > 0,
     external_mcp_starts_or_installs_seen: startClicks + trackedConfigFetches + installIntents + installCopies > 0,
     mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
-    material_tool_usage_50_plus: mcpToolCalls >= 50,
-    create_cart_url_seen: createCartUrlCalls > 0,
+    material_tool_usage_50_plus: qualifiedMcpToolCalls >= 50,
+    create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
     qualified_first_party_cart_landing_seen: qualifiedCartLandings > 0,
     first_party_mcp_order_seen: attributedOrderCount > 0,
     measurable_mcp_revenue_seen: attributedRevenue > 0,
@@ -2799,6 +2845,8 @@ async function mcpFunnelSnapshotPayload(env: Env, date = todayUtc(), limit = 500
       mcp_source_attributed_runtime_events: mcpSourceAttributedRuntimeEvents,
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
+      external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
+      external_qualified_create_cart_url_calls: qualifiedCreateCartUrlCalls,
       mcp_cart_clicks: cartClicks,
       raw_first_party_mcp_cart_landings: cartLandings,
       qualified_first_party_mcp_cart_landings: qualifiedCartLandings,
