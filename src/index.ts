@@ -1138,6 +1138,7 @@ const AI_SALES_EVENT_READ_CONCURRENCY = 50;
 const PUBLIC_MCP_ORDER_SUMMARY_TIMEOUT_MS = 3500;
 const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 5000;
+const PUBLIC_MCP_FUNNEL_EVENT_LIMIT = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT;
 const PUBLIC_MCP_DEFAULT_ORDER_DAYS = 30;
 const PUBLIC_MCP_DEFAULT_ORDER_LIMIT = 100;
 const AI_SALES_ALLOWED_EVENTS = new Set([
@@ -5247,7 +5248,7 @@ async function publicMcpOrderSummary(env: Env, days: number, limit: number) {
 async function mcpFunnelSnapshotPayload(
   env: Env,
   date = todayUtc(),
-  limit = PUBLIC_MCP_DEFAULT_EVENT_LIMIT,
+  limit = PUBLIC_MCP_FUNNEL_EVENT_LIMIT,
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
@@ -5335,7 +5336,7 @@ async function mcpFunnelSnapshotPayload(
       tools_count: TOOLS.length,
       resources_count: MCP_RESOURCES.length,
       prompts_count: PROMPTS.length,
-      default_public_event_limit: PUBLIC_MCP_DEFAULT_EVENT_LIMIT,
+      default_public_event_limit: PUBLIC_MCP_FUNNEL_EVENT_LIMIT,
       default_public_order_lookback_days: PUBLIC_MCP_DEFAULT_ORDER_DAYS,
       default_public_order_scan_limit: PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
       full_event_limit_hint: "Use ?limit=5000&order_days=90&order_limit=250 for a heavier operator snapshot when latency is acceptable.",
@@ -9288,7 +9289,7 @@ app.get("/ai/mcp-usage-snapshot.md", async (c) => {
 app.get("/ai/mcp-funnel-snapshot.json", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_FUNNEL_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;
@@ -9302,7 +9303,7 @@ app.get("/ai/mcp-funnel-snapshot.json", async (c) => {
 app.get("/ai/mcp-funnel-snapshot.md", async (c) => {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_DEFAULT_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_FUNNEL_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(5000, requestedLimit)) : 5000;

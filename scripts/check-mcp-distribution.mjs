@@ -999,6 +999,8 @@ async function liveMcpCheck() {
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
       funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
+      funnelSnapshot?.limit === 5000 &&
+      funnelSnapshot?.runtime?.default_public_event_limit === 5000 &&
       funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
       funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
