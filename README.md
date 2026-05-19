@@ -178,6 +178,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP reviewer activation: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
 - MCP reviewer activation Markdown: https://mcp.packrift.com/ai/mcp-reviewer-activation.md
 - MCP activation command center: https://mcp.packrift.com/r/activate
+- Live MCP tool discovery JSON: https://mcp.packrift.com/ai/mcp-tools.json
+- Live MCP tool discovery Markdown: https://mcp.packrift.com/ai/spec-finder-tools.md
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
