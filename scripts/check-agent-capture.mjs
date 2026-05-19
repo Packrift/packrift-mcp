@@ -219,7 +219,7 @@ async function main() {
     check("markdown contains agent surface labels", mdResult.ok && hasAll(mdResult.text, mdNeedles), {
       detail: mdNeedles.filter((needle) => !mdResult.text.includes(needle)).join(", ") || "all present",
     }),
-    check("health still current", healthResult.value?.tools_count >= 14 && healthResult.value?.resources_count >= 70, {
+    check("health still current", healthResult.value?.tools_count >= 15 && healthResult.value?.resources_count >= 70, {
       detail: `tools=${healthResult.value?.tools_count ?? 0}, resources=${healthResult.value?.resources_count ?? 0}`,
     }),
     check("resources/list advertises capture routes", hasResourceUri(resourceUris, "/ai/all-agent-capture.json") && hasResourceUri(resourceUris, "/ai/all-agent-capture.md"), {

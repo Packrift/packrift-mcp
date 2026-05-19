@@ -91,6 +91,34 @@ const ACTIONS = [
     submission_url: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
   },
   {
+    id: "mcpskills",
+    label: "MCPSkills",
+    action_status: "submitted_pending",
+    directory_status: "pending",
+    priority: "medium",
+    method: "Submitted through the public /api/submit endpoint.",
+    evidence: "Submission returned a success redirect after posting the GitHub repo, ai-tools category, and short hosted MCP description.",
+    stale_markers: ["Packrift not yet visible on the server directory"],
+    recrawl_subject: "Review MCPSkills Packrift MCP submission",
+    next_action: "Monitor for listing publication; use the refreshed proof message if review asks for current endpoint evidence.",
+    listing_url: "https://mcpskills.app/servers",
+    submission_url: "https://mcpskills.app/submit",
+  },
+  {
+    id: "agentndx",
+    label: "AgentNDX",
+    action_status: "submitted_pending",
+    directory_status: "pending",
+    priority: "medium",
+    method: "Submitted through the public /api/submit endpoint.",
+    evidence: "Submission returned a success redirect after posting name, GitHub repo, hosted start page, MCP protocol, and short description.",
+    stale_markers: ["Packrift not yet visible on the browse directory"],
+    recrawl_subject: "Review AgentNDX Packrift MCP submission",
+    next_action: "Monitor for listing publication; use the refreshed proof message if review asks for current endpoint evidence.",
+    listing_url: "https://agentndx.ai/browse",
+    submission_url: "https://agentndx.ai/submit",
+  },
+  {
     id: "chiark",
     label: "Chiark",
     action_status: "monitor_upstream_registry",
@@ -196,7 +224,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R06",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R07",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",

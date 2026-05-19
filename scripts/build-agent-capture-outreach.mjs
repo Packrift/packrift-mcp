@@ -104,7 +104,7 @@ function directoryRefreshMessage(row, capture = null) {
     ? `${CAPTURE_URL} shows ${capture.surfaces.length} agent surfaces and the canonical endpoint. Live health shows ${capture.runtime.tools_count} tools, ${capture.runtime.resources_count} resources, and ${capture.runtime.prompts_count} prompts.`
     : `${CAPTURE_URL} shows the current all-agent capture matrix.`;
   return [
-    `Subject: Refresh Packrift MCP listing to current hosted 14-tool endpoint`,
+    `Subject: Refresh Packrift MCP listing to current hosted 15-tool endpoint`,
     "",
     `Hi, Packrift MCP is live as a hosted Streamable HTTP MCP server at ${MCP_ENDPOINT}.`,
     "",

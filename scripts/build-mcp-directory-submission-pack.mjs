@@ -31,7 +31,7 @@ const TARGETS = [
     submission_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     category: "Business",
     priority: "high",
-    action: "Monitor the hosted Glama connector; it should stay healthy and list the 14 live tools.",
+    action: "Monitor the hosted Glama connector; it should stay healthy and list the 15 live tools.",
   },
   {
     name: "glama_server_listing",
@@ -59,6 +59,24 @@ const TARGETS = [
     category: "Business",
     priority: "high",
     action: "Use official-registry publication and public server.json as the recrawl source; this checker may see a 403 from PulseMCP.",
+  },
+  {
+    name: "mcpskills",
+    label: "MCPSkills",
+    listing_url: "https://mcpskills.app/servers",
+    submission_url: "https://mcpskills.app/submit",
+    category: "AI Tools",
+    priority: "medium",
+    action: "Monitor the submitted listing and provide hosted endpoint proof if review asks for validation.",
+  },
+  {
+    name: "agentndx",
+    label: "AgentNDX",
+    listing_url: "https://agentndx.ai/browse",
+    submission_url: "https://agentndx.ai/submit",
+    category: "Business",
+    priority: "medium",
+    action: "Monitor the submitted MCP protocol listing and provide hosted start page proof if review asks for validation.",
   },
   {
     name: "mcpbench",

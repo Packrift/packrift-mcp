@@ -84,6 +84,7 @@ export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
       "A qualified MCP cart landing is an external buyer or agent reaching a URL with utm_source=chatgpt-mcp, utm_medium=mcp_tool, utm_campaign=create_cart_url, and the /r/cart/{SKU} landing path before Shopify checkout.",
     required_live_confirmation: [
       "exact SKU or exact dimensions selected by buyer",
+      "prepare_purchase_handoff may collapse product, price, and inventory checks for known exact SKUs",
       "get_product confirms product identity and variant",
       "get_pricing confirms live unit price",
       "check_inventory confirms availability",
@@ -91,6 +92,27 @@ export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
       "create_cart_url returns the MCP cart landing URL",
     ],
     activation_paths: [
+      {
+        id: "one_call_exact_sku_prepare_then_cart",
+        buyer_prompt:
+          "Prepare Packrift SKU 1066 for purchase. Confirm live product, price, and inventory first, then create the cart only after I confirm quantity 1.",
+        expected_agent_behavior:
+          "Call prepare_purchase_handoff with buyer_confirmed=false first; after buyer confirmation, call it again with buyer_confirmed=true and return the MCP /r/cart URL.",
+        json_rpc_sequence: [
+          toolCall("prepare-1066-unconfirmed", "prepare_purchase_handoff", {
+            sku: "1066",
+            quantity: 1,
+            buyer_confirmed: false,
+            source_context: "mcp_cart_activation",
+          }),
+          toolCall("prepare-1066-confirmed", "prepare_purchase_handoff", {
+            sku: "1066",
+            quantity: 1,
+            buyer_confirmed: true,
+            source_context: "mcp_cart_activation",
+          }),
+        ],
+      },
       {
         id: "exact_sku_reorder_to_cart",
         buyer_prompt:
@@ -150,6 +172,7 @@ export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
     },
     success_signals: [
       "tools/list and prompts/list are visible from external agents",
+      "prepare_purchase_handoff is called for known exact SKUs",
       "get_cart_handoff_candidates is called for exact SKUs",
       "get_pricing and check_inventory run before cart handoff",
       "create_cart_url returns an MCP /r/cart landing URL",

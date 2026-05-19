@@ -161,7 +161,7 @@ const HOSTS = [
       url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     },
     first_test_ids: ["tools-list", "candidate-1066"],
-    notes: ["The Glama hosted connector should show the current 14-tool remote endpoint.", "The stale Glama source listing is a separate directory refresh issue."],
+    notes: ["The Glama hosted connector should show the current 15-tool remote endpoint.", "The stale Glama source listing is a separate directory refresh issue."],
   },
   {
     id: "mcp_marketplace",
@@ -227,6 +227,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       "Prefer remote MCP install paths over local self-hosting.",
       "Do not ask buyers for Packrift API keys.",
       "Use browser agents only as read-first discovery bridges; confirm live commerce facts through MCP.",
+      "Use prepare_purchase_handoff for known exact SKUs when the host needs one compact live-confirmation and guarded cart-handoff tool call.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Route no-exact-match cases to quote recovery instead of forcing nearby substitutes.",
     ],
@@ -235,6 +236,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
     conversion_path: [
       "Install or connect the hosted Packrift MCP endpoint.",
       "Run tools/list and prompts/list.",
+      "For a known exact SKU, call prepare_purchase_handoff with buyer_confirmed=false first; call again with buyer_confirmed=true only after the buyer confirms SKU and quantity.",
       "Call get_cart_handoff_candidates for a known SKU or search_products for the buyer request.",
       "Call get_product, get_pricing, and check_inventory for the exact selected SKU.",
       "Call create_cart_url only after buyer confirmation.",

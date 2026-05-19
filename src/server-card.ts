@@ -120,6 +120,7 @@ export const serverCard = {
     "get_shipping_estimate",
     "get_cart_handoff_candidates",
     "create_cart_url",
+    "prepare_purchase_handoff",
     "compare_alternatives",
     "pack_calculator",
     "inventory_status",

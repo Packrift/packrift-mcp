@@ -378,6 +378,7 @@ Packrift exposes a public MCP server for AI agents that need real-time catalog a
 - \`inventory_status(variant_ids, sku, handle, quantity)\` — live Shopify total and location-level inventory status where Shopify exposes location quantities
 - \`get_shipping_estimate(zip, country, items)\` — carrier rates and totals for a destination zip and cart contents
 - \`create_cart_url({ sku, quantity })\` or \`create_cart_url({ items })\` — build a measured MCP cart landing plus final packrift.com/cart/... URL with \`?ref=mcp\` and \`utm_source=chatgpt-mcp&utm_medium=mcp_tool&utm_campaign=create_cart_url\` attribution; SKU, handle, and variant metadata are continuity-checked against AI_APPROVE catalog records before hand-off to checkout
+- \`prepare_purchase_handoff(sku, quantity, buyer_confirmed)\` — one-call exact-SKU prep. Confirms the AI_APPROVE product, live price, and inventory; creates the measured MCP cart URL only when \`buyer_confirmed=true\`
 
 Cart handoff candidates for priority SKUs are available at https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md. The cart activation playbook is available at https://mcp.packrift.com/ai/mcp-cart-activation.json and https://mcp.packrift.com/ai/mcp-cart-activation.md. Use these as structured examples for the required sequence: exact SKU retrieval, \`get_product\`, \`get_pricing\`, \`check_inventory\`, then \`create_cart_url\`, with the returned MCP \`/r/cart\` landing URL as the primary buyer handoff.
 
@@ -388,7 +389,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 **Discovery surfaces:**
 
 - MCP start page: https://mcp.packrift.com/start
-- Tracked MCP start template: https://mcp.packrift.com/r/start/{source} (use lowercase source slugs such as mcpservers_org, glama_connector, mcp_directory, pulsemcp_packrift, mcpbench, chiark, docker_mcp_catalog, or partner-specific slugs; custom slugs are allowed without pre-registration when they match ^[a-z0-9_]{2,64}$)
+- Tracked MCP start template: https://mcp.packrift.com/r/start/{source} (use lowercase source slugs such as mcpservers_org, glama_connector, mcp_directory, pulsemcp_packrift, mcpskills, agentndx, mcpbench, chiark, docker_mcp_catalog, or partner-specific slugs; custom slugs are allowed without pre-registration when they match ^[a-z0-9_]{2,64}$)
 - MCP start pack JSON: https://mcp.packrift.com/ai/mcp-start.json
 - MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
 - llms.txt: https://mcp.packrift.com/llms.txt

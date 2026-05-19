@@ -45,7 +45,7 @@ MCP clients that support remote HTTP or Streamable HTTP servers can add Packrift
 
 ## Hosted connector and directory listings
 
-Use the hosted endpoint above when possible. It requires no buyer-side API key and exposes the current 14-tool Packrift exact-spec commerce surface.
+Use the hosted endpoint above when possible. It requires no buyer-side API key and exposes the current 15-tool Packrift exact-spec commerce surface.
 
 - Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
 - MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
@@ -150,6 +150,7 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 | `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
 | `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority AI-approved SKUs with ready `create_cart_url` arguments, measured SKU/product/reorder/quote/cart links, and required live-confirmation sequence. |
 | `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a GA4-visible Packrift cart landing URL plus the final `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
+| `prepare_purchase_handoff(sku, quantity?, buyer_confirmed?)` | Fast exact-SKU path. Confirms the AI_APPROVE product, live price, and inventory, then returns a measured MCP cart URL only when `buyer_confirmed=true`. |
 | `compare_alternatives(requested_spec, family?, competitor_reference?, limit?)` | Ranks AI-approved Packrift alternatives for open-ended buyer requests, including competitor-style packaging specs. |
 | `pack_calculator(item, padding?, use_case?, limit?)` | Calculates protected inside dimensions and returns fitted box or mailer candidates with void-fill guidance. |
 | `inventory_status(variant_ids?, sku?, handle?, quantity?)` | Live total and location-level Shopify inventory status for exact SKUs, handles, or variant IDs. |

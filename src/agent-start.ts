@@ -19,6 +19,8 @@ const TRACKED_START_RECOMMENDED_SOURCES = [
   "glama_server_listing",
   "mcp_directory",
   "pulsemcp_packrift",
+  "mcpskills",
+  "agentndx",
   "mcpbench",
   "chiark",
   "mcp_marketplace_io",
@@ -75,17 +77,28 @@ const FIRST_FLOW = [
   {
     step: 2,
     name: "List tools",
-    outcome: "The agent confirms the current 14-tool commerce surface.",
+    outcome: "The agent confirms the current 15-tool commerce surface.",
     request: { jsonrpc: "2.0", id: "tools", method: "tools/list" },
   },
   {
     step: 3,
+    name: "Try the one-call exact-SKU prep tool",
+    outcome: "The agent confirms SKU 1066, live price, and inventory without creating a cart URL until buyer_confirmed is true.",
+    request: toolCall("prepare-1066", "prepare_purchase_handoff", {
+      sku: "1066",
+      quantity: 1,
+      buyer_confirmed: false,
+      source_context: "mcp_start_demo",
+    }),
+  },
+  {
+    step: 4,
     name: "Fetch one purchase-ready cart candidate",
     outcome: "The agent receives SKU 1066 plus the required live-confirmation sequence.",
     request: toolCall("candidate-1066", "get_cart_handoff_candidates", { sku: "1066", limit: 1 }),
   },
   {
-    step: 4,
+    step: 5,
     name: "Confirm live price",
     outcome: "The agent verifies the current price before showing a buyer-facing recommendation.",
     request: toolCall("price-1066", "get_pricing", {
@@ -94,7 +107,7 @@ const FIRST_FLOW = [
     }),
   },
   {
-    step: 5,
+    step: 6,
     name: "Confirm live inventory",
     outcome: "The agent verifies the exact SKU is available before cart handoff.",
     request: toolCall("inventory-1066", "check_inventory", {
@@ -102,7 +115,7 @@ const FIRST_FLOW = [
     }),
   },
   {
-    step: 6,
+    step: 7,
     name: "Create the measured cart handoff",
     outcome: "The agent returns a Packrift MCP /r/cart landing URL before the final Shopify cart URL.",
     request: toolCall("cart-1066", "create_cart_url", {
@@ -121,6 +134,7 @@ const FIRST_FLOW = [
 
 const BUYER_PROMPTS = [
   "Reorder Packrift SKU 1066. Confirm product, live price, inventory, then prepare a cart handoff for quantity 1.",
+  "Use prepare_purchase_handoff for Packrift SKU 1066 with buyer_confirmed=false, then ask me to confirm the exact SKU and quantity before creating the cart handoff.",
   "Find packaging for a 9 x 4 x 3 inch item weighing 2 lb for ecommerce shipping; compare options and check live price and inventory.",
   "A buyer asked for 10 x 6 x 8 ECT-32 kraft boxes. If there is no exact AI-approved match, explain no exact match and route to bulk quote recovery.",
   "Create a procurement line item for Packrift SKU LL251WR with exact SKU, product URL, live price check, inventory, and reorder path.",
@@ -147,6 +161,8 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
         glama_server_listing: trackedStartUrl("glama_server_listing"),
         mcp_directory: trackedStartUrl("mcp_directory"),
         pulsemcp_packrift: trackedStartUrl("pulsemcp_packrift"),
+        mcpskills: trackedStartUrl("mcpskills"),
+        agentndx: trackedStartUrl("agentndx"),
         mcpbench: trackedStartUrl("mcpbench"),
         chiark: trackedStartUrl("chiark"),
         mcp_marketplace_io: trackedStartUrl("mcp_marketplace_io"),
@@ -184,6 +200,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "This start surface is useful only if it drives external installs, tools/list calls, get_cart_handoff_candidates calls, measured /r/cart landings, and MCP-attributed orders. It is not proof that the adoption goal is complete.",
     operating_rules: [
       "Use https://mcp.packrift.com/mcp as the canonical endpoint.",
+      "Use prepare_purchase_handoff when an agent already has an exact Packrift SKU and needs the fastest safe product, live price, inventory, and cart-handoff prep.",
       "Use /r/start/{source} tracked start links for directories, partners, campaigns, and agent handoffs so start traffic can be attributed by source.",
       "Custom /r/start/{source} slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",

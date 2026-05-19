@@ -66,6 +66,22 @@ const DIRECTORY_TARGETS = [
     requested_action: "Use the official registry entry and public server.json as the recrawl source if direct crawler access is blocked.",
   },
   {
+    id: "mcpskills",
+    name: "MCPSkills",
+    listing_url: "https://mcpskills.app/servers",
+    refresh_url: "https://mcpskills.app/submit",
+    priority: "medium",
+    requested_action: "Review the direct submission and list Packrift from the public GitHub repo with the hosted no-auth MCP endpoint.",
+  },
+  {
+    id: "agentndx",
+    name: "AgentNDX",
+    listing_url: "https://agentndx.ai/browse",
+    refresh_url: "https://agentndx.ai/submit",
+    priority: "medium",
+    requested_action: "Review the direct submission and list Packrift as an MCP protocol service with the hosted start page.",
+  },
+  {
     id: "docker_mcp_catalog",
     name: "Docker MCP Catalog",
     listing_url: "https://github.com/docker/mcp-registry/pull/3388",
@@ -79,7 +95,7 @@ const DIRECTORY_TARGETS = [
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, official registry entry, install matrix, first-run proof, workflow gallery, browser-agent bridge, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R06",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R07",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",

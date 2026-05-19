@@ -21,6 +21,35 @@ function toolCall(id: string, name: string, args: Record<string, unknown>) {
 
 const EXACT_SKU_WORKFLOWS = [
   {
+    id: "one_call_purchase_handoff_1066",
+    title: "One-call exact SKU live confirmation",
+    audience: "Agent hosts and demos that need the shortest useful Packrift MCP flow from known SKU to guarded cart handoff.",
+    buyer_prompt:
+      "Use Packrift SKU 1066. Confirm the exact product, live price, and inventory; create the cart only after I confirm quantity 1.",
+    success_outcome:
+      "Agent uses prepare_purchase_handoff to collapse product, price, inventory, and guarded cart handoff into one safe MCP tool call.",
+    sequence: [
+      toolCall("prepare-1066-unconfirmed", "prepare_purchase_handoff", {
+        sku: "1066",
+        quantity: 1,
+        buyer_confirmed: false,
+        source_context: "workflow_gallery_one_call",
+      }),
+      toolCall("prepare-1066-confirmed", "prepare_purchase_handoff", {
+        sku: "1066",
+        quantity: 1,
+        buyer_confirmed: true,
+        source_context: "workflow_gallery_one_call",
+      }),
+    ],
+    expected_checks: [
+      "unconfirmed result has status live_confirmed_awaiting_buyer_confirmation and cart null",
+      "confirmed result has status cart_handoff_ready",
+      "cart result url starts with https://mcp.packrift.com/r/cart/1066",
+      "live_confirmation includes product, pricing, inventory, price_ok, and inventory_ok",
+    ],
+  },
+  {
     id: "exact_sku_reorder_1066",
     title: "Exact SKU reorder to measured cart",
     audience: "AI shopping agents, procurement copilots, and agent-host demos that need the shortest buyer-ready flow.",

@@ -141,6 +141,18 @@ async function main() {
   const inventory = variantId
     ? await callTool("check_inventory", { variant_ids: [variantId], selected_sku: sku, selected_handle: handle })
     : null;
+  const preparedUnconfirmed = await callTool("prepare_purchase_handoff", {
+    sku,
+    quantity: qty,
+    buyer_confirmed: false,
+    source_context: "smoke_cart_handoff",
+  });
+  const preparedConfirmed = await callTool("prepare_purchase_handoff", {
+    sku,
+    quantity: qty,
+    buyer_confirmed: true,
+    source_context: "smoke_cart_handoff",
+  });
   const cart = cartArguments
     ? await callTool("create_cart_url", {
         ...cartArguments,
@@ -157,7 +169,11 @@ async function main() {
 
   const checks = [
     check("initialize_ok", initialize.ok, { status: initialize.status, server: initialize.parsed?.result?.serverInfo ?? null }),
-    check("tools_list_ok", toolsList.ok && toolNames.length >= 14, { status: toolsList.status, tool_count: toolNames.length }),
+    check("tools_list_ok", toolsList.ok && toolNames.length >= 15 && toolNames.includes("prepare_purchase_handoff"), {
+      status: toolsList.status,
+      tool_count: toolNames.length,
+      has_prepare_purchase_handoff: toolNames.includes("prepare_purchase_handoff"),
+    }),
     check("candidate_found", Boolean(candidate && variantId), { sku, variant_id: variantId, handle }),
     check("candidate_requires_live_confirmation", Array.isArray(candidate?.live_confirmation_required), {
       live_confirmation_required: candidate?.live_confirmation_required ?? null,
@@ -175,6 +191,34 @@ async function main() {
       status: inventory?.status ?? null,
       available: inventory?.structured?.[0]?.available ?? null,
     }),
+    check(
+      "prepare_purchase_handoff_unconfirmed_guard",
+      Boolean(
+        preparedUnconfirmed?.ok &&
+          !preparedUnconfirmed.isToolError &&
+          preparedUnconfirmed.structured?.status === "live_confirmed_awaiting_buyer_confirmation" &&
+          preparedUnconfirmed.structured?.cart === null
+      ),
+      {
+        status: preparedUnconfirmed?.status ?? null,
+        handoff_status: preparedUnconfirmed?.structured?.status ?? null,
+        cart_present: Boolean(preparedUnconfirmed?.structured?.cart),
+      }
+    ),
+    check(
+      "prepare_purchase_handoff_confirmed_cart",
+      Boolean(
+        preparedConfirmed?.ok &&
+          !preparedConfirmed.isToolError &&
+          preparedConfirmed.structured?.status === "cart_handoff_ready" &&
+          preparedConfirmed.structured?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/")
+      ),
+      {
+        status: preparedConfirmed?.status ?? null,
+        handoff_status: preparedConfirmed?.structured?.status ?? null,
+        cart_url: preparedConfirmed?.structured?.cart?.url ?? null,
+      }
+    ),
     check("cart_url_ok", Boolean(cart?.ok && !cart.isToolError && cartUrl && finalCartUrl), {
       status: cart?.status ?? null,
       url: cartUrl,
@@ -206,6 +250,8 @@ async function main() {
       variant_id: variantId,
       handle,
       title: candidate?.title ?? product?.structured?.title ?? null,
+      prepared_purchase_handoff_status: preparedConfirmed?.structured?.status ?? null,
+      prepared_purchase_handoff_cart_url: preparedConfirmed?.structured?.cart?.url ?? null,
       cart_url: cartUrl,
       final_cart_url: finalCartUrl,
     },

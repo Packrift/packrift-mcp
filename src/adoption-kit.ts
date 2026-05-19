@@ -190,12 +190,23 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       },
       {
         step: 3,
+        name: "Use one-call exact-SKU prep",
+        why: "For known SKUs, confirm product, live price, and inventory in one call while withholding cart URL until buyer_confirmed is true.",
+        request: toolCall("prepare-1066", "prepare_purchase_handoff", {
+          sku: demo.sku,
+          quantity: 1,
+          buyer_confirmed: false,
+          source_context: "adoption_kit_demo",
+        }),
+      },
+      {
+        step: 4,
         name: "Get a ready exact-SKU cart candidate",
         why: "Start with a conversion-proven SKU that already has safe create_cart_url arguments.",
         request: toolCall("candidate-1066", "get_cart_handoff_candidates", { sku: demo.sku, limit: 1 }),
       },
       {
-        step: 4,
+        step: 5,
         name: "Confirm live price",
         why: "Do not show price-dependent handoff until live pricing is checked.",
         request: toolCall("price-1066", "get_pricing", {
@@ -204,7 +215,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
         }),
       },
       {
-        step: 5,
+        step: 6,
         name: "Confirm live inventory",
         why: "Do not show a cart or checkout path for an unavailable exact SKU.",
         request: toolCall("inventory-1066", "check_inventory", {
@@ -212,7 +223,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
         }),
       },
       {
-        step: 6,
+        step: 7,
         name: "Create measured cart handoff only after confirmation",
         why: "Return an MCP cart landing URL with attribution and exact SKU continuity.",
         request: toolCall("cart-1066", "create_cart_url", {
@@ -230,7 +241,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
     ],
     developer_examples: DEVELOPER_EXAMPLES,
     expected_first_flow_outcomes: [
-      "tools/list returns at least 14 tools.",
+      "tools/list returns at least 15 tools, including prepare_purchase_handoff for one-call exact-SKU live confirmation and guarded cart handoff.",
+      "prepare_purchase_handoff with buyer_confirmed=false returns live confirmation and cart null.",
       "get_cart_handoff_candidates returns AI_APPROVE SKU 1066 when requested exactly.",
       "Cart candidates expose an MCP measured landing URL under https://mcp.packrift.com/r/cart/ before the final Shopify cart URL.",
       "Agents must call get_product, get_pricing, and check_inventory before presenting create_cart_url output to a buyer.",
@@ -239,7 +251,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       {
         name: "Exact SKU reorder",
         prompt: "Reorder Packrift SKU 1066. Confirm product, live price, inventory, and then prepare a cart handoff for quantity 1.",
-        best_tools: ["get_cart_handoff_candidates", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
+        best_tools: ["prepare_purchase_handoff", "get_cart_handoff_candidates", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
       },
       {
         name: "Find packaging for an item",

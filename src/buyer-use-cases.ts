@@ -142,9 +142,10 @@ export function mcpBuyerUseCasesPayload(runtime: BuyerUseCasesRuntime) {
     first_call_sequence: [
       { step: 1, method: "tools/list", why: "Confirm the client sees Packrift commerce tools." },
       { step: 2, method: "prompts/list", why: "Choose the native exact-spec, reorder, cart handoff, or no-match workflow." },
-      { step: 3, method: "tools/call", tool: "find_packaging_for_item or search_products", why: "Resolve candidate exact SKUs." },
-      { step: 4, method: "tools/call", tool: "get_pricing and check_inventory", why: "Confirm live commercial facts." },
-      { step: 5, method: "tools/call", tool: "create_cart_url", why: "Create a measured cart handoff only after selection and live confirmation." },
+      { step: 3, method: "tools/call", tool: "prepare_purchase_handoff", why: "Use this fastest path when the buyer already has an exact SKU." },
+      { step: 4, method: "tools/call", tool: "find_packaging_for_item or search_products", why: "Resolve candidate exact SKUs when the buyer is still exploring." },
+      { step: 5, method: "tools/call", tool: "get_pricing and check_inventory", why: "Confirm live commercial facts when using the manual flow." },
+      { step: 6, method: "tools/call", tool: "create_cart_url", why: "Create a measured cart handoff only after selection and live confirmation." },
     ],
   };
 }

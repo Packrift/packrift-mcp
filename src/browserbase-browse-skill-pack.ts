@@ -33,10 +33,23 @@ const DEMO_SEQUENCE = [
     name: "Fetch a ready exact-SKU workflow",
     method: "GET",
     url: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
-    expected: "workflow exact_sku_reorder_1066 with live-check sequence before cart handoff",
+    expected: "workflow one_call_purchase_handoff_1066 and exact_sku_reorder_1066 with live-check sequence before cart handoff",
   },
   {
     step: 3,
+    name: "Use the one-call exact-SKU prep path",
+    method: "POST",
+    url: MCP_ENDPOINT,
+    request: toolCall("prepare-1066", "prepare_purchase_handoff", {
+      sku: "1066",
+      quantity: 1,
+      buyer_confirmed: false,
+      source_context: "browserbase_browse",
+    }),
+    expected: "live price and inventory are confirmed, but cart remains null until buyer_confirmed is true",
+  },
+  {
+    step: 4,
     name: "Call MCP for candidate continuity",
     method: "POST",
     url: MCP_ENDPOINT,
@@ -44,7 +57,7 @@ const DEMO_SEQUENCE = [
     expected: "candidate includes selected_sku 1066, variant_id, handle, and create_cart_url_sku_arguments",
   },
   {
-    step: 4,
+    step: 5,
     name: "Call MCP for live price",
     method: "POST",
     url: MCP_ENDPOINT,
@@ -58,7 +71,7 @@ const DEMO_SEQUENCE = [
     expected: "unit_price and currency are returned from live Shopify data",
   },
   {
-    step: 5,
+    step: 6,
     name: "Call MCP for live inventory",
     method: "POST",
     url: MCP_ENDPOINT,
@@ -71,7 +84,7 @@ const DEMO_SEQUENCE = [
     expected: "in_stock true or a clear unavailable state",
   },
   {
-    step: 6,
+    step: 7,
     name: "Create measured cart handoff only after live confirmation",
     method: "POST",
     url: MCP_ENDPOINT,
@@ -128,6 +141,7 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
     browser_agent_rules: [
       "Use public URLs for read-first discovery, not for final commercial facts.",
       "Call Packrift MCP for get_product, get_pricing, check_inventory, shipping estimates, no-match handling, and create_cart_url.",
+      "Use prepare_purchase_handoff when the browser agent already has an exact SKU and needs a compact live-confirmed handoff path.",
       "Use create_cart_url with sku plus quantity after buyer confirmation; the tool blocks SKU, handle, and variant mismatches.",
       "Never present nearby dimensions, material, closure, printer type, pack count, case count, or color as an exact substitute.",
       "When no exact AI_APPROVE item exists, route to explain_no_exact_match and get_bulk_quote_link instead of forcing a cart.",
@@ -163,6 +177,7 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       "browserbase_browse_skill_pack resource reads",
       "MCP tools/list and resources/list after browser-skill discovery",
       "get_cart_handoff_candidates calls with source context browserbase_browse",
+      "prepare_purchase_handoff calls with source_context browserbase_browse",
       "create_cart_url calls with source_context browserbase_browse",
       "qualified /r/cart landings and MCP-attributed orders",
     ],

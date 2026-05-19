@@ -27,6 +27,7 @@ import { checkInventorySchema, checkInventoryHandler } from "./tools/check_inven
 import { recommendPackagingSchema, recommendPackagingHandler } from "./tools/recommend_packaging.js";
 import { getShippingEstimateSchema, getShippingEstimateHandler } from "./tools/get_shipping_estimate.js";
 import { createCartUrlSchema, createCartUrlHandler } from "./tools/create_cart_url.js";
+import { preparePurchaseHandoffHandler, preparePurchaseHandoffSchema } from "./tools/prepare_purchase_handoff.js";
 import {
   compareAlternativesHandler,
   compareAlternativesSchema,
@@ -139,6 +140,7 @@ const TOOLS: ToolDef[] = [
   { schema: getShippingEstimateSchema, handler: getShippingEstimateHandler },
   { schema: getCartHandoffCandidatesSchema, handler: getCartHandoffCandidatesHandler },
   { schema: createCartUrlSchema, handler: createCartUrlHandler },
+  { schema: preparePurchaseHandoffSchema, handler: preparePurchaseHandoffHandler },
   { schema: compareAlternativesSchema, handler: compareAlternativesHandler },
   { schema: packCalculatorSchema, handler: packCalculatorHandler },
   { schema: inventoryStatusSchema, handler: inventoryStatusHandler },
@@ -342,7 +344,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             prompts: { listChanged: false },
           },
           instructions:
-            "Packrift finds the right packaging supply for a given item. All product discovery, product detail, price, inventory, shipping, reorder, quote, and cart handoff tools are AI_APPROVE-gated where a product SKU is involved. Hero use case: the user has an item's dimensions (or a use case like 'mailer' / 'fragile') and needs the smallest box, mailer, or container that fits — call find_packaging_for_item. Use search_products only when the user names a specific product type and dimensions are unknown. Use get_cart_handoff_candidates to discover priority AI-approved SKUs with ready create_cart_url arguments for agentic cart exploration. After picking a SKU, use get_product for full detail, get_pricing/check_inventory for live confirmation, get_reorder_link or get_bulk_quote_link for procurement handoff, get_shipping_estimate for rates, then create_cart_url to hand off to checkout (always carries ?ref=mcp). If no exact match exists, call explain_no_exact_match.",
+            "Packrift finds the right packaging supply for a given item. All product discovery, product detail, price, inventory, shipping, reorder, quote, and cart handoff tools are AI_APPROVE-gated where a product SKU is involved. Hero use case: the user has an item's dimensions (or a use case like 'mailer' / 'fragile') and needs the smallest box, mailer, or container that fits — call find_packaging_for_item. Use search_products only when the user names a specific product type and dimensions are unknown. Use prepare_purchase_handoff for the fastest exact-SKU path: it confirms product, live price, and inventory, and returns a measured MCP cart URL only when buyer_confirmed=true. Use get_cart_handoff_candidates to discover priority AI-approved SKUs with ready create_cart_url arguments for agentic cart exploration. After picking a SKU, use get_product for full detail, get_pricing/check_inventory for live confirmation, get_reorder_link or get_bulk_quote_link for procurement handoff, get_shipping_estimate for rates, then create_cart_url to hand off to checkout (always carries ?ref=mcp). If no exact match exists, call explain_no_exact_match.",
         });
 
       case "notifications/initialized":
@@ -671,6 +673,8 @@ const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "glama_server_listing",
   "mcp_directory",
   "pulsemcp_packrift",
+  "mcpskills",
+  "agentndx",
   "mcpbench",
   "chiark",
   "mcp_marketplace_io",

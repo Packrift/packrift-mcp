@@ -26,7 +26,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://mcpservers.org/servers/packrift/packrift-mcp",
     submission_url: "https://mcpservers.org/submit",
     priority: "high",
-    follow_up_action: "Submit the GitHub repo and ask for the listing to be recrawled with the current 14-tool cart-handoff README.",
+    follow_up_action: "Submit the GitHub repo and ask for the listing to be recrawled with the current 15-tool cart-handoff README.",
   },
   mcpbench: {
     listing_url: "https://mcpbench.ai/servers/io.github.Packrift/packrift-mcp",
@@ -38,7 +38,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     submission_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     priority: "high",
-    follow_up_action: "Keep the hosted Glama connector healthy and listing all 14 current tools.",
+    follow_up_action: "Keep the hosted Glama connector healthy and listing all 15 current tools.",
   },
   glama_server_listing: {
     listing_url: "https://glama.ai/mcp/servers/ye4xxr7qiu",
@@ -69,6 +69,18 @@ const SURFACE_GUIDANCE = {
     submission_url: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
     priority: "high",
     follow_up_action: "PulseMCP is blocked to this checker; use official-registry publication and public server.json as the recrawl source.",
+  },
+  mcpskills: {
+    listing_url: "https://mcpskills.app/servers",
+    submission_url: "https://mcpskills.app/submit",
+    priority: "medium",
+    follow_up_action: "MCPSkills direct submission is queued; monitor for Packrift appearing in the public server directory.",
+  },
+  agentndx: {
+    listing_url: "https://agentndx.ai/browse",
+    submission_url: "https://agentndx.ai/submit",
+    priority: "medium",
+    follow_up_action: "AgentNDX direct submission is queued; monitor for Packrift appearing in browse/API results.",
   },
   docker_mcp_catalog: {
     listing_url: "https://github.com/docker/mcp-registry/pull/3388",
@@ -278,10 +290,11 @@ async function liveMcpCheck() {
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
       health?.resources_count >= 65 &&
-      health?.tools_count >= 14 &&
-      toolNames.length >= 14 &&
+      health?.tools_count >= 15 &&
+      toolNames.length >= 15 &&
       toolNames.includes("create_cart_url") &&
       toolNames.includes("get_cart_handoff_candidates") &&
+      toolNames.includes("prepare_purchase_handoff") &&
       resourcesCount >= 65 &&
       promptsCount >= 7 &&
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R03" &&
@@ -341,6 +354,7 @@ async function liveMcpCheck() {
       workflowGallery?.release === "PACKRIFT-MCP-WORKFLOW-GALLERY-R01" &&
       workflowGallery?.canonical_endpoint === MCP_ENDPOINT &&
       workflowGallery?.workflow_count >= 5 &&
+      workflowGallery?.workflows?.some((workflow) => workflow.id === "one_call_purchase_handoff_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "exact_sku_reorder_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
@@ -348,16 +362,17 @@ async function liveMcpCheck() {
       browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R01" &&
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
+      browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
-      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R06" &&
+      directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R07" &&
       directoryRefresh?.live_proof?.mcp_start === "https://mcp.packrift.com/ai/mcp-start.json" &&
       directoryRefresh?.live_proof?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directoryRefresh?.live_proof?.tracked_start_partner_demo === "https://mcp.packrift.com/r/start/partner_demo" &&
       directoryRefresh?.canonical_listing?.tracked_start_source_policy?.partner_specific_sources_allowed === true &&
       directoryRefresh?.live_proof?.browserbase_browse_skill_pack === "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json" &&
-      directoryRefresh?.priority_refresh_targets?.length >= 5 &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R06" &&
-      directorySubmitActions?.actions?.length >= 7 &&
+      directoryRefresh?.priority_refresh_targets?.length >= 9 &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R07" &&
+      directorySubmitActions?.actions?.length >= 9 &&
       directorySubmitActions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       directorySubmitActions?.actions?.every((action) => action.tracked_start_url?.startsWith("https://mcp.packrift.com/r/start/")) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.tracked_start?.startsWith("https://mcp.packrift.com/r/start/")) &&
@@ -503,7 +518,14 @@ async function liveMcpCheck() {
 async function mcpserversCheck() {
   const result = await fetchText("https://mcpservers.org/servers/packrift/packrift-mcp");
   const text = result.text;
-  const required = ["get_cart_handoff_candidates", "mcp-cart-handoff-candidates", "compare_alternatives", "pack_calculator", "inventory_status"];
+  const required = [
+    "get_cart_handoff_candidates",
+    "prepare_purchase_handoff",
+    "mcp-cart-handoff-candidates",
+    "compare_alternatives",
+    "pack_calculator",
+    "inventory_status",
+  ];
   return check(result.ok ? "mcpservers_org" : "mcpservers_org", result.ok && hasAll(text, required) ? "pass" : "stale", {
     http_status: result.status,
     url: result.url,
@@ -525,8 +547,8 @@ async function glamaConnectorCheck() {
   const result = await fetchText("https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp");
   const text = result.text;
   const toolNames = [...new Set([...text.matchAll(/[?&]tool=([a-z_]+)/g)].map((match) => match[1]))].sort();
-  const required = ["create_cart_url", "get_cart_handoff_candidates", "find_packaging_for_item", "inventory_status"];
-  return check("glama_connector", result.ok && text.includes("Healthy") && toolNames.length >= 14 && hasAll(text, required) ? "pass" : "stale", {
+  const required = ["create_cart_url", "prepare_purchase_handoff", "get_cart_handoff_candidates", "find_packaging_for_item", "inventory_status"];
+  return check("glama_connector", result.ok && text.includes("Healthy") && toolNames.length >= 15 && hasAll(text, required) ? "pass" : "stale", {
     http_status: result.status,
     url: result.url,
     status_label: text.includes("Healthy") ? "Healthy" : null,
@@ -540,7 +562,7 @@ async function glamaServerListingCheck() {
   const result = await fetchText("https://glama.ai/api/mcp/v1/servers/Packrift/packrift-mcp");
   if (!result.ok) return check("glama_server_listing", "fail", { http_status: result.status, url: result.url });
   const parsed = JSON.parse(result.text);
-  return check("glama_server_listing", Array.isArray(parsed.tools) && parsed.tools.length >= 14 ? "pass" : "stale", {
+  return check("glama_server_listing", Array.isArray(parsed.tools) && parsed.tools.length >= 15 ? "pass" : "stale", {
     http_status: result.status,
     url: parsed.url,
     id: parsed.id,
@@ -558,7 +580,7 @@ async function mcpMarketplaceCheck() {
   if (!result.ok) return check("mcp_marketplace_io", "fail", { http_status: result.status, url: result.url });
   const parsed = JSON.parse(result.text);
   const listing = parsed.results?.find((row) => row.slug === "io-github-packrift-packrift-mcp") ?? null;
-  return check("mcp_marketplace_io", listing?.toolCount >= 14 && listing?.mode === "remote" ? "pass" : "stale", {
+  return check("mcp_marketplace_io", listing?.toolCount >= 15 && listing?.mode === "remote" ? "pass" : "stale", {
     http_status: result.status,
     url: listing?.url ?? result.url,
     listing,
@@ -639,6 +661,8 @@ async function main() {
       simplePresenceCheck("chiark", "https://chiark.ai/", ["Packrift"]),
       mcpMarketplaceCheck(),
       simplePresenceCheck("pulsemcp_packrift", "https://www.pulsemcp.com/servers/packrift", ["Packrift"]),
+      simplePresenceCheck("mcpskills", "https://mcpskills.app/servers", ["Packrift"]),
+      simplePresenceCheck("agentndx", "https://agentndx.ai/browse", ["Packrift"]),
       dockerMcpCatalogCheck(),
     ])
   ).map(withGuidance);
