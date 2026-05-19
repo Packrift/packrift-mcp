@@ -8,6 +8,8 @@ const OUT_ROOT = resolve(REPO_ROOT, "outputs/agent-capture-outreach");
 const CAPTURE_URL = "https://mcp.packrift.com/ai/all-agent-capture.json";
 const CAPTURE_MD_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
+const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const DISTRIBUTION_LATEST = resolve(REPO_ROOT, "outputs/mcp-distribution-check/latest.json");
 const AGENT_CAPTURE_CHECK_LATEST = resolve(REPO_ROOT, "outputs/agent-capture-check/latest.json");
 const SERVER_JSON = JSON.parse(readFileSync(resolve(REPO_ROOT, "server.json"), "utf8"));
@@ -35,9 +37,40 @@ function distributionRows(distribution) {
   return (distribution?.checks ?? []).filter((row) => row.status !== "pass");
 }
 
+function directoryActionRows(submitActions, distribution) {
+  const liveRows = submitActions?.actions ?? [];
+  if (liveRows.length) {
+    return liveRows.map((row) => ({
+      id: row.id,
+      name: row.id,
+      label: row.label,
+      action_status: row.action_status,
+      directory_status: row.directory_status,
+      priority: row.priority,
+      listing_url: row.listing_url,
+      submission_url: row.submission_url,
+      missing: row.stale_markers ?? [],
+      follow_up_action: row.next_action,
+      tracked_start_url: row.tracked_start_url,
+      proof_urls: row.proof_urls,
+      message: row.recrawl_message,
+    }));
+  }
+  return distributionRows(distribution).map((row) => ({
+    ...row,
+    id: row.name,
+    label: row.name,
+    action_status: row.status,
+    directory_status: row.status,
+    tracked_start_url: TRACKED_START_TEMPLATE.replace("{source}", row.name),
+    message: directoryRefreshMessage(row),
+  }));
+}
+
 function evidenceLinks(capture) {
   return {
     canonical_mcp_endpoint: MCP_ENDPOINT,
+    tracked_start_template: TRACKED_START_TEMPLATE,
     all_agent_capture_json: CAPTURE_URL,
     all_agent_capture_markdown: CAPTURE_MD_URL,
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
@@ -49,6 +82,7 @@ function evidenceLinks(capture) {
     mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+    mcp_directory_submit_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
     health: "https://mcp.packrift.com/health",
     manifest: "https://mcp.packrift.com/manifest",
     server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
@@ -64,14 +98,17 @@ function evidenceLinks(capture) {
   };
 }
 
-function directoryRefreshMessage(row, capture) {
+function directoryRefreshMessage(row, capture = null) {
   const missing = row.missing?.length ? ` The current listing is missing: ${row.missing.join(", ")}.` : "";
+  const captureFacts = capture
+    ? `${CAPTURE_URL} shows ${capture.surfaces.length} agent surfaces and the canonical endpoint. Live health shows ${capture.runtime.tools_count} tools, ${capture.runtime.resources_count} resources, and ${capture.runtime.prompts_count} prompts.`
+    : `${CAPTURE_URL} shows the current all-agent capture matrix.`;
   return [
     `Subject: Refresh Packrift MCP listing to current hosted 14-tool endpoint`,
     "",
     `Hi, Packrift MCP is live as a hosted Streamable HTTP MCP server at ${MCP_ENDPOINT}.`,
     "",
-    `Current proof: ${CAPTURE_URL} shows ${capture.surfaces.length} agent surfaces and the canonical endpoint. Live health shows ${capture.runtime.tools_count} tools, ${capture.runtime.resources_count} resources, and ${capture.runtime.prompts_count} prompts. First-run proof, workflow gallery, cart activation, and cart handoff candidates are live at https://mcp.packrift.com/ai/mcp-first-run-proof.json, https://mcp.packrift.com/ai/mcp-workflow-gallery.json, https://mcp.packrift.com/ai/mcp-cart-activation.json, and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json.`,
+    `Current proof: ${captureFacts} First-run proof, workflow gallery, cart activation, and cart handoff candidates are live at https://mcp.packrift.com/ai/mcp-first-run-proof.json, https://mcp.packrift.com/ai/mcp-workflow-gallery.json, https://mcp.packrift.com/ai/mcp-cart-activation.json, and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json.`,
     "",
     `The latest check marks ${row.name} as ${row.status}.${missing}`,
     "",
@@ -79,6 +116,8 @@ function directoryRefreshMessage(row, capture) {
     `- Server name: ${SERVER_JSON.name}`,
     `- Title: ${SERVER_JSON.title}`,
     `- Remote endpoint: ${MCP_ENDPOINT}`,
+    `- Tracked start page: ${TRACKED_START_TEMPLATE.replace("{source}", row.name ?? "generic")}`,
+    `- Canonical start page: https://mcp.packrift.com/start`,
     `- Repository: ${SERVER_JSON.repository?.url}`,
     `- Website: ${SERVER_JSON.websiteUrl}`,
     `- Description: ${SERVER_JSON.description}`,
@@ -128,6 +167,8 @@ function browseCandidateBrief() {
 
 function agentInstallSnippets() {
   return {
+    tracked_start_template: TRACKED_START_TEMPLATE,
+    generic_tracked_start: TRACKED_START_TEMPLATE.replace("{source}", "generic"),
     generic_mcp_json: {
       mcpServers: {
         packrift: {
@@ -145,7 +186,7 @@ function agentInstallSnippets() {
 
 function markdown(payload) {
   const staleRows = payload.directory_refreshes
-    .map((row) => `| ${row.name} | ${row.status} | ${row.priority ?? ""} | ${row.listing_url ?? row.url ?? ""} | ${row.submission_url ?? ""} |`)
+    .map((row) => `| ${row.label ?? row.name} | ${row.action_status} | ${row.directory_status} | ${row.priority ?? ""} | ${row.tracked_start_url ?? ""} | ${row.listing_url ?? row.url ?? ""} | ${row.submission_url ?? ""} |`)
     .join("\n");
   const messages = payload.directory_refreshes
     .map((row) => [`### ${row.name}`, "", "```text", row.message, "```", ""].join("\n"))
@@ -160,6 +201,7 @@ function markdown(payload) {
     "## Use This For",
     "",
     "- Refresh stale MCP directories with copy-ready proof.",
+    "- Use source-specific tracked start links from the canonical directory submit-action queue.",
     "- Give partners or agent platforms a single evidence bundle.",
     "- Point developers to the install matrix for copy-ready setup and smoke tests.",
     "- Use the live browser-agent bridge for Browse-style agents without creating a duplicate Packrift CLI.",
@@ -174,9 +216,9 @@ function markdown(payload) {
     "",
     "## Directory Refresh Queue",
     "",
-    "| Surface | Status | Priority | Listing | Submission |",
-    "| --- | --- | --- | --- | --- |",
-    staleRows || "| none | pass | | | |",
+    "| Surface | Action status | Directory status | Priority | Tracked start | Listing | Submission |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    staleRows || "| none | pass | pass | | | | |",
     "",
     "## Copy-Ready Directory Messages",
     "",
@@ -198,12 +240,13 @@ function markdown(payload) {
 }
 
 async function main() {
-  const [capture, distribution, agentCaptureCheck] = await Promise.all([
+  const [capture, submitActions, distribution, agentCaptureCheck] = await Promise.all([
     fetchJson(CAPTURE_URL),
+    fetchJson(DIRECTORY_SUBMIT_ACTIONS_URL),
     Promise.resolve(readJsonIfExists(DISTRIBUTION_LATEST)),
     Promise.resolve(readJsonIfExists(AGENT_CAPTURE_CHECK_LATEST)),
   ]);
-  const rows = distributionRows(distribution);
+  const rows = directoryActionRows(submitActions, distribution);
   const payload = {
     generated_at: new Date().toISOString(),
     capture: {
@@ -222,16 +265,13 @@ async function main() {
         }
       : null,
     distribution_counts: distribution?.counts ?? null,
-    directory_refreshes: rows.map((row) => ({
-      name: row.name,
-      status: row.status,
-      priority: row.priority,
-      listing_url: row.listing_url,
-      submission_url: row.submission_url,
-      missing: row.missing ?? [],
-      follow_up_action: row.follow_up_action,
-      message: directoryRefreshMessage(row, capture),
-    })),
+    directory_submit_actions: {
+      release: submitActions.release,
+      tracked_start_template: submitActions.tracked_start_template,
+      status_counts: submitActions.status_counts,
+      actions_count: submitActions.actions?.length ?? 0,
+    },
+    directory_refreshes: rows,
     browserbase_browse_candidate: browseCandidateBrief(),
     agent_install_snippets: agentInstallSnippets(),
   };
