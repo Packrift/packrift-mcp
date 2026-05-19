@@ -3124,7 +3124,14 @@ interface PostInstallActivationRow {
   qualified_cart_landings: number;
 }
 
-const SOURCE_ACTIVATION_INTERNAL_SOURCES = new Set(["generic", "partner_demo", "codex_probe", "codex_probe_r04", "mcp_route_redirect"]);
+const SOURCE_ACTIVATION_INTERNAL_SOURCES = new Set([
+  "generic",
+  "partner_demo",
+  "codex",
+  "codex_probe",
+  "codex_probe_r04",
+  "mcp_route_redirect",
+]);
 
 const SOURCE_ACTIVATION_DIRECTORY_STATUS: Record<string, string> = {
   cline_mcp_marketplace: "pending marketplace issue; convert reviewer/browser proof into a real hosted MCP client run",
