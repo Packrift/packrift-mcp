@@ -7,6 +7,10 @@ import { getPricingHandler } from "./get_pricing.js";
 import { getProductHandler } from "./get_product.js";
 import { getBulkQuoteLinkHandler, getReorderLinkHandler } from "./procurement_links.js";
 
+type PreparePurchaseHandoffContext = {
+  sessionId?: string | null;
+};
+
 export const preparePurchaseHandoffSchema = {
   name: "prepare_purchase_handoff",
   description:
@@ -78,7 +82,7 @@ function productSummary(value: unknown) {
   };
 }
 
-export async function preparePurchaseHandoffHandler(env: Env, raw: unknown) {
+export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, context: PreparePurchaseHandoffContext = {}) {
   const input = preparePurchaseHandoffZod.parse(raw);
   const sku = input.sku.trim().toUpperCase();
   const quantity = input.quantity;
@@ -149,11 +153,15 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown) {
   };
   const canCreateCart = input.buyer_confirmed && Boolean(priceOk && inventoryOk);
   const cart = canCreateCart
-    ? await createCartUrlHandler(env, {
-        ...cartArguments,
-        suppress_analytics: input.suppress_analytics,
-        analytics_context: input.analytics_context,
-      })
+    ? await createCartUrlHandler(
+        env,
+        {
+          ...cartArguments,
+          suppress_analytics: input.suppress_analytics,
+          analytics_context: input.analytics_context,
+        },
+        context
+      )
     : null;
   const cartHandoff =
     cart && typeof cart === "object" && "cart_handoff" in cart

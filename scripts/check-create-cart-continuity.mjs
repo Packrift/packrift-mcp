@@ -34,8 +34,8 @@ function assertCheck(condition, message, details = {}) {
   }
 }
 
-async function expectPass(name, args, validate) {
-  const result = await createCartUrlHandler(env, synthetic(args));
+async function expectPass(name, args, validate, context = {}) {
+  const result = await createCartUrlHandler(env, synthetic(args), context);
   validate(result);
   return { name, pass: true };
 }
@@ -77,6 +77,35 @@ checks.push(
         resolved_from_catalog: result.resolved_from_catalog,
       });
     }
+  )
+);
+
+checks.push(
+  await expectPass(
+    "mcp_session_id_flows_to_cart_handoff",
+    {
+      sku: "1066",
+      quantity: 1,
+      selected_sku: "1066",
+      selected_handle: sku1066.handle,
+    },
+    (result) => {
+      assertCheck(result.mcp_session_id === "session-continuity-check-123", "Result did not expose the MCP session ID", {
+        mcp_session_id: result.mcp_session_id,
+      });
+      assertCheck(result.url?.includes("mcp_session_id=session-continuity-check-123"), "Measured MCP cart URL did not include the MCP session ID", {
+        url: result.url,
+      });
+      assertCheck(result.final_cart_url?.includes("mcp_session_id=session-continuity-check-123"), "Final Shopify cart URL did not include the MCP session ID", {
+        final_cart_url: result.final_cart_url,
+      });
+      assertCheck(
+        result.cart_handoff?.attribution_required?.mcp_session_id === "session-continuity-check-123",
+        "Cart handoff attribution did not include the MCP session ID",
+        result.cart_handoff?.attribution_required
+      );
+    },
+    { sessionId: "session-continuity-check-123" }
   )
 );
 

@@ -91,7 +91,7 @@ function workerUptimeSeconds(): number {
 
 interface ToolDef {
   schema: { name: string; description: string; inputSchema: unknown };
-  handler: (env: Env, args: unknown) => unknown | Promise<unknown>;
+  handler: (env: Env, args: unknown, context?: RpcExecutionContext) => unknown | Promise<unknown>;
 }
 
 const CART_HANDOFF_CANDIDATE_FAMILIES = [
@@ -553,7 +553,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
         const shouldRecordToolTelemetry = !isSyntheticToolCall(args) && !shouldSkipInternalTelemetry(context.userAgent ?? "");
         const startedAt = Date.now();
         try {
-          const out = await tool.handler(env, args);
+          const out = await tool.handler(env, args, context);
           if (shouldRecordToolTelemetry) {
             await recordAiSalesEvent(
               env,
@@ -1520,6 +1520,8 @@ function copyRouteTrackingParams(source: URL, target: URL): URL {
     "utm_term",
     "packrift_ai_id",
     "ai_commerce_id",
+    "mcp_handoff_id",
+    "mcp_session_id",
     "mcp_key",
     "mcp_journey",
     "mcp_result_set",
@@ -1537,6 +1539,7 @@ function copyRouteCartAttributeParams(source: URL, target: URL): URL {
     packrift_packrift_ai_id: source.searchParams.get("packrift_ai_id") ?? source.searchParams.get("ai_commerce_id"),
     packrift_ai_commerce_id: source.searchParams.get("ai_commerce_id") ?? source.searchParams.get("packrift_ai_id"),
     packrift_mcp_handoff_id: source.searchParams.get("mcp_handoff_id"),
+    packrift_mcp_session_id: source.searchParams.get("mcp_session_id"),
     packrift_mcp_key: source.searchParams.get("mcp_key"),
     packrift_mcp_journey: source.searchParams.get("mcp_journey"),
     packrift_mcp_result_set: source.searchParams.get("mcp_result_set"),
@@ -1601,6 +1604,7 @@ function cartLandingResponse(requestUrl: URL, item: ApprovedCatalogItem): Respon
       packrift_ai_id: ${JSON.stringify(requestUrl.searchParams.get("packrift_ai_id") ?? "")},
       ai_commerce_id: ${JSON.stringify(requestUrl.searchParams.get("ai_commerce_id") ?? "")},
       mcp_handoff_id: ${JSON.stringify(requestUrl.searchParams.get("mcp_handoff_id") ?? "")},
+      mcp_session_id: ${JSON.stringify(requestUrl.searchParams.get("mcp_session_id") ?? "")},
       mcp_key: ${JSON.stringify(requestUrl.searchParams.get("mcp_key") ?? "")},
       mcp_journey: ${JSON.stringify(requestUrl.searchParams.get("mcp_journey") ?? "")},
       mcp_result_set: ${JSON.stringify(requestUrl.searchParams.get("mcp_result_set") ?? "")},
@@ -1920,6 +1924,7 @@ async function recordRouteRedirectTelemetry(
     packrift_ai_id: packriftAiId,
     ai_commerce_id: requestUrl.searchParams.get("ai_commerce_id") || packriftAiId,
     mcp_handoff_id: requestUrl.searchParams.get("mcp_handoff_id") ?? "",
+    mcp_session_id: requestUrl.searchParams.get("mcp_session_id") ?? "",
     mcp_key: requestUrl.searchParams.get("mcp_key") ?? item.sku,
     mcp_journey: requestUrl.searchParams.get("mcp_journey") ?? `${surface}:${item.sku}:${event}`,
     mcp_result_set: requestUrl.searchParams.get("mcp_result_set") ?? `${surface}_${compactDate()}`,
@@ -5607,7 +5612,7 @@ function buildPdpProcurementHandoff(html: string, url: URL): string {
   if (!root || root.dataset.copyBound === 'true') return;
   root.dataset.copyBound = 'true';
   const clean = (value, max) => String(value || '').replace(/\\s+/g, ' ').trim().slice(0, max);
-  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_handoff_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_handoff_id', 'mcp_session_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
   const readContinuity = () => {
     const params = new URLSearchParams(window.location.search);
     let saved = {};
@@ -5764,7 +5769,7 @@ function buildAiSalesAddToCartListener(): string {
   const root = document.querySelector('.packrift-pdp-procurement[data-packrift-sku], [data-packrift-sku]');
   const seen = new Map();
   const clean = (value, max) => String(value || '').replace(/\\s+/g, ' ').trim().slice(0, max);
-  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_handoff_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+  const continuityFields = ['packrift_ai_id', 'ai_commerce_id', 'mcp_handoff_id', 'mcp_session_id', 'mcp_key', 'mcp_journey', 'mcp_result_set', 'match_type', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
   const readContinuity = () => {
     const params = new URLSearchParams(window.location.search);
     let saved = {};

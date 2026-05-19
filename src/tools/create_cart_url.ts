@@ -3,6 +3,10 @@ import { Env, variantIdToNumeric } from "../shopify.js";
 import { approvalForHandle, approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
 import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
 
+type CreateCartUrlContext = {
+  sessionId?: string | null;
+};
+
 export const createCartUrlSchema = {
   name: "create_cart_url",
   description:
@@ -119,7 +123,13 @@ function cartContinuityError(message: string): never {
   );
 }
 
-export async function createCartUrlHandler(env: Env, raw: unknown) {
+function normalizedMcpSessionId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const sessionId = value.trim();
+  return /^[A-Za-z0-9._:-]{1,120}$/.test(sessionId) ? sessionId : null;
+}
+
+export async function createCartUrlHandler(env: Env, raw: unknown, context: CreateCartUrlContext = {}) {
   const input = createCartUrlZod.parse(raw);
   const requestedSku = normalizedSku(input.sku);
   const selectedSkuInput = normalizedSku(input.selected_sku);
@@ -172,6 +182,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   const selectedHandle = selectedHandleInput ?? resolvedItem?.handle;
   const matchType = input.match_type ?? input.source_context ?? (approvedSkuItem ? "buyer_confirmed_exact_sku" : "cart_handoff");
   const mcpHandoffId = `mcp_handoff_${crypto.randomUUID()}`;
+  const mcpSessionId = normalizedMcpSessionId(context.sessionId);
   const path = items
     .map((it) => `${variantIdToNumeric(it.variant_id)}:${it.qty}`)
     .join(",");
@@ -197,6 +208,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
     utm_medium: "mcp_tool",
     utm_campaign: "create_cart_url",
     utm_content: cartUtmContent,
+    mcp_session_id: mcpSessionId,
   };
   params.set("ref", input.ref);
   params.set("utm_source", cartTracking.utm_source);
@@ -206,6 +218,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   if (cartTracking.utm_term) params.set("utm_term", cartTracking.utm_term);
   params.set("packrift_ai_id", tracking.packrift_ai_id);
   params.set("mcp_handoff_id", mcpHandoffId);
+  if (mcpSessionId) params.set("mcp_session_id", mcpSessionId);
   params.set("mcp_key", tracking.continuity_key);
   params.set("mcp_journey", tracking.journey_id);
   if (tracking.result_set_id) params.set("mcp_result_set", tracking.result_set_id);
@@ -226,6 +239,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
     landingUrl.searchParams.set("packrift_ai_id", tracking.packrift_ai_id);
     landingUrl.searchParams.set("ai_commerce_id", tracking.ai_commerce_id);
     landingUrl.searchParams.set("mcp_handoff_id", mcpHandoffId);
+    if (mcpSessionId) landingUrl.searchParams.set("mcp_session_id", mcpSessionId);
     landingUrl.searchParams.set("mcp_key", tracking.continuity_key);
     landingUrl.searchParams.set("mcp_journey", tracking.journey_id);
     if (tracking.result_set_id) landingUrl.searchParams.set("mcp_result_set", tracking.result_set_id);
@@ -252,6 +266,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
       utm_content: cartTracking.utm_content,
       utm_term: cartTracking.utm_term ?? null,
       mcp_handoff_id: mcpHandoffId,
+      mcp_session_id: mcpSessionId,
       mcp_key: tracking.continuity_key,
       mcp_journey: tracking.journey_id,
       mcp_result_set: tracking.result_set_id ?? null,
@@ -259,6 +274,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
   };
   const response = {
     mcp_handoff_id: mcpHandoffId,
+    mcp_session_id: mcpSessionId,
     url,
     final_cart_url: finalCartUrl,
     cart_handoff: cartHandoff,
@@ -320,6 +336,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
         packrift_ai_id: tracking.packrift_ai_id,
         ai_commerce_id: tracking.ai_commerce_id,
         mcp_handoff_id: mcpHandoffId,
+        mcp_session_id: mcpSessionId ?? "",
         mcp_key: tracking.continuity_key,
         mcp_journey: tracking.journey_id,
         mcp_result_set: tracking.result_set_id ?? "",
