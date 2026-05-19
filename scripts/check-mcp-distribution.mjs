@@ -1303,7 +1303,8 @@ async function liveMcpCheck() {
       evalPack?.tracked_actions?.activation_shell?.includes("/r/activate/") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
-      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R05" &&
+      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R06" &&
+      browserbaseBrowseSkillPack?.browse_catalog_submission?.install_count_observed >= 6 &&
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
       browserbaseBrowseSkillPack?.browse_skill_candidate?.skill_md_url === "https://mcp.packrift.com/SKILL.md" &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.check_command === "browse skills find packrift" &&
@@ -1608,7 +1609,7 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.activation_readiness?.suppressions?.some((rule) => String(rule).includes("Do not count Packrift self-checks")) &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Activation proof loop") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R19" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R20" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
@@ -1647,6 +1648,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.browser_assisted_submissions?.browse_sh?.catalog_check_command === "browse skills find packrift" &&
       agentCaptureOutreach?.browserbase_browse_candidate?.status === "catalog_live_installable" &&
       agentCaptureOutreach?.browserbase_browse_candidate?.catalog_slug === "packrift.com/exact-spec-packaging-procurement-e4ujmy" &&
+      agentCaptureOutreach?.browserbase_browse_candidate?.install_count_observed >= 6 &&
       agentCaptureOutreach?.browserbase_browse_candidate?.install_check?.status === "pass" &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&

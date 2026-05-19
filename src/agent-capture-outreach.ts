@@ -150,7 +150,7 @@ function browserbaseBrowseCandidate() {
     recommended_method: "mcp",
     verified: true,
     proxies: true,
-    install_count_observed: 1,
+    install_count_observed: 6,
     catalog_source_url: "https://github.com/browserbase/browse.sh/blob/main/skills/packrift.com/exact-spec-packaging-procurement-e4ujmy/SKILL.md",
     submitted_at: "2026-05-19",
     first_seen_in_catalog_at: "2026-05-19",
@@ -264,7 +264,7 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
       recommended_method: "mcp",
       verified: true,
       proxies: true,
-      install_count_observed: 1,
+      install_count_observed: 6,
       catalog_source_url: "https://github.com/browserbase/browse.sh/blob/main/skills/packrift.com/exact-spec-packaging-procurement-e4ujmy/SKILL.md",
       submitted_at: "2026-05-19",
       first_seen_in_catalog_at: "2026-05-19",
@@ -388,7 +388,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R19",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R20",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

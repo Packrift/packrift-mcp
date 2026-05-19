@@ -107,7 +107,7 @@ const DEMO_SEQUENCE = [
 
 export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkillPackRuntime) {
   return {
-    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R05",
+    release: "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R06",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -147,6 +147,8 @@ export function browserbaseBrowseSkillPackPayload(runtime: BrowserbaseBrowseSkil
       check_command: "browse skills find packrift",
       catalog_slug: "packrift.com/exact-spec-packaging-procurement-e4ujmy",
       catalog_source_url: "https://github.com/browserbase/browse.sh/blob/main/skills/packrift.com/exact-spec-packaging-procurement-e4ujmy/SKILL.md",
+      install_count_observed: 6,
+      install_count_observed_at: "2026-05-19",
       install_check_status: "pass",
       install_check_command: "browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy",
       installed_local_path: ".agents/skills/exact-spec-packaging-procurement",
