@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R04";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R05";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -128,9 +128,11 @@ export function mcpReviewerActivationPayload(runtime: ReviewerActivationRuntime,
       required_final_tool: "create_cart_url",
       browser_executable: true,
       browser_runner_url: target.tracked_reviewer_activation_html_url,
+      agent_prompt: firstUsefulRun.agent_prompt,
       sequence: firstUsefulRun.sequence,
       curl_script: firstUsefulRun.curl_script,
       success_signals: firstUsefulRun.success_signals,
+      agent_prompt_success_criteria: firstUsefulRun.agent_prompt_success_criteria,
     },
     activation_rules: [
       "Use the existing hosted Packrift MCP endpoint; do not create a separate Packrift CLI, browser-only buyer surface, or alternate checkout.",
@@ -227,6 +229,10 @@ export function mcpReviewerActivationMarkdown(runtime: ReviewerActivationRuntime
     "",
     `Endpoint: ${payload.real_mcp_client_run.endpoint}`,
     "",
+    "Agent prompt:",
+    "",
+    fencedText(payload.real_mcp_client_run.agent_prompt),
+    "",
     fencedJson(payload.real_mcp_client_run.sequence),
     "",
     "Shell script:",
@@ -307,6 +313,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
     </div>
     <div class="bar">
       <button id="run">Run real MCP check</button>
+      <button id="copy-agent-prompt" class="secondary" type="button">Copy agent prompt</button>
       <a class="button secondary" href="${escapeHtml(target.tracked_first_run_live_proof_url)}">Open live proof</a>
       <a class="button secondary" href="${escapeHtml(payload.markdown_url)}?source=${escapeHtml(target.id)}">Markdown</a>
       <a class="button secondary" href="${escapeHtml(payload.machine_readable_url)}?source=${escapeHtml(target.id)}">JSON</a>
@@ -321,6 +328,11 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
       <pre>${escapeHtml(payload.real_mcp_client_run.endpoint)}</pre>
     </section>
     <section class="panel">
+      <h2>Agent Prompt</h2>
+      <p>Paste this into the MCP host after install. It requires the real Packrift MCP tools and a measured cart URL.</p>
+      <pre>${escapeHtml(payload.real_mcp_client_run.agent_prompt)}</pre>
+    </section>
+    <section class="panel">
       <h2>JSON-RPC Sequence</h2>
       <pre>${escapeHtml(JSON.stringify(payload.real_mcp_client_run.sequence, null, 2))}</pre>
     </section>
@@ -333,6 +345,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
   <script>
     const activation = ${scriptJson(payload)};
     const runButton = document.getElementById("run");
+    const copyPromptButton = document.getElementById("copy-agent-prompt");
     const output = document.getElementById("output");
     const cart = document.getElementById("cart");
     const resultPanel = document.getElementById("result");
@@ -484,6 +497,15 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
         output.textContent = error && error.stack ? error.stack : String(error);
         runButton.disabled = false;
       });
+    });
+    copyPromptButton && copyPromptButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(activation.real_mcp_client_run.agent_prompt || "");
+        copyPromptButton.textContent = "Copied";
+      } catch {
+        copyPromptButton.textContent = "Select prompt";
+      }
+      setTimeout(() => { copyPromptButton.textContent = "Copy agent prompt"; }, 1400);
     });
   </script>
 </body>

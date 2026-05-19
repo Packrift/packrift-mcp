@@ -5,8 +5,8 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R05";
-export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R05";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R06";
+export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R06";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
 export const MCP_TARGET_QUERY_PARAM = "packrift_mcp_target";
@@ -204,6 +204,35 @@ const FIRST_USEFUL_RUN_SKU = {
   handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
 } as const;
 
+function firstUsefulRunAgentPrompt(input: {
+  endpoint: string;
+  sourceSlug: string;
+  targetSlug: string;
+  sourceContext: string;
+  journeyId: string;
+  resultSetId: string;
+}) {
+  return [
+    "Use Packrift MCP for this workflow; do not browse the storefront first and do not create a separate Packrift CLI.",
+    `MCP endpoint/config source: ${input.endpoint}`,
+    "",
+    `Task: reorder Packrift SKU ${FIRST_USEFUL_RUN_SKU.sku} for quantity 1.`,
+    "",
+    "Required tool sequence:",
+    "1. Run tools/list and confirm Packrift MCP is connected.",
+    `2. Call get_cart_handoff_candidates with sku="${FIRST_USEFUL_RUN_SKU.sku}" and limit=1.`,
+    `3. Call get_pricing with variant_ids=["${FIRST_USEFUL_RUN_SKU.variantId}"], quantity=1, selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", and match_type="agent_prompt_first_run".`,
+    `4. Call check_inventory with variant_ids=["${FIRST_USEFUL_RUN_SKU.variantId}"], selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", and match_type="agent_prompt_first_run".`,
+    `5. If the live checks pass, call create_cart_url with sku="${FIRST_USEFUL_RUN_SKU.sku}", quantity=1, selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", match_type="agent_prompt_first_run", source_context="${input.sourceContext}", journey_id="${input.journeyId}", result_set_id="${input.resultSetId}", and utm_term="${FIRST_USEFUL_RUN_SKU.sku}".`,
+    "",
+    "Return the product title, live unit price and currency, inventory status, and the measured cart URL.",
+    `Success requires a cart URL starting with https://mcp.packrift.com/r/cart/${FIRST_USEFUL_RUN_SKU.sku}.`,
+    "Do not place an order. If any live check fails, stop and say exactly which check failed.",
+    "",
+    `Attribution: source=${input.sourceSlug}; target=${input.targetSlug}.`,
+  ].join("\n");
+}
+
 export function mcpFirstUsefulRun(source = "generic", target = "generic_streamable_http") {
   const sourceSlug = normalizeRuntimeSlug(source, "generic");
   const targetSlug = normalizeRuntimeSlug(target, "runtime");
@@ -239,12 +268,21 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
       utm_term: FIRST_USEFUL_RUN_SKU.sku,
     }),
   ];
+  const agentPrompt = firstUsefulRunAgentPrompt({
+    endpoint,
+    sourceSlug,
+    targetSlug,
+    sourceContext,
+    journeyId,
+    resultSetId,
+  });
   return {
     purpose:
       "After installing Packrift MCP, run this exact source-aware workflow to prove the endpoint can progress from install to live SKU checks and a measured MCP cart handoff.",
     endpoint,
     buyer_prompt:
       "Reorder Packrift SKU 1066. Confirm the exact product, live price, and inventory, then prepare a measured cart handoff for quantity 1.",
+    agent_prompt: agentPrompt,
     run_rule:
       "Use the source-aware endpoint above. The final create_cart_url call only creates a cart URL string; it does not place an order.",
     sequence,
@@ -257,6 +295,11 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
       "check_inventory returns in_stock before cart handoff",
       "create_cart_url returns a URL starting with https://mcp.packrift.com/r/cart/1066",
       "usage snapshot records a source-attributed create_cart_url tool call when the workflow is run from a tracked install",
+    ],
+    agent_prompt_success_criteria: [
+      "The agent calls the Packrift MCP tools instead of only reading the prompt.",
+      "The agent confirms live price and inventory before calling create_cart_url.",
+      "The final response includes a measured https://mcp.packrift.com/r/cart/1066 URL and says no order was placed.",
     ],
   };
 }
@@ -470,6 +513,10 @@ function fencedShell(value: string): string {
   return ["```sh", value, "```"].join("\n");
 }
 
+function fencedText(value: string): string {
+  return ["```text", value, "```"].join("\n");
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -516,6 +563,10 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
     `Endpoint: \`${payload.first_useful_run.endpoint}\``,
     "",
     payload.first_useful_run.buyer_prompt,
+    "",
+    "Agent prompt:",
+    "",
+    fencedText(payload.first_useful_run.agent_prompt),
     "",
     fencedJson(payload.first_useful_run.sequence),
     "",
@@ -574,6 +625,7 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
     </div>
     <div class="bar">
       <button data-copy-target="${escapeHtml(payload.target.id)}" data-copy="${escapeHtml(copyBlock)}">Copy install</button>
+      <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_agent_prompt`)}" data-copy="${escapeHtml(payload.first_useful_run.agent_prompt)}">Copy agent prompt</button>
       <a class="button secondary" href="${escapeHtml(payload.tracked_run_html_url)}">Open first run</a>
       <a class="button secondary" href="${escapeHtml(payload.tracked_reviewer_activation_html_url)}">Run real MCP check</a>
       <a class="button secondary" href="${escapeHtml(payload.tracked_config_url)}">Config JSON</a>
@@ -588,6 +640,11 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
         <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_endpoint`)}" data-copy="${escapeHtml(payload.source_aware_endpoint)}">Copy endpoint</button>
       </div>
       <pre>${escapeHtml(payload.source_aware_endpoint)}</pre>
+    </section>
+    <section class="panel">
+      <h2>Agent Prompt</h2>
+      <p>Paste this into the MCP host after install. It forces the real tool sequence and measured cart handoff.</p>
+      <pre>${escapeHtml(payload.first_useful_run.agent_prompt)}</pre>
     </section>
     <section class="panel">
       <h2>First Useful Run</h2>
@@ -654,7 +711,7 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
         button.textContent = "Select text";
       }
       window.setTimeout(() => {
-        button.textContent = target.includes("endpoint") ? "Copy endpoint" : target.includes("curl") ? "Copy curl script" : target.includes("json") ? "Copy JSON-RPC" : "Copy install";
+        button.textContent = target.includes("agent_prompt") ? "Copy agent prompt" : target.includes("endpoint") ? "Copy endpoint" : target.includes("curl") ? "Copy curl script" : target.includes("json") ? "Copy JSON-RPC" : "Copy install";
         button.classList.remove("copied");
       }, 1400);
     });
@@ -687,6 +744,10 @@ export function mcpInstallActionsMarkdown(runtime: McpInstallActionRuntime): str
     `Endpoint: \`${payload.first_useful_run.endpoint}\``,
     "",
     payload.first_useful_run.buyer_prompt,
+    "",
+    "Agent prompt:",
+    "",
+    fencedText(payload.first_useful_run.agent_prompt),
     "",
     fencedJson(payload.first_useful_run.sequence),
     "",

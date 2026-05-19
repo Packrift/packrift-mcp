@@ -15,8 +15,8 @@ export interface FirstRunActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R02";
-export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R02";
+export const MCP_FIRST_RUN_ACTION_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTION-R03";
+export const MCP_FIRST_RUN_ACTIONS_RELEASE = "PACKRIFT-MCP-FIRST-RUN-ACTIONS-R03";
 export const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 
 function normalizeRunSlug(value: string, fallback: string): string {
@@ -135,6 +135,10 @@ function fencedShell(value: string): string {
   return ["```sh", value, "```"].join("\n");
 }
 
+function fencedText(value: string): string {
+  return ["```text", value, "```"].join("\n");
+}
+
 export function mcpFirstRunActionMarkdown(payload: ReturnType<typeof mcpFirstRunActionPayload>): string {
   return [
     "# Packrift MCP First Run Action",
@@ -156,6 +160,10 @@ export function mcpFirstRunActionMarkdown(payload: ReturnType<typeof mcpFirstRun
     "Shell one-liner:",
     "",
     fencedShell(payload.shell_one_liner),
+    "",
+    "Agent prompt:",
+    "",
+    fencedText(payload.first_useful_run.agent_prompt),
     "",
     "Pasteable curl script:",
     "",
