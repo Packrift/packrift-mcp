@@ -155,6 +155,10 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown) {
         analytics_context: input.analytics_context,
       })
     : null;
+  const cartHandoff =
+    cart && typeof cart === "object" && "cart_handoff" in cart
+      ? (cart as { cart_handoff?: unknown }).cart_handoff ?? null
+      : null;
 
   return {
     tool_name: "prepare_purchase_handoff",
@@ -179,6 +183,7 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown) {
       inventory_ok: inventoryOk,
     },
     cart,
+    cart_handoff: cartHandoff,
     cart_arguments_if_buyer_confirms: cartArguments,
     fallback_actions: {
       reorder,

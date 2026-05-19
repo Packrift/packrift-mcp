@@ -235,6 +235,18 @@ async function evaluate(test, tools) {
     });
   }
 
+  if (test.surface === "create_cart_url") {
+    checks.push({
+      name: "cart_handoff_primary_url",
+      pass:
+        structured?.cart_handoff?.primary_url === structured?.url &&
+        structured?.primary_buyer_handoff?.primary_url === structured?.url &&
+        structured?.cart_handoff?.primary_url_role === "measured_mcp_cart_landing" &&
+        structured?.cart_handoff?.landing_records_event === true,
+      observed: structured?.cart_handoff || null,
+    });
+  }
+
   if (test.expected?.results) {
     const results = Array.isArray(structured) ? structured : structured?.results;
     checks.push({

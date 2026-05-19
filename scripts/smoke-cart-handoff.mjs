@@ -211,12 +211,14 @@ async function main() {
         preparedConfirmed?.ok &&
           !preparedConfirmed.isToolError &&
           preparedConfirmed.structured?.status === "cart_handoff_ready" &&
-          preparedConfirmed.structured?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/")
+          preparedConfirmed.structured?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/") &&
+          preparedConfirmed.structured?.cart_handoff?.primary_url === preparedConfirmed.structured?.cart?.url
       ),
       {
         status: preparedConfirmed?.status ?? null,
         handoff_status: preparedConfirmed?.structured?.status ?? null,
         cart_url: preparedConfirmed?.structured?.cart?.url ?? null,
+        cart_handoff_primary_url: preparedConfirmed?.structured?.cart_handoff?.primary_url ?? null,
       }
     ),
     check("cart_url_ok", Boolean(cart?.ok && !cart.isToolError && cartUrl && finalCartUrl), {
@@ -224,6 +226,19 @@ async function main() {
       url: cartUrl,
       final_cart_url: finalCartUrl,
     }),
+    check(
+      "cart_handoff_primary_url_ok",
+      Boolean(
+        cart?.structured?.cart_handoff?.primary_url === cartUrl &&
+          cart?.structured?.cart_handoff?.primary_url_role === "measured_mcp_cart_landing" &&
+          cart?.structured?.cart_handoff?.landing_records_event === true &&
+          cart?.structured?.primary_buyer_handoff?.primary_url === cartUrl
+      ),
+      {
+        cart_handoff: cart?.structured?.cart_handoff ?? null,
+        primary_buyer_handoff: cart?.structured?.primary_buyer_handoff ?? null,
+      }
+    ),
     check("cart_continuity_ok", Boolean(cart?.structured?.cart_continuity?.validated && cart?.structured?.cart_continuity?.selected_sku === sku), {
       cart_continuity: cart?.structured?.cart_continuity ?? null,
     }),

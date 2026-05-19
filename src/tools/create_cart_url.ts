@@ -228,9 +228,34 @@ export async function createCartUrlHandler(env: Env, raw: unknown) {
     if (tracking.match_type) landingUrl.searchParams.set("match_type", tracking.match_type);
   }
   const url = landingUrl?.toString() ?? finalCartUrl;
+  const cartHandoff = {
+    primary_url: url,
+    primary_url_role: landingUrl ? "measured_mcp_cart_landing" : "shopify_cart_permalink",
+    required_next_action: landingUrl
+      ? "Open or present primary_url to the buyer. The MCP cart landing records mcp_cart_landing, then forwards to Shopify checkout with the same attribution."
+      : "Present primary_url to the buyer as the cart handoff. No MCP cart landing shim is available for multi-line carts.",
+    final_destination_url: finalCartUrl,
+    no_order_created_by_mcp: true,
+    buyer_confirmation_required_before_call: true,
+    landing_records_event: Boolean(landingUrl),
+    landing_event: landingUrl ? "mcp_cart_landing" : null,
+    attribution_required: {
+      ref: input.ref,
+      utm_source: cartTracking.utm_source,
+      utm_medium: cartTracking.utm_medium,
+      utm_campaign: cartTracking.utm_campaign,
+      utm_content: cartTracking.utm_content,
+      utm_term: cartTracking.utm_term ?? null,
+      mcp_key: tracking.continuity_key,
+      mcp_journey: tracking.journey_id,
+      mcp_result_set: tracking.result_set_id ?? null,
+    },
+  };
   const response = {
     url,
     final_cart_url: finalCartUrl,
+    cart_handoff: cartHandoff,
+    primary_buyer_handoff: cartHandoff,
     items,
     resolved_from_catalog: resolvedItem
       ? {
