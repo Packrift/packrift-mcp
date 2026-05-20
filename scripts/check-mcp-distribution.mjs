@@ -402,6 +402,7 @@ async function liveMcpCheck() {
     mcpToolsDiscoveryResult,
     specFinderToolsResult,
     agentCaptureResult,
+    agentHostRolloutResult,
     adoptionKitResult,
     installMatrixResult,
     installActionsResult,
@@ -503,6 +504,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-tools.json"),
     fetchText("https://mcp.packrift.com/ai/spec-finder-tools.md"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-agent-host-rollout.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-install-matrix.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-install-actions.json"),
@@ -598,6 +600,7 @@ async function liveMcpCheck() {
   const measuredHandoffs = measuredHandoffsResult.ok ? JSON.parse(measuredHandoffsResult.text) : null;
   const mcpToolsDiscovery = mcpToolsDiscoveryResult.ok ? JSON.parse(mcpToolsDiscoveryResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
+  const agentHostRollout = agentHostRolloutResult.ok ? JSON.parse(agentHostRolloutResult.text) : null;
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
   const installMatrix = installMatrixResult.ok ? JSON.parse(installMatrixResult.text) : null;
   const installActions = installActionsResult.ok ? JSON.parse(installActionsResult.text) : null;
@@ -1064,9 +1067,16 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R20" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R21" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "mcp_agent_host_rollout" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json") &&
+      agentCapture?.hub_urls?.agent_host_rollout === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json" &&
+      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R01" &&
+      agentHostRollout?.source_count >= 35 &&
+      agentHostRollout?.rows?.some((row) => row.source === "openai_chatgpt" && row.source_aware_endpoint?.includes("packrift_mcp_source=openai_chatgpt")) &&
+      agentHostRollout?.rows?.some((row) => row.source === "langchain_agent" && row.tracked_first_run_shell_url?.includes("/r/run/langchain_agent/")) &&
+      agentHostRollout?.rows?.some((row) => row.source === "n8n_automation" && row.reviewer_activation_shell_url === "https://mcp.packrift.com/r/activate/n8n_automation?format=sh") &&
       agentCapture?.surfaces?.some(
         (surface) =>
           surface.id === "mcp_install_actions" &&

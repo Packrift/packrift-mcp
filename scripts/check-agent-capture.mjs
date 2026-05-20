@@ -138,6 +138,7 @@ async function main() {
     "hosted_mcp_endpoint",
     "mcp_start",
     "mcp_adoption_kit",
+    "mcp_agent_host_rollout",
     "mcp_install_matrix",
     "mcp_install_actions",
     "mcp_first_run_actions",
@@ -199,6 +200,7 @@ async function main() {
     "GA4 proof",
     "source activation queue",
     "activation experiments",
+    "agent host rollout",
     "command center",
     "buyer use cases",
     "cart activation",
@@ -228,7 +230,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R20", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R21", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -265,6 +267,9 @@ async function main() {
       detail: `tools=${healthResult.value?.tools_count ?? 0}, resources=${healthResult.value?.resources_count ?? 0}`,
     }),
     check("resources/list advertises capture routes", hasResourceUri(resourceUris, "/ai/all-agent-capture.json") && hasResourceUri(resourceUris, "/ai/all-agent-capture.md"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises agent host rollout", hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.json") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.md") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.html"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises adoption kit", hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.json") && hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.md"), {

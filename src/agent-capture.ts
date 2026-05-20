@@ -73,6 +73,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the primary handoff link for anyone trying Packrift MCP for the first time.",
     }),
     surface({
+      id: "mcp_agent_host_rollout",
+      name: "Packrift MCP agent host rollout",
+      agent_type: "runtime_source_capture",
+      audience: "Agent builders and operators wiring Packrift MCP into recognizable hosts such as Cline, Cursor, Windsurf, Codex, Claude, OpenAI/ChatGPT, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, and MCP Inspector.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json",
+      install_or_call:
+        "Use the rollout sheet to pick the source slug for a host family, copy the source-aware endpoint, and share tracked install, first-run, activation, and eval links without creating a duplicate Packrift CLI.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      next_action:
+        "Use this as the fast all-agent rollout sheet when a new host, framework, automation tool, or directory needs source-aware Packrift MCP links.",
+    }),
+    surface({
       id: "mcp_install_matrix",
       name: "Packrift MCP install matrix",
       agent_type: "developer_onboarding",
@@ -612,7 +628,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R20",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R21",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -628,6 +644,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      agent_host_rollout: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json",
+      agent_host_rollout_html: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html",
       activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
@@ -711,7 +729,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, the agent host rollout sheet, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",
