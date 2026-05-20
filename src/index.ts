@@ -5115,6 +5115,8 @@ function sourceActivationExternalActivationRequired(row: PostInstallActivationRo
     (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) ||
     (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) ||
     (row.first_run_executions > 0 && row.mcp_tool_calls === 0) ||
+    (row.first_run_actions > 0 && row.mcp_tool_calls === 0) ||
+    (row.starts + row.tracked_config_fetches + row.install_intents > 0 && row.first_run_actions === 0 && row.mcp_tool_calls === 0) ||
     Boolean(SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source])
   );
 }
@@ -5366,7 +5368,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R23",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -6021,7 +6023,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R11",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R12",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",

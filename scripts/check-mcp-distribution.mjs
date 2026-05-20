@@ -890,6 +890,16 @@ async function liveMcpCheck() {
     sourceActivationAnthropic?.preferred_target === "claude_code" &&
     sourceActivationAnthropic?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
     sourceActivationAnthropic?.real_host_run?.first_run_shell_url?.includes("/r/run/anthropic_connectors_directory/claude_code");
+  const sourceActivationHostIntentRowsRequireExternalOk = ["claude_remote_mcp", "codex_remote_mcp", "glama_connector", "mcp_so"].every((source) =>
+    sourceActivationQueue?.queue?.some(
+      (row) =>
+        row.source === source &&
+        row.current_counts?.first_run_actions > 0 &&
+        row.current_counts?.mcp_tool_calls === 0 &&
+        row.external_activation_required === true &&
+        row.recommended_action?.includes("first-run")
+    )
+  );
   return check(
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
@@ -1620,7 +1630,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/generic_streamable_http?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R23" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 1000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
@@ -1681,6 +1691,7 @@ async function liveMcpCheck() {
       Array.isArray(sourceActivationQueue?.blocking_goal_gates) &&
       Array.isArray(sourceActivationQueue?.queue) &&
       sourceActivationQueue?.queue?.some((row) => row.primary_action_url?.startsWith("https://mcp.packrift.com/r/")) &&
+      sourceActivationHostIntentRowsRequireExternalOk &&
       sourceActivationQueue?.queue?.every(
         (row) =>
           row.tracked_first_run_shell_url?.startsWith("https://mcp.packrift.com/r/run/") &&
@@ -1768,9 +1779,9 @@ async function liveMcpCheck() {
       sourceActivationClineHtmlResult.text.includes("Cline Real-Host Run") &&
       sourceActivationClineHtmlResult.text.includes("Copy-Ready External Request") &&
       sourceActivationHostPacketsOk &&
-      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R11" &&
+      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R12" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R23" &&
       activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       activationExperiments?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-experiments.json?limit=20000&order_days=90&order_limit=250" &&
@@ -1832,7 +1843,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R03" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
-      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22" &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R23" &&
       activationWave?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-wave.json?limit=20000&order_days=90&order_limit=250" &&
       activationWave?.links?.activation_wave_operator_json === activationWave?.snapshot_coverage?.operator_url &&
