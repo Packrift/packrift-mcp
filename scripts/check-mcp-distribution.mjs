@@ -10,6 +10,10 @@ const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JS
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
+const MCP_OPENAPI_JSON_URL = `${PACKRIFT_ORIGIN}/openapi.json`;
+const MCP_WELL_KNOWN_OPENAPI_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/openapi.json`;
+const MCP_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/ai-plugin.json`;
+const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/ai-plugin.json`;
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
@@ -495,6 +499,10 @@ async function liveMcpCheck() {
     clientConfigResult,
     rootMcpJsonResult,
     wellKnownMcpJsonResult,
+    openapiJsonResult,
+    wellKnownOpenapiJsonResult,
+    aiPluginJsonResult,
+    wellKnownAiPluginJsonResult,
     marketplaceManifestResult,
     llmsTxtResult,
     llmsFullTxtResult,
@@ -637,6 +645,10 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-client-config.json"),
     fetchText("https://mcp.packrift.com/mcp.json"),
     fetchText("https://mcp.packrift.com/.well-known/mcp.json"),
+    fetchText(MCP_OPENAPI_JSON_URL),
+    fetchText(MCP_WELL_KNOWN_OPENAPI_JSON_URL),
+    fetchText(MCP_AI_PLUGIN_JSON_URL),
+    fetchText(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL),
     fetchText("https://mcp.packrift.com/.well-known/mcp-marketplace.json"),
     fetchText("https://mcp.packrift.com/llms.txt"),
     fetchText("https://mcp.packrift.com/llms-full.txt"),
@@ -787,6 +799,32 @@ async function liveMcpCheck() {
   const clientConfig = clientConfigResult.ok ? JSON.parse(clientConfigResult.text) : null;
   const rootMcpJson = rootMcpJsonResult.ok ? JSON.parse(rootMcpJsonResult.text) : null;
   const wellKnownMcpJson = wellKnownMcpJsonResult.ok ? JSON.parse(wellKnownMcpJsonResult.text) : null;
+  const openapiJson = openapiJsonResult.ok ? JSON.parse(openapiJsonResult.text) : null;
+  const wellKnownOpenapiJson = wellKnownOpenapiJsonResult.ok ? JSON.parse(wellKnownOpenapiJsonResult.text) : null;
+  const aiPluginJson = aiPluginJsonResult.ok ? JSON.parse(aiPluginJsonResult.text) : null;
+  const wellKnownAiPluginJson = wellKnownAiPluginJsonResult.ok ? JSON.parse(wellKnownAiPluginJsonResult.text) : null;
+  const openApiDiscoveryOk =
+    openapiJsonResult.ok &&
+    wellKnownOpenapiJsonResult.ok &&
+    aiPluginJsonResult.ok &&
+    wellKnownAiPluginJsonResult.ok &&
+    openapiJson?.openapi === "3.1.0" &&
+    wellKnownOpenapiJson?.openapi === "3.1.0" &&
+    openapiJson?.info?.title === "Packrift MCP Discovery Adapter" &&
+    wellKnownOpenapiJson?.info?.title === "Packrift MCP Discovery Adapter" &&
+    openapiJson?.["x-packrift-mcp"]?.endpoint === MCP_ENDPOINT &&
+    openapiJson?.["x-packrift-mcp"]?.auth_required === false &&
+    openapiJson?.paths?.["/mcp"]?.post?.operationId === "callPackriftMcpJsonRpc" &&
+    openapiJson?.paths?.["/ai/mcp-tools.json"]?.get?.operationId === "getPackriftMcpToolDiscovery" &&
+    openapiJson?.paths?.["/r/run/{source}/{target}"]?.get?.operationId === "getPackriftSourceAwareFirstRun" &&
+    openapiJson?.paths?.["/r/order/{source}"]?.get?.operationId === "getPackriftSourceAwareOrderHandoff" &&
+    aiPluginJson?.schema_version === "v1" &&
+    aiPluginJson?.auth?.type === "none" &&
+    aiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
+    aiPluginJson?.mcp?.endpoint === MCP_ENDPOINT &&
+    aiPluginJson?.mcp?.auth_required === false &&
+    wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
+    wellKnownAiPluginJson?.mcp?.endpoint === MCP_ENDPOINT;
   const marketplaceManifest = marketplaceManifestResult.ok ? JSON.parse(marketplaceManifestResult.text) : null;
   const trackedConfigGeneric = trackedConfigGenericResult.ok ? JSON.parse(trackedConfigGenericResult.text) : null;
   const trackedFirstRunExecute = trackedFirstRunExecuteResult.ok ? JSON.parse(trackedFirstRunExecuteResult.text) : null;
@@ -1252,6 +1290,10 @@ async function liveMcpCheck() {
     );
   });
   const requiredCoreResourceUris = [
+    MCP_OPENAPI_JSON_URL,
+    MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    MCP_AI_PLUGIN_JSON_URL,
+    MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
     "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
     "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
@@ -1266,6 +1308,10 @@ async function liveMcpCheck() {
     "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
     "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md",
     "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html",
+    MCP_OPENAPI_JSON_URL,
+    MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    MCP_AI_PLUGIN_JSON_URL,
+    MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     "https://mcp.packrift.com/r/order/mcp_so?format=md",
     "https://mcp.packrift.com/r/order/mcp_so?format=sh",
     MCP_ACTIVATION_WAVE_RUNNER_URL,
@@ -1289,6 +1335,15 @@ async function liveMcpCheck() {
       toolNames.includes("create_cart_url") &&
       resourcesCount >= 68 &&
       promptsCount >= 7,
+    legacy_agent_discovery:
+      openapiJson?.openapi === "3.1.0" &&
+      openapiJson?.["x-packrift-mcp"]?.endpoint === MCP_ENDPOINT &&
+      openapiJson?.paths?.["/mcp"]?.post?.operationId === "callPackriftMcpJsonRpc" &&
+      wellKnownOpenapiJson?.info?.title === openapiJson?.info?.title &&
+      aiPluginJson?.schema_version === "v1" &&
+      aiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
+      aiPluginJson?.mcp?.endpoint === MCP_ENDPOINT &&
+      wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL,
     feeds:
       strictPublicProductFeedOk &&
       preferredDirectProductFeedOk &&
@@ -1335,6 +1390,7 @@ async function liveMcpCheck() {
       usageSnapshot?.runtime_source_inference?.rule_count >= 65 &&
       funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
       funnelSnapshot?.runtime_source_inference?.rule_count >= 65,
+    openapi_discovery: openApiDiscoveryOk,
     agent_progress:
       agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       agentAdoptionProgressHtmlResult.ok,
@@ -1375,11 +1431,23 @@ async function liveMcpCheck() {
       serverCard?.serverInfo?.name === "Packrift MCP" &&
       serverCard?.authentication?.required === false &&
       serverCard?.endpoint_url === MCP_ENDPOINT &&
+      openapiJson?.["x-packrift-mcp"]?.endpoint === MCP_ENDPOINT &&
+      wellKnownOpenapiJson?.info?.title === openapiJson?.info?.title &&
+      aiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
+      wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
       serverCard?.client_config?.root_mcp_json === "https://mcp.packrift.com/mcp.json" &&
+      serverCard?.client_config?.openapi_json === MCP_OPENAPI_JSON_URL &&
+      serverCard?.client_config?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
+      serverCard?.client_config?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
+      serverCard?.client_config?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
       serverCard?.client_config?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       serverCard?.client_config?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       serverCard?.client_config?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
       serverCard?.client_config?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
+      serverCard?.registry_distribution?.openapi_json === MCP_OPENAPI_JSON_URL &&
+      serverCard?.registry_distribution?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
+      serverCard?.registry_distribution?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
+      serverCard?.registry_distribution?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
       serverCard?.registry_distribution?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       serverCard?.registry_distribution?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       serverCard?.registry_distribution?.reviewer_activation === "https://mcp.packrift.com/ai/mcp-reviewer-activation.json" &&
@@ -1421,6 +1489,10 @@ async function liveMcpCheck() {
       serverCard?.resource_links?.mcpBuyerOrderHandoffsJson === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       serverCard?.resource_links?.mcpBuyerOrderHandoffsMarkdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL &&
       serverCard?.resource_links?.mcpBuyerOrderHandoffsHtml === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      serverCard?.resource_links?.openapiJson === MCP_OPENAPI_JSON_URL &&
+      serverCard?.resource_links?.wellKnownOpenapiJson === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
+      serverCard?.resource_links?.aiPluginJson === MCP_AI_PLUGIN_JSON_URL &&
+      serverCard?.resource_links?.wellKnownAiPluginJson === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
       serverCard?.resource_links?.mcpActivationWaveRunnerShell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       serverCard?.resource_links?.mcpActivationWaveTasksJsonl === MCP_ACTIVATION_WAVE_TASKS_JSONL_URL &&
       serverCard?.resource_links?.mcpActivationWaveTasksCsv === MCP_ACTIVATION_WAVE_TASKS_CSV_URL &&
@@ -1449,11 +1521,16 @@ async function liveMcpCheck() {
       preparePurchaseTool?.inputSchema?.properties?.mcp_install_target &&
       sourceAwarePreparePurchaseOk &&
       resourcesCount >= 68 &&
+      openApiDiscoveryOk &&
       resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
       resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
       resourceUris.has("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
       resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=sh") &&
+      resourceUris.has(MCP_OPENAPI_JSON_URL) &&
+      resourceUris.has(MCP_WELL_KNOWN_OPENAPI_JSON_URL) &&
+      resourceUris.has(MCP_AI_PLUGIN_JSON_URL) &&
+      resourceUris.has(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md") &&
       resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       resourceTemplatesResult.ok &&
@@ -1557,6 +1634,10 @@ async function liveMcpCheck() {
       mcpToolsDiscoveryToolNames.includes("create_cart_url") &&
       mcpToolsDiscovery?.conversion_urls?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       mcpToolsDiscovery?.conversion_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      mcpToolsDiscovery?.conversion_urls?.openapi_json === MCP_OPENAPI_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
@@ -1616,6 +1697,10 @@ async function liveMcpCheck() {
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      marketplaceManifest?.discovery?.openapi_json === MCP_OPENAPI_JSON_URL &&
+      marketplaceManifest?.discovery?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
+      marketplaceManifest?.discovery?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
+      marketplaceManifest?.discovery?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
       marketplaceManifest?.discovery?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       marketplaceManifest?.discovery?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       marketplaceManifest?.discovery?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
@@ -1630,12 +1715,16 @@ async function liveMcpCheck() {
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/install/{source}/{target}") &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/run/{source}/{target}") &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
+      llmsTxtResult.text.includes(MCP_OPENAPI_JSON_URL) &&
+      llmsTxtResult.text.includes(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
       llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL) &&
       llmsFullTxtResult.ok &&
       llmsFullTxtResult.text.includes("Tracked MCP first-run template: https://mcp.packrift.com/r/run/{source}/{target}") &&
       llmsFullTxtResult.text.includes("MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
+      llmsFullTxtResult.text.includes(MCP_OPENAPI_JSON_URL) &&
+      llmsFullTxtResult.text.includes(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
       llmsFullTxtResult.text.includes("Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
       llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL) &&
@@ -3907,6 +3996,13 @@ async function liveMcpCheck() {
         endpoint: clientConfig?.canonical_endpoint ?? null,
         root_mcp_json_status: rootMcpJsonResult.status,
         well_known_mcp_json_status: wellKnownMcpJsonResult.status,
+        openapi_json_status: openapiJsonResult.status,
+        well_known_openapi_json_status: wellKnownOpenapiJsonResult.status,
+        ai_plugin_json_status: aiPluginJsonResult.status,
+        well_known_ai_plugin_json_status: wellKnownAiPluginJsonResult.status,
+        openapi_paths: Object.keys(openapiJson?.paths ?? {}),
+        ai_plugin_api_url: aiPluginJson?.api?.url ?? null,
+        ai_plugin_mcp_endpoint: aiPluginJson?.mcp?.endpoint ?? null,
         marketplace_manifest_status: marketplaceManifestResult.status,
         marketplace_manifest_tool_count: marketplaceManifest?.signals?.tool_count ?? null,
         marketplace_manifest_has_prepare_purchase_handoff: Boolean(

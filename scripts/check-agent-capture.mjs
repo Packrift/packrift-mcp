@@ -377,6 +377,9 @@ async function main() {
     check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/r/config/generic") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {
       detail: `resources=${resources.length}`,
     }),
+    check("resources/list advertises legacy AI discovery", hasResourceUri(resourceUris, "/openapi.json") && hasResourceUri(resourceUris, "/.well-known/openapi.json") && hasResourceUri(resourceUris, "/ai-plugin.json") && hasResourceUri(resourceUris, "/.well-known/ai-plugin.json"), {
+      detail: `resources=${resources.length}`,
+    }),
     check("resources/list advertises usage snapshot", hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.md"), {
       detail: `resources=${resources.length}`,
     }),

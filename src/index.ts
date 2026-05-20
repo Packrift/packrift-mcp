@@ -4240,7 +4240,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_openapi_discovery|mcp_ai_plugin_discovery|openapi\.json|ai-plugin\.json|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -12638,6 +12638,10 @@ const AI_SALES_SKU_ROUTE_LIMIT = 1000;
 const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
+const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
+const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
+const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
+const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
 const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
@@ -12771,6 +12775,10 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
   "https://mcp.packrift.com/mcp.json",
+  MCP_OPENAPI_JSON_URL,
+  MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+  MCP_AI_PLUGIN_JSON_URL,
+  MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
   "https://mcp.packrift.com/manifest",
   "https://mcp.packrift.com/resources",
   "https://mcp.packrift.com/health",
@@ -12943,6 +12951,10 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/llms.txt": "Short Packrift agent index with MCP, corpus, and family file links.",
   "/llms-full.txt": "Dense Packrift agent reference for packaging categories, tools, guides, and discovery links.",
   "/mcp.json": "Copy-ready remote MCP client config for installing Packrift MCP in common agent hosts.",
+  "/openapi.json": "OpenAPI discovery adapter for legacy AI agents and crawlers that probe REST manifests before MCP.",
+  "/.well-known/openapi.json": "Well-known OpenAPI discovery adapter for legacy AI agents and crawlers.",
+  "/ai-plugin.json": "AI plugin-style discovery manifest pointing legacy agent crawlers to the Packrift MCP OpenAPI adapter.",
+  "/.well-known/ai-plugin.json": "Well-known AI plugin-style discovery manifest pointing legacy agent crawlers to the Packrift MCP OpenAPI adapter.",
   "/robots.txt": "MCP subdomain crawler policy and sitemap references.",
   "/sitemap.xml": "MCP discovery sitemap for machine-readable Packrift resources.",
   "/ai/sitemap.xml": "AI corpus sitemap for exact-spec Packrift product data files.",
@@ -13453,6 +13465,12 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/llms.txt") return llmsTxt;
   if (pathname === "/llms-full.txt") return llmsFullTxt;
   if (pathname === "/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
+  if (pathname === "/openapi.json" || pathname === "/.well-known/openapi.json") {
+    return JSON.stringify(mcpOpenApiPayload(), null, 2);
+  }
+  if (pathname === "/ai-plugin.json" || pathname === "/.well-known/ai-plugin.json") {
+    return JSON.stringify(mcpAiPluginDiscoveryPayload(), null, 2);
+  }
   if (pathname === "/robots.txt") return robotsTxt();
   if (pathname === "/sitemap.xml" || pathname === "/ai/sitemap.xml") return aiSitemapXml();
   if (pathname === "/ai/top-1000-ai-sales-sitemap.xml") return topAiSalesSkuSitemapXml();
@@ -13827,6 +13845,10 @@ function mcpToolDiscoveryPayload() {
       manifest: "https://mcp.packrift.com/manifest",
       resources: "https://mcp.packrift.com/resources",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
@@ -13943,6 +13965,219 @@ function mcpToolDiscoveryMarkdown(): string {
   ].join("\n");
 }
 
+function openApiJsonResponse(description: string) {
+  return {
+    description,
+    content: {
+      "application/json": {
+        schema: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+    },
+  };
+}
+
+function mcpOpenApiPayload() {
+  const jsonRpcBody = {
+    type: "object",
+    required: ["jsonrpc", "method"],
+    additionalProperties: true,
+    properties: {
+      jsonrpc: { type: "string", enum: ["2.0"] },
+      id: { oneOf: [{ type: "string" }, { type: "number" }, { type: "null" }] },
+      method: {
+        type: "string",
+        examples: ["tools/list", "tools/call", "resources/list", "resources/read", "prompts/list"],
+      },
+      params: {
+        type: "object",
+        additionalProperties: true,
+      },
+    },
+  };
+  const sourceParam = {
+    name: "source",
+    in: "path",
+    required: true,
+    schema: { type: "string", pattern: "^[a-z0-9_]{2,64}$" },
+  };
+  const targetParam = {
+    name: "target",
+    in: "path",
+    required: true,
+    schema: { type: "string" },
+  };
+
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "Packrift MCP Discovery Adapter",
+      version: serverCard.version,
+      description:
+        "REST discovery adapter for Packrift MCP. Use the hosted Streamable HTTP MCP endpoint for live exact-spec packaging search, price, inventory, shipping, and measured cart handoff. These REST paths help legacy AI agents and crawlers discover the MCP surface.",
+      contact: { email: "farhan@packrift.com" },
+    },
+    servers: [{ url: "https://mcp.packrift.com" }],
+    "x-packrift-mcp": {
+      endpoint: "https://mcp.packrift.com/mcp",
+      transport: "streamable-http",
+      auth_required: false,
+      tool_discovery: MCP_TOOL_DISCOVERY_JSON_URL,
+      client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
+      ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      measured_cart_rule:
+        "Use Packrift MCP tools for live checks; create_cart_url returns a measured /r/cart URL and does not place an order.",
+    },
+    paths: {
+      "/mcp": {
+        post: {
+          operationId: "callPackriftMcpJsonRpc",
+          summary: "Call Packrift MCP JSON-RPC",
+          description:
+            "Use JSON-RPC methods such as tools/list, tools/call, resources/list, resources/read, and prompts/list against the hosted Streamable HTTP MCP endpoint.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: jsonRpcBody,
+              },
+            },
+          },
+          responses: { "200": openApiJsonResponse("MCP JSON-RPC response") },
+        },
+      },
+      "/health": {
+        get: {
+          operationId: "getPackriftMcpHealth",
+          summary: "Read Packrift MCP health",
+          responses: { "200": openApiJsonResponse("Health, version, tool count, resource count, and KV status") },
+        },
+      },
+      "/manifest": {
+        get: {
+          operationId: "getPackriftMcpManifest",
+          summary: "Read Packrift MCP REST manifest",
+          responses: { "200": openApiJsonResponse("Packrift MCP manifest and discovery URLs") },
+        },
+      },
+      "/resources": {
+        get: {
+          operationId: "listPackriftMcpResources",
+          summary: "List Packrift MCP resources",
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 500 } },
+            { name: "cursor", in: "query", required: false, schema: { type: "string" } },
+          ],
+          responses: { "200": openApiJsonResponse("Paginated Packrift MCP resource list") },
+        },
+      },
+      "/products/{handle_or_sku}": {
+        get: {
+          operationId: "getPackriftProductResource",
+          summary: "Read one AI-approved Packrift product resource",
+          parameters: [
+            {
+              name: "handle_or_sku",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: { "200": openApiJsonResponse("AI-approved Packrift product resource") },
+        },
+      },
+      "/ai/mcp-tools.json": {
+        get: {
+          operationId: "getPackriftMcpToolDiscovery",
+          summary: "Read live Packrift MCP tool discovery",
+          responses: { "200": openApiJsonResponse("Tool names, buyer flows, guardrails, and conversion URLs") },
+        },
+      },
+      "/ai/mcp-buyer-use-cases.json": {
+        get: {
+          operationId: "getPackriftMcpBuyerUseCases",
+          summary: "Read buyer-facing Packrift MCP use cases",
+          responses: { "200": openApiJsonResponse("Buyer intent workflows for exact SKU, fit, labels, mailers, and no-match recovery") },
+        },
+      },
+      "/ai/mcp-cart-activation.json": {
+        get: {
+          operationId: "getPackriftMcpCartActivation",
+          summary: "Read Packrift MCP cart activation playbook",
+          responses: { "200": openApiJsonResponse("Measured cart handoff rules and JSON-RPC sequences") },
+        },
+      },
+      "/ai/mcp-ga4-funnel-proof.json": {
+        get: {
+          operationId: "getPackriftMcpGa4FunnelProof",
+          summary: "Read sanitized Packrift MCP funnel proof",
+          responses: { "200": openApiJsonResponse("Qualified external sessions, cart landings, and order proof status") },
+        },
+      },
+      "/r/config/{source}": {
+        get: {
+          operationId: "getPackriftSourceAwareMcpConfig",
+          summary: "Read source-aware MCP client config",
+          parameters: [sourceParam],
+          responses: { "200": openApiJsonResponse("Source-preserving MCP client config") },
+        },
+      },
+      "/r/run/{source}/{target}": {
+        get: {
+          operationId: "getPackriftSourceAwareFirstRun",
+          summary: "Read source-aware first useful run",
+          parameters: [sourceParam, targetParam],
+          responses: { "200": openApiJsonResponse("Source-aware first-run action payload") },
+        },
+      },
+      "/r/order/{source}": {
+        get: {
+          operationId: "getPackriftSourceAwareOrderHandoff",
+          summary: "Read source-aware buyer/reviewer order handoff",
+          parameters: [sourceParam],
+          responses: { "200": openApiJsonResponse("Buyer-approved checkout handoff preserving MCP attribution") },
+        },
+      },
+    },
+  };
+}
+
+function mcpAiPluginDiscoveryPayload() {
+  return {
+    schema_version: "v1",
+    name_for_human: "Packrift MCP",
+    name_for_model: "packrift_mcp",
+    description_for_human:
+      "Search exact-spec packaging products, confirm live price and inventory, and prepare measured Packrift cart handoffs through MCP.",
+    description_for_model:
+      "Use Packrift MCP for exact-spec packaging procurement. Prefer the hosted MCP endpoint at https://mcp.packrift.com/mcp for tools/list and tools/call. Confirm exact SKU or dimensions, live price, and inventory before cart handoff. create_cart_url returns a measured /r/cart URL and does not place an order. Do not substitute nearby sizes, materials, colors, printer types, adhesives, pack counts, or SKUs as exact matches.",
+    auth: { type: "none" },
+    api: {
+      type: "openapi",
+      url: MCP_OPENAPI_JSON_URL,
+      is_user_authenticated: false,
+    },
+    logo_url: "https://mcp.packrift.com/packrift-mcp-logo.png",
+    contact_email: "farhan@packrift.com",
+    legal_info_url: "https://packrift.com/policies/terms-of-service",
+    mcp: {
+      endpoint: "https://mcp.packrift.com/mcp",
+      transport: "streamable-http",
+      auth_required: false,
+      tool_discovery: MCP_TOOL_DISCOVERY_JSON_URL,
+      buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
+      funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+    },
+  };
+}
+
 async function mcpHealthPayload(env: Env) {
   let kvStatus: "ok" | "error" = "ok";
   try {
@@ -13968,6 +14203,10 @@ function mcpManifestPayload() {
     sse_url: "https://mcp.packrift.com/sse",
     health_url: "https://mcp.packrift.com/health",
     resources_url: "https://mcp.packrift.com/resources",
+    openapi_url: MCP_OPENAPI_JSON_URL,
+    well_known_openapi_url: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    ai_plugin_url: MCP_AI_PLUGIN_JSON_URL,
+    well_known_ai_plugin_url: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     product_resource_template: "https://mcp.packrift.com/products/{handle_or_sku}",
     resource_count: MCP_RESOURCES.length,
     tool_count: TOOLS.length,
@@ -14069,6 +14308,10 @@ function mcpServerCardPayload() {
     registry_distribution: {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
@@ -14114,6 +14357,10 @@ function mcpServerCardPayload() {
     client_config: {
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       full_bundle: "https://mcp.packrift.com/ai/mcp-client-config.json",
       markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
@@ -14644,6 +14891,10 @@ function mcpMarketplaceDiscoveryPayload() {
       resources: "https://mcp.packrift.com/resources",
       health: "https://mcp.packrift.com/health",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       mcp_tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       mcp_tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       launch_guide: "https://github.com/Packrift/packrift-mcp/blob/main/LAUNCHGUIDE.md",
@@ -15632,6 +15883,50 @@ app.get("/.well-known/mcp.json", async (c) => {
     c,
     "mcp.json",
     JSON.stringify(config, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
+app.get("/openapi.json", async (c) => {
+  const payload = mcpOpenApiPayload();
+  await recordGeneratedAiResourceFetch(c, "/openapi.json", "mcp_openapi_discovery", jsonByteSize(payload));
+  return cachedStaticTextResponse(
+    c,
+    "openapi.json",
+    JSON.stringify(payload, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
+app.get("/.well-known/openapi.json", async (c) => {
+  const payload = mcpOpenApiPayload();
+  await recordGeneratedAiResourceFetch(c, "/.well-known/openapi.json", "mcp_openapi_discovery", jsonByteSize(payload));
+  return cachedStaticTextResponse(
+    c,
+    "openapi.json",
+    JSON.stringify(payload, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
+app.get("/ai-plugin.json", async (c) => {
+  const payload = mcpAiPluginDiscoveryPayload();
+  await recordGeneratedAiResourceFetch(c, "/ai-plugin.json", "mcp_ai_plugin_discovery", jsonByteSize(payload));
+  return cachedStaticTextResponse(
+    c,
+    "ai-plugin.json",
+    JSON.stringify(payload, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
+app.get("/.well-known/ai-plugin.json", async (c) => {
+  const payload = mcpAiPluginDiscoveryPayload();
+  await recordGeneratedAiResourceFetch(c, "/.well-known/ai-plugin.json", "mcp_ai_plugin_discovery", jsonByteSize(payload));
+  return cachedStaticTextResponse(
+    c,
+    "ai-plugin.json",
+    JSON.stringify(payload, null, 2),
     "application/json; charset=utf-8"
   );
 });

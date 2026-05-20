@@ -156,6 +156,10 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP client config: https://mcp.packrift.com/ai/mcp-client-config.json
 - Root MCP JSON config: https://mcp.packrift.com/mcp.json
 - Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
+- OpenAPI discovery adapter: https://mcp.packrift.com/openapi.json
+- Well-known OpenAPI discovery adapter: https://mcp.packrift.com/.well-known/openapi.json
+- AI plugin-style discovery manifest: https://mcp.packrift.com/ai-plugin.json
+- AI plugin-style discovery manifest: https://mcp.packrift.com/.well-known/ai-plugin.json
 - Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
 - MCP Marketplace manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
