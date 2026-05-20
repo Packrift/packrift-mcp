@@ -100,6 +100,9 @@ endpoint above.
 
 - `Dockerfile` starts the Packrift MCP server on `PORT=8787`.
 - `glama.json` is the source-listing maintainer claim file.
+- `smithery.yaml` gives Glama/Smithery-compatible container metadata with an
+  empty config schema, so source-listing release checks do not infer a required
+  buyer token.
 - Running the container without `SHOPIFY_PACKRIFT_TOKEN` still exposes MCP
   discovery: `tools/list` returns the current 15-tool surface and
   `resources/list` returns the public AI/MCP resources.

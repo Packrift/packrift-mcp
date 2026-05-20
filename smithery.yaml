@@ -1,0 +1,15 @@
+# Smithery-compatible container metadata used by Glama's source-listing release flow.
+# Packrift's canonical public MCP is hosted at https://mcp.packrift.com/mcp and
+# requires no buyer-side token. The container path is for directory scoring and
+# local validation only.
+runtime: "container"
+build:
+  dockerfile: "Dockerfile"
+  dockerBuildPath: "."
+startCommand:
+  type: "http"
+configSchema:
+  type: "object"
+  properties: {}
+  required: []
+exampleConfig: {}
