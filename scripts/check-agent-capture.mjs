@@ -133,6 +133,9 @@ async function main() {
     clientConfigResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
+    visitorGrowthResult,
+    visitorGrowthTasksJsonlResult,
+    visitorGrowthTasksCsvResult,
     outreachResult,
   ] = await Promise.all([
     fetchJson(jsonUrl),
@@ -145,6 +148,9 @@ async function main() {
     fetchJson(`${BASE_URL}/ai/mcp-client-config.json`),
     fetchJson(`${BASE_URL}/ai/mcp-directory-refresh.json`),
     fetchJson(`${BASE_URL}/ai/mcp-directory-submit-actions.json`),
+    fetchJson(`${BASE_URL}/ai/mcp-visitor-growth-queue.json`),
+    fetchText(`${BASE_URL}/ai/mcp-visitor-growth-tasks.jsonl`),
+    fetchText(`${BASE_URL}/ai/mcp-visitor-growth-tasks.csv`),
     fetchJson(`${BASE_URL}/ai/agent-capture-outreach.json`),
   ]);
 
@@ -166,6 +172,7 @@ async function main() {
     "mcp_funnel_snapshot",
     "mcp_ga4_funnel_proof",
     "mcp_source_activation_queue",
+    "mcp_visitor_growth_queue",
     "mcp_revenue_conversion_queue",
     "mcp_activation_experiments",
     "mcp_external_activation_brief",
@@ -207,6 +214,7 @@ async function main() {
   const clientConfig = clientConfigResult.value;
   const directoryRefresh = directoryRefreshResult.value;
   const directorySubmitActions = directorySubmitActionsResult.value;
+  const visitorGrowth = visitorGrowthResult.value;
   const outreach = outreachResult.value;
   const outreachText = JSON.stringify(outreach ?? {});
   const mdNeedles = [
@@ -225,6 +233,8 @@ async function main() {
     "funnel snapshot",
     "GA4 proof",
     "source activation queue",
+    "visitor growth queue",
+    "mcp-visitor-growth-tasks.jsonl",
     "revenue conversion queue",
     "activation experiments",
     "selected external activation brief",
@@ -264,7 +274,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R29", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R30", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -459,6 +469,28 @@ async function main() {
     check("resources/list advertises source activation queue", hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.html") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-sitemap.xml") && hasResourceUri(resourceUris, "/r/activate"), {
       detail: `resources=${resources.length}`,
     }),
+    check(
+      "resources/list advertises visitor growth queue",
+      hasResourceUri(resourceUris, "/ai/mcp-visitor-growth-queue.json") &&
+        hasResourceUri(resourceUris, "/ai/mcp-visitor-growth-queue.md") &&
+        hasResourceUri(resourceUris, "/ai/mcp-visitor-growth-queue.html") &&
+        hasResourceUri(resourceUris, "/ai/mcp-visitor-growth-tasks.jsonl") &&
+        hasResourceUri(resourceUris, "/ai/mcp-visitor-growth-tasks.csv"),
+      { detail: `resources=${resources.length}` }
+    ),
+    check(
+      "visitor growth queue is importable and non-duplicative",
+      visitorGrowth?.release === "PACKRIFT-MCP-VISITOR-GROWTH-QUEUE-R01" &&
+        visitorGrowth?.proof_summary?.ga4_qualified_external_mcp_sessions?.threshold >= 1000 &&
+        visitorGrowth?.tasks?.some((row) => row.lane === "qualified_visitor_growth" && row.tracked_start_url?.includes("/r/start/")) &&
+        visitorGrowth?.tasks?.some((row) => row.lane === "buyer_order_conversion" && /order|checkout/i.test(row.success_gate ?? "")) &&
+        visitorGrowth?.operating_rules?.some((rule) => /duplicate/.test(rule)) &&
+        visitorGrowthTasksJsonlResult.ok &&
+        visitorGrowthTasksJsonlResult.text.includes('"no_duplicate_work_rule"') &&
+        visitorGrowthTasksCsvResult.ok &&
+        visitorGrowthTasksCsvResult.text.startsWith("release,generated_at,rank,task_id,source"),
+      { detail: visitorGrowthResult.ok ? `${visitorGrowth?.task_count ?? 0} visitor tasks` : "visitor queue failed" }
+    ),
     check("resources/list advertises revenue conversion queue", hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.html"), {
       detail: `resources=${resources.length}`,
     }),

@@ -10,6 +10,7 @@ const PREVIOUS_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions/l
 const PACKAGE_JSON = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8"));
 const PACKAGE_VERSION = PACKAGE_JSON.version;
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
+const OFFICIAL_REGISTRY_URL = "https://registry.modelcontextprotocol.io/servers/io.github.Packrift/packrift-mcp";
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
@@ -290,7 +291,7 @@ function publicProofLine(pack) {
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R02";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R06";
   const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R02";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. Legacy discovery is available through ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, and ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}. Selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}. Selected external activation runner is ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}.`;
+  return `Current proof: Packrift MCP version ${PACKAGE_VERSION} is live; the official registry entry is ${OFFICIAL_REGISTRY_URL}; live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. Legacy discovery is available through ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, and ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}. Selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}. Selected external activation runner is ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}.`;
 }
 
 function recrawlMessage(pack, target) {
@@ -512,7 +513,7 @@ function main() {
     .filter((target) => !["pass"].includes(target.current_status))
     .map((target) => buildAction(pack, previousByName, target));
   const payload = {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R51",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R52",
     generated_at: new Date().toISOString(),
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     tracked_start_template: "https://mcp.packrift.com/r/start/{source}",

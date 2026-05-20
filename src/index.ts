@@ -4308,7 +4308,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_openapi_discovery|mcp_ai_plugin_discovery|openapi\.json|ai-plugin\.json|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_openapi_discovery|mcp_ai_plugin_discovery|openapi\.json|ai-plugin\.json|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_visitor_growth_queue|mcp_visitor_growth_tasks|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -7765,6 +7765,877 @@ function cachedMcpRevenueConversionQueuePayload(
     promise,
   };
   return promise;
+}
+
+type McpVisitorGrowthLane = "qualified_visitor_growth" | "external_mcp_activation" | "buyer_order_conversion";
+
+const MCP_VISITOR_GROWTH_SOURCE_SEEDS: Array<{
+  source: string;
+  name: string;
+  lane: McpVisitorGrowthLane;
+  target: NonNullable<ReturnType<typeof normalizeInstallTarget>>["id"];
+  expected_lift: number;
+  why: string;
+}> = [
+  {
+    source: "mcp_directory",
+    name: "MCP.Directory",
+    lane: "qualified_visitor_growth",
+    target: "generic_streamable_http",
+    expected_lift: 85,
+    why: "High-intent MCP directory search can move the GA4-qualified external session gate.",
+  },
+  {
+    source: "anthropic_connectors_directory",
+    name: "Claude Connectors Directory",
+    lane: "qualified_visitor_growth",
+    target: "claude_code",
+    expected_lift: 95,
+    why: "Claude connector discovery is one of the fastest paths to real agent users and external MCP sessions.",
+  },
+  {
+    source: "smithery",
+    name: "Smithery",
+    lane: "qualified_visitor_growth",
+    target: "generic_streamable_http",
+    expected_lift: 80,
+    why: "Smithery users are already looking for installable MCP servers and can create qualified starts plus tool runs.",
+  },
+  {
+    source: "mcpservers_org",
+    name: "mcpservers.org",
+    lane: "qualified_visitor_growth",
+    target: "generic_streamable_http",
+    expected_lift: 60,
+    why: "Published directory coverage should keep pointing users to the current hosted endpoint and tracked start link.",
+  },
+  {
+    source: "browse_sh",
+    name: "Browserbase Browse",
+    lane: "qualified_visitor_growth",
+    target: "generic_streamable_http",
+    expected_lift: 55,
+    why: "Browse is an agent-facing open web catalog; keep installs routed through Packrift MCP instead of a duplicate CLI.",
+  },
+  {
+    source: "mcp_marketplace_io",
+    name: "MCP Marketplace",
+    lane: "qualified_visitor_growth",
+    target: "mcp_marketplace",
+    expected_lift: 45,
+    why: "The public listing exists but needs current 15-tool endpoint proof and source-aware traffic links.",
+  },
+  {
+    source: "pulsemcp_packrift",
+    name: "PulseMCP",
+    lane: "qualified_visitor_growth",
+    target: "generic_streamable_http",
+    expected_lift: 40,
+    why: "Registry-driven catalog visibility can send qualified directory traffic without another submission loop.",
+  },
+  {
+    source: "glama_connector",
+    name: "Glama hosted connector",
+    lane: "external_mcp_activation",
+    target: "glama_connector",
+    expected_lift: 35,
+    why: "Glama has connector proof and cart landings; the useful next step is real MCP host use from Glama-side users.",
+  },
+  {
+    source: "docker_mcp_catalog",
+    name: "Docker MCP Catalog",
+    lane: "external_mcp_activation",
+    target: "generic_streamable_http",
+    expected_lift: 30,
+    why: "Docker MCP catalog review can turn listing interest into a source-attributed first useful run.",
+  },
+  {
+    source: "findmcp_dev",
+    name: "FindMCP",
+    lane: "external_mcp_activation",
+    target: "generic_streamable_http",
+    expected_lift: 24,
+    why: "FindMCP has discovery demand but needs real source-aware MCP tool-call proof.",
+  },
+  {
+    source: "mcplist_ai",
+    name: "MCPLIST",
+    lane: "external_mcp_activation",
+    target: "generic_streamable_http",
+    expected_lift: 22,
+    why: "MCPLIST search traffic can convert from directory interest into Packrift MCP install and first-run proof.",
+  },
+  {
+    source: "mcpserverfinder",
+    name: "MCP Server Finder",
+    lane: "external_mcp_activation",
+    target: "generic_streamable_http",
+    expected_lift: 22,
+    why: "MCP Server Finder is a discovery surface that can contribute qualified external sessions and host-side tool calls.",
+  },
+  {
+    source: "mcp_so",
+    name: "MCP.so",
+    lane: "buyer_order_conversion",
+    target: "generic_streamable_http",
+    expected_lift: 18,
+    why: "MCP.so is mature enough to focus on buyer/reviewer checkout proof rather than more first-run loops.",
+  },
+  {
+    source: "cline_mcp_marketplace",
+    name: "Cline MCP Marketplace",
+    lane: "buyer_order_conversion",
+    target: "cline",
+    expected_lift: 18,
+    why: "Cline has source-aware proof and should now push a real buyer/reviewer cart handoff toward order proof.",
+  },
+  {
+    source: "openai_chatgpt",
+    name: "OpenAI / ChatGPT agents",
+    lane: "qualified_visitor_growth",
+    target: "generic_streamable_http",
+    expected_lift: 40,
+    why: "OpenAI-style agents are a broad qualified user class for the hosted endpoint and exact-spec buyer flows.",
+  },
+  {
+    source: "codex_remote_mcp",
+    name: "Codex remote MCP",
+    lane: "qualified_visitor_growth",
+    target: "codex",
+    expected_lift: 28,
+    why: "Codex workspaces can install Packrift as a remote MCP endpoint with source attribution and no local clone.",
+  },
+];
+
+function visitorGrowthTaskLane(
+  sourceRow: McpSourceActivationQueuePayload["queue"][number] | null,
+  seededLane?: McpVisitorGrowthLane
+): McpVisitorGrowthLane {
+  if (seededLane) return seededLane;
+  if (sourceRow?.target_event_to_watch === "mcp_attributed_order" || sourceRow?.order_conversion_handoff) {
+    return "buyer_order_conversion";
+  }
+  if (sourceRow?.target_event_to_watch?.startsWith("mcp_tool_call")) return "external_mcp_activation";
+  return "qualified_visitor_growth";
+}
+
+function visitorGrowthTargetEvent(lane: McpVisitorGrowthLane, sourceRow: McpSourceActivationQueuePayload["queue"][number] | null): string {
+  if (lane === "qualified_visitor_growth") return "ga4_qualified_external_mcp_session_start";
+  if (lane === "buyer_order_conversion") return "mcp_attributed_order";
+  return sourceRow?.target_event_to_watch ?? "mcp_tool_call";
+}
+
+function visitorGrowthPriority(score: number): "critical" | "high" | "medium" | "watch" {
+  if (score >= 120) return "critical";
+  if (score >= 80) return "high";
+  if (score >= 40) return "medium";
+  return "watch";
+}
+
+function visitorGrowthSuccessGate(lane: McpVisitorGrowthLane, source: string): string {
+  if (lane === "qualified_visitor_growth") {
+    return `A real external user or agent starts from a ${source} tracked link, installs or opens Packrift MCP, and the public GA4 proof moves qualified external MCP sessions toward 1,000.`;
+  }
+  if (lane === "buyer_order_conversion") {
+    return `A real buyer, reviewer, or MCP-host user completes checkout from the ${source} source-preserving handoff and public proof shows first_party_mcp_orders > 0 or MCP-attributed revenue.`;
+  }
+  return `A real external MCP host uses the ${source} source-aware endpoint and public snapshots show non-suppressed tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url activity.`;
+}
+
+function visitorGrowthCopyReadyRequest(input: {
+  source: string;
+  name: string;
+  lane: McpVisitorGrowthLane;
+  trackedStartUrl: string;
+  trackedInstallUrl: string;
+  trackedFirstRunUrl: string;
+  reviewerActivationUrl: string;
+  buyerHandoffUrl?: string | null;
+  listingUrl?: string | null;
+  proofUrl: string;
+  visitorRemaining: number;
+}): string {
+  const intent =
+    input.lane === "buyer_order_conversion"
+      ? "use the existing buyer/reviewer handoff for a real checkout review"
+      : input.lane === "external_mcp_activation"
+        ? "run Packrift from the real MCP host and finish with create_cart_url"
+        : "list or refresh Packrift MCP with the tracked start/install links so qualified external users can try it";
+  return [
+    `Packrift MCP is live at https://mcp.packrift.com/mcp with no auth required for exact-spec packaging search, live price/inventory checks, and measured cart handoff.`,
+    `For ${input.name}, please ${intent}.`,
+    `Tracked start: ${input.trackedStartUrl}`,
+    `Tracked install: ${input.trackedInstallUrl}`,
+    `First useful run: ${input.trackedFirstRunUrl}`,
+    `Reviewer activation: ${input.reviewerActivationUrl}`,
+    input.buyerHandoffUrl ? `Buyer/reviewer handoff: ${input.buyerHandoffUrl}` : "",
+    input.listingUrl ? `Listing or submission URL: ${input.listingUrl}` : "",
+    `Current proof and gap: ${input.proofUrl}. Remaining qualified external MCP sessions to 1,000: ${input.visitorRemaining}.`,
+    "Do not ask users to install a separate Packrift CLI, clone a duplicate server, or use a separate checkout surface. Everything should route through the hosted Packrift MCP endpoint and source-aware /r/ links.",
+	  ].filter(Boolean).join("\n");
+}
+
+function visitorGrowthMailtoRecipient(url?: string | null): string | null {
+  if (!url?.startsWith("mailto:")) return null;
+  try {
+    return new URL(url).pathname || null;
+  } catch {
+    return url.replace(/^mailto:/, "").split("?")[0] || null;
+  }
+}
+
+function visitorGrowthContactHandoff(input: {
+  source: string;
+  name: string;
+  lane: McpVisitorGrowthLane;
+  copyReadyRequest: string;
+  successGate: string;
+  primaryActionUrl: string;
+  listingUrl?: string | null;
+  submitAction?: {
+    action_status?: string;
+    submission_url?: string;
+    next_action?: string;
+    concise_email?: {
+      to?: string | null;
+      subject?: string;
+      body?: string;
+    };
+  } | null;
+}) {
+  const reviewHandoff = MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS[input.source] ?? null;
+  const submissionRecipient = visitorGrowthMailtoRecipient(input.submitAction?.submission_url);
+  const supportEmail = reviewHandoff?.support_email ?? input.submitAction?.concise_email?.to ?? submissionRecipient;
+  const subject =
+    input.submitAction?.concise_email?.subject ??
+    `Activate Packrift MCP for ${input.name} (${input.source})`;
+  const body =
+    input.submitAction?.concise_email?.body ??
+    [
+      "Hi, could you help activate Packrift MCP from your real directory, catalog, or MCP host?",
+      "",
+      input.copyReadyRequest,
+      "",
+      `Acceptance check: ${input.successGate}`,
+      "",
+      "This is a copy-ready handoff only. Please do not create a duplicate Packrift CLI, duplicate MCP server, or alternate checkout surface.",
+    ].join("\n");
+  const primarySurface =
+    reviewHandoff?.primary_surface ??
+    input.submitAction?.submission_url ??
+    input.listingUrl ??
+    input.primaryActionUrl;
+  const channel = supportEmail
+    ? "email"
+    : reviewHandoff?.public_comment_url
+      ? "public_comment"
+      : reviewHandoff?.support_url
+        ? "support_url"
+        : input.submitAction?.submission_url
+          ? "submission_surface"
+          : "review_surface";
+  return {
+    release: "PACKRIFT-MCP-VISITOR-GROWTH-CONTACT-HANDOFF-R01",
+    channel,
+    status: reviewHandoff?.status ?? input.submitAction?.action_status ?? "source_specific_activation_needed",
+    primary_surface: primarySurface,
+    support_email: supportEmail,
+    support_url: reviewHandoff?.support_url ?? null,
+    public_comment_url: reviewHandoff?.public_comment_url ?? null,
+    subject,
+    body,
+    mailto_url: supportEmail ? `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` : null,
+    next_contact_action:
+      reviewHandoff?.next_contact_action ??
+      input.submitAction?.next_action ??
+      "Use the source-specific activation links and ask the real external host or reviewer to run the measured first-useful-run sequence.",
+    no_send_rule:
+      "This contact handoff is copy-ready only. It does not send email, post comments, create a duplicate MCP server, or place an order.",
+  };
+}
+
+async function mcpVisitorGrowthQueuePayload(
+  env: Env,
+  date = todayUtc(),
+  limit = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT,
+  orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
+  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
+  options: PublicMcpDerivedResourceCacheOptions = {}
+) {
+  const [adoption, sourceQueue, revenueQueue] = await Promise.all([
+    cachedMcpAgentAdoptionProgressPayload(env, date, limit, orderDays, orderLimit, options),
+    cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit, options),
+    cachedMcpRevenueConversionQueuePayload(env, date, limit, orderDays, orderLimit, options),
+  ]);
+  const directoryRefresh = mcpDirectoryRefreshPayload(directoryRefreshRuntime());
+  const directorySubmitActions = mcpDirectorySubmitActionsPayload(
+    await directorySubmitActionsRuntimeForRequest(
+      env,
+      publicMcpSnapshotUrl("/ai/mcp-directory-submit-actions.json", limit, orderDays, orderLimit)
+    )
+  );
+  const directoryBySource = new Map<string, (typeof directoryRefresh.priority_refresh_targets)[number]>(
+    directoryRefresh.priority_refresh_targets.map((target) => [target.id, target])
+  );
+  const submitBySource = new Map<string, (typeof directorySubmitActions.actions)[number]>(
+    directorySubmitActions.actions.map((action) => [action.id, action])
+  );
+  const sourceQueueBySource = new Map(sourceQueue.queue.map((row) => [row.source, row]));
+  const revenueBySource = new Map(revenueQueue.rows.map((row) => [row.source, row]));
+  const seedBySource = new Map(MCP_VISITOR_GROWTH_SOURCE_SEEDS.map((seed) => [seed.source, seed]));
+  const visitorCount = Number(adoption.counts.ga4_qualified_external_mcp_session_starts ?? 0);
+  const visitorThreshold = Number(adoption.counts.ga4_qualified_external_mcp_session_threshold ?? 1000);
+  const visitorRemaining = Math.max(0, visitorThreshold - visitorCount);
+  const orderCount = Number(adoption.counts.first_party_mcp_orders ?? 0);
+  const orderRevenue = Number(adoption.counts.first_party_mcp_order_revenue ?? 0);
+  const materialUsageCount = Number(adoption.counts.material_tool_usage_count ?? 0);
+  const materialUsageThreshold = Number(adoption.counts.material_tool_usage_threshold ?? 50);
+  const queuedSources = [
+    ...MCP_VISITOR_GROWTH_SOURCE_SEEDS.map((seed) => seed.source),
+    ...sourceQueue.queue.slice(0, 12).map((row) => row.source),
+    ...revenueQueue.rows.slice(0, 8).map((row) => row.source),
+  ];
+  const sources = Array.from(new Set(queuedSources));
+  const tasks = sources.map((source) => {
+    const seed = seedBySource.get(source);
+    const sourceRow = sourceQueueBySource.get(source) ?? null;
+    const revenueRow = revenueBySource.get(source) ?? null;
+    const directory = directoryBySource.get(source) ?? null;
+    const submitAction = submitBySource.get(source) ?? null;
+    const target =
+      seed?.target ??
+      sourceRow?.preferred_target ??
+      normalizeInstallTarget(sourcePreferredActivationTarget(source))?.id ??
+      "generic_streamable_http";
+    const urls = sourceActivationUrls(source);
+    const firstUsefulRun = mcpFirstUsefulRun(source, target);
+    const lane = visitorGrowthTaskLane(sourceRow, seed?.lane);
+    const targetEvent = visitorGrowthTargetEvent(lane, sourceRow);
+    const buyerHandoffUrl =
+      revenueRow?.buyer_handoff_url ??
+      sourceRow?.order_conversion_handoff?.buyer_handoff_url ??
+      sourceRow?.source_order_handoff?.buyer_handoff_url ??
+      null;
+    const listingUrl = directory?.listing_url ?? submitAction?.listing_url ?? null;
+    const externalActionUrl = directory?.refresh_url ?? submitAction?.submission_url ?? listingUrl;
+    const primaryActionUrl =
+      lane === "buyer_order_conversion"
+        ? buyerHandoffUrl ?? sourceRow?.primary_action_url ?? urls.order_handoff_html_url
+        : lane === "qualified_visitor_growth"
+          ? externalActionUrl ?? urls.tracked_start_url
+          : sourceRow?.primary_action_url ?? urls.reviewer_activation_runner_url;
+    const currentCounts = sourceRow?.current_counts ?? {
+      starts: 0,
+      tracked_config_fetches: 0,
+      install_intents: 0,
+      first_run_actions: 0,
+      first_run_executions: 0,
+      preferred_target: target,
+      mcp_tool_calls: 0,
+      create_cart_url_calls: 0,
+      external_qualified_create_cart_url_calls: 0,
+      qualified_cart_landings: 0,
+      recent_measured_cart_urls: [],
+    };
+    const directoryStatus = submitAction?.directory_status ?? directory?.priority ?? "not_listed_in_submit_action_queue";
+    const signalScore =
+      Number(currentCounts.starts ?? 0) +
+      Number(currentCounts.install_intents ?? 0) * 2 +
+      Number(currentCounts.first_run_executions ?? 0) * 4 +
+      Number(currentCounts.mcp_tool_calls ?? 0) * 5 +
+      Number(currentCounts.qualified_cart_landings ?? 0) * 8;
+    const baseScore =
+      (seed?.expected_lift ?? 20) +
+      (sourceRow?.priority_score ?? 0) +
+      (revenueRow ? 70 : 0) +
+      (/unlisted|stale|pending|blocked/i.test(String(directoryStatus)) ? 25 : 0) +
+      signalScore;
+    const priority = visitorGrowthPriority(baseScore);
+    const name = seed?.name ?? directory?.name ?? submitAction?.label ?? source;
+	    const copyReadyRequest = visitorGrowthCopyReadyRequest({
+	      source,
+	      name,
+      lane,
+      trackedStartUrl: urls.tracked_start_url,
+      trackedInstallUrl: urls.tracked_install_url,
+      trackedFirstRunUrl: urls.tracked_first_run_url,
+      reviewerActivationUrl: urls.reviewer_activation_runner_url,
+      buyerHandoffUrl,
+      listingUrl,
+	      proofUrl: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+	      visitorRemaining,
+	    });
+	    const successGate = visitorGrowthSuccessGate(lane, source);
+	    const contactHandoff = visitorGrowthContactHandoff({
+	      source,
+	      name,
+	      lane,
+	      copyReadyRequest,
+	      successGate,
+	      primaryActionUrl,
+	      listingUrl,
+	      submitAction,
+	    });
+	    return {
+      task_id: `mcp_visitor_growth:${lane}:${source}`,
+      source,
+      source_name: name,
+      lane,
+      priority,
+      priority_score: baseScore,
+      expected_lift: seed?.expected_lift ?? Math.max(10, Math.min(35, baseScore)),
+      why: seed?.why ?? sourceRow?.recommended_action ?? "Source appears in the current MCP activation queue and can contribute qualified sessions, real tool calls, cart landings, or order proof.",
+      current_stage:
+        lane === "qualified_visitor_growth"
+          ? `Global visitor gap remains ${visitorRemaining} qualified external MCP sessions. Directory status: ${directoryStatus}.`
+          : sourceRow?.current_stage ?? revenueRow?.current_stage ?? "Source needs measured follow-through through the hosted Packrift MCP endpoint.",
+      target_event_to_watch: targetEvent,
+      primary_action_url: primaryActionUrl,
+      primary_external_action_url: externalActionUrl ?? null,
+      listing_url: listingUrl,
+      preferred_target: target,
+      source_aware_endpoint: firstUsefulRun.endpoint,
+      tracked_start_url: urls.tracked_start_url,
+      tracked_config_url: urls.tracked_config_url,
+      tracked_install_url: urls.tracked_install_url,
+      tracked_first_run_url: urls.tracked_first_run_url,
+      tracked_first_run_execute_url: urls.tracked_first_run_execute_url,
+      tracked_first_run_shell_url: urls.tracked_first_run_shell_url,
+      reviewer_activation_url: urls.reviewer_activation_url,
+      reviewer_activation_html_url: urls.reviewer_activation_runner_url,
+      reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
+      buyer_handoff_url: buyerHandoffUrl,
+      order_handoff_shell_url: urls.order_handoff_shell_url,
+	      source_activation_packet_url: `https://mcp.packrift.com/ai/mcp-source-activation/${encodeURIComponent(source)}.json`,
+	      directory_update_card_url: urls.directory_update_card_json_url,
+	      eval_pack_url: urls.eval_pack_json_url,
+	      copy_ready_request: copyReadyRequest,
+	      contact_handoff: contactHandoff,
+	      next_contact_action: contactHandoff.next_contact_action,
+	      success_gate: successGate,
+      no_duplicate_work_rule:
+        "Use the hosted Packrift MCP endpoint plus existing /r/start, /r/config, /r/install, /r/run, /r/activate, /r/order, and /r/cart handoffs. Do not create a separate Packrift CLI, buyer app, checkout, or duplicate MCP server.",
+      proof_urls: {
+        visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+        agent_adoption_progress: adoption.links.agent_adoption_progress_json,
+        ga4_funnel_proof: adoption.links.ga4_funnel_proof_json,
+        source_activation_queue: sourceQueue.links.source_activation_queue_json,
+        revenue_conversion_queue: revenueQueue.links.revenue_conversion_queue_json,
+        buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
+        directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+        directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      },
+      current_counts: currentCounts,
+    };
+  }).sort((a, b) => b.priority_score - a.priority_score || a.source.localeCompare(b.source));
+  return {
+    release: MCP_VISITOR_GROWTH_QUEUE_RELEASE,
+    generated_at: new Date().toISOString(),
+    date,
+    event_read_limit: limit,
+    event_lookback_days: sourceQueue.event_lookback_days,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    status:
+      visitorRemaining > 0 && orderCount === 0
+        ? "visitor_and_order_growth_needed"
+        : visitorRemaining > 0
+          ? "visitor_growth_needed"
+          : orderCount === 0
+            ? "order_growth_needed"
+            : "visitor_and_order_proven",
+    purpose:
+      "Public Packrift MCP growth queue for moving from proven tool usage into thousands of qualified external MCP sessions and buyer-approved order proof without creating duplicate Packrift surfaces.",
+    source_releases: {
+      agent_adoption_progress: adoption.release,
+      source_activation_queue: sourceQueue.release,
+      revenue_conversion_queue: revenueQueue.release,
+      directory_refresh: directoryRefresh.release,
+      directory_submit_actions: directorySubmitActions.release,
+    },
+    proof_summary: {
+      material_tool_usage: {
+        count: materialUsageCount,
+        threshold: materialUsageThreshold,
+        remaining_to_threshold: Math.max(0, materialUsageThreshold - materialUsageCount),
+        progress_pct: progressPct(materialUsageCount, materialUsageThreshold),
+        basis: adoption.counts.material_tool_usage_basis,
+        status: materialUsageCount >= materialUsageThreshold ? "proven" : "not_proven",
+      },
+      ga4_qualified_external_mcp_sessions: {
+        count: visitorCount,
+        threshold: visitorThreshold,
+        remaining_to_threshold: visitorRemaining,
+        progress_pct: progressPct(visitorCount, visitorThreshold),
+        status: visitorCount >= visitorThreshold ? "proven" : "not_proven",
+      },
+      first_party_mcp_orders: {
+        count: orderCount,
+        revenue: orderRevenue,
+        currency: adoption.counts.first_party_mcp_order_currency,
+        status: orderCount > 0 || orderRevenue > 0 ? "proven" : "not_proven",
+      },
+      qualified_cart_landings: adoption.counts.qualified_first_party_mcp_cart_landings,
+      external_qualified_mcp_tool_calls: adoption.counts.external_qualified_mcp_tool_calls,
+    },
+    task_count: tasks.length,
+	    lane_counts: tasks.reduce<Record<McpVisitorGrowthLane, number>>(
+	      (acc, task) => {
+	        acc[task.lane] = (acc[task.lane] ?? 0) + 1;
+	        return acc;
+	      },
+	      { qualified_visitor_growth: 0, external_mcp_activation: 0, buyer_order_conversion: 0 }
+	    ),
+	    contact_handoff_summary: {
+	      release: "PACKRIFT-MCP-VISITOR-GROWTH-CONTACT-HANDOFF-R01",
+	      contact_ready_count: tasks.filter((task) => task.contact_handoff.channel !== "review_surface").length,
+	      email_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "email").length,
+	      public_comment_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "public_comment").length,
+	      support_url_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "support_url").length,
+	      no_send_rule:
+	        "Visitor growth contact handoffs are copy-ready only; they do not send email, post comments, create duplicate Packrift surfaces, or place orders.",
+	    },
+	    tasks,
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-visitor-growth-queue.json", limit, orderDays, orderLimit),
+    operating_rules: [
+      "Work this queue for distribution and demand proof, not to create another Packrift product surface.",
+      "A directory refresh is useful only when it sends real external users or agents to source-aware Packrift MCP links.",
+      "A source activation row is complete only when public snapshots show non-suppressed real MCP tool calls, measured cart landings, or buyer-approved order proof.",
+      "Do not duplicate Packrift MCP work into a separate CLI, buyer app, checkout, or duplicate server; use the hosted endpoint and the existing source-aware /r/ handoffs.",
+      "A buyer/order row must preserve MCP attribution into Shopify checkout and never count self-opened carts, generated-resource fetches, or shell runner output as order proof.",
+    ],
+    links: {
+      visitor_growth_queue_json: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+      visitor_growth_queue_markdown: MCP_VISITOR_GROWTH_QUEUE_MARKDOWN_URL,
+      visitor_growth_queue_html: MCP_VISITOR_GROWTH_QUEUE_HTML_URL,
+      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
+      agent_adoption_progress: adoption.links.agent_adoption_progress_json,
+      agent_adoption_progress_html: adoption.links.agent_adoption_progress_html,
+      source_activation_queue: sourceQueue.links.source_activation_queue_json,
+      source_activation_queue_html: sourceQueue.links.source_activation_queue_html,
+      revenue_conversion_queue: revenueQueue.links.revenue_conversion_queue_json,
+      revenue_conversion_queue_html: revenueQueue.links.revenue_conversion_queue_html,
+      buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
+      buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+      directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
+      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      ga4_funnel_proof: adoption.links.ga4_funnel_proof_json,
+    },
+  };
+}
+
+type McpVisitorGrowthQueuePayload = Awaited<ReturnType<typeof mcpVisitorGrowthQueuePayload>>;
+
+let mcpVisitorGrowthQueuePayloadCache:
+  | {
+      key: string;
+      expiresAtMs: number;
+      promise: Promise<McpVisitorGrowthQueuePayload>;
+    }
+  | null = null;
+
+function mcpVisitorGrowthQueueCacheKey(date: string, limit: number, orderDays: number, orderLimit: number): string {
+  return `${date}:${limit}:${orderDays}:${orderLimit}`;
+}
+
+function cachedMcpVisitorGrowthQueuePayload(
+  env: Env,
+  date: string,
+  limit: number,
+  orderDays: number,
+  orderLimit: number,
+  options: PublicMcpDerivedResourceCacheOptions = {}
+): Promise<McpVisitorGrowthQueuePayload> {
+  const key = mcpVisitorGrowthQueueCacheKey(date, limit, orderDays, orderLimit);
+  const now = Date.now();
+  if (!options.refresh && mcpVisitorGrowthQueuePayloadCache?.key === key && mcpVisitorGrowthQueuePayloadCache.expiresAtMs > now) {
+    return mcpVisitorGrowthQueuePayloadCache.promise;
+  }
+  const promise = (async () => {
+    const cached = options.refresh
+      ? null
+      : await readPublicMcpDerivedResourceCache<McpVisitorGrowthQueuePayload>(
+          env,
+          "visitor_growth_queue",
+          key
+        );
+    if (cached) return cached;
+    const payload = await mcpVisitorGrowthQueuePayload(env, date, limit, orderDays, orderLimit, options);
+    await writePublicMcpDerivedResourceCache(env, "visitor_growth_queue", key, payload);
+    return payload;
+  })().catch((error) => {
+    if (mcpVisitorGrowthQueuePayloadCache?.promise === promise) mcpVisitorGrowthQueuePayloadCache = null;
+    throw error;
+  });
+  mcpVisitorGrowthQueuePayloadCache = {
+    key,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("visitor_growth_queue"),
+    promise,
+  };
+  return promise;
+}
+
+function mcpVisitorGrowthQueueTaskRows(payload: McpVisitorGrowthQueuePayload) {
+  return payload.tasks.map((task, index) => ({
+    release: payload.release,
+    generated_at: payload.generated_at,
+    rank: index + 1,
+    task_id: task.task_id,
+    source: task.source,
+    source_name: task.source_name,
+    lane: task.lane,
+    priority: task.priority,
+    priority_score: task.priority_score,
+    expected_lift: task.expected_lift,
+    target_event_to_watch: task.target_event_to_watch,
+    current_stage: task.current_stage,
+    primary_action_url: task.primary_action_url,
+    primary_external_action_url: task.primary_external_action_url ?? "",
+    listing_url: task.listing_url ?? "",
+    source_aware_endpoint: task.source_aware_endpoint,
+    tracked_start_url: task.tracked_start_url,
+    tracked_config_url: task.tracked_config_url,
+    tracked_install_url: task.tracked_install_url,
+    tracked_first_run_url: task.tracked_first_run_url,
+    tracked_first_run_shell_url: task.tracked_first_run_shell_url,
+    reviewer_activation_html_url: task.reviewer_activation_html_url,
+    reviewer_activation_shell_url: task.reviewer_activation_shell_url,
+    buyer_handoff_url: task.buyer_handoff_url ?? "",
+    order_handoff_shell_url: task.order_handoff_shell_url,
+    source_activation_packet_url: task.source_activation_packet_url,
+    directory_update_card_url: task.directory_update_card_url,
+    eval_pack_url: task.eval_pack_url,
+    current_starts: task.current_counts.starts,
+    current_install_intents: task.current_counts.install_intents,
+    current_first_run_executions: task.current_counts.first_run_executions,
+    current_mcp_tool_calls: task.current_counts.mcp_tool_calls,
+    current_qualified_cart_landings: task.current_counts.qualified_cart_landings,
+    copy_ready_request: task.copy_ready_request,
+    success_gate: task.success_gate,
+    no_duplicate_work_rule: task.no_duplicate_work_rule,
+    measurement_urls: [
+      task.proof_urls.visitor_growth_queue,
+      task.proof_urls.agent_adoption_progress,
+      task.proof_urls.ga4_funnel_proof,
+      task.proof_urls.source_activation_queue,
+    ].join(" | "),
+  }));
+}
+
+function mcpVisitorGrowthQueueTasksJsonl(payload: McpVisitorGrowthQueuePayload): string {
+  return `${mcpVisitorGrowthQueueTaskRows(payload).map((row) => JSON.stringify(row)).join("\n")}\n`;
+}
+
+function mcpVisitorGrowthQueueTasksCsv(payload: McpVisitorGrowthQueuePayload): string {
+  const rows = mcpVisitorGrowthQueueTaskRows(payload);
+  const headers = [
+    "release",
+    "generated_at",
+    "rank",
+    "task_id",
+    "source",
+    "source_name",
+    "lane",
+    "priority",
+    "priority_score",
+    "expected_lift",
+    "target_event_to_watch",
+    "current_stage",
+    "primary_action_url",
+    "primary_external_action_url",
+    "listing_url",
+    "source_aware_endpoint",
+    "tracked_start_url",
+    "tracked_config_url",
+    "tracked_install_url",
+    "tracked_first_run_url",
+    "tracked_first_run_shell_url",
+    "reviewer_activation_html_url",
+    "reviewer_activation_shell_url",
+    "buyer_handoff_url",
+    "order_handoff_shell_url",
+    "source_activation_packet_url",
+    "directory_update_card_url",
+    "eval_pack_url",
+    "current_starts",
+    "current_install_intents",
+    "current_first_run_executions",
+    "current_mcp_tool_calls",
+    "current_qualified_cart_landings",
+    "copy_ready_request",
+    "success_gate",
+    "no_duplicate_work_rule",
+    "measurement_urls",
+  ] as const;
+  return [
+    headers.join(","),
+    ...rows.map((row) => headers.map((header) => csvField(String(row[header] ?? "").replace(/\r?\n/g, " "))).join(",")),
+    "",
+  ].join("\n");
+}
+
+function mcpVisitorGrowthQueueMarkdown(payload: McpVisitorGrowthQueuePayload): string {
+  return [
+    "# Packrift MCP Visitor Growth Queue",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Status: ${payload.status}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.purpose,
+    "",
+    "## Proof Summary",
+    "",
+    `- Material tool usage: ${payload.proof_summary.material_tool_usage.count} / ${payload.proof_summary.material_tool_usage.threshold} (${payload.proof_summary.material_tool_usage.status})`,
+    `- GA4 qualified external MCP sessions: ${payload.proof_summary.ga4_qualified_external_mcp_sessions.count} / ${payload.proof_summary.ga4_qualified_external_mcp_sessions.threshold}`,
+    `- Remaining qualified external MCP sessions: ${payload.proof_summary.ga4_qualified_external_mcp_sessions.remaining_to_threshold}`,
+    `- Qualified cart landings: ${payload.proof_summary.qualified_cart_landings}`,
+    `- First-party MCP orders: ${payload.proof_summary.first_party_mcp_orders.count}`,
+    `- First-party MCP revenue: ${payload.proof_summary.first_party_mcp_orders.revenue} ${payload.proof_summary.first_party_mcp_orders.currency}`,
+    "",
+    "## Lane Counts",
+    "",
+    `- Qualified visitor growth: ${payload.lane_counts.qualified_visitor_growth}`,
+    `- External MCP activation: ${payload.lane_counts.external_mcp_activation}`,
+    `- Buyer order conversion: ${payload.lane_counts.buyer_order_conversion}`,
+    "",
+    "## Tasks",
+    "",
+    "| Rank | Priority | Lane | Source | Target event | Current stage | Primary action | Tracked start | Install | First run | Buyer handoff | Success gate |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    payload.tasks
+      .map(
+        (task, index) =>
+          `| ${index + 1} | ${task.priority} | ${task.lane} | ${task.source} | ${task.target_event_to_watch} | ${markdownTableCell(task.current_stage)} | ${task.primary_action_url} | ${task.tracked_start_url} | ${task.tracked_install_url} | ${task.tracked_first_run_url} | ${task.buyer_handoff_url ?? ""} | ${markdownTableCell(task.success_gate)} |`
+      )
+      .join("\n"),
+    "",
+    "## No Duplicate Work",
+    "",
+    payload.operating_rules.map((rule) => `- ${rule}`).join("\n"),
+    "",
+    "## Task Exports",
+    "",
+    `- JSONL: ${payload.links.visitor_growth_tasks_jsonl}`,
+    `- CSV: ${payload.links.visitor_growth_tasks_csv}`,
+    "",
+    "## Proof Links",
+    "",
+    Object.entries(payload.links).map(([key, value]) => `- ${key}: ${value}`).join("\n"),
+    "",
+  ].join("\n");
+}
+
+function mcpVisitorGrowthQueueHtml(payload: McpVisitorGrowthQueuePayload): string {
+  const taskCards = payload.tasks.slice(0, 18).map((task, index) => {
+    const proofLinks = Object.values(task.proof_urls)
+      .map((url) => `<a href="${escapeHtml(url)}">${escapeHtml(new URL(url).pathname.replace("/ai/", ""))}</a>`)
+      .join(" ");
+    return `<article class="task ${escapeHtml(task.priority)}">
+      <div class="head">
+        <div>
+          <p class="eyebrow">#${index + 1} · ${escapeHtml(task.priority)} · ${escapeHtml(task.lane)}</p>
+          <h2>${escapeHtml(task.source_name)}</h2>
+        </div>
+        <span>${escapeHtml(task.target_event_to_watch)}</span>
+      </div>
+      <p>${escapeHtml(task.current_stage)}</p>
+      <p>${escapeHtml(task.why)}</p>
+      <div class="metrics">
+        <span>starts ${task.current_counts.starts}</span>
+        <span>installs ${task.current_counts.install_intents}</span>
+        <span>runs ${task.current_counts.first_run_executions}</span>
+        <span>tools ${task.current_counts.mcp_tool_calls}</span>
+        <span>carts ${task.current_counts.qualified_cart_landings}</span>
+      </div>
+      <div class="actions">
+        <a class="button primary" href="${escapeHtml(task.primary_action_url)}">Primary action</a>
+        <a class="button" href="${escapeHtml(task.tracked_start_url)}">Tracked start</a>
+        <a class="button" href="${escapeHtml(task.tracked_install_url)}">Install</a>
+        <a class="button" href="${escapeHtml(task.tracked_first_run_url)}">First run</a>
+        <a class="button" href="${escapeHtml(task.reviewer_activation_html_url)}">Activation</a>
+        ${task.buyer_handoff_url ? `<a class="button" href="${escapeHtml(task.buyer_handoff_url)}">Buyer handoff</a>` : ""}
+        <a class="button" href="${escapeHtml(task.eval_pack_url)}">Eval pack</a>
+      </div>
+      <details>
+        <summary>Copy-ready request</summary>
+        <pre>${escapeHtml(task.copy_ready_request)}</pre>
+      </details>
+      <details>
+        <summary>Proof and guardrails</summary>
+        <p>${escapeHtml(task.success_gate)}</p>
+        <p>${escapeHtml(task.no_duplicate_work_rule)}</p>
+        <p class="links">${proofLinks}</p>
+      </details>
+    </article>`;
+  }).join("");
+  const rules = payload.operating_rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("");
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP Visitor Growth Queue</title>
+  <meta name="description" content="${escapeHtml(payload.purpose)}">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_visitor_growth_queue", source: "operator", target: "visitor_growth", utmCampaign: "packrift_mcp_visitor_growth_queue" })}
+  <style>
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--amber:#96610f;--red:#9f2d20}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    main{max-width:1160px;margin:0 auto;padding:32px 18px 56px}
+    header{display:grid;gap:16px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:clamp(2rem,5vw,4.4rem);line-height:.98;letter-spacing:0}
+    h2{margin:0;font-size:1.15rem;letter-spacing:0}
+    p{margin:0;color:var(--muted);max-width:860px}
+    a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+    .status,.metrics,.actions,.exports{display:flex;flex-wrap:wrap;gap:8px}
+    .status span,.metrics span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
+    .tasks{display:grid;gap:14px;margin-top:22px}
+    .task{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .task.critical{border-left:5px solid var(--red)}
+    .task.high{border-left:5px solid var(--amber)}
+    .task.medium{border-left:5px solid var(--green)}
+    .head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:10px}
+    .head span{border:1px solid var(--line);border-radius:999px;padding:5px 9px;color:var(--muted);font-size:.85rem;background:#f9faf8}
+    .eyebrow{font-size:.82rem;text-transform:uppercase;letter-spacing:0;color:var(--muted);margin-bottom:4px}
+    .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
+    .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    details{border:1px solid var(--line);border-radius:8px;background:#fbfcfa;padding:10px;margin-top:12px}
+    summary{cursor:pointer;font-weight:700}
+    pre{white-space:pre-wrap;word-break:break-word;background:#111b17;color:#f4f8fb;border-radius:6px;padding:12px;overflow:auto}
+    .rules{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+    ul{margin:8px 0 0;padding-left:20px;color:var(--muted)}
+    @media (max-width:680px){.head{display:grid}.button{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Packrift MCP Visitor Growth Queue</h1>
+      <p>${escapeHtml(payload.purpose)}</p>
+      <div class="status">
+        <span>Status: ${escapeHtml(payload.status)}</span>
+        <span>Material usage ${payload.proof_summary.material_tool_usage.count}/${payload.proof_summary.material_tool_usage.threshold}</span>
+        <span>GA4 sessions ${payload.proof_summary.ga4_qualified_external_mcp_sessions.count}/${payload.proof_summary.ga4_qualified_external_mcp_sessions.threshold}</span>
+        <span>Remaining ${payload.proof_summary.ga4_qualified_external_mcp_sessions.remaining_to_threshold}</span>
+        <span>Cart landings ${payload.proof_summary.qualified_cart_landings}</span>
+        <span>Orders ${payload.proof_summary.first_party_mcp_orders.count}</span>
+      </div>
+      <div class="exports">
+        <a class="button primary" href="${escapeHtml(payload.links.visitor_growth_queue_json)}">JSON</a>
+        <a class="button" href="${escapeHtml(payload.links.visitor_growth_tasks_jsonl)}">JSONL tasks</a>
+        <a class="button" href="${escapeHtml(payload.links.visitor_growth_tasks_csv)}">CSV tasks</a>
+        <a class="button" href="${escapeHtml(payload.links.agent_adoption_progress_html)}">Adoption progress</a>
+        <a class="button" href="${escapeHtml(payload.links.source_activation_queue_html)}">Activation queue</a>
+        <a class="button" href="${escapeHtml(payload.links.revenue_conversion_queue_html)}">Revenue queue</a>
+      </div>
+      <div class="rules"><ul>${rules}</ul></div>
+    </header>
+    <section class="tasks">${taskCards}</section>
+  </main>
+</body>
+</html>`;
 }
 
 function mcpRevenueConversionQueueMarkdown(payload: McpRevenueConversionQueuePayload): string {
@@ -13334,6 +14205,12 @@ const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-b
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
 const MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl";
 const MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv";
+const MCP_VISITOR_GROWTH_QUEUE_RELEASE = "PACKRIFT-MCP-VISITOR-GROWTH-QUEUE-R02";
+const MCP_VISITOR_GROWTH_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.json";
+const MCP_VISITOR_GROWTH_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.md";
+const MCP_VISITOR_GROWTH_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.html";
+const MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-visitor-growth-tasks.jsonl";
+const MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-visitor-growth-tasks.csv";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
   { source: "mcpservers_org", target: "generic_streamable_http" },
@@ -13554,6 +14431,11 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+  MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+  MCP_VISITOR_GROWTH_QUEUE_MARKDOWN_URL,
+  MCP_VISITOR_GROWTH_QUEUE_HTML_URL,
+  MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+  MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
   MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
   MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
   MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
@@ -14280,6 +15162,11 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await cachedMcpSourceActivationQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT), null, 2);
   if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await cachedMcpSourceActivationQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
   if (pathname === "/ai/mcp-source-activation-queue.html") return mcpSourceActivationQueueHtml(await cachedMcpSourceActivationQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-visitor-growth-queue.json") return JSON.stringify(await cachedMcpVisitorGrowthQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT), null, 2);
+  if (pathname === "/ai/mcp-visitor-growth-queue.md") return mcpVisitorGrowthQueueMarkdown(await cachedMcpVisitorGrowthQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-visitor-growth-queue.html") return mcpVisitorGrowthQueueHtml(await cachedMcpVisitorGrowthQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-visitor-growth-tasks.jsonl") return mcpVisitorGrowthQueueTasksJsonl(await cachedMcpVisitorGrowthQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-visitor-growth-tasks.csv") return mcpVisitorGrowthQueueTasksCsv(await cachedMcpVisitorGrowthQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
   if (pathname === "/ai/mcp-revenue-conversion-queue.json") return JSON.stringify(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT), null, 2);
   if (pathname === "/ai/mcp-revenue-conversion-queue.md") return mcpRevenueConversionQueueMarkdown(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
   if (pathname === "/ai/mcp-revenue-conversion-queue.html") return mcpRevenueConversionQueueHtml(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
@@ -14552,6 +15439,10 @@ function mcpToolDiscoveryPayload() {
       source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+      visitor_growth_queue_html: MCP_VISITOR_GROWTH_QUEUE_HTML_URL,
+      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
       revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
       revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
@@ -14645,6 +15536,9 @@ function mcpToolDiscoveryMarkdown(): string {
     "",
     `- Source activation sitemap: ${payload.conversion_urls.source_activation_sitemap}`,
     `- Source activation queue: ${payload.conversion_urls.source_activation_queue}`,
+    `- Visitor growth queue: ${payload.conversion_urls.visitor_growth_queue}`,
+    `- Visitor growth task JSONL: ${payload.conversion_urls.visitor_growth_tasks_jsonl}`,
+    `- Visitor growth task CSV: ${payload.conversion_urls.visitor_growth_tasks_csv}`,
     `- Revenue conversion queue: ${payload.conversion_urls.revenue_conversion_queue}`,
     `- Buyer order handoffs: ${payload.conversion_urls.buyer_order_handoffs}`,
     `- Buyer order handoff task JSONL: ${payload.conversion_urls.buyer_order_handoffs_tasks_jsonl}`,
@@ -14739,6 +15633,9 @@ function mcpOpenApiPayload() {
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
       agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
@@ -14861,6 +15758,27 @@ function mcpOpenApiPayload() {
           responses: { "200": openApiJsonResponse("Source-specific next actions for moving directories and reviewers into real MCP tool calls") },
         },
       },
+      "/ai/mcp-visitor-growth-queue.json": {
+        get: {
+          operationId: "getPackriftMcpVisitorGrowthQueue",
+          summary: "Read Packrift MCP visitor growth queue",
+          responses: { "200": openApiJsonResponse("Directory, agent-host, source activation, and buyer handoff tasks for growing qualified MCP sessions and order proof") },
+        },
+      },
+      "/ai/mcp-visitor-growth-tasks.jsonl": {
+        get: {
+          operationId: "getPackriftMcpVisitorGrowthTasksJsonl",
+          summary: "Read flat Packrift MCP visitor-growth task JSONL",
+          responses: { "200": openApiJsonResponse("Line-delimited visitor growth tasks for external distribution and buyer/order follow-through") },
+        },
+      },
+      "/ai/mcp-visitor-growth-tasks.csv": {
+        get: {
+          operationId: "getPackriftMcpVisitorGrowthTasksCsv",
+          summary: "Read flat Packrift MCP visitor-growth task CSV",
+          responses: { "200": openApiJsonResponse("CSV visitor growth tasks for spreadsheet, CRM, and partner-review workflows") },
+        },
+      },
       "/ai/mcp-agent-host-rollout.json": {
         get: {
           operationId: "getPackriftMcpAgentHostRollout",
@@ -14980,6 +15898,9 @@ function mcpAiPluginDiscoveryPayload() {
       funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       agent_adoption_progress: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
       agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
@@ -15053,6 +15974,10 @@ function mcpManifestPayload() {
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
     mcp_source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+    mcp_visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+    mcp_visitor_growth_queue_html: MCP_VISITOR_GROWTH_QUEUE_HTML_URL,
+    mcp_visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+    mcp_visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
     mcp_revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
     mcp_revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
     mcp_buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
@@ -15138,6 +16063,10 @@ function mcpServerCardPayload() {
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+      visitor_growth_queue_html: MCP_VISITOR_GROWTH_QUEUE_HTML_URL,
+      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
       revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
       revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
@@ -15862,6 +16791,9 @@ function mcpMarketplaceDiscoveryPayload() {
       tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
       tracked_run_codex_generic: "https://mcp.packrift.com/r/run/generic/codex",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
+      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
+      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
       source_activation_sitemap: "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
       mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       mcp_funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
@@ -16142,9 +17074,54 @@ function measuredCartLandingUrlForItem(item: ApprovedCatalogItem, quantity = 1, 
   return url.toString();
 }
 
-function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
+function preparePurchaseHandoffForItem(item: ApprovedCatalogItem, quantity = 1, source = "mcp_cart_handoff_candidates") {
   const safeQuantity = Math.max(1, Math.floor(quantity));
+  const sourceSlug = normalizeMcpRuntimeSlug(source) || "mcp_cart_handoff_candidates";
+  const argsBase = {
+    sku: item.sku,
+    quantity: safeQuantity,
+    source_context: `${sourceSlug}_exact_sku_purchase`.slice(0, 80),
+    mcp_source_context: sourceSlug,
+    mcp_install_target: "generic_streamable_http",
+    journey_id: `mcp_prepare_${sourceSlug}_${item.sku}_${item.variantId}`.slice(0, 120),
+    result_set_id: `${sourceSlug}_prepare_purchase`,
+    utm_term: item.sku,
+  };
+  const argumentsUnconfirmed = { ...argsBase, buyer_confirmed: false };
+  const argumentsConfirmed = { ...argsBase, buyer_confirmed: true };
+  const jsonRpcUnconfirmed = jsonRpcToolCall(`prepare-${item.sku}-unconfirmed`, "prepare_purchase_handoff", argumentsUnconfirmed);
+  const jsonRpcConfirmed = jsonRpcToolCall(`prepare-${item.sku}-confirmed`, "prepare_purchase_handoff", argumentsConfirmed);
+  return {
+    tool_name: "prepare_purchase_handoff",
+    mcp_endpoint: "https://mcp.packrift.com/mcp",
+    source_context: argsBase.source_context,
+    mcp_source_context: sourceSlug,
+    mcp_install_target: argsBase.mcp_install_target,
+    buyer_confirmation_rule:
+      "Call with buyer_confirmed=false first to confirm the AI_APPROVE product, live price, and inventory. Call with buyer_confirmed=true only after the buyer approves the exact SKU and quantity.",
+    success_rule:
+      `The confirmed call should return a measured https://mcp.packrift.com/r/cart/${item.sku} URL and still does not place an order.`,
+    arguments_unconfirmed: argumentsUnconfirmed,
+    arguments_confirmed_after_buyer_approval: argumentsConfirmed,
+    json_rpc_unconfirmed: jsonRpcUnconfirmed,
+    json_rpc_confirmed_after_buyer_approval: jsonRpcConfirmed,
+    copy_ready_unconfirmed_json_rpc: JSON.stringify(jsonRpcUnconfirmed, null, 2),
+    copy_ready_confirmed_json_rpc_after_buyer_approval: JSON.stringify(jsonRpcConfirmed, null, 2),
+  };
+}
+
+function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1, source = "mcp_cart_handoff_candidates") {
+  const safeQuantity = Math.max(1, Math.floor(quantity));
+  const preparePurchaseHandoff = preparePurchaseHandoffForItem(item, safeQuantity, source);
   if (isMcpCommerceHeldSku(item.sku)) {
+    const heldPreparePurchaseHandoff = {
+      ...preparePurchaseHandoff,
+      success_rule:
+        "The unconfirmed call should return blocked_by_mcp_commerce_hold and quote recovery. Do not run a confirmed cart handoff for this held SKU until operator approval is recorded.",
+      arguments_confirmed_after_buyer_approval: null,
+      json_rpc_confirmed_after_buyer_approval: null,
+      copy_ready_confirmed_json_rpc_after_buyer_approval: null,
+    };
     const quoteUrl = routeRedirectUrlForItem(item, "quote");
     return {
       status: "blocked_by_mcp_commerce_hold",
@@ -16152,9 +17129,17 @@ function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
       mcp_endpoint: "https://mcp.packrift.com/mcp",
       prompt_name: "prepare_cart_handoff",
       discovery_tool: "get_cart_handoff_candidates",
+      prepare_purchase_handoff_tool: "prepare_purchase_handoff",
       create_cart_url_tool: "create_cart_url",
       required_sequence: ["get_product", "get_pricing", "check_inventory", "get_bulk_quote_link"],
       required_before_presenting_cart_url: ["explicit operator approval"],
+      prepare_purchase_handoff: heldPreparePurchaseHandoff,
+      prepare_purchase_handoff_arguments_unconfirmed: heldPreparePurchaseHandoff.arguments_unconfirmed,
+      prepare_purchase_handoff_arguments_confirmed: null,
+      prepare_purchase_handoff_json_rpc_unconfirmed: heldPreparePurchaseHandoff.json_rpc_unconfirmed,
+      prepare_purchase_handoff_json_rpc_confirmed: null,
+      copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc: heldPreparePurchaseHandoff.copy_ready_unconfirmed_json_rpc,
+      copy_ready_prepare_purchase_handoff_confirmed_json_rpc: null,
       create_cart_url_arguments: null,
       create_cart_url_sku_arguments: null,
       cart_url_candidate: null,
@@ -16189,13 +17174,22 @@ function cartHandoffForItem(item: ApprovedCatalogItem, quantity = 1) {
   const finalShopifyCartUrl = cartUrlForItem(item, safeQuantity);
   return {
     status: "candidate_requires_live_confirmation",
-    purpose: "Turn this exact AI_APPROVE SKU into a GA4-visible MCP cart handoff after live price and inventory checks.",
+    purpose: "Turn this exact AI_APPROVE SKU into a GA4-visible MCP cart handoff after live price, inventory, and buyer confirmation checks.",
     mcp_endpoint: "https://mcp.packrift.com/mcp",
     prompt_name: "prepare_cart_handoff",
     discovery_tool: "get_cart_handoff_candidates",
+    prepare_purchase_handoff_tool: "prepare_purchase_handoff",
     create_cart_url_tool: "create_cart_url",
+    preferred_exact_sku_sequence: ["prepare_purchase_handoff buyer_confirmed=false", "prepare_purchase_handoff buyer_confirmed=true after buyer approval"],
     required_sequence: ["get_product", "get_pricing", "check_inventory", "create_cart_url"],
     required_before_presenting_cart_url: ["exact SKU confirmed", "variant ID confirmed", "live price confirmed", "inventory confirmed", "buyer quantity confirmed"],
+    prepare_purchase_handoff: preparePurchaseHandoff,
+    prepare_purchase_handoff_arguments_unconfirmed: preparePurchaseHandoff.arguments_unconfirmed,
+    prepare_purchase_handoff_arguments_confirmed: preparePurchaseHandoff.arguments_confirmed_after_buyer_approval,
+    prepare_purchase_handoff_json_rpc_unconfirmed: preparePurchaseHandoff.json_rpc_unconfirmed,
+    prepare_purchase_handoff_json_rpc_confirmed: preparePurchaseHandoff.json_rpc_confirmed_after_buyer_approval,
+    copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc: preparePurchaseHandoff.copy_ready_unconfirmed_json_rpc,
+    copy_ready_prepare_purchase_handoff_confirmed_json_rpc: preparePurchaseHandoff.copy_ready_confirmed_json_rpc_after_buyer_approval,
     create_cart_url_arguments: {
       items: [{ variant_id: item.variantId, qty: safeQuantity }],
       selected_sku: item.sku,
@@ -16256,7 +17250,7 @@ function skuRouteItem(sku: string): ApprovedCatalogItem | undefined {
   return APPROVED_CATALOG_BY_SKU.get(decodeURIComponent(sku).toUpperCase());
 }
 
-function skuPagePayload(item: ApprovedCatalogItem) {
+function skuPagePayload(item: ApprovedCatalogItem, cartSource = "mcp_sku_page") {
   const commerceHeld = isMcpCommerceHeldSku(item.sku);
   const canonicalProductUrl = productUrlForItem(item);
   const tracking = skuPageTrackingForItem(item);
@@ -16270,7 +17264,7 @@ function skuPagePayload(item: ApprovedCatalogItem) {
   const retrievalSafeJsonUrl = `https://mcp.packrift.com/ai/sku/${encodeURIComponent(item.sku)}.json`;
   const paidChatgptSignal = PAID_CHATGPT_SKU_SIGNALS[item.sku.toUpperCase()] ?? null;
   const exactMatchRule = "Exact-spec procurement only: do not substitute nearby dimensions, material, color, count, or product family unless the buyer explicitly accepts a substitute. Do not present a nearby product as exact.";
-  const mcpCartHandoff = cartHandoffForItem(item, 1);
+  const mcpCartHandoff = cartHandoffForItem(item, 1, cartSource);
   return {
     packrift_ai_id: tracking.packrift_ai_id,
     ai_commerce_id: tracking.ai_commerce_id,
@@ -16283,8 +17277,13 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     status: "AI_APPROVE",
     next_action: commerceHeld
       ? "This SKU is held from MCP cart handoff. Use measured quote recovery or request operator approval before any AI-commerce cart path."
-      : "For checkout handoff, use mcp_cart_handoff.required_sequence and create_cart_url_arguments after live price and inventory confirmation.",
+      : "For exact-SKU checkout handoff, use prepare_purchase_handoff with buyer_confirmed=false first, then buyer_confirmed=true only after live confirmation and buyer approval.",
     mcp_cart_handoff: mcpCartHandoff,
+    prepare_purchase_handoff: mcpCartHandoff.prepare_purchase_handoff,
+    prepare_purchase_handoff_arguments_unconfirmed: mcpCartHandoff.prepare_purchase_handoff_arguments_unconfirmed,
+    prepare_purchase_handoff_arguments_confirmed: mcpCartHandoff.prepare_purchase_handoff_arguments_confirmed,
+    copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc: mcpCartHandoff.copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc,
+    copy_ready_prepare_purchase_handoff_confirmed_json_rpc: mcpCartHandoff.copy_ready_prepare_purchase_handoff_confirmed_json_rpc,
     held_sku_policy: commerceHeld
       ? {
           status: "active",
@@ -16329,7 +17328,7 @@ function skuPagePayload(item: ApprovedCatalogItem) {
     mcp_endpoint: "https://mcp.packrift.com/mcp",
     recommended_mcp_sequence: commerceHeld
       ? ["search_products", "get_product", "get_pricing", "check_inventory", "get_bulk_quote_link"]
-      : ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
+      : ["search_products", "prepare_purchase_handoff buyer_confirmed=false", "prepare_purchase_handoff buyer_confirmed=true after buyer approval"],
     no_match_policy: `No-match policy: ${exactMatchRule}`,
     live_confirmation_required: commerceHeld ? ["price", "inventory", "shipping", "operator approval before cart"] : ["price", "inventory", "shipping", "cart"],
     copy_procurement_spec: `SKU ${item.sku}: ${item.title}.`,
@@ -16349,10 +17348,12 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     "",
     cartHandoffBlocked
       ? "This SKU is held from MCP AI-commerce cart handoff. Do not use `create_cart_url`; route buyer interest to quote recovery or operator review."
-      : "For buyer checkout, first confirm the exact SKU, variant, live price, inventory, and buyer-selected quantity through MCP. Then use `create_cart_url` with the arguments below so the landing is stamped as `chatgpt-mcp / mcp_tool / create_cart_url` in GA4.",
+      : "For buyer checkout, use `prepare_purchase_handoff` first with `buyer_confirmed=false` to confirm exact SKU, live price, and inventory. After the buyer approves the exact SKU and quantity, call it again with `buyer_confirmed=true`; it returns a measured MCP cart URL stamped for GA4.",
     "",
     `- Prompt: \`${payload.mcp_cart_handoff.prompt_name}\``,
-    `- Required sequence: ${payload.mcp_cart_handoff.required_sequence.map((step: string) => `\`${step}\``).join(" -> ")}`,
+    `- Preferred one-call sequence: ${(payload.mcp_cart_handoff.preferred_exact_sku_sequence ?? payload.mcp_cart_handoff.required_sequence).map((step: string) => `\`${step}\``).join(" -> ")}`,
+    cartHandoffBlocked ? null : `- prepare_purchase_handoff unconfirmed arguments: \`${JSON.stringify(payload.prepare_purchase_handoff_arguments_unconfirmed)}\``,
+    cartHandoffBlocked ? null : `- prepare_purchase_handoff confirmed arguments after buyer approval: \`${JSON.stringify(payload.prepare_purchase_handoff_arguments_confirmed)}\``,
     cartHandoffBlocked ? `- Hold reason: ${payload.mcp_cart_handoff.held_sku_policy?.reason ?? MCP_COMMERCE_HOLD_REASON}` : `- create_cart_url arguments: \`${JSON.stringify(payload.mcp_cart_handoff.create_cart_url_arguments)}\``,
     cartHandoffBlocked ? "- Cart URL candidate after confirmation: blocked by MCP commerce hold" : `- Cart URL candidate after confirmation: ${payload.mcp_cart_handoff.cart_url_candidate}`,
     `- Quote fallback if specs differ: ${payload.mcp_cart_handoff.measured_fallbacks.quote}`,
@@ -16382,13 +17383,14 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     "Use the Packrift MCP server for live product confirmation before sending a buyer to checkout.",
     "",
     "1. Call `search_products` with the SKU or exact product title.",
-    "2. Call `get_product` for product facts and variant IDs.",
-    "3. Call `get_pricing` and `check_inventory` before cart handoff.",
-    "4. Use the measured product, reorder, or quote URL for buyer handoff after live confirmation.",
+    "2. Prefer `prepare_purchase_handoff` with `buyer_confirmed=false` for one-call product, price, and inventory confirmation.",
+    "3. Ask the buyer to approve the exact SKU and quantity.",
+    "4. After approval, call `prepare_purchase_handoff` with `buyer_confirmed=true` to return the measured MCP cart URL.",
+    "5. Use the measured product, reorder, or quote URL for buyer handoff after live confirmation when checkout is not approved.",
     cartHandoffBlocked
-      ? "5. Do not use `create_cart_url` for this held SKU; route to quote recovery or operator review."
-      : "5. Use `create_cart_url` only after live price and inventory confirmation.",
-    "6. If a requested spec differs from this product, call `explain_no_exact_match` and route to the measured quote URL.",
+      ? "6. Do not use `create_cart_url` for this held SKU; route to quote recovery or operator review."
+      : "6. Use `create_cart_url` only when the host cannot use `prepare_purchase_handoff`, and only after live price, inventory, and buyer confirmation.",
+    "7. If a requested spec differs from this product, call `explain_no_exact_match` and route to the measured quote URL.",
     "",
     "## If The Shopify Product Page Is Challenged",
     "",
@@ -16419,7 +17421,7 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
 }
 
 function purchasePathPayload(item: ApprovedCatalogItem) {
-  const payload = skuPagePayload(item);
+  const payload = skuPagePayload(item, "purchase_path");
   return {
     sku: payload.sku,
     product_id: payload.product_id,
@@ -16430,6 +17432,11 @@ function purchasePathPayload(item: ApprovedCatalogItem) {
     status: payload.status,
     next_action: payload.next_action,
     mcp_cart_handoff: payload.mcp_cart_handoff,
+    prepare_purchase_handoff: payload.prepare_purchase_handoff,
+    prepare_purchase_handoff_arguments_unconfirmed: payload.prepare_purchase_handoff_arguments_unconfirmed,
+    prepare_purchase_handoff_arguments_confirmed: payload.prepare_purchase_handoff_arguments_confirmed,
+    copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc: payload.copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc,
+    copy_ready_prepare_purchase_handoff_confirmed_json_rpc: payload.copy_ready_prepare_purchase_handoff_confirmed_json_rpc,
     paid_chatgpt_family: payload.paid_chatgpt_family,
     ai_commerce_signal: payload.ai_commerce_signal,
     openai_catalog_feed_attribution: payload.openai_catalog_feed_attribution,
@@ -16466,13 +17473,18 @@ function purchasePathsJsonl(): string {
 }
 
 function measuredHandoffItem(item: ApprovedCatalogItem) {
-  const payload = skuPagePayload(item);
+  const payload = skuPagePayload(item, "measured_handoff_directory");
   return {
     sku: payload.sku,
     title: payload.title,
     family: payload.family,
     status: payload.status,
     mcp_cart_handoff: payload.mcp_cart_handoff,
+    prepare_purchase_handoff: payload.prepare_purchase_handoff,
+    prepare_purchase_handoff_arguments_unconfirmed: payload.prepare_purchase_handoff_arguments_unconfirmed,
+    prepare_purchase_handoff_arguments_confirmed: payload.prepare_purchase_handoff_arguments_confirmed,
+    copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc: payload.copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc,
+    copy_ready_prepare_purchase_handoff_confirmed_json_rpc: payload.copy_ready_prepare_purchase_handoff_confirmed_json_rpc,
     canonical_product_url: payload.canonical_product_url,
     mcp_sku_md: payload.retrieval_safe_url,
     mcp_sku_json: payload.retrieval_safe_json_url,
@@ -16491,7 +17503,7 @@ function measuredHandoffItem(item: ApprovedCatalogItem) {
 
 function measuredHandoffDirectoryPayload(limit = 250) {
   return {
-    release: "PACKRIFT-MEASURED-HANDOFF-DIRECTORY-R02",
+    release: "PACKRIFT-MEASURED-HANDOFF-DIRECTORY-R03",
     generated_at: new Date().toISOString(),
     source: "measured_handoff_directory",
     status: "live_mcp_controlled_directory",
@@ -16592,7 +17604,7 @@ function measuredHandoffDirectoryCsv(limit = 250): string {
 
 function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
   const safeQuantity = Math.max(1, Math.floor(quantity));
-  const payload = skuPagePayload(item);
+  const payload = skuPagePayload(item, "mcp_cart_handoff_candidates");
   return {
     sku: item.sku,
     title: item.title,
@@ -16604,6 +17616,12 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
     cart_confirmation_required: true,
     mcp_endpoint: payload.mcp_cart_handoff.mcp_endpoint,
     prompt_name: payload.mcp_cart_handoff.prompt_name,
+    prepare_purchase_handoff_tool: payload.mcp_cart_handoff.prepare_purchase_handoff_tool,
+    prepare_purchase_handoff: payload.prepare_purchase_handoff,
+    prepare_purchase_handoff_arguments_unconfirmed: payload.prepare_purchase_handoff_arguments_unconfirmed,
+    prepare_purchase_handoff_arguments_confirmed: payload.prepare_purchase_handoff_arguments_confirmed,
+    copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc: payload.copy_ready_prepare_purchase_handoff_unconfirmed_json_rpc,
+    copy_ready_prepare_purchase_handoff_confirmed_json_rpc: payload.copy_ready_prepare_purchase_handoff_confirmed_json_rpc,
     create_cart_url_tool: payload.mcp_cart_handoff.create_cart_url_tool,
     create_cart_url_arguments: payload.mcp_cart_handoff.create_cart_url_arguments,
     create_cart_url_sku_arguments: payload.mcp_cart_handoff.create_cart_url_sku_arguments,
@@ -16622,7 +17640,7 @@ function cartHandoffCandidateItem(item: ApprovedCatalogItem, quantity = 1) {
 
 function cartHandoffCandidatesPayload(limit = 50) {
   return {
-    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R04",
+    release: "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R05",
     generated_at: new Date().toISOString(),
     source: "mcp_cart_handoff_candidates",
     purpose:
@@ -16638,7 +17656,8 @@ function cartHandoffCandidatesPayload(limit = 50) {
       rule: "Held SKUs are excluded from MCP cart candidates, purchase-path handoff feeds, and create_cart_url output until explicit operator approval is recorded.",
       recovery_tool: "get_bulk_quote_link",
     },
-    mcp_sequence: ["search_products", "get_product", "get_pricing", "check_inventory", "create_cart_url"],
+    mcp_sequence: ["search_products", "prepare_purchase_handoff buyer_confirmed=false", "prepare_purchase_handoff buyer_confirmed=true after buyer approval"],
+    fallback_mcp_sequence: ["get_product", "get_pricing", "check_inventory", "create_cart_url"],
     items: topAiSalesSkuItems(limit).map((item) => cartHandoffCandidateItem(item, 1)),
   };
 }
@@ -16672,7 +17691,7 @@ function cartHandoffCandidatesMarkdown(limit = 25): string {
     "",
     payload.mcp_sequence.map((step, index) => `${index + 1}. \`${step}\``).join("\n"),
     "",
-    "After live confirmation, agents may call `create_cart_url` with `create_cart_url_sku_arguments` from the JSON payload. Variant-ID arguments remain available for hosts that require explicit cart line items.",
+    "Use `prepare_purchase_handoff_arguments_unconfirmed` first for live product, price, and inventory confirmation. After buyer approval, use `prepare_purchase_handoff_arguments_confirmed`; it returns the measured MCP cart URL. Agents that cannot call the shortcut may fall back to `create_cart_url_sku_arguments` after the same live checks.",
     "",
     "## Priority Cart Candidates",
     "",
@@ -17359,6 +18378,58 @@ app.get("/ai/mcp-source-activation-queue.html", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.html", "mcp_source_activation_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-visitor-growth-queue.json", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const payload = await cachedMcpVisitorGrowthQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh });
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-visitor-growth-queue.json", "mcp_visitor_growth_queue", jsonByteSize(payload));
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS);
+});
+
+app.get("/ai/mcp-visitor-growth-queue.md", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpVisitorGrowthQueueMarkdown(await cachedMcpVisitorGrowthQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-visitor-growth-queue.md", "mcp_visitor_growth_queue", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-visitor-growth-queue.html", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpVisitorGrowthQueueHtml(await cachedMcpVisitorGrowthQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-visitor-growth-queue.html", "mcp_visitor_growth_queue", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-visitor-growth-tasks.jsonl", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpVisitorGrowthQueueTasksJsonl(await cachedMcpVisitorGrowthQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-visitor-growth-tasks.jsonl", "mcp_visitor_growth_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-visitor-growth-tasks.csv", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpVisitorGrowthQueueTasksCsv(await cachedMcpVisitorGrowthQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-visitor-growth-tasks.csv", "mcp_visitor_growth_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/csv; charset=utf-8",
     ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });

@@ -684,6 +684,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
         "Open the command center, work critical rows first, and use the source-specific real MCP runner for sources with installs or create_cart_url output but missing tool calls, measured /r/cart landings, or orders.",
     }),
     surface({
+      id: "mcp_visitor_growth_queue",
+      name: "Packrift MCP visitor growth queue",
+      agent_type: "distribution_and_growth_queue",
+      audience: "Directory owners, agent hosts, browser-skill catalogs, partners, reviewers, and Packrift operators working the 1,000-qualified-session and order-proof gaps.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.json",
+      install_or_call:
+        "Use the visitor growth queue when the question is where to get more qualified Packrift MCP users next. It merges directory refreshes, source activation rows, agent-host links, and buyer handoffs into JSONL/CSV tasks while preserving the no-duplicate-work rule.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.html",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
+      next_action:
+        "Work visitor-growth tasks that can send real external users to source-aware start/install links, then use mature buyer handoffs only when checkout review is approved.",
+    }),
+    surface({
       id: "mcp_revenue_conversion_queue",
       name: "Packrift MCP revenue conversion queue",
       agent_type: "revenue_conversion_measurement",
@@ -1154,7 +1170,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R29",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R30",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -1172,6 +1188,10 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      visitor_growth_queue: "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.json",
+      visitor_growth_queue_html: "https://mcp.packrift.com/ai/mcp-visitor-growth-queue.html",
+      visitor_growth_tasks_jsonl: "https://mcp.packrift.com/ai/mcp-visitor-growth-tasks.jsonl",
+      visitor_growth_tasks_csv: "https://mcp.packrift.com/ai/mcp-visitor-growth-tasks.csv",
       revenue_conversion_queue: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
       revenue_conversion_queue_html: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html",
       buyer_order_handoffs: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
@@ -1301,6 +1321,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "These are the source-aware install and first-run paths to use before falling back to the generic endpoint.",
     `Flat rollout task exports: ${payload.hub_urls.agent_host_rollout_tasks_jsonl} and ${payload.hub_urls.agent_host_rollout_tasks_csv}`,
+    `Visitor growth task exports: ${payload.hub_urls.visitor_growth_tasks_jsonl} and ${payload.hub_urls.visitor_growth_tasks_csv}`,
     "",
     "| Host | Source | Target | Endpoint | Install | First-run shell | Activation shell | Order shell | Success gate |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
