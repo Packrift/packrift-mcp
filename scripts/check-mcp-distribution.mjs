@@ -281,35 +281,44 @@ async function fetchRedirect(url) {
   }
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function fetchMcp(method, params = undefined) {
-  try {
-    const response = await fetch(MCP_ENDPOINT, {
-      method: "POST",
-      headers: {
-        ...TEXT_HEADERS,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: method,
-        method,
-        ...(params ? { params } : {}),
-      }),
-      redirect: "follow",
-    });
-    const text = await response.text();
-    const value = text ? JSON.parse(text) : null;
-    return {
-      ok: response.ok && !value?.error,
-      status: response.status,
-      url: response.url,
-      value,
-      error: value?.error?.message ?? null,
-    };
-  } catch (error) {
-    return { ok: false, status: 0, url: MCP_ENDPOINT, value: null, error: error.message };
+  let lastResult = { ok: false, status: 0, url: MCP_ENDPOINT, value: null, error: "not attempted" };
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(MCP_ENDPOINT, {
+        method: "POST",
+        headers: {
+          ...TEXT_HEADERS,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: method,
+          method,
+          ...(params ? { params } : {}),
+        }),
+        redirect: "follow",
+      });
+      const text = await response.text();
+      const value = parseMcpResponseText(text);
+      lastResult = {
+        ok: response.ok && !value?.error,
+        status: response.status,
+        url: response.url,
+        value,
+        error: value?.error?.message ?? null,
+        attempts: attempt,
+      };
+      if (lastResult.ok || response.status < 500) return lastResult;
+    } catch (error) {
+      lastResult = { ok: false, status: 0, url: MCP_ENDPOINT, value: null, error: error.message, attempts: attempt };
+    }
+    await sleep(250 * attempt);
   }
+  return lastResult;
 }
 
 function hasAll(text, needles) {
@@ -322,6 +331,22 @@ function parseJsonOrNull(text) {
   } catch {
     return null;
   }
+}
+
+function parseMcpResponseText(text) {
+  const direct = parseJsonOrNull(text);
+  if (direct) return direct;
+  const dataLines = String(text ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice("data:".length).trim())
+    .filter(Boolean);
+  for (const line of dataLines.toReversed()) {
+    const parsed = parseJsonOrNull(line);
+    if (parsed) return parsed;
+  }
+  return null;
 }
 
 function parseUrlOrNull(value) {
