@@ -9368,7 +9368,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
 </html>`;
 }
 
-const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R04";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R05";
 
 type McpExternalActivationReviewHandoff = {
   status: string;
@@ -9479,24 +9479,49 @@ function mcpExternalActivationSelectedTasks(payload: McpActivationWavePayload) {
   return selectedTasks;
 }
 
-function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_capture_wave"]["tasks"][number]) {
+function mcpExternalActivationTaskStatus(targetEvent: string): string {
+  if (targetEvent === "mcp_attributed_order") return "buyer_checkout_needed";
+  if (targetEvent === "mcp_cart_landing") return "cart_landing_needed";
+  if (targetEvent.startsWith("mcp_tool_call")) return "real_mcp_tool_call_needed";
+  if (targetEvent === "mcp_first_run_execution") return "first_run_execution_needed";
+  if (targetEvent === "mcp_first_run_intent") return "first_run_intent_needed";
+  return "activation_needed";
+}
+
+function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_capture_wave"]["tasks"][number], selectedIndex: number) {
   const reviewHandoff = mcpExternalActivationReviewHandoff(task);
   return {
     rank: task.wave_rank,
+    selected_rank: selectedIndex + 1,
+    wave_rank: task.wave_rank,
     source: task.source,
     preferred_target: task.preferred_target,
+    priority: task.priority,
+    priority_score: task.priority_score,
+    activation_status: mcpExternalActivationTaskStatus(task.target_event_to_watch),
     current_stage: task.current_stage,
     target_event_to_watch: task.target_event_to_watch,
+    recommended_action: task.recommended_action,
     expected_tool_call_lift: task.expected_tool_call_lift,
     source_aware_endpoint: task.source_aware_endpoint,
+    primary_action_url: task.primary_action_url,
     tracked_install_json_url: task.tracked_install_json_url,
+    tracked_first_run_url: task.tracked_first_run_url,
     tracked_first_run_shell_url: task.tracked_first_run_shell_url,
+    reviewer_activation_runner_url: task.reviewer_activation_runner_url,
     reviewer_activation_shell_url: task.reviewer_activation_shell_url,
     one_command_external_runner: task.one_command_external_runner,
     eval_pack_json_url: task.eval_pack_json_url,
+    eval_pack_markdown_url: task.eval_pack_markdown_url,
+    tool_discovery_json_url: task.tool_discovery_json_url,
+    tool_discovery_markdown_url: task.tool_discovery_markdown_url,
     directory_update_card_json_url: task.directory_update_card_json_url,
+    directory_update_card_markdown_url: task.directory_update_card_markdown_url,
     buyer_handoff_url: task.buyer_handoff_preview?.buyer_handoff_url ?? task.source_order_handoff?.buyer_handoff_url ?? null,
     external_review_handoff: reviewHandoff,
+    copy_ready_host_configs: task.copy_ready_host_configs,
+    fast_activation_path: task.fast_activation_path,
+    action_sequence: task.action_sequence,
     success_gate: task.success_gate,
     current_counts: task.current_counts,
     short_request:
@@ -9506,7 +9531,7 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_cap
 
 function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
   const selectedTaskRows = mcpExternalActivationSelectedTasks(payload);
-  const selectedRuns = selectedTaskRows.map(mcpExternalActivationBriefTask);
+  const selectedRuns = selectedTaskRows.map((task, index) => mcpExternalActivationBriefTask(task, index));
   const selectedExpectedLift = selectedRuns.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   const visitorThreshold = Number(payload.source_snapshot.ga4_qualified_external_mcp_session_threshold ?? 1000);
   const visitorCount = Number(payload.source_snapshot.ga4_qualified_external_mcp_session_starts ?? 0);
@@ -9607,21 +9632,34 @@ function mcpExternalActivationBriefTaskExportRows(payload: McpExternalActivation
     canonical_endpoint: payload.canonical_endpoint,
     activation_wave_release: payload.activation_wave_release,
     source_queue_release: payload.source_queue_release,
-    selected_rank: task.rank,
+    selected_rank: task.selected_rank,
+    selected_contact_rank: task.selected_rank,
+    wave_rank: task.wave_rank,
     source: task.source,
     preferred_target: task.preferred_target,
+    priority: task.priority,
+    priority_score: task.priority_score,
+    activation_status: task.activation_status,
     current_stage: task.current_stage,
     target_event_to_watch: task.target_event_to_watch,
+    recommended_action: task.recommended_action,
     expected_tool_call_lift: task.expected_tool_call_lift,
     subject: `Run Packrift MCP selected external activation for ${task.source}`,
     short_request: task.short_request,
     source_aware_endpoint: task.source_aware_endpoint,
+    primary_action_url: task.primary_action_url,
     tracked_install_json_url: task.tracked_install_json_url,
+    tracked_first_run_url: task.tracked_first_run_url,
     tracked_first_run_shell_url: task.tracked_first_run_shell_url,
+    reviewer_activation_runner_url: task.reviewer_activation_runner_url,
     reviewer_activation_shell_url: task.reviewer_activation_shell_url,
     one_command_external_runner: task.one_command_external_runner,
     eval_pack_json_url: task.eval_pack_json_url,
+    eval_pack_markdown_url: task.eval_pack_markdown_url,
+    tool_discovery_json_url: task.tool_discovery_json_url,
+    tool_discovery_markdown_url: task.tool_discovery_markdown_url,
     directory_update_card_json_url: task.directory_update_card_json_url,
+    directory_update_card_markdown_url: task.directory_update_card_markdown_url,
     buyer_handoff_url: task.buyer_handoff_url ?? "",
     review_handoff_status: task.external_review_handoff.status,
     review_handoff_primary_surface: task.external_review_handoff.primary_surface,
@@ -9633,6 +9671,17 @@ function mcpExternalActivationBriefTaskExportRows(payload: McpExternalActivation
     current_mcp_tool_calls: Number(task.current_counts?.mcp_tool_calls ?? 0),
     current_create_cart_url_calls: Number(task.current_counts?.create_cart_url_calls ?? 0),
     current_qualified_cart_landings: Number(task.current_counts?.qualified_cart_landings ?? 0),
+    copy_ready_generic_mcp_json: task.copy_ready_host_configs.generic_mcp_json,
+    copy_ready_cline_mcp_json: task.copy_ready_host_configs.cline_mcp_json,
+    copy_ready_claude_code_command: task.copy_ready_host_configs.claude_code_command,
+    copy_ready_codex_command: task.copy_ready_host_configs.codex_command,
+    copy_ready_agent_prompt: task.copy_ready_host_configs.agent_prompt,
+    copy_ready_curl_script: task.copy_ready_host_configs.curl_script,
+    copy_ready_first_run_shell_one_liner: task.copy_ready_host_configs.first_run_shell_one_liner ?? task.one_command_external_runner,
+    fast_activation_path_first_run_url: task.fast_activation_path.first_run_url,
+    fast_activation_path_first_run_shell_url: task.fast_activation_path.first_run_shell_url,
+    fast_activation_path_required_final_tool: task.fast_activation_path.required_final_tool,
+    action_sequence: task.action_sequence.join(" | "),
     no_duplicate_work_rule:
       "Use the hosted Packrift MCP endpoint and existing /r/install, /r/run, /r/activate, and /r/cart handoffs. Do not create a duplicate CLI, server, or checkout surface.",
   }));
@@ -9647,18 +9696,27 @@ function mcpExternalActivationBriefTasksCsv(payload: McpExternalActivationBriefP
   const headers = [
     "release",
     "selected_rank",
+    "selected_contact_rank",
+    "wave_rank",
     "source",
     "preferred_target",
+    "priority",
+    "priority_score",
+    "activation_status",
     "target_event_to_watch",
     "expected_tool_call_lift",
     "subject",
     "short_request",
     "source_aware_endpoint",
+    "primary_action_url",
     "tracked_install_json_url",
+    "tracked_first_run_url",
     "tracked_first_run_shell_url",
+    "reviewer_activation_runner_url",
     "reviewer_activation_shell_url",
     "one_command_external_runner",
     "eval_pack_json_url",
+    "tool_discovery_json_url",
     "directory_update_card_json_url",
     "buyer_handoff_url",
     "review_handoff_status",
@@ -9671,6 +9729,11 @@ function mcpExternalActivationBriefTasksCsv(payload: McpExternalActivationBriefP
     "current_mcp_tool_calls",
     "current_create_cart_url_calls",
     "current_qualified_cart_landings",
+    "copy_ready_claude_code_command",
+    "copy_ready_codex_command",
+    "copy_ready_first_run_shell_one_liner",
+    "fast_activation_path_first_run_shell_url",
+    "fast_activation_path_required_final_tool",
   ];
   return [
     headers.join(","),
@@ -9683,7 +9746,7 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
   const rows = payload.selected_external_runs
     .map(
       (row) =>
-        `| ${row.rank} | ${row.source} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.eval_pack_json_url} | ${row.external_review_handoff.primary_surface} |`
+        `| ${row.selected_rank} | ${row.source} | ${row.priority} | ${row.activation_status} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.eval_pack_json_url} | ${row.external_review_handoff.primary_surface} |`
     )
     .join("\n");
   return [
@@ -9718,9 +9781,9 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
     "",
     "## Selected Runs",
     "",
-    "| Rank | Source | Target event | Expected lift | Shell runner | Eval pack | Reviewer surface |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
-    rows || "| none | none | none | 0 | none | none | none |",
+    "| Rank | Source | Priority | Status | Target event | Expected lift | Shell runner | Eval pack | Reviewer surface |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    rows || "| none | none | none | none | none | 0 | none | none | none |",
     "",
     "## Copy-Ready Requests",
     "",
@@ -9728,13 +9791,25 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
       .map(
         (row) =>
           [
-            `### ${row.rank}. ${row.source}`,
+            `### ${row.selected_rank}. ${row.source}`,
             "",
             row.short_request,
+            "",
+            `Priority: ${row.priority} (${row.priority_score})`,
+            `Activation status: ${row.activation_status}`,
             "",
             `Reviewer handoff: ${row.external_review_handoff.primary_surface}`,
             `Contact status: ${row.external_review_handoff.status}`,
             `Next contact action: ${row.external_review_handoff.next_contact_action}`,
+            "",
+            "Copy-ready host config:",
+            "",
+            "```json",
+            row.copy_ready_host_configs.generic_mcp_json,
+            "```",
+            "",
+            `Codex: \`${row.copy_ready_host_configs.codex_command}\``,
+            `Claude Code: \`${row.copy_ready_host_configs.claude_code_command}\``,
             "",
             `Success gate: ${row.success_gate}`,
             "",
@@ -9767,22 +9842,25 @@ function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPaylo
       (row) => `<article>
         <div class="task-head">
           <div>
-            <p class="eyebrow">#${row.rank} - ${escapeHtml(row.preferred_target)}</p>
+            <p class="eyebrow">#${row.selected_rank} - ${escapeHtml(row.priority)} - ${escapeHtml(row.preferred_target)}</p>
             <h2>${escapeHtml(row.source)}</h2>
           </div>
-          <span>${escapeHtml(row.target_event_to_watch)}</span>
+          <span>${escapeHtml(row.activation_status)}</span>
         </div>
         <p>${escapeHtml(row.short_request)}</p>
         <p class="gate">${escapeHtml(row.success_gate)}</p>
         <div class="links">
           <a href="${escapeHtml(row.tracked_first_run_shell_url)}">Shell runner</a>
           <a href="${escapeHtml(row.tracked_install_json_url)}">Host config</a>
+          <a href="${escapeHtml(row.primary_action_url)}">Primary action</a>
+          <a href="${escapeHtml(row.tool_discovery_json_url)}">Tools JSON</a>
           <a href="${escapeHtml(row.eval_pack_json_url)}">Eval pack</a>
           <a href="${escapeHtml(row.directory_update_card_json_url)}">Update card</a>
           <a href="${escapeHtml(row.external_review_handoff.primary_surface)}">Reviewer surface</a>
           ${row.buyer_handoff_url ? `<a href="${escapeHtml(row.buyer_handoff_url)}">Buyer handoff</a>` : ""}
         </div>
         <p><strong>Contact path:</strong> ${escapeHtml(row.external_review_handoff.status)} - ${escapeHtml(row.external_review_handoff.next_contact_action)}</p>
+        <p><strong>Install:</strong> ${escapeHtml(row.copy_ready_host_configs.codex_command)}</p>
         <pre>${escapeHtml(row.one_command_external_runner)}</pre>
       </article>`
     )

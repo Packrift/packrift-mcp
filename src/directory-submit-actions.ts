@@ -69,6 +69,8 @@ const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wav
 const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
+const EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
 const EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const REVENUE_CONVERSION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
@@ -278,18 +280,18 @@ const ACTIONS = [
   {
     id: "mcp_marketplace_io",
     label: "MCP Marketplace",
-    action_status: "recrawl_needed",
+    action_status: "email_draft_ready",
     directory_status: "stale",
     priority: "medium",
-    method: "Marketplace manifest recrawl request.",
+    method: "Support-address recrawl draft after public creator flow stayed stale.",
     evidence:
-      "The public MCP Marketplace listing exists but still shows the older 14-tool surface; the hosted marketplace manifest now exposes the full 15-tool no-auth remote endpoint.",
+      "The public MCP Marketplace listing exists but still shows the older 14-tool surface; the hosted marketplace manifest exposes the full 15-tool no-auth remote endpoint, and an unsent support@mcp-marketplace.io draft is ready.",
     stale_markers: ["toolCount 14", "prepare_purchase_handoff missing", "hosted endpoint framed as self-host credentials"],
     recrawl_subject: "Refresh MCP Marketplace Packrift listing to the current 15-tool hosted endpoint",
     next_action:
-      "Request a marketplace recrawl using the hosted marketplace manifest, source activation sitemap, server card, and mcp_marketplace_io first-run activation card.",
+      "Review and send the existing support@mcp-marketplace.io draft with the hosted marketplace manifest, selected external activation task feeds, server card, and mcp_marketplace_io first-run activation card.",
     listing_url: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
-    submission_url: "https://mcp-marketplace.io/for-creators",
+    submission_url: "mailto:support@mcp-marketplace.io",
   },
   {
     id: "pulsemcp_packrift",
@@ -837,7 +839,7 @@ function sourceActivationRecrawlLines(runtime: DirectorySubmitActionsRuntime, so
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; external activation brief is ${EXTERNAL_ACTIVATION_BRIEF_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; revenue conversion queue is ${REVENUE_CONVERSION_QUEUE_URL}; buyer order handoffs hub is ${BUYER_ORDER_HANDOFFS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked first-run actions preserve source into order handoffs without placing an order.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; external activation brief is ${EXTERNAL_ACTIVATION_BRIEF_URL}; selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; revenue conversion queue is ${REVENUE_CONVERSION_QUEUE_URL}; buyer order handoffs hub is ${BUYER_ORDER_HANDOFFS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked first-run actions preserve source into order handoffs without placing an order.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -923,6 +925,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Activation wave HTML: ${ACTIVATION_WAVE_HTML_URL}`,
     `- External activation brief: ${EXTERNAL_ACTIVATION_BRIEF_URL}`,
     `- External activation brief HTML: ${EXTERNAL_ACTIVATION_BRIEF_HTML_URL}`,
+    `- Selected external activation tasks JSONL: ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL}`,
+    `- Selected external activation tasks CSV: ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}`,
     `- Selected external activation runner: ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}`,
     `- Guarded activation wave runner: ${ACTIVATION_WAVE_RUNNER_URL}`,
     `- One-command external wave runner: PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS '${ACTIVATION_WAVE_RUNNER_URL}' | bash`,
@@ -1030,6 +1034,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
       external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
       external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
       revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
@@ -1084,6 +1090,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
         external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
         external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+        external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+        external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
         external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
@@ -1100,7 +1108,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R47",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R48",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1129,6 +1137,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     source_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
     external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
     external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+    external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+    external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
     external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
     revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
     revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
@@ -1175,7 +1185,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R15",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R16",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1214,6 +1224,8 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
       external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
       external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
       revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
@@ -1239,6 +1251,8 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       activation_wave_html: action.proof_urls.activation_wave_html,
       external_activation_brief: action.proof_urls.external_activation_brief,
       external_activation_brief_html: action.proof_urls.external_activation_brief_html,
+      external_activation_brief_tasks_jsonl: action.proof_urls.external_activation_brief_tasks_jsonl,
+      external_activation_brief_tasks_csv: action.proof_urls.external_activation_brief_tasks_csv,
       external_activation_brief_runner_shell: action.proof_urls.external_activation_brief_runner_shell,
       revenue_conversion_queue: action.proof_urls.revenue_conversion_queue,
       revenue_conversion_queue_html: action.proof_urls.revenue_conversion_queue_html,
@@ -1296,6 +1310,8 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Activation wave HTML: ${payload.canonical_listing.activation_wave_html}`,
     `External activation brief: ${payload.canonical_listing.external_activation_brief}`,
     `External activation brief HTML: ${payload.canonical_listing.external_activation_brief_html}`,
+    `Selected external activation tasks JSONL: ${payload.canonical_listing.external_activation_brief_tasks_jsonl}`,
+    `Selected external activation tasks CSV: ${payload.canonical_listing.external_activation_brief_tasks_csv}`,
     `Selected external activation runner: ${payload.canonical_listing.external_activation_brief_runner_shell}`,
     `Revenue conversion queue: ${payload.canonical_listing.revenue_conversion_queue}`,
     `Revenue conversion queue HTML: ${payload.canonical_listing.revenue_conversion_queue_html}`,
@@ -1400,6 +1416,8 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     `Activation wave HTML: ${payload.source_activation_wave_html}`,
     `External activation brief: ${payload.external_activation_brief}`,
     `External activation brief HTML: ${payload.external_activation_brief_html}`,
+    `Selected external activation tasks JSONL: ${payload.external_activation_brief_tasks_jsonl}`,
+    `Selected external activation tasks CSV: ${payload.external_activation_brief_tasks_csv}`,
     `Selected external activation runner: ${payload.external_activation_brief_runner_shell}`,
     `Revenue conversion queue: ${payload.revenue_conversion_queue}`,
     `Revenue conversion queue HTML: ${payload.revenue_conversion_queue_html}`,

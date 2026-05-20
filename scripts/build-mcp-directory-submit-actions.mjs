@@ -13,6 +13,8 @@ const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-conn
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
+const EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
+const EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
 const EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 
 const DIRECT_STATUS = {
@@ -284,7 +286,7 @@ function publicProofLine(pack) {
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R02";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R06";
   const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R02";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}. Selected external activation runner is ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}.`;
+  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}. Selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}. Selected external activation runner is ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}.`;
 }
 
 function recrawlMessage(pack, target) {
@@ -319,6 +321,8 @@ function recrawlMessage(pack, target) {
     `- Browser first-run page: ${trackedRunHtml}`,
     `- One-click live proof: ${trackedRunExecute}`,
     `- Reviewer activation browser runner: ${reviewerActivation}`,
+    `- Selected external activation tasks JSONL: ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL}`,
+    `- Selected external activation tasks CSV: ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}`,
     `- Selected external activation runner: ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}`,
     `- One-command selected external runner: PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS '${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}' | bash`,
     `- Guarded activation wave runner fallback: ${ACTIVATION_WAVE_RUNNER_URL}`,
@@ -388,6 +392,8 @@ function buildAction(pack, previousByName, target) {
       tracked_first_run_generic_execute: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
       reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
       activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
+      external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
       external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
     },
