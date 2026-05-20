@@ -1150,6 +1150,8 @@ const PUBLIC_MCP_ORDER_SUMMARY_TIMEOUT_MS = 3500;
 const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_USAGE_EVENT_LIMIT_MAX = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 20000;
+const PUBLIC_MCP_SOURCE_ACTIVATION_PACKET_EVENT_LIMIT = 5000;
+const MCP_ACTIVATION_EXPERIMENTS_CACHE_MS = 5 * 60 * 1000;
 const PUBLIC_MCP_FUNNEL_EVENT_LIMIT = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT;
 const PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS = 2;
 const PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX = 50000;
@@ -5893,6 +5895,44 @@ async function mcpActivationExperimentsPayload(
   };
 }
 
+type McpActivationExperimentsPayload = Awaited<ReturnType<typeof mcpActivationExperimentsPayload>>;
+
+let mcpActivationExperimentsPayloadCache:
+  | {
+      key: string;
+      expiresAtMs: number;
+      promise: Promise<McpActivationExperimentsPayload>;
+    }
+  | null = null;
+
+function mcpActivationExperimentsCacheKey(date: string, limit: number, orderDays: number, orderLimit: number): string {
+  return `${date}:${limit}:${orderDays}:${orderLimit}`;
+}
+
+function cachedMcpActivationExperimentsPayload(
+  env: Env,
+  date: string,
+  limit: number,
+  orderDays: number,
+  orderLimit: number
+): Promise<McpActivationExperimentsPayload> {
+  const key = mcpActivationExperimentsCacheKey(date, limit, orderDays, orderLimit);
+  const now = Date.now();
+  if (mcpActivationExperimentsPayloadCache?.key === key && mcpActivationExperimentsPayloadCache.expiresAtMs > now) {
+    return mcpActivationExperimentsPayloadCache.promise;
+  }
+  const promise = mcpActivationExperimentsPayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+    if (mcpActivationExperimentsPayloadCache?.promise === promise) mcpActivationExperimentsPayloadCache = null;
+    throw error;
+  });
+  mcpActivationExperimentsPayloadCache = {
+    key,
+    expiresAtMs: now + MCP_ACTIVATION_EXPERIMENTS_CACHE_MS,
+    promise,
+  };
+  return promise;
+}
+
 function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcpActivationExperimentsPayload>>, source: string) {
   const sourceSlug = normalizeDynamicResourceSource(source);
   if (!sourceSlug) return null;
@@ -8899,7 +8939,7 @@ const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
-const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R01";
+const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R02";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
@@ -12021,14 +12061,14 @@ app.get("/ai/mcp-source-activation/*", async (c) => {
   const source = match[1] ?? "";
   const format = (match[2] ?? requestUrl.searchParams.get("format") ?? "json").toLowerCase();
   const date = normalizeAiSalesDate(requestUrl.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(requestUrl.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedLimit = Number.parseInt(requestUrl.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_PACKET_EVENT_LIMIT), 10);
   const requestedOrderDays = Number.parseInt(requestUrl.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
   const requestedOrderLimit = Number.parseInt(requestUrl.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
   const packet = mcpSourceActivationPacketPayload(
-    await mcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit),
+    await cachedMcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit),
     source
   );
   if (!packet) {

@@ -1630,7 +1630,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
-      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R01" &&
+      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R02" &&
       sourceActivationCline?.source === "cline_mcp_marketplace" &&
       sourceActivationCline?.preferred_target === "cline" &&
       sourceActivationCline?.status === "real_host_tool_call_needed" &&
