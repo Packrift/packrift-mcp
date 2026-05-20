@@ -639,6 +639,7 @@ async function liveMcpCheck() {
     sourceOrderResourceMarkdownResult,
     sourceOrderResourceShellResult,
     sourceAwarePreparePurchaseResult,
+    restResourcesResult,
     toolsResult,
     resourcesResult,
     resourceTemplatesResult,
@@ -801,6 +802,7 @@ async function liveMcpCheck() {
         analytics_context: { synthetic: true, source: "distribution_check" },
       },
     }),
+    fetchText("https://mcp.packrift.com/resources"),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("resources/templates/list"),
@@ -1010,9 +1012,21 @@ async function liveMcpCheck() {
   const mcpToolsDiscoveryToolNames = (mcpToolsDiscovery?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const preparePurchaseTool = (toolsResult.value?.result?.tools ?? []).find((tool) => tool.name === "prepare_purchase_handoff");
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
+  const restResources = restResourcesResult.ok ? JSON.parse(restResourcesResult.text) : null;
+  const restResourceUris = new Set((restResources?.resources ?? []).map((resource) => resource.uri));
   const resources = resourcesResult.value?.result?.resources ?? [];
   const resourcesCount = resources.length;
   const resourceUris = new Set(resources.map((resource) => resource.uri));
+  const firstPageGoalResourceUris = [
+    MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+    MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+    MCP_ACTIVATION_WAVE_RUNNER_URL,
+    "https://mcp.packrift.com/ai/mcp-source-activation/findmcp_dev.html",
+    "https://mcp.packrift.com/ai/mcp-source-activation/glama_connector.html",
+    "https://mcp.packrift.com/r/order/mcp_so?format=html",
+    "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html",
+  ];
+  const firstPageGoalResourceMissing = firstPageGoalResourceUris.filter((uri) => !restResourceUris.has(uri));
   const resourceTemplates = resourceTemplatesResult.value?.result?.resourceTemplates ?? [];
   const resourceTemplateUris = new Set(resourceTemplates.map((resource) => resource.uriTemplate));
   const sourceRunResourceShellText = sourceRunResourceShellResult.value?.result?.contents?.[0]?.text ?? "";
@@ -1188,7 +1202,13 @@ async function liveMcpCheck() {
       "mcp_source_context=generic",
     ]),
     source_activation_queue_html: hasMcpPageAnalytics(sourceActivationQueueHtmlResult.text, "mcp_source_activation_queue"),
-    source_activation_packet_html: hasMcpPageAnalytics(sourceActivationClineHtmlResult.text, "mcp_source_activation_packet"),
+    source_activation_packet_html: hasMcpPageAnalytics(sourceActivationClineHtmlResult.text, "mcp_source_activation_packet", [
+      "utm_source=chatgpt-mcp",
+      "utm_medium=mcp_tool",
+      "utm_campaign=packrift_mcp_source_activation_packet",
+      "mcp_source_context=cline_mcp_marketplace",
+      "mcp_install_target=cline",
+    ]),
     activation_experiments_html: hasMcpPageAnalytics(activationExperimentsHtmlResult.text, "mcp_activation_experiments"),
     activation_wave_html: hasMcpPageAnalytics(activationWaveHtmlResult.text, "mcp_activation_wave"),
     external_activation_brief_html: hasMcpPageAnalytics(externalActivationBriefHtmlResult.text, "mcp_external_activation_brief"),
@@ -1463,6 +1483,7 @@ async function liveMcpCheck() {
       aiPluginJson?.mcp?.endpoint === MCP_ENDPOINT &&
       aiPluginJson?.mcp?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL,
+    first_page_goal_resources: firstPageGoalResourceMissing.length === 0,
     feeds:
       strictPublicProductFeedOk &&
       preferredDirectProductFeedOk &&
@@ -1541,6 +1562,7 @@ async function liveMcpCheck() {
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
       hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]),
     mcp_page_analytics: mcpPageAnalyticsOk,
+    first_page_goal_resource_uris_missing: firstPageGoalResourceMissing,
     required_core_resource_uris_missing: requiredCoreResourceUris.filter((uri) => !resourceUris.has(uri)),
   };
   const liveMcpDiagnosticsPass = Object.entries(liveMcpFailureDiagnostics).every(([, value]) =>
@@ -1581,6 +1603,9 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       serverCard?.registry_distribution?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       serverCard?.registry_distribution?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      serverCard?.registry_distribution?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      serverCard?.registry_distribution?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      serverCard?.registry_distribution?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       serverCard?.registry_distribution?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       serverCard?.registry_distribution?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       serverCard?.registry_distribution?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
@@ -1606,6 +1631,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
       serverCard?.resource_links?.openaiStrictPublicProductFeedTsv === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL &&
+      serverCard?.resource_links?.mcpAgentHostRolloutTasksJsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      serverCard?.resource_links?.mcpAgentHostRolloutTasksCsv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       serverCard?.resource_links?.openaiPreferredDirectProductFeedTsv === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL &&
       serverCard?.resource_links?.openaiPreferredDirectProductFeedGzip === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL &&
       serverCard?.resource_links?.mcpRevenueConversionQueueJson === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
@@ -1655,6 +1682,8 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_WELL_KNOWN_OPENAPI_JSON_URL) &&
       resourceUris.has(MCP_AI_PLUGIN_JSON_URL) &&
       resourceUris.has(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
+      resourceUris.has(MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL) &&
+      resourceUris.has(MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md") &&
       resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       resourceTemplatesResult.ok &&
@@ -4328,6 +4357,8 @@ async function liveMcpCheck() {
       agent_host_rollout_priority_source_count: agentHostRollout?.priority_source_count ?? null,
       agent_host_rollout_activation_queue_release: agentHostRollout?.activation_queue?.release ?? null,
       agent_host_rollout_activation_queue_status: agentHostRollout?.activation_queue?.status ?? null,
+      agent_host_rollout_task_rows: agentHostRolloutTaskRows.length,
+      agent_host_rollout_csv_lines: agentHostRolloutCsvLines.length,
       agent_host_rollout_mcp_so: {
         activation_priority: agentHostRolloutMcpSo?.activation_priority ?? null,
         activation_status: agentHostRolloutMcpSo?.activation_status ?? null,

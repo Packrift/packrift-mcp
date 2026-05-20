@@ -9012,7 +9012,7 @@ function mcpSourceActivationPacketHtml(payload: NonNullable<ReturnType<typeof mc
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Source Activation</title>
   <meta name="description" content="Focused Packrift MCP source activation packet for real MCP host runs, tool-call proof, and measured cart handoff.">
-  ${packriftMcpGa4HeadScript({ pageType: "mcp_source_activation_packet", source: payload.source, target: payload.preferred_target, utmCampaign: "packrift_mcp_source_activation_packet" })}
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_source_activation_packet", source: payload.source, target: payload.preferred_target, utmCampaign: "packrift_mcp_source_activation_packet", forceQualifiedMcpUtm: true })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--red:#9f2d20}
     *{box-sizing:border-box}
@@ -13156,6 +13156,23 @@ const MCP_AGENT_HOST_FAST_PATH_RESOURCE_URLS = AGENT_HOST_FAST_PATHS.flatMap(({ 
 const MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS = Array.from(
   new Set([...MCP_SEEDED_SOURCE_ACTIVATION_RESOURCE_URLS, ...MCP_AGENT_HOST_FAST_PATH_RESOURCE_URLS])
 );
+const MCP_PRIORITY_SOURCE_ACTIVATION_RESOURCE_URLS = [
+  "docker_mcp_catalog",
+  "findmcp_dev",
+  "glama_connector",
+  "mcplist_ai",
+  "mcpserverfinder",
+].flatMap((source) => [
+  `https://mcp.packrift.com/ai/mcp-source-activation/${source}.html`,
+  `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
+  `https://mcp.packrift.com/r/activate/${source}?format=html`,
+  `https://mcp.packrift.com/r/run/${source}/${sourcePreferredActivationTarget(source)}?format=sh`,
+]);
+const MCP_MATURE_ORDER_HANDOFF_RESOURCE_URLS = ["mcp_so", "cline_mcp_marketplace"].flatMap((source) => [
+  `https://mcp.packrift.com/r/order/${source}?format=html`,
+  `https://mcp.packrift.com/r/order/${source}?format=sh`,
+  `https://mcp.packrift.com/r/order/${source}?format=json`,
+]);
 const APPROVED_CATALOG_BY_SKU = new Map(
   APPROVED_CATALOG.map((item) => [item.sku.toUpperCase(), item])
 );
@@ -13280,11 +13297,7 @@ const AI_DISCOVERY_URLS = [
   MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
   MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
   MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
-  MCP_SOURCE_ACTIVATION_SITEMAP_URL,
-  ...MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS,
-  "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
-  "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
-  "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
+  ...MCP_MATURE_ORDER_HANDOFF_RESOURCE_URLS,
   MCP_ACTIVATION_WAVE_JSON_URL,
   MCP_ACTIVATION_WAVE_MARKDOWN_URL,
   MCP_ACTIVATION_WAVE_HTML_URL,
@@ -13299,6 +13312,12 @@ const AI_DISCOVERY_URLS = [
   MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
   MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
   MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
+  ...MCP_PRIORITY_SOURCE_ACTIVATION_RESOURCE_URLS,
+  MCP_SOURCE_ACTIVATION_SITEMAP_URL,
+  ...MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS,
+  "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
+  "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
+  "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.html",
