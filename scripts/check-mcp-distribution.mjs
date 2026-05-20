@@ -2668,8 +2668,17 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directorySubmitActions?.source_eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
+      directorySubmitActions?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      directorySubmitActions?.source_activation_queue_runtime?.status === "activation_needed" &&
+      directorySubmitActions?.source_activation_queue_runtime?.operator_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250" &&
+      directorySubmitActions?.source_activation_queue_runtime?.row_count > 0 &&
+      directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.source_activation_state?.target_event_to_watch === "mcp_attributed_order" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html") &&
+      directorySubmitActions?.actions?.some((action) => action.id === "glama_connector" && action.source_activation_state?.target_event_to_watch === "mcp_tool_call" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/activate/glama_connector?format=html") &&
       directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13" &&
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
+      directoryUpdateCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      directoryUpdateCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
+      directoryUpdateCline?.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
       directoryUpdateCline?.canonical_listing?.endpoint === "https://mcp.packrift.com/mcp" &&
       directoryUpdateCline?.canonical_listing?.authentication === "none_required_for_hosted_endpoint" &&
       directoryUpdateCline?.canonical_listing?.tool_names?.includes("prepare_purchase_handoff") &&
@@ -2703,6 +2712,9 @@ async function liveMcpCheck() {
       directoryUpdatePunkpeye?.source === "punkpeye_awesome_mcp" &&
       directoryUpdatePunkpeye?.source_release_readiness?.status === "blocked_by_glama_source_quality" &&
       directoryUpdateMcpSo?.source === "mcp_so" &&
+      directoryUpdateMcpSo?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      directoryUpdateMcpSo?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
+      directoryUpdateMcpSo?.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       directoryUpdateMcpSo?.tracked_urls?.config?.startsWith("https://mcp.packrift.com/r/config/mcp_so") &&
       directoryUpdateMcpSo?.acceptance_gate?.some((rule) => String(rule).includes("measured https://mcp.packrift.com/r/cart/1066")) &&
       directoryUpdateMarketplace?.source === "mcp_marketplace_io" &&
