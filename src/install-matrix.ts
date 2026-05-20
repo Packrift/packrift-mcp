@@ -9,6 +9,8 @@ export interface InstallMatrixRuntime {
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
+const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
+const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
 
 function remoteMcpJson(name = "packrift") {
   return {
@@ -273,7 +275,7 @@ const HOSTS = [
 
 export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R07",
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R08",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -292,6 +294,7 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       "Use browser agents only as read-first discovery bridges; confirm live commerce facts through MCP.",
       "Use /r/config/{source} when sharing copy-ready MCP JSON config from a directory, partner, campaign, or agent handoff so the fetch is measurable.",
       "Use /r/install/{source}/{target} when a directory, partner, or agent handoff needs a target-specific install command or config and install-intent attribution.",
+      "Use /ai/mcp-activation-wave.json when the material tool-call gate is open; it selects the current source-aware real-host runs to execute through this install matrix.",
       "Use prepare_purchase_handoff for known exact SKUs when the host needs one compact live-confirmation and guarded cart-handoff tool call.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
       "Run the cart-1066 smoke test after install; it returns a measured cart URL only and does not place an order.",
@@ -305,6 +308,16 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       codex: trackedInstallUrl("generic", "codex"),
       cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
       cline: trackedInstallUrl("generic", "cline"),
+    },
+    activation_wave: {
+      url: ACTIVATION_WAVE_URL,
+      html_url: ACTIVATION_WAVE_HTML_URL,
+      use_when:
+        "Use this after a directory, marketplace, or partner has seen Packrift but has not produced real external MCP host tool calls.",
+      required_success_signal:
+        "A valid activation run reaches create_cart_url from a real MCP host and later appears in the source activation queue or funnel snapshot as non-suppressed external proof.",
+      no_duplicate_work_rule:
+        "Do not create a Packrift CLI or duplicate checkout surface; use the hosted endpoint plus source-aware install and first-run URLs.",
     },
     hosts: HOSTS,
     smoke_tests: SMOKE_TESTS,
@@ -337,6 +350,8 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      activation_wave: ACTIVATION_WAVE_URL,
+      activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
@@ -398,6 +413,18 @@ export function mcpInstallMatrixMarkdown(runtime: InstallMatrixRuntime): string 
     Object.entries(payload.tracked_install_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
+    "",
+    "## Activation Wave",
+    "",
+    `JSON: ${payload.activation_wave.url}`,
+    "",
+    `HTML: ${payload.activation_wave.html_url}`,
+    "",
+    payload.activation_wave.use_when,
+    "",
+    `Success signal: ${payload.activation_wave.required_success_signal}`,
+    "",
+    `No duplicate work rule: ${payload.activation_wave.no_duplicate_work_rule}`,
     "",
     "## Host Matrix",
     "",

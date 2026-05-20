@@ -1,4 +1,5 @@
-import { clineMcpJson, stdioMcpRemoteJson } from "./install-action.js";
+import { clineMcpJson, stdioMcpRemoteJson, trackedInstallUrl } from "./install-action.js";
+import { trackedRunUrl } from "./first-run-action.js";
 
 export interface AdoptionKitRuntime {
   serverVersion: string;
@@ -8,6 +9,18 @@ export interface AdoptionKitRuntime {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
+const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const SHAREABLE_SOURCES = [
+  "generic",
+  "cline_mcp_marketplace",
+  "glama_connector",
+  "mcp_marketplace_io",
+  "official_registry",
+  "mcpcentral",
+  "mcp_so",
+  "browse_sh",
+] as const;
 
 const DEMO_SKUS = [
   {
@@ -42,6 +55,51 @@ function toolCall(id: string, name: string, args: Record<string, unknown>) {
       name,
       arguments: args,
     },
+  };
+}
+
+function trackedConfigUrl(source: string): string {
+  const url = new URL(`https://mcp.packrift.com/r/config/${source}`);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "adoption_kit_config");
+  url.searchParams.set("utm_campaign", "packrift_mcp_activation");
+  url.searchParams.set("utm_content", "developer_share_pack");
+  return url.toString();
+}
+
+function sourceActivationPacketUrl(source: string, format: "json" | "md" | "html" = "json"): string {
+  return `https://mcp.packrift.com/ai/mcp-source-activation/${source}.${format}`;
+}
+
+function shareableSourceLink(source: (typeof SHAREABLE_SOURCES)[number]) {
+  const preferredTarget = source === "cline_mcp_marketplace" ? "cline" : "generic_streamable_http";
+  return {
+    source,
+    preferred_target: preferredTarget,
+    tracked_start_url: `https://mcp.packrift.com/r/start/${source}`,
+    tracked_config_url: trackedConfigUrl(source),
+    tracked_install_urls: {
+      generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
+      stdio_mcp_remote: trackedInstallUrl(source, "stdio_mcp_remote"),
+      claude_code: trackedInstallUrl(source, "claude_code"),
+      codex: trackedInstallUrl(source, "codex"),
+      cline: trackedInstallUrl(source, "cline"),
+    },
+    tracked_first_run_urls: {
+      preferred: trackedRunUrl(source, preferredTarget),
+      preferred_html: `${trackedRunUrl(source, preferredTarget)}&format=html`,
+      preferred_shell: `${trackedRunUrl(source, preferredTarget)}&format=sh`,
+      generic_streamable_http: trackedRunUrl(source, "generic_streamable_http"),
+      generic_streamable_http_html: `${trackedRunUrl(source, "generic_streamable_http")}&format=html`,
+      generic_streamable_http_shell: `${trackedRunUrl(source, "generic_streamable_http")}&format=sh`,
+    },
+    reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${source}?format=html`,
+    reviewer_activation_shell: `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+    source_activation_packet: sourceActivationPacketUrl(source),
+    source_activation_packet_markdown: sourceActivationPacketUrl(source, "md"),
+    source_activation_packet_html: sourceActivationPacketUrl(source, "html"),
+    eval_pack: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${source}`,
+    one_command_external_runner: `curl -sS '${trackedRunUrl(source, preferredTarget)}&format=sh' | bash`,
   };
 }
 
@@ -130,8 +188,9 @@ print(rpc("candidate-1066", "tools/call", {
 
 export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
+  const shareableSourceLinks = SHAREABLE_SOURCES.map(shareableSourceLink);
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R08",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R09",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -179,7 +238,25 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       marketplace_listing: "https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp",
       registry_search: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
+      activation_wave: ACTIVATION_WAVE_URL,
+      activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       self_hosted_container_optional: "docker pull ghcr.io/packrift/packrift-mcp:latest",
+    },
+    developer_share_pack: {
+      purpose:
+        "Copy one source-specific row into a directory, marketplace, partner handoff, or agent-host review so installs and first useful runs preserve attribution.",
+      rule:
+        "Use these links to drive real MCP host usage through the existing hosted endpoint. Do not count generated resource fetches, sitemap crawls, or Packrift self-checks as completed source activation.",
+      source_count: shareableSourceLinks.length,
+      shareable_source_links: shareableSourceLinks,
+      activation_wave: ACTIVATION_WAVE_URL,
+      activation_wave_html: ACTIVATION_WAVE_HTML_URL,
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      measurement_urls: {
+        usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+        funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+        ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      },
     },
     first_five_minutes: [
       {
@@ -253,6 +330,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Cart candidates expose an MCP measured landing URL under https://mcp.packrift.com/r/cart/ before the final Shopify cart URL.",
       "Agents must call get_product, get_pricing, and check_inventory before presenting create_cart_url output to a buyer.",
       "Directory reviewers can use https://mcp.packrift.com/r/activate/generic?format=html to run the real MCP sequence in a browser.",
+      "Developers and reviewers can use developer_share_pack.shareable_source_links to preserve source attribution from start/config/install through first useful run and activation proof.",
       "Stdio-only hosts can use npx mcp-remote as a thin bridge to the hosted endpoint; this is not a Packrift CLI.",
     ],
     useful_workflows: [
@@ -299,6 +377,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
+      activation_wave: ACTIVATION_WAVE_URL,
+      activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       product_corpus: "https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl",
@@ -323,6 +403,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Use the reviewer activation browser runner when a marketplace, directory, or agent host needs to turn proof interest into a real create_cart_url call.",
       "Use the eval pack when a host or directory needs acceptance-test cases with expected assertions.",
       "Use the source activation queue to prioritize the next external source that needs a real MCP run, measured cart landing, or order.",
+      "Use the activation wave when the material tool-call gate is open; it packages the next source-aware real host runs without creating a duplicate CLI or buyer surface.",
       "If any required spec differs, return no exact match and route to bulk quote recovery.",
     ],
   };
@@ -380,6 +461,23 @@ export function mcpAdoptionKitMarkdown(runtime: AdoptionKitRuntime): string {
     `Glama connector: ${payload.install.glama_connector}`,
     "",
     `Install matrix: ${payload.install.install_matrix}`,
+    "",
+    `Activation wave: ${payload.install.activation_wave_html}`,
+    "",
+    "## Developer Share Pack",
+    "",
+    payload.developer_share_pack.purpose,
+    "",
+    payload.developer_share_pack.rule,
+    "",
+    "| Source | Target | Start | Config | Install | First-run shell | Activation runner | Packet |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    payload.developer_share_pack.shareable_source_links
+      .map(
+        (link) =>
+          `| ${link.source} | ${link.preferred_target} | ${link.tracked_start_url} | ${link.tracked_config_url} | ${link.tracked_install_urls.generic_streamable_http} | ${link.tracked_first_run_urls.preferred_shell} | ${link.reviewer_activation_runner} | ${link.source_activation_packet} |`
+      )
+      .join("\n"),
     "",
     "## First Five Minutes",
     "",

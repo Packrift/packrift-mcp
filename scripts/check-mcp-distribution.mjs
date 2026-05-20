@@ -1040,10 +1040,22 @@ async function liveMcpCheck() {
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_eval_pack" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json" && surface.install_or_call?.includes("create_cart_url")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "agent_capture_outreach_packet" && surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
-      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R08" &&
+      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R09" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
       adoptionKit?.developer_examples?.length >= 4 &&
+      adoptionKit?.developer_share_pack?.shareable_source_links?.length >= 8 &&
+      adoptionKit?.developer_share_pack?.shareable_source_links?.some(
+        (link) =>
+          link.source === "cline_mcp_marketplace" &&
+          link.preferred_target === "cline" &&
+          link.tracked_first_run_urls?.preferred_shell?.includes("/r/run/cline_mcp_marketplace/cline")
+      ) &&
+      adoptionKit?.developer_share_pack?.shareable_source_links?.every((link) => link.reviewer_activation_runner?.includes("/r/activate/")) &&
+      adoptionKit?.developer_share_pack?.shareable_source_links?.every((link) => link.one_command_external_runner?.includes("format=sh")) &&
+      adoptionKit?.developer_share_pack?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
       adoptionKit?.install?.reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
+      adoptionKit?.install?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
+      adoptionKit?.install?.activation_wave_html === MCP_ACTIVATION_WAVE_HTML_URL &&
       adoptionKit?.proof_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.command === "npx" &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.args?.includes("mcp-remote") &&
@@ -1053,8 +1065,9 @@ async function liveMcpCheck() {
       adoptionKit?.install?.cline?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       adoptionKit?.proof_urls?.reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
       adoptionKit?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      adoptionKit?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
       adoptionKit?.expected_first_flow_outcomes?.some((outcome) => outcome.includes("https://mcp.packrift.com/r/cart/")) &&
-      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R07" &&
+      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R08" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.hosts?.some(
         (host) =>
@@ -1077,6 +1090,9 @@ async function liveMcpCheck() {
       installMatrix?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       installMatrix?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
       installMatrix?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      installMatrix?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
+      installMatrix?.activation_wave?.url === MCP_ACTIVATION_WAVE_JSON_URL &&
+      installMatrix?.activation_wave?.no_duplicate_work_rule?.includes("Do not create a Packrift CLI") &&
       installActions?.release === "PACKRIFT-MCP-INSTALL-ACTIONS-R11" &&
       installActions?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/generic/codex")) &&
