@@ -246,9 +246,9 @@ const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL =
-  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv";
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_URL =
-  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv.gz";
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv.gz";
 
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
@@ -1709,7 +1709,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Copy-ready host configs") &&
       activationExperimentsHtmlResult.text.includes("First-run shell") &&
       activationExperimentsHtmlResult.text.includes("Shell script") &&
-      activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R01" &&
+      activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R02" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
       activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
       activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
@@ -1717,11 +1717,31 @@ async function liveMcpCheck() {
       activationWave?.links?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       activationWave?.links?.one_command_wave_runner?.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
       activationWave?.links?.one_command_wave_runner?.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
+      activationWave?.links?.one_command_full_capture_runner?.includes("PACKRIFT_ACTIVATION_WAVE_SCOPE=full") &&
+      activationWave?.links?.one_command_full_capture_runner?.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       typeof activationWave?.tool_call_gap?.remaining_to_threshold === "number" &&
       typeof activationWave?.tool_call_gap?.expected_tool_call_lift_if_all_tasks_run === "number" &&
+      typeof activationWave?.tool_call_gap?.full_capture_source_count === "number" &&
+      activationWave?.tool_call_gap?.full_capture_source_count >= activationWave?.wave_tasks?.length &&
+      typeof activationWave?.tool_call_gap?.full_capture_expected_tool_call_lift_if_all_tasks_run === "number" &&
+      activationWave?.full_capture_wave?.scope === "all_current_tool_call_sources" &&
+      activationWave?.full_capture_wave?.runner_env?.includes("PACKRIFT_ACTIVATION_WAVE_SCOPE=full") &&
+      activationWave?.full_capture_wave?.source_count === activationWave?.tool_call_gap?.full_capture_source_count &&
+      activationWave?.full_capture_wave?.tasks?.length === activationWave?.full_capture_wave?.source_count &&
+      activationWave?.full_capture_wave?.tasks?.length >= activationWave?.wave_tasks?.length &&
+      activationWave?.full_capture_wave?.tasks?.every(
+        (task) =>
+          typeof task.source === "string" &&
+          task.target_event_to_watch?.startsWith("mcp_tool_call") &&
+          task.tracked_first_run_shell_url?.includes("format=sh") &&
+          task.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+          task.success_gate?.includes("external-qualified MCP tool calls")
+      ) &&
+      activationWave?.full_capture_wave?.tasks?.some((task) => task.source === "official_registry") &&
       Array.isArray(activationWave?.blocking_goal_gates) &&
       Array.isArray(activationWave?.suppression_rules) &&
       activationWave?.suppression_rules?.some((rule) => rule.includes("Do not count this activation wave page")) &&
+      activationWave?.suppression_rules?.some((rule) => rule.includes("Full-source capture mode")) &&
       Array.isArray(activationWave?.wave_tasks) &&
       activationWave?.wave_tasks?.length > 0 &&
       activationWave?.wave_tasks?.every(
@@ -1747,11 +1767,13 @@ async function liveMcpCheck() {
       activationWaveMarkdownResult.text.includes("Packrift MCP Activation Wave") &&
       activationWaveMarkdownResult.text.includes("No Duplicate Work Rule") &&
       activationWaveMarkdownResult.text.includes("Tool-Call Gap") &&
+      activationWaveMarkdownResult.text.includes("Full Source Capture") &&
       activationWaveMarkdownResult.text.includes("Copy-Ready Source Requests") &&
       activationWaveMarkdownResult.text.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       activationWaveHtmlResult.ok &&
       activationWaveHtmlResult.text.includes("Packrift MCP Activation Wave") &&
       activationWaveHtmlResult.text.includes("No duplicate work") &&
+      activationWaveHtmlResult.text.includes("Full-source capture runner") &&
       activationWaveHtmlResult.text.includes("Source-aware endpoint") &&
       activationWaveHtmlResult.text.includes("Copy-ready host configs") &&
       activationWaveHtmlResult.text.includes("One-command external runner") &&
@@ -1759,6 +1781,7 @@ async function liveMcpCheck() {
       activationWaveRunnerResult.ok &&
       activationWaveRunnerResult.text.includes("#!/usr/bin/env bash") &&
       activationWaveRunnerResult.text.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
+      activationWaveRunnerResult.text.includes("PACKRIFT_ACTIVATION_WAVE_SCOPE=full") &&
       activationWaveRunnerResult.text.includes("Refusing to execute") &&
       activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
       activationWaveRunnerResult.text.includes("/r/run/") &&

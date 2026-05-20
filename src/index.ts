@@ -6690,15 +6690,17 @@ async function mcpActivationWavePayload(
   const requiredSourcesToClearGate = toolCallGap > 0 ? Math.ceil(toolCallGap / expectedToolCallsPerFullSource) : 0;
   const waveSize = Math.min(candidateRows.length, Math.max(5, requiredSourcesToClearGate));
   const waveTasks = candidateRows.slice(0, waveSize).map(activationWaveTask);
+  const fullCaptureTasks = candidateRows.map(activationWaveTask);
   const expectedLift = waveTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
+  const fullExpectedLift = fullCaptureTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R01",
+    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R02",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     status: waveTasks.length > 0 ? "wave_ready" : "no_tool_call_wave_ready",
     purpose:
-      "A source-aware activation wave for moving real external Packrift MCP tool calls toward the 50+ material usage gate without creating a duplicate Packrift CLI, marketplace, or buyer surface.",
+      "A source-aware activation wave for moving real external Packrift MCP tool calls toward the 50+ material usage gate and then across every current high-intent source without creating a duplicate Packrift CLI, marketplace, or buyer surface.",
     no_duplicate_work_rule:
       "Use https://mcp.packrift.com/mcp and existing /r/install, /r/run, /r/activate, and /r/cart handoffs. Do not build a separate Packrift CLI or duplicate buyer checkout surface unless it is only a thin wrapper around the hosted endpoint.",
     source_queue_release: queuePayload.release,
@@ -6718,16 +6720,30 @@ async function mcpActivationWavePayload(
       expected_tool_call_lift_if_all_tasks_run: expectedLift,
       projected_external_qualified_mcp_tool_calls_after_wave: externalQualifiedToolCalls + expectedLift,
       enough_to_clear_material_tool_usage_gate: externalQualifiedToolCalls + expectedLift >= materialToolUsageThreshold,
+      full_capture_source_count: fullCaptureTasks.length,
+      full_capture_expected_tool_call_lift_if_all_tasks_run: fullExpectedLift,
+      projected_external_qualified_mcp_tool_calls_after_full_capture: externalQualifiedToolCalls + fullExpectedLift,
     },
     selection_rule:
       "Select priority queue rows whose next watched event starts with mcp_tool_call. If no such rows exist, fall back to non-order activation rows. Order-conversion rows stay in the buyer handoff lane.",
     wave_count: waveTasks.length,
     wave_tasks: waveTasks,
+    full_capture_wave: {
+      scope: "all_current_tool_call_sources",
+      source_count: fullCaptureTasks.length,
+      expected_tool_call_lift_if_all_tasks_run: fullExpectedLift,
+      projected_external_qualified_mcp_tool_calls_after_full_capture: externalQualifiedToolCalls + fullExpectedLift,
+      runner_env: "PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full",
+      runner_rule:
+        "Use this only from a real external reviewer or MCP host environment. It runs every current tool-call source task, not just the minimum set required to clear the 50+ material usage gate.",
+      tasks: fullCaptureTasks,
+    },
     suppression_rules: [
       "Do not count this activation wave page, generated resource fetches, /resources/list, or sitemap crawls as source activation.",
       "Do not count Codex local smoke checks, distribution_check requests, manual_verify events, or mcp_cart_handoff_smoke events as external source proof.",
       "Do not self-open returned /r/cart URLs to close the cart-landing gate.",
       "Keep GA4-qualified visitor proof, MCP tool-call proof, cart proof, and Shopify order proof separate.",
+      "Full-source capture mode still requires real external MCP host execution; the generated shell bundle itself is not adoption proof.",
     ],
     links: {
       activation_wave_json: MCP_ACTIVATION_WAVE_JSON_URL,
@@ -6735,6 +6751,7 @@ async function mcpActivationWavePayload(
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
       one_command_wave_runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS ${shellQuote(MCP_ACTIVATION_WAVE_RUNNER_URL)} | bash`,
+      one_command_full_capture_runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS ${shellQuote(MCP_ACTIVATION_WAVE_RUNNER_URL)} | bash`,
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
       activation_experiments_json: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
@@ -6751,10 +6768,20 @@ async function mcpActivationWavePayload(
 }
 
 function mcpActivationWaveRunnerShell(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>): string {
-  const taskLines = payload.wave_tasks
+  const shellTaskLines = (tasks: typeof payload.wave_tasks) =>
+    tasks
+      .map((task) =>
+        [
+          `run_wave_task ${shellQuote(String(task.wave_rank))} ${shellQuote(task.source)} ${shellQuote(task.tracked_first_run_shell_url)} ${shellQuote(String(task.expected_tool_call_lift))}`,
+        ].join("\n")
+      )
+      .join("\n");
+  const thresholdTaskLines = shellTaskLines(payload.wave_tasks);
+  const fullCaptureTaskLines = shellTaskLines(payload.full_capture_wave.tasks);
+  const sourceCommands = payload.full_capture_wave.tasks
     .map((task) =>
       [
-        `run_wave_task ${shellQuote(String(task.wave_rank))} ${shellQuote(task.source)} ${shellQuote(task.tracked_first_run_shell_url)} ${shellQuote(String(task.expected_tool_call_lift))}`,
+        `  echo ${shellQuote(task.one_command_external_runner)}`,
       ].join("\n")
     )
     .join("\n");
@@ -6765,18 +6792,31 @@ function mcpActivationWaveRunnerShell(payload: Awaited<ReturnType<typeof mcpActi
     "echo 'Packrift MCP activation wave runner'",
     `echo 'Release: ${payload.release}'`,
     `echo 'Current external-qualified tool calls: ${payload.tool_call_gap.current_external_qualified_mcp_tool_calls}/${payload.tool_call_gap.material_usage_threshold}'`,
+    `echo 'Threshold wave tasks: ${payload.wave_count}; full-source capture tasks: ${payload.full_capture_wave.source_count}'`,
     "echo 'This is a thin wrapper around the hosted Packrift MCP first-run scripts. It does not create a CLI, checkout surface, or order.'",
     "echo 'Run it from an external reviewer or real MCP host environment. Packrift self-runs do not prove the adoption goal.'",
+    "echo 'Set PACKRIFT_ACTIVATION_WAVE_SCOPE=full to run every current source task instead of only the threshold-clearing wave.'",
     "",
     "if [ \"${PACKRIFT_EXTERNAL_ACTIVATION:-}\" != \"1\" ]; then",
     "  echo ''",
     "  echo 'Refusing to execute until PACKRIFT_EXTERNAL_ACTIVATION=1 is set.'",
     "  echo 'Copy one of these source-specific commands into the real external host or reviewer environment:'",
-    ...payload.wave_tasks.map((task) => `  echo ${shellQuote(task.one_command_external_runner)}`),
+    sourceCommands || "  echo 'No activation wave tasks are ready right now.'",
     "  echo ''",
     `  echo 'Or explicitly run the guarded wave bundle: PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS ${MCP_ACTIVATION_WAVE_RUNNER_URL} | bash'`,
+    `  echo 'Or run the full-source capture bundle: PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS ${MCP_ACTIVATION_WAVE_RUNNER_URL} | bash'`,
     "  exit 2",
     "fi",
+    "",
+    "wave_scope=\"${PACKRIFT_ACTIVATION_WAVE_SCOPE:-threshold}\"",
+    "case \"$wave_scope\" in",
+    "  threshold|full) ;;",
+    "  *)",
+    "    echo \"Unsupported PACKRIFT_ACTIVATION_WAVE_SCOPE=$wave_scope. Use threshold or full.\"",
+    "    exit 2",
+    "    ;;",
+    "esac",
+    "echo \"Activation wave scope: $wave_scope\"",
     "",
     "run_wave_task() {",
     "  local rank=\"$1\"",
@@ -6793,7 +6833,11 @@ function mcpActivationWaveRunnerShell(payload: Awaited<ReturnType<typeof mcpActi
     "  PACKRIFT_MCP_SESSION_ID=\"mcp-wave-${source}-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM\" bash \"$tmp_file\"",
     "}",
     "",
-    taskLines || "echo 'No activation wave tasks are ready right now.'",
+    "if [ \"$wave_scope\" = \"full\" ]; then",
+    fullCaptureTaskLines || "  echo 'No full-source capture tasks are ready right now.'",
+    "else",
+    thresholdTaskLines || "  echo 'No threshold activation wave tasks are ready right now.'",
+    "fi",
     "",
     "echo ''",
     "echo 'Packrift MCP activation wave runner finished.'",
@@ -6830,8 +6874,12 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
     `- Expected lift if all tasks run: ${payload.tool_call_gap.expected_tool_call_lift_if_all_tasks_run}`,
     `- Projected tool calls after wave: ${payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_wave}`,
     `- Enough to clear material usage gate: ${payload.tool_call_gap.enough_to_clear_material_tool_usage_gate ? "yes" : "no"}`,
+    `- Full-source capture size: ${payload.tool_call_gap.full_capture_source_count}`,
+    `- Full-source expected lift: ${payload.tool_call_gap.full_capture_expected_tool_call_lift_if_all_tasks_run}`,
+    `- Projected after full-source capture: ${payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_full_capture}`,
     `- Guarded wave runner: ${payload.links.activation_wave_runner_shell}`,
     `- One-command wave runner: \`${payload.links.one_command_wave_runner}\``,
+    `- One-command full-source capture runner: \`${payload.links.one_command_full_capture_runner}\``,
     "",
     "## Wave Tasks",
     "",
@@ -6843,6 +6891,21 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
           `| ${row.wave_rank} | ${row.source} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.primary_action_url} | ${row.source_aware_endpoint} | ${row.reviewer_activation_shell_url} | ${row.eval_pack_json_url} |`
       )
       .join("\n") || "| none | none | none | 0 | none | none | none | none |",
+    "",
+    "## Full Source Capture",
+    "",
+    `Scope: ${payload.full_capture_wave.scope}`,
+    `Source count: ${payload.full_capture_wave.source_count}`,
+    `Expected lift: ${payload.full_capture_wave.expected_tool_call_lift_if_all_tasks_run}`,
+    `Runner env: \`${payload.full_capture_wave.runner_env}\``,
+    "",
+    payload.full_capture_wave.runner_rule,
+    "",
+    "| Rank | Source | Target event | Expected lift | Shell runner |",
+    "| --- | --- | --- | --- | --- |",
+    payload.full_capture_wave.tasks
+      .map((row) => `| ${row.wave_rank} | ${row.source} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} |`)
+      .join("\n") || "| none | none | none | 0 | none |",
     "",
     "## Copy-Ready Source Requests",
     "",
@@ -6866,7 +6929,7 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
 }
 
 function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>): string {
-  const cards = payload.wave_tasks
+  const cards = payload.full_capture_wave.tasks
     .map((row) => {
       const counts = row.current_counts;
       const actionSteps = row.action_sequence.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
@@ -6985,9 +7048,11 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
       <div class="status">
         <span>Status: ${escapeHtml(payload.status)}</span>
         <span>Tasks: ${payload.wave_count}</span>
+        <span>Full capture: ${payload.full_capture_wave.source_count}</span>
         <span>Current tool calls: ${payload.tool_call_gap.current_external_qualified_mcp_tool_calls}</span>
         <span>Gap to 50: ${payload.tool_call_gap.remaining_to_threshold}</span>
         <span>Expected lift: ${payload.tool_call_gap.expected_tool_call_lift_if_all_tasks_run}</span>
+        <span>Full lift: ${payload.full_capture_wave.expected_tool_call_lift_if_all_tasks_run}</span>
         <span>Projected: ${payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_wave}</span>
         <span>Adoption: ${escapeHtml(payload.agent_adoption_progress.status)}</span>
       </div>
@@ -7004,16 +7069,21 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
         <a href="${escapeHtml(payload.links.activation_experiments_html)}">Experiments</a>
         <a href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel snapshot</a>
       </div>
-      <div class="proof-boundary">
-        <strong>Guarded one-command runner</strong>
-        <pre>${escapeHtml(payload.links.one_command_wave_runner)}</pre>
-      </div>
+	      <div class="proof-boundary">
+	        <strong>Guarded one-command runner</strong>
+	        <pre>${escapeHtml(payload.links.one_command_wave_runner)}</pre>
+	      </div>
+	      <div class="proof-boundary">
+	        <strong>Full-source capture runner</strong>
+	        <p>${escapeHtml(payload.full_capture_wave.runner_rule)}</p>
+	        <pre>${escapeHtml(payload.links.one_command_full_capture_runner)}</pre>
+	      </div>
       <details>
         <summary>Global suppression rules</summary>
         <ul>${suppressionRules}</ul>
       </details>
     </header>
-    <section class="tasks">${cards || "<p>No tool-call wave tasks are ready right now.</p>"}</section>
+	    <section class="tasks">${cards || "<p>No tool-call wave tasks are ready right now.</p>"}</section>
   </main>
 </body>
 </html>`;
@@ -8624,6 +8694,15 @@ const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string; bodyT
     contentType: "application/gzip",
     bodyType: "arrayBuffer",
   },
+  "/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv": {
+    key: "ai/packrift-openai-products-preferred-direct-4836-20260520.tsv",
+    contentType: "text/tab-separated-values; charset=utf-8",
+  },
+  "/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv.gz": {
+    key: "ai/packrift-openai-products-preferred-direct-4836-20260520.tsv.gz",
+    contentType: "application/gzip",
+    bodyType: "arrayBuffer",
+  },
   "/ai/openai-products.tsv": {
     key: "ai/packrift-openai-products-strict-stable-current.tsv",
     contentType: "text/tab-separated-values; charset=utf-8",
@@ -8935,6 +9014,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv",
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv",
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv",
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv",
   "https://mcp.packrift.com/ai/corrugated-box-sizes.jsonl",
   "https://mcp.packrift.com/ai/mailer-sizes.jsonl",
   "https://mcp.packrift.com/ai/label-sizes.jsonl",
@@ -9081,6 +9161,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/packrift-openai-products-strict-stable-current.tsv": "Strict stable OpenAI-shaped product snapshot for QA.",
   "/ai/packrift-openai-products-preferred-direct-current.tsv": "Current preferred direct OpenAI-shaped product feed handoff for access review.",
   "/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv": "Immutable 4,835-row preferred direct OpenAI-shaped product feed handoff from the 2026-05-19 validation packet.",
+  "/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv": "Immutable 4,836-row preferred direct OpenAI-shaped product feed handoff from the 2026-05-20 validation packet.",
   "/ai/corrugated-box-sizes.jsonl": "AI-approved corrugated boxes by exact spec.",
   "/ai/mailer-sizes.jsonl": "AI-approved mailers by exact spec.",
   "/ai/label-sizes.jsonl": "AI-approved labels by exact spec.",

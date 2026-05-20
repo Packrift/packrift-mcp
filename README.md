@@ -186,8 +186,13 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - Cline source activation packet: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json
 - MCP activation wave: https://mcp.packrift.com/ai/mcp-activation-wave.json
 - MCP activation wave HTML: https://mcp.packrift.com/ai/mcp-activation-wave.html
+- MCP activation wave runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS 'https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh' | bash`
+- MCP full-source capture runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS 'https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh' | bash`
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
 - MCP reviewer activation shell script: https://mcp.packrift.com/r/activate/generic?format=sh
+- MCP buyer/reviewer order handoff template: https://mcp.packrift.com/r/order/{source}?format=html
+- MCP.so buyer/reviewer order handoff: https://mcp.packrift.com/r/order/mcp_so?format=html
+- Cline buyer/reviewer order handoff: https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html
 - Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
@@ -416,6 +421,7 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `https://mcp.packrift.com/ai/mcp-reviewer-activation.json` and `.md`, and
 the activation command center at `https://mcp.packrift.com/r/activate`,
 the source activation queue HTML at `https://mcp.packrift.com/ai/mcp-source-activation-queue.html`,
+the activation wave and guarded full-source capture runner at `https://mcp.packrift.com/ai/mcp-activation-wave.json`,
 the browser runner at `https://mcp.packrift.com/r/activate/generic?format=html`, and
 the shell activation script at `https://mcp.packrift.com/r/activate/generic?format=sh`, and
 `https://mcp.packrift.com/ai/mcp-eval-pack.json` and `.md`, and
