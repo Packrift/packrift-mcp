@@ -11,6 +11,7 @@ const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
+const FETCH_TIMEOUT_MS = 20000;
 const execFileAsync = promisify(execFile);
 
 const SURFACE_GUIDANCE = {
@@ -279,7 +280,7 @@ function cacheBustedUrl(url) {
 
 async function fetchText(url) {
   try {
-    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow" });
+    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     const text = await response.text();
     return { ok: response.ok, status: response.status, url: response.url, text };
   } catch (error) {
@@ -289,7 +290,7 @@ async function fetchText(url) {
 
 async function fetchRedirect(url) {
   try {
-    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "manual" });
+    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     return {
       ok: response.status >= 300 && response.status < 400,
       status: response.status,
@@ -321,6 +322,7 @@ async function fetchMcp(method, params = undefined) {
           ...(params ? { params } : {}),
         }),
         redirect: "follow",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       const text = await response.text();
       const value = parseMcpResponseText(text);
@@ -951,16 +953,19 @@ async function liveMcpCheck() {
   const revenueConversionMcpSoRow = revenueConversionRows.find((row) => row.source === "mcp_so");
   const revenueConversionClineRow = revenueConversionRows.find((row) => row.source === "cline_mcp_marketplace");
   const buyerOrderHandoffRows = Array.isArray(buyerOrderHandoffs?.handoffs) ? buyerOrderHandoffs.handoffs : [];
-  const buyerOrderHandoffsOk =
-    buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R01" &&
-    buyerOrderHandoffs?.status === "buyer_reviewer_handoffs_ready" &&
-    buyerOrderHandoffs?.canonical_endpoint === MCP_ENDPOINT &&
-    buyerOrderHandoffs?.links?.buyer_order_handoffs_json === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
-    buyerOrderHandoffs?.links?.buyer_order_handoffs_markdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL &&
-    buyerOrderHandoffs?.links?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
-    buyerOrderHandoffs?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
-    buyerOrderHandoffRows.length >= 1 &&
-    buyerOrderHandoffRows.some(
+  const buyerOrderHandoffsDiagnostics = {
+    json_ok: buyerOrderHandoffsResult.ok,
+    markdown_ok: buyerOrderHandoffsMarkdownResult.ok,
+    html_ok: buyerOrderHandoffsHtmlResult.ok,
+    release: buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R01",
+    status: buyerOrderHandoffs?.status === "buyer_reviewer_handoffs_ready",
+    canonical_endpoint: buyerOrderHandoffs?.canonical_endpoint === MCP_ENDPOINT,
+    json_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_json === MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
+    markdown_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_markdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
+    html_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+    revenue_queue_link: buyerOrderHandoffs?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+    handoff_rows_present: buyerOrderHandoffRows.length >= 1,
+    mcp_so_handoff: buyerOrderHandoffRows.some(
       (row) =>
         row.source === "mcp_so" &&
         row.status === "buyer_checkout_needed" &&
@@ -969,24 +974,24 @@ async function liveMcpCheck() {
         row.source_preserving_cart_url?.includes("mcp_install_target=generic_streamable_http") &&
         row.copy_ready_buyer_request?.includes("only place the order if it is actually approved") &&
         row.suppression_rule?.includes("Do not count synthetic proof")
-    ) &&
-    buyerOrderHandoffRows.some(
+    ),
+    cline_handoff: buyerOrderHandoffRows.some(
       (row) =>
         row.source === "cline_mcp_marketplace" &&
         row.status === "buyer_checkout_needed" &&
         row.buyer_handoff_html_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
         row.source_preserving_cart_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
         row.source_preserving_cart_url?.includes("mcp_install_target=cline")
-    ) &&
-    buyerOrderHandoffsMarkdownResult.ok &&
-    buyerOrderHandoffsMarkdownResult.text.includes("Packrift MCP Buyer Order Handoffs") &&
-    buyerOrderHandoffsMarkdownResult.text.includes("mcp_so") &&
-    buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace") &&
-    buyerOrderHandoffsHtmlResult.ok &&
-    buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs") &&
-    buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request") &&
-    buyerOrderHandoffsHtmlResult.text.includes("mcp_so") &&
-    buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace");
+    ),
+    markdown_title: buyerOrderHandoffsMarkdownResult.text.includes("Packrift MCP Buyer Order Handoffs"),
+    markdown_mcp_so: buyerOrderHandoffsMarkdownResult.text.includes("mcp_so"),
+    markdown_cline: buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace"),
+    html_title: buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs"),
+    html_copy_ready: buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request"),
+    html_mcp_so: buyerOrderHandoffsHtmlResult.text.includes("mcp_so"),
+    html_cline: buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace"),
+  };
+  const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
   const revenueConversionRowsOk =
     revenueConversionRows.length >= 1 &&
     [revenueConversionMcpSoRow, revenueConversionClineRow].some(
@@ -3337,6 +3342,14 @@ async function liveMcpCheck() {
       activation_experiments_critical_count: activationExperiments?.critical_count ?? null,
       activation_experiments_html_status: activationExperimentsHtmlResult.status,
       activation_experiments_markdown_status: activationExperimentsMarkdownResult.status,
+      buyer_order_handoffs: {
+        status: buyerOrderHandoffsResult.status,
+        release: buyerOrderHandoffs?.release ?? null,
+        hub_status: buyerOrderHandoffs?.status ?? null,
+        handoff_count: buyerOrderHandoffRows.length,
+        sources: buyerOrderHandoffRows.map((row) => row.source),
+        diagnostics: buyerOrderHandoffsDiagnostics,
+      },
       agent_adoption_progress_release: agentAdoptionProgress?.release ?? null,
       agent_adoption_progress_status: agentAdoptionProgress?.status ?? null,
       agent_adoption_progress_html_status: agentAdoptionProgressHtmlResult.status,
