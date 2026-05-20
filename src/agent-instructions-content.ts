@@ -91,6 +91,8 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP activation experiments JSON: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments Markdown: https://mcp.packrift.com/ai/mcp-activation-experiments.md
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
+- MCP external activation selected-task JSONL: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl
+- MCP external activation selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv
 - MCP buyer use cases JSON: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
 - MCP cart activation JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json

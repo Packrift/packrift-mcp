@@ -415,6 +415,8 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
+- MCP external activation selected-task JSONL: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl
+- MCP external activation selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
