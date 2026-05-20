@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 const REPO_ROOT = process.cwd();
 const SNAPSHOT_PATH = resolve(REPO_ROOT, "outputs/mcp-funnel-snapshot/latest.json");
 const SNAPSHOT_MD_PATH = resolve(REPO_ROOT, "outputs/mcp-funnel-snapshot/latest.md");
+const SOURCE_ACTIVATION_QUEUE_URL =
+  "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250";
 const DEFAULT_OUT_DIR = "/Users/farhan/Downloads";
 const OUT_DIR = resolve(process.env.PACKRIFT_ATTRIBUTION_NOTE_DIR || DEFAULT_OUT_DIR);
 
@@ -80,6 +82,28 @@ function pct(numerator, denominator) {
 
 function yesNo(value) {
   return value ? "yes" : "no";
+}
+
+async function fetchJson(url, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    return await response.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function firstNumeric(...values) {
+  for (const value of values) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
 }
 
 function sourceMetricRows(csvRows, sourceMedium) {
@@ -184,11 +208,38 @@ function toolRows(snapshot) {
     : ["| none seen | 0 | 0 | n/a | 0 | 0 | USD $0.00 | no first-party MCP tool usage in snapshot |"];
 }
 
-function markdown(snapshot, paths) {
+function sourceActivationRows(sourceQueue) {
+  const rows = sourceQueue?.critical_actions ?? sourceQueue?.queue ?? [];
+  if (!rows.length) return ["| none | none | none | none | none | none |"];
+  return rows.slice(0, 8).map((row) => {
+    const counts = row.current_counts ?? {};
+    return `| ${row.source ?? "unknown"} | ${row.status ?? row.activation_status ?? "unknown"} | ${row.target_event_to_watch ?? "unknown"} | ${count(counts.mcp_tool_calls)} | ${count(counts.qualified_cart_landings)} | ${row.primary_action_url ?? row.buyer_handoff_url ?? ""} |`;
+  });
+}
+
+function eventAttributionRows(snapshot) {
+  const rows = snapshot.first_party_mcp?.top_event_attribution ?? [];
+  if (!rows.length) return ["| none | none | none | none | none | none | none | 0 |"];
+  return rows.slice(0, 12).map((row) => {
+    const [event, source, utmSource, utmMedium, utmCampaign, mcpKey, matchType, botFamily] = String(row.key ?? "").split("|");
+    return `| ${event || "unknown"} | ${source || "unknown"} | ${utmSource || "unknown"} | ${utmMedium || "unknown"} | ${utmCampaign || "unknown"} | ${mcpKey || "unknown"} | ${botFamily || matchType || "unknown"} | ${count(row.count)} |`;
+  });
+}
+
+function topList(rows, label) {
+  if (!rows?.length) return `- ${label}: none`;
+  return [
+    `- ${label}:`,
+    ...rows.slice(0, 8).map((row) => `  - ${row.key}: ${count(row.count)}`),
+  ].join("\n");
+}
+
+function markdown(snapshot, paths, sourceQueue = null) {
   const fp = snapshot.first_party_mcp ?? {};
   const metrics = snapshot.proof_metrics ?? {};
   const orders = snapshot.first_party_orders ?? {};
   const ga4 = snapshot.ga4 ?? {};
+  const sourceSnapshot = sourceQueue?.source_snapshot ?? {};
   const csvPath = ga4.output_dir ? resolve(ga4.output_dir, "packrift-ga4-ai_mcp_events.csv") : "";
   const csvRows = maybeReadCsv(csvPath);
   const mcpTool = sourceFunnel(snapshot, csvRows, "chatgpt-mcp / mcp_tool");
@@ -199,8 +250,18 @@ function markdown(snapshot, paths) {
   const generatedDate = dateStamp(snapshot.generated_at);
   const visitorThreshold = num(snapshot.agent_adoption_progress?.progress_bars?.monthly_ga4_qualified_visitors_1000?.threshold || 1000);
   const visitorRemaining = Math.max(0, visitorThreshold - num(metrics.qualified_external_mcp_session_starts));
-  const toolCallThreshold = num(snapshot.agent_adoption_progress?.progress_bars?.material_tool_usage_50?.threshold || 50);
-  const toolCallRemaining = Math.max(0, toolCallThreshold - num(fp.total_tool_calls));
+  const toolCallThreshold = firstNumeric(
+    sourceQueue?.agent_adoption_progress?.progress_bars?.material_tool_usage_50?.threshold,
+    sourceSnapshot.agent_adoption_progress?.progress_bars?.material_tool_usage_50?.threshold,
+    50
+  );
+  const materialToolCalls = firstNumeric(
+    sourceSnapshot.external_qualified_mcp_tool_calls,
+    sourceQueue?.agent_adoption_progress?.progress_bars?.material_tool_usage_50?.count,
+    sourceSnapshot.agent_adoption_progress?.progress_bars?.material_tool_usage_50?.count,
+    fp.total_tool_calls
+  );
+  const toolCallRemaining = Math.max(0, toolCallThreshold - materialToolCalls);
   const qualifiedCartLandings = num(metrics.qualified_external_cart_landings);
 
   return [
@@ -228,6 +289,7 @@ function markdown(snapshot, paths) {
     "| --- | ---: | ---: | --- |",
     `| First-party MCP discovery events | ${count(fp.mcp_discovery_events)} | n/a | tools/list, prompts/list, resources/list, resources/read |`,
     `| First-party MCP tool calls | ${count(fp.total_tool_calls)} | ${pct(fp.total_tool_calls, fp.mcp_discovery_events)} of discovery | top tool: ${(fp.top_tools ?? [])[0]?.key ?? "none"} |`,
+    `| External-qualified MCP tool calls | ${count(materialToolCalls)} | ${pct(materialToolCalls, toolCallThreshold)} of material-use gate | source activation queue basis; excludes self-generated proof traffic where classified |`,
     `| create_cart_url calls | ${count(fp.create_cart_url_calls)} | ${pct(fp.create_cart_url_calls, fp.total_tool_calls)} of tool calls | measured handoffs exist; now needs external volume and buyer-approved order proof |`,
     `| First-party cart clicks | ${count(fp.cart_clicks)} | ${pct(fp.cart_clicks, fp.create_cart_url_calls)} of create_cart_url calls | 0 means no measured clickthrough yet |`,
     `| First-party MCP cart landings | ${count(fp.mcp_cart_landings)} | ${pct(fp.mcp_cart_landings, fp.create_cart_url_calls)} of create_cart_url calls | explicit first-party /r/cart landing receipts |`,
@@ -257,17 +319,41 @@ function markdown(snapshot, paths) {
     "| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ...toolRows(snapshot),
     "",
+    "## Continuity Join Readiness",
+    "",
+    "These aggregate IDs are the bridge from MCP tool calls to cart landings and Shopify order attributes. No buyer identifiers or order rows are exposed here.",
+    "",
+    "| Event | Source | UTM source | UTM medium | Campaign | MCP key | Bot family | Count |",
+    "| --- | --- | --- | --- | --- | --- | --- | ---: |",
+    ...eventAttributionRows(snapshot),
+    "",
+    topList(fp.top_mcp_keys, "Top MCP keys"),
+    topList(fp.top_mcp_journeys, "Top MCP journeys"),
+    topList(fp.top_tool_mcp_keys, "Top tool MCP keys"),
+    topList(fp.top_packrift_ai_ids, "Top Packrift AI IDs"),
+    "",
+    "## Source Activation Queue",
+    "",
+    `Live queue release: ${sourceQueue?.release ?? "unavailable"}`,
+    `Live queue status: ${sourceQueue?.status ?? "unavailable"}`,
+    `External-qualified tool calls: ${count(materialToolCalls)} / ${count(toolCallThreshold)}`,
+    `Qualified visitor gap: ${count(sourceSnapshot.monthly_qualified_visitor_remaining ?? visitorRemaining)}`,
+    "",
+    "| Source | Status | Target event | Tool calls | Qualified cart landings | Next action URL |",
+    "| --- | --- | --- | ---: | ---: | --- |",
+    ...sourceActivationRows(sourceQueue),
+    "",
     "## What This Proves",
     "",
     `- Not proven yet: only ${count(metrics.qualified_external_mcp_session_starts)} qualified external MCP sessions, ${count(metrics.qualified_external_cart_landings)} qualified cart landings, ${count(orders.attributed_order_count)} MCP orders, and ${money(orders.attributed_revenue, currency)} MCP revenue.`,
     `- The non-MCP ChatGPT product-card path is already monetizing: ${count(chatgptFeed.add_to_cart)} add_to_cart, ${count(chatgptFeed.begin_checkout)} begin_checkout, ${count(chatgptFeed.purchase)} purchases, ${money(chatgptFeed.revenue, currency)} revenue from chatgpt.com / feed.`,
-    `- The live MCP surface is operational, but usage is still thin: ${count(fp.total_tool_calls)} tool calls and ${count(fp.create_cart_url_calls)} create_cart_url calls in the first-party snapshot.`,
+    `- The live MCP surface is operational, but usage is still thin: ${count(materialToolCalls)} external-qualified tool calls and ${count(fp.create_cart_url_calls)} create_cart_url calls in the first-party snapshot.`,
     `- The main measurement gap is tool-to-commerce joining: source-level GA4 shows ${count(mcpTool.add_to_cart)} add_to_cart and ${count(mcpTool.begin_checkout)} begin_checkout for chatgpt-mcp / mcp_tool, but the current snapshot does not prove which MCP tool caused those events.`,
     "",
     "## Current Blockers",
     "",
     `- No thousands-of-visitors proof: qualified external MCP sessions are ${count(metrics.qualified_external_mcp_session_starts)} / ${count(visitorThreshold)}; ${count(visitorRemaining)} more are needed.`,
-    `- Material MCP tool usage is still thin: ${count(fp.total_tool_calls)} / ${count(toolCallThreshold)} first-party MCP tool calls; ${count(toolCallRemaining)} more are needed for the material-usage gate.`,
+    `- Material MCP tool usage is still thin: ${count(materialToolCalls)} / ${count(toolCallThreshold)} external-qualified MCP tool calls; ${count(toolCallRemaining)} more are needed for the material-usage gate.`,
     qualifiedCartLandings > 0
       ? `- Cart-landing proof is visible (${count(qualifiedCartLandings)} qualified external cart landings), but it has not converted into a first-party MCP-attributed order.`
       : "- No qualified cart-landing proof yet: current raw cart-landing receipts are internal/synthetic or not externally qualified.",
@@ -298,15 +384,16 @@ function markdown(snapshot, paths) {
   ].join("\n");
 }
 
-function main() {
+async function main() {
   const snapshot = readJson(SNAPSHOT_PATH);
+  const sourceQueue = await fetchJson(SOURCE_ACTIVATION_QUEUE_URL);
   const stamp = dateStamp(snapshot.generated_at);
   mkdirSync(OUT_DIR, { recursive: true });
   const paths = {
     current: resolve(OUT_DIR, "packrift-mcp-attribution-funnel-current.md"),
     dated: resolve(OUT_DIR, `packrift-mcp-attribution-funnel-${stamp}.md`),
   };
-  const md = markdown(snapshot, paths);
+  const md = markdown(snapshot, paths, sourceQueue);
   writeFileSync(paths.current, md);
   writeFileSync(paths.dated, md);
   console.log(
@@ -317,6 +404,8 @@ function main() {
         dated: paths.dated,
         qualified_external_mcp_session_starts: snapshot.proof_metrics?.qualified_external_mcp_session_starts ?? null,
         qualified_external_cart_landings: snapshot.proof_metrics?.qualified_external_cart_landings ?? null,
+        external_qualified_mcp_tool_calls:
+          sourceQueue?.source_snapshot?.external_qualified_mcp_tool_calls ?? snapshot.first_party_mcp?.total_tool_calls ?? null,
         first_party_mcp_orders: snapshot.first_party_orders?.attributed_order_count ?? null,
       },
       null,
@@ -325,4 +414,7 @@ function main() {
   );
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
