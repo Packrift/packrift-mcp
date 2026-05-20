@@ -86,10 +86,12 @@ const DIRECT_STATUS = {
     next_action: "Send or update the PulseMCP support request with official-registry and public proof.",
   },
   mcpmarket_com: {
-    status: "manual_update_needed",
-    method: "Manual listing claim/update",
-    evidence: "Automated checks hit a Vercel checkpoint; use browser-side verification and the update flow.",
-    next_action: "Open the MCP Market listing/update flow in the browser and align it to the hosted endpoint and current server card.",
+    status: "email_draft_ready",
+    method: "Public Terms contact route after Vercel checkpoint blocked browser update flow",
+    evidence:
+      "Automated checks hit a Vercel checkpoint; MCP Market Terms lists hi@mcpmarketplace.com as the Sitka Labs contact address, so a review-ready draft is the safest available update path.",
+    next_action:
+      "Review and send the hi@mcpmarketplace.com draft with the hosted endpoint, current server card, and mcpmarket_com first-run proof.",
   },
   cursor_directory: {
     status: "auth_gated_manual",

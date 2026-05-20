@@ -309,16 +309,17 @@ const ACTIONS = [
   {
     id: "mcpmarket_com",
     label: "MCP Market",
-    action_status: "manual_update_needed",
+    action_status: "email_draft_ready",
     directory_status: "blocked",
     priority: "medium",
-    method: "Manual listing claim/update.",
-    evidence: "Automated checks hit a Vercel security checkpoint; use browser-side verification and update flow.",
-    stale_markers: ["checker blocked", "hosted endpoint/current server card not verified by automation"],
+    method: "Public Terms contact route after Vercel checkpoint blocked browser update flow.",
+    evidence:
+      "Automated checks hit a Vercel security checkpoint; MCP Market Terms lists hi@mcpmarketplace.com as the Sitka Labs contact address, so a review-ready draft is the safest available update path.",
+    stale_markers: ["checker blocked", "hosted endpoint/current server card not verified by automation", "submit page blocked by Vercel checkpoint"],
     recrawl_subject: "Update MCP Market Packrift MCP listing to current hosted endpoint",
-    next_action: "Open the MCP Market listing/update flow in the browser and align it to the hosted endpoint and current server card.",
+    next_action: "Review and send the hi@mcpmarketplace.com draft with the hosted endpoint, current server card, and mcpmarket_com first-run proof.",
     listing_url: "https://mcpmarket.com/server/packrift",
-    submission_url: "https://mcpmarket.com/submit",
+    submission_url: "mailto:hi@mcpmarketplace.com",
   },
   {
     id: "cursor_directory",
@@ -1099,7 +1100,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R46",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R47",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1174,7 +1175,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R15",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",

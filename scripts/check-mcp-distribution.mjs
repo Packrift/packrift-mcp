@@ -196,9 +196,9 @@ const SURFACE_GUIDANCE = {
   },
   mcpmarket_com: {
     listing_url: "https://mcpmarket.com/server/packrift",
-    submission_url: "https://mcpmarket.com/submit",
+    submission_url: "mailto:hi@mcpmarketplace.com",
     priority: "medium",
-    follow_up_action: "Use browser-side verification or the submit/update flow; automated checks hit a Vercel checkpoint.",
+    follow_up_action: "Review and send the hi@mcpmarketplace.com draft because the browser submit/update flow hits a Vercel checkpoint.",
   },
   cursor_directory: {
     listing_url: "https://cursor.directory/",
@@ -256,6 +256,8 @@ const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activati
 const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.md";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
@@ -525,6 +527,8 @@ async function liveMcpCheck() {
     externalActivationBriefResult,
     externalActivationBriefMarkdownResult,
     externalActivationBriefHtmlResult,
+    externalActivationBriefTasksJsonlResult,
+    externalActivationBriefTasksCsvResult,
     externalActivationBriefRunnerResult,
     activationCommandCenterResult,
     agentAdoptionProgressResult,
@@ -659,6 +663,8 @@ async function liveMcpCheck() {
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL),
+    fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL),
+    fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json"),
@@ -759,6 +765,9 @@ async function liveMcpCheck() {
   const externalActivationBrief = externalActivationBriefResult.ok ? JSON.parse(externalActivationBriefResult.text) : null;
   const activationWaveTaskRows = activationWaveTasksJsonlResult.ok
     ? activationWaveTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
+    : [];
+  const externalActivationBriefTaskRows = externalActivationBriefTasksJsonlResult.ok
+    ? externalActivationBriefTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
     : [];
   const agentAdoptionProgress = agentAdoptionProgressResult.ok ? JSON.parse(agentAdoptionProgressResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
@@ -1148,6 +1157,8 @@ async function liveMcpCheck() {
     MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
     MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL,
     MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+    MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+    MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
     MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
   ];
   const liveMcpFailureDiagnostics = {
@@ -1266,6 +1277,9 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       serverCard?.registry_distribution?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       serverCard?.registry_distribution?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      serverCard?.registry_distribution?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      serverCard?.registry_distribution?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      serverCard?.registry_distribution?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       serverCard?.registry_distribution?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
       serverCard?.registry_distribution?.automation_workflows_html === MCP_AUTOMATION_WORKFLOWS_HTML_URL &&
       serverCard?.registry_distribution?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
@@ -1284,8 +1298,13 @@ async function liveMcpCheck() {
       serverCard?.resource_links?.mcpBuyerOrderHandoffsMarkdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL &&
       serverCard?.resource_links?.mcpBuyerOrderHandoffsHtml === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       serverCard?.resource_links?.mcpActivationWaveRunnerShell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
+      serverCard?.resource_links?.mcpActivationWaveTasksJsonl === MCP_ACTIVATION_WAVE_TASKS_JSONL_URL &&
+      serverCard?.resource_links?.mcpActivationWaveTasksCsv === MCP_ACTIVATION_WAVE_TASKS_CSV_URL &&
       serverCard?.resource_links?.mcpExternalActivationBriefJson === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       serverCard?.resource_links?.mcpExternalActivationBriefHtml === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      serverCard?.resource_links?.mcpExternalActivationBriefTasksJsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      serverCard?.resource_links?.mcpExternalActivationBriefTasksCsv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      serverCard?.resource_links?.mcpExternalActivationBriefRunnerShell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
@@ -1344,6 +1363,8 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_HTML_URL) &&
@@ -1400,6 +1421,8 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       mcpToolsDiscovery?.conversion_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      mcpToolsDiscovery?.conversion_urls?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      mcpToolsDiscovery?.conversion_urls?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
       mcpToolsDiscovery?.conversion_urls?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.automation_workflows_html === MCP_AUTOMATION_WORKFLOWS_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
@@ -2570,6 +2593,8 @@ async function liveMcpCheck() {
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       externalActivationBrief?.proof_urls?.external_activation_brief_json === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       externalActivationBrief?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      externalActivationBrief?.proof_urls?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      externalActivationBrief?.proof_urls?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
       externalActivationBrief?.proof_urls?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       externalActivationBrief?.proof_urls?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       externalActivationBrief?.external_runner?.selected_contact_ready?.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
@@ -2585,6 +2610,22 @@ async function liveMcpCheck() {
         activationWave?.source_snapshot?.first_party_mcp_orders &&
       externalActivationBrief?.selected_external_run_count >= activationWave?.tool_call_gap?.required_sources_to_clear_gate &&
       externalActivationBrief?.selected_external_runs?.length === externalActivationBrief?.selected_external_run_count &&
+      externalActivationBriefTaskRows.length === externalActivationBrief?.selected_external_run_count &&
+      externalActivationBriefTasksJsonlResult.ok &&
+      externalActivationBriefTasksJsonlResult.text.includes("one_command_external_runner") &&
+      externalActivationBriefTasksJsonlResult.text.includes("review_handoff_primary_surface") &&
+      externalActivationBriefTaskRows.every(
+        (task) =>
+          task.release === externalActivationBrief?.release &&
+          task.source &&
+          task.tracked_first_run_shell_url?.includes("format=sh") &&
+          task.one_command_external_runner?.includes("/r/run/") &&
+          task.review_handoff_primary_surface &&
+          task.success_gate?.includes("external-qualified MCP tool calls")
+      ) &&
+      externalActivationBriefTasksCsvResult.ok &&
+      externalActivationBriefTasksCsvResult.text.includes("selected_rank,source,preferred_target") &&
+      externalActivationBriefTasksCsvResult.text.includes("review_handoff_primary_surface") &&
       externalActivationBrief?.selection_rule?.includes("handoff readiness") &&
       externalActivationBrief?.selected_external_runs?.every(
         (task) =>
@@ -2625,12 +2666,16 @@ async function liveMcpCheck() {
       externalActivationBriefMarkdownResult.text.includes("Packrift MCP External Activation Brief") &&
       externalActivationBriefMarkdownResult.text.includes("External Runner") &&
       externalActivationBriefMarkdownResult.text.includes("Selected-runs runner") &&
+      externalActivationBriefMarkdownResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
+      externalActivationBriefMarkdownResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL) &&
       externalActivationBriefMarkdownResult.text.includes("Reviewer handoff") &&
       externalActivationBriefMarkdownResult.text.includes("Copy-Ready Requests") &&
       externalActivationBriefMarkdownResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL) &&
       externalActivationBriefHtmlResult.ok &&
       externalActivationBriefHtmlResult.text.includes("Packrift MCP External Activation Brief") &&
       externalActivationBriefHtmlResult.text.includes("Guarded selected-runs runner") &&
+      externalActivationBriefHtmlResult.text.includes("JSONL tasks") &&
+      externalActivationBriefHtmlResult.text.includes("CSV tasks") &&
       externalActivationBriefHtmlResult.text.includes("Full activation wave") &&
       externalActivationBriefHtmlResult.text.includes("Reviewer surface") &&
       externalActivationBriefRunnerResult.ok &&
@@ -2843,13 +2888,16 @@ async function liveMcpCheck() {
       directoryRefresh?.recrawl_request?.includes("mcp-activation-wave.json") &&
       directoryRefresh?.recrawl_request?.includes("mcp-tools.json") &&
       directoryRefresh?.recrawl_request?.includes(".well-known/mcp-marketplace.json") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R46" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R47" &&
       directorySubmitActions?.source_mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       directorySubmitActions?.actions?.length >= 28 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory" && action.action_status === "auth_gated_manual") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_marketplace_io" && action.action_status === "recrawl_needed") &&
+      directorySubmitActions?.actions?.some(
+        (action) => action.id === "mcpmarket_com" && action.action_status === "email_draft_ready" && action.submission_url === "mailto:hi@mcpmarketplace.com"
+      ) &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcplist_ai" && action.action_status === "email_draft_ready") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcphubz" && action.action_status === "login_required_contact_broken") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_blue" && action.action_status === "parked_domain_blocked") &&
@@ -2990,7 +3038,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_activation_queue_runtime?.row_count > 0 &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.source_activation_state?.target_event_to_watch === "mcp_attributed_order" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html") &&
       directorySubmitActions?.actions?.some((action) => action.id === "glama_connector" && action.source_activation_state?.target_event_to_watch === "mcp_tool_call" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/activate/glama_connector?format=html") &&
-      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14" &&
+      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R15" &&
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
       directoryUpdateCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       directoryUpdateCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
@@ -3018,13 +3066,13 @@ async function liveMcpCheck() {
       directoryUpdateClineMarkdownResult.text.includes("Copy-Ready Concise Email") &&
       directoryUpdateClineMarkdownResult.text.includes("Live tool discovery JSON") &&
       directoryUpdateClineMarkdownResult.text.includes("cline_mcp_marketplace") &&
-      directoryUpdateGlamaServer?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14" &&
+      directoryUpdateGlamaServer?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R15" &&
       directoryUpdateGlamaServer?.source === "glama_server_listing" &&
       directoryUpdateGlamaServer?.source_release_readiness?.status === "ready_for_glama_admin_release" &&
       directoryUpdateGlamaServer?.source_release_readiness?.docker_readiness?.tools_list_without_token === true &&
       directoryUpdateGlamaServer?.source_release_readiness?.docker_readiness?.expected_resources_min >= 600 &&
       directoryUpdateGlamaServer?.source_release_readiness?.admin_steps?.some((step) => String(step).includes("release/sync")) &&
-      directoryUpdatePunkpeye?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14" &&
+      directoryUpdatePunkpeye?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R15" &&
       directoryUpdatePunkpeye?.source === "punkpeye_awesome_mcp" &&
       directoryUpdatePunkpeye?.source_release_readiness?.status === "blocked_by_glama_source_quality" &&
       directoryUpdateMcpSo?.source === "mcp_so" &&
@@ -3168,7 +3216,7 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.activation_readiness?.suppressions?.some((rule) => String(rule).includes("Do not count Packrift self-checks")) &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Activation proof loop") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R26" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R27" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreachHtml.includes("Packrift Agent Capture Outreach") &&
       agentCaptureOutreachHtml.includes("Use This, Not A Duplicate Surface") &&
@@ -3181,8 +3229,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
       agentCaptureOutreach?.directory_refreshes?.every((action) => action.concise_email?.release === "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R01") &&
       agentCaptureOutreach?.directory_refreshes?.some((action) => action.id === "glama_server_listing" && action.source_release_readiness?.status === "ready_for_glama_admin_release") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R26" &&
-      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R46" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R27" &&
+      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R47" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
@@ -3301,6 +3349,8 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
       resourceUris.has(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
