@@ -81,7 +81,9 @@ Use these as examples of exact product families that converted, not as universal
 - [Top 1,000 AI-sales SKU CSV](https://mcp.packrift.com/ai/top-1000-ai-sales-skus.csv): spreadsheet-friendly version of the focused AI-sales index
 - [Top 1,000 SKU page sitemap](https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml): crawl map for per-SKU markdown and JSON pages such as https://mcp.packrift.com/ai/sku/1066.md
 - [All AI-approved SKU page sitemap](https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml): crawl map for every AI_APPROVE SKU markdown and JSON page
-- [OpenAI stable product feed TSV](https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv): flat strict 4,745-row product snapshot shaped for OpenAI file-upload QA
+- [OpenAI strict public product feed TSV](https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv): conservative 3,392-row OpenAI-shaped product-feed QA surface
+- [OpenAI preferred direct product feed TSV](https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv): current 4,835-row validated direct handoff with 0 simulated rejects or warnings
+- [OpenAI preferred direct product feed GZIP](https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz): compressed 4,835-row direct handoff for approved file-upload, SFTP, or API ingestion
 - [Exact-spec catalog overview](https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md): crawlable corpus map and family coverage
 - [AI packaging procurement prompts](https://mcp.packrift.com/ai/packaging-procurement-prompts.md): exact-spec prompt patterns for buyers and procurement agents
 - [AI sales critical path](https://mcp.packrift.com/ai/ai-sales-critical-path.md): buyer-critical MCP, product, reorder, quote, and no-match routes

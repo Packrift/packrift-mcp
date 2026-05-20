@@ -39,6 +39,12 @@ export const serverCard = {
     topAiSalesSkus: "https://mcp.packrift.com/ai/top-1000-ai-sales-skus.md",
     topAiSalesSkusCsv: "https://mcp.packrift.com/ai/top-1000-ai-sales-skus.csv",
     topAiSalesSkuSitemap: "https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml",
+    openaiStrictPublicProductFeedTsv:
+      "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv",
+    openaiPreferredDirectProductFeedTsv:
+      "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv",
+    openaiPreferredDirectProductFeedGzip:
+      "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz",
     skuPageTemplate: "https://mcp.packrift.com/ai/sku/{sku}.md",
     skuJsonTemplate: "https://mcp.packrift.com/ai/sku/{sku}.json",
     exactSpecCatalog: "https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md",

@@ -436,7 +436,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Top 1,000 SKU page sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU page sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
 - Example SKU page: https://mcp.packrift.com/ai/sku/1066.md
-- OpenAI stable product feed TSV: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
+- OpenAI strict public product feed TSV, conservative 3,392-row OpenAI-shaped QA surface: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
+- OpenAI preferred direct product feed TSV, current 4,835-row validated direct handoff with 0 simulated rejects or warnings: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv
+- OpenAI preferred direct product feed GZIP, compressed 4,835-row direct handoff for approved file-upload, SFTP, or API ingestion: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz
 - Exact-spec catalog overview: https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md
 - Shopify native UCP commerce surface: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
 - Agent endpoints status: https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json

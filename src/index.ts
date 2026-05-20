@@ -8072,7 +8072,7 @@ async function storefrontPassThrough(request: Request, env: Env): Promise<Respon
   return new Response(updated, { status: response.status, statusText: response.statusText, headers });
 }
 
-const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string }> = {
+const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string; bodyType?: "text" | "arrayBuffer" }> = {
   "/ai/packrift-exact-spec-packaging-catalog.md": {
     key: "ai/packrift-exact-spec-packaging-catalog.md",
     contentType: "text/markdown; charset=utf-8",
@@ -8104,6 +8104,24 @@ const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string }> = {
   "/ai/packrift-openai-products-strict-stable-current.tsv": {
     key: "ai/packrift-openai-products-strict-stable-current.tsv",
     contentType: "text/tab-separated-values; charset=utf-8",
+  },
+  "/ai/packrift-openai-products-preferred-direct-current.tsv": {
+    key: "ai/packrift-openai-products-preferred-direct-current.tsv",
+    contentType: "text/tab-separated-values; charset=utf-8",
+  },
+  "/ai/packrift-openai-products-preferred-direct-current.tsv.gz": {
+    key: "ai/packrift-openai-products-preferred-direct-current.tsv.gz",
+    contentType: "application/gzip",
+    bodyType: "arrayBuffer",
+  },
+  "/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv": {
+    key: "ai/packrift-openai-products-preferred-direct-4835-20260519.tsv",
+    contentType: "text/tab-separated-values; charset=utf-8",
+  },
+  "/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv.gz": {
+    key: "ai/packrift-openai-products-preferred-direct-4835-20260519.tsv.gz",
+    contentType: "application/gzip",
+    bodyType: "arrayBuffer",
   },
   "/ai/openai-products.tsv": {
     key: "ai/packrift-openai-products-strict-stable-current.tsv",
@@ -8289,8 +8307,10 @@ const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string }> = {
 
 const EMPTY_OK_AI_CORPUS_KEYS = new Set(["ai/tag-sizes.jsonl", "ai/waste-containment-sizes.jsonl"]);
 
-function aiCorpusBodyIsLoaded(route: { key: string }, body: string | null): boolean {
-  return body !== null && (body.length > 0 || EMPTY_OK_AI_CORPUS_KEYS.has(route.key));
+function aiCorpusBodyIsLoaded(route: { key: string }, body: string | ArrayBuffer | null): boolean {
+  if (body === null) return false;
+  const size = typeof body === "string" ? body.length : body.byteLength;
+  return size > 0 || EMPTY_OK_AI_CORPUS_KEYS.has(route.key);
 }
 
 const AI_SALES_PRIORITY_SKUS = ["1066", "LL251WR", "MFL1295"] as const;
@@ -8411,6 +8431,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml",
   "https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml",
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv",
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv",
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv",
   "https://mcp.packrift.com/ai/corrugated-box-sizes.jsonl",
   "https://mcp.packrift.com/ai/mailer-sizes.jsonl",
   "https://mcp.packrift.com/ai/label-sizes.jsonl",
@@ -8551,6 +8573,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/top-1000-ai-sales-sitemap.xml": "Crawl map for top AI-sales SKU-level markdown pages.",
   "/ai/all-ai-approved-sku-sitemap.xml": "Full crawl map for every AI_APPROVE SKU-level markdown and JSON page.",
   "/ai/packrift-openai-products-strict-stable-current.tsv": "Strict stable OpenAI-shaped product snapshot for QA.",
+  "/ai/packrift-openai-products-preferred-direct-current.tsv": "Current preferred direct OpenAI-shaped product feed handoff for access review.",
+  "/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv": "Immutable 4,835-row preferred direct OpenAI-shaped product feed handoff from the 2026-05-19 validation packet.",
   "/ai/corrugated-box-sizes.jsonl": "AI-approved corrugated boxes by exact spec.",
   "/ai/mailer-sizes.jsonl": "AI-approved mailers by exact spec.",
   "/ai/label-sizes.jsonl": "AI-approved labels by exact spec.",
@@ -12004,7 +12028,10 @@ app.get("/ai/*", async (c) => {
     return c.json({ error: "not_found", message: "Unknown Packrift AI corpus file." }, 404, RAW_HEADERS);
   }
 
-  const body = await c.env.CATALOG_CACHE.get(route.key, "text");
+  const body =
+    route.bodyType === "arrayBuffer"
+      ? await c.env.CATALOG_CACHE.get(route.key, "arrayBuffer")
+      : await c.env.CATALOG_CACHE.get(route.key, "text");
   if (!aiCorpusBodyIsLoaded(route, body)) {
     return c.json(
       {

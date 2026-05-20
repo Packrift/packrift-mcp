@@ -238,6 +238,16 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
+  "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL =
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL =
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_URL =
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv.gz";
 
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
@@ -402,6 +412,11 @@ async function liveMcpCheck() {
     marketplaceManifestResult,
     llmsTxtResult,
     llmsFullTxtResult,
+    strictPublicProductFeedResult,
+    preferredDirectProductFeedResult,
+    preferredDirectProductFeedGzipResult,
+    preferredDirectProductFeedImmutableResult,
+    preferredDirectProductFeedImmutableGzipResult,
     trackedConfigGenericResult,
     trackedInstallCodexResult,
     trackedInstallCodexHtmlResult,
@@ -498,6 +513,11 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/.well-known/mcp-marketplace.json"),
     fetchText("https://mcp.packrift.com/llms.txt"),
     fetchText("https://mcp.packrift.com/llms-full.txt"),
+    fetchText(OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL),
+    fetchText(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL),
+    fetchText(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL),
+    fetchText(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL),
+    fetchText(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_URL),
     fetchText("https://mcp.packrift.com/r/config/generic?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=text&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/install/generic/codex?format=html&utm_content=distribution_check"),
@@ -666,6 +686,22 @@ async function liveMcpCheck() {
   const sourceRunResourceShellText = sourceRunResourceShellResult.value?.result?.contents?.[0]?.text ?? "";
   const sourceRunResourceMarkdownText = sourceRunResourceMarkdownResult.value?.result?.contents?.[0]?.text ?? "";
   const sourceActivateResourceShellText = sourceActivateResourceShellResult.value?.result?.contents?.[0]?.text ?? "";
+  const strictPublicProductFeedOk =
+    strictPublicProductFeedResult.ok &&
+    strictPublicProductFeedResult.text.startsWith("is_eligible_search\tis_eligible_checkout\titem_id\t");
+  const preferredDirectProductFeedOk =
+    preferredDirectProductFeedResult.ok &&
+    preferredDirectProductFeedResult.text.startsWith("is_eligible_search\tis_eligible_checkout\titem_id\tgtin\t") &&
+    preferredDirectProductFeedResult.text.includes("\n");
+  const preferredDirectProductFeedGzipOk =
+    preferredDirectProductFeedGzipResult.ok && preferredDirectProductFeedGzipResult.text.charCodeAt(0) === 0x1f;
+  const preferredDirectProductFeedImmutableOk =
+    preferredDirectProductFeedImmutableResult.ok &&
+    preferredDirectProductFeedImmutableResult.text.startsWith("is_eligible_search\tis_eligible_checkout\titem_id\tgtin\t") &&
+    preferredDirectProductFeedImmutableResult.text.includes("\n");
+  const preferredDirectProductFeedImmutableGzipOk =
+    preferredDirectProductFeedImmutableGzipResult.ok &&
+    preferredDirectProductFeedImmutableGzipResult.text.charCodeAt(0) === 0x1f;
   const promptsCount = promptsResult.value?.result?.prompts?.length ?? 0;
   const sourceActivationCriticalActions = Array.isArray(sourceActivationQueue?.critical_actions) ? sourceActivationQueue.critical_actions : [];
   const sourceActivationCriticalActionsOk =
@@ -794,6 +830,9 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.tracked_reviewer_activation_html_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
+      serverCard?.resources?.openaiStrictPublicProductFeedTsv === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL &&
+      serverCard?.resources?.openaiPreferredDirectProductFeedTsv === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL &&
+      serverCard?.resources?.openaiPreferredDirectProductFeedGzip === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
@@ -843,6 +882,9 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.html") &&
+      resourceUris.has(OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL) &&
+      resourceUris.has(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
+      resourceUris.has(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.md") &&
@@ -899,6 +941,11 @@ async function liveMcpCheck() {
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-queue.json") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      strictPublicProductFeedOk &&
+      preferredDirectProductFeedOk &&
+      preferredDirectProductFeedGzipOk &&
+      preferredDirectProductFeedImmutableOk &&
+      preferredDirectProductFeedImmutableGzipOk &&
       marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 35 &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
@@ -920,10 +967,14 @@ async function liveMcpCheck() {
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/run/{source}/{target}") &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
+      llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL) &&
       llmsFullTxtResult.ok &&
       llmsFullTxtResult.text.includes("Tracked MCP first-run template: https://mcp.packrift.com/r/run/{source}/{target}") &&
       llmsFullTxtResult.text.includes("MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       llmsFullTxtResult.text.includes("Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
+      llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL) &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       start?.start_urls?.source_aware_html_template === "https://mcp.packrift.com/start?utm_source={source}" &&
       start?.start_urls?.tracked_config_template === "https://mcp.packrift.com/r/config/{source}" &&
