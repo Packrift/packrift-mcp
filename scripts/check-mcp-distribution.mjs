@@ -1136,6 +1136,24 @@ async function liveMcpCheck() {
       trackedOrderCline?.mcp_install_target === "cline" &&
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http",
+    agent_capture:
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R26" &&
+      (agentCapture?.operating_rules ?? []).some(
+        (rule) =>
+          /OpenAI\/ChatGPT/.test(rule) &&
+          /LangChain/.test(rule) &&
+          /n8n/.test(rule) &&
+          /MCP Inspector/.test(rule) &&
+          /Goose/.test(rule) &&
+          /major MCP directories/.test(rule)
+      ),
+    runtime_source_inference:
+      marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 65 &&
+      usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
+      usageSnapshot?.runtime_source_inference?.rule_count >= 65 &&
+      funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
+      funnelSnapshot?.runtime_source_inference?.rule_count >= 65,
     agent_progress:
       agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       agentAdoptionProgressHtmlResult.ok,
@@ -1351,11 +1369,15 @@ async function liveMcpCheck() {
       preferredDirectProductFeedImmutableOk &&
       preferredDirectProductFeedImmutableGzipOk &&
       marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
-      marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 35 &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 65 &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "n8n_automation") &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "mcp_inspector") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "goose_agent") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "sourcegraph_cody") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "official_registry") &&
+      marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "mcpservers_org") &&
       marketplaceManifest?.discovery?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
@@ -1470,7 +1492,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R25" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R26" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
       agentCapture?.counts?.agent_host_fast_paths >= 12 &&
@@ -1773,10 +1795,12 @@ async function liveMcpCheck() {
       usageSnapshot?.runtime?.default_public_event_limit === 500 &&
       usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=1000") &&
       usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
-      usageSnapshot?.runtime_source_inference?.rule_count >= 35 &&
+      usageSnapshot?.runtime_source_inference?.rule_count >= 65 &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "n8n_automation") &&
+      usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "goose_agent") &&
+      usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "mcpservers_org") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_agent_host_rollout") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
@@ -1893,8 +1917,10 @@ async function liveMcpCheck() {
       funnelSnapshot?.runtime?.default_public_event_limit === 1000 &&
       funnelSnapshot?.runtime?.default_public_event_lookback_days === 2 &&
       funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
-      funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
+      funnelSnapshot?.runtime_source_inference?.rule_count >= 65 &&
       funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
+      funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "goose_agent") &&
+      funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "official_registry") &&
       funnelSnapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       typeof ga4FunnelProof?.visitor_goal?.qualified_external_mcp_session_starts === "number" &&

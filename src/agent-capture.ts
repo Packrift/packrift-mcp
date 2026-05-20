@@ -820,7 +820,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R25",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R26",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -888,7 +888,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
       "Use stdio_mcp_remote with npx mcp-remote only as a thin bridge for MCP hosts that cannot connect to remote HTTP directly.",
       "Use /r/run/{source}/{target} after install to measure first-run intent and push users into create_cart_url.",
-      "When a direct MCP client skips tracked config, infer source attribution from recognizable user-agent families such as Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, or generic MCP clients.",
+      "When a direct MCP client skips tracked config, infer source attribution from recognizable request signals such as User-Agent, Referer, Origin, X-MCP-Client, and X-Client-Name. Covered families include Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, Goose, Sourcegraph Cody, Aider, Msty, LM Studio, Ollama, AnythingLLM, Lovable, Manus, major MCP directories, and generic MCP clients.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
       "Use /r/activate/{source}?format=sh when an external reviewer or agent host prefers a shell runner that performs real JSON-RPC tools/list and tools/call requests against the hosted MCP endpoint.",
       "Use /ai/mcp-revenue-conversion-queue.json only after a source has real MCP tool-call and qualified /r/cart landing proof; do not count queue views, shell runners, or self-opened carts as order proof.",
