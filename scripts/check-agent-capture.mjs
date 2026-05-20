@@ -148,6 +148,7 @@ async function main() {
     "mcp_funnel_snapshot",
     "mcp_ga4_funnel_proof",
     "mcp_source_activation_queue",
+    "mcp_revenue_conversion_queue",
     "mcp_activation_experiments",
     "buyer_mcp_use_cases",
     "mcp_cart_activation",
@@ -200,6 +201,7 @@ async function main() {
     "funnel snapshot",
     "GA4 proof",
     "source activation queue",
+    "revenue conversion queue",
     "activation experiments",
     "agent host rollout",
     "command center",
@@ -236,7 +238,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R23", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R24", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -362,6 +364,9 @@ async function main() {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises source activation queue", hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-queue.html") && hasResourceUri(resourceUris, "/ai/mcp-source-activation-sitemap.xml") && hasResourceUri(resourceUris, "/r/activate"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises revenue conversion queue", hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.html"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises activation experiments", hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.html"), {

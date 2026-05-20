@@ -3385,6 +3385,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
     "mcp_first_run_proof",
     "mcp_workflow_gallery",
     "mcp_automation_workflows",
+    "mcp_revenue_conversion_queue",
     "mcp_eval_pack",
     "browser_agent_bridge",
     "browserbase_browse_skill_pack",
@@ -3507,6 +3508,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
       workflow_gallery_resource_events: bySource.mcp_workflow_gallery ?? 0,
       automation_workflows_resource_events: bySource.mcp_automation_workflows ?? 0,
+      revenue_conversion_queue_resource_events: bySource.mcp_revenue_conversion_queue ?? 0,
       eval_pack_resource_events: bySource.mcp_eval_pack ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
       funnel_snapshot_resource_events: bySource.mcp_funnel_snapshot ?? 0,
@@ -3966,7 +3968,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -5057,7 +5059,7 @@ function sourceActivationOrderConversionHandoff(
     attribution_rule:
       "Source-specific order proof should prefer packrift_mcp_source_context, then fall back to source parsed from mcp_journey, result set, Packrift AI IDs, or UTM fields.",
     suppression_rule:
-      "Do not count synthetic proof, shell-runner-only proof, or Packrift self-opened carts as an MCP-attributed order. The order must come from a buyer, reviewer, or real MCP host user completing Shopify checkout.",
+      "Do not count synthetic proof, shell runner only proof, or Packrift self-opened carts as an MCP-attributed order. The order must come from a buyer, reviewer, or real MCP host user completing Shopify checkout.",
   };
 }
 
@@ -5504,6 +5506,9 @@ async function mcpSourceActivationQueuePayload(
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_markdown: "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      revenue_conversion_queue_json: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+      revenue_conversion_queue_markdown: MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
+      revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       source_activation_queue_operator_json: publicMcpSnapshotUrl(
         "/ai/mcp-source-activation-queue.json",
         PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
@@ -5605,6 +5610,8 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     `- HTML command center: ${payload.links.activation_command_center}`,
     `- Source activation queue HTML: ${payload.links.source_activation_queue_html}`,
+    `- Revenue conversion queue: ${payload.links.revenue_conversion_queue_json}`,
+    `- Revenue conversion queue HTML: ${payload.links.revenue_conversion_queue_html}`,
     `- Activation experiments: ${payload.links.activation_experiments_json}`,
     `- Activation experiments HTML: ${payload.links.activation_experiments_html}`,
     `- Activation wave: ${payload.links.activation_wave_json}`,
@@ -5815,6 +5822,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
       <div class="links">
         <a href="${escapeHtml(payload.links.source_activation_queue_json)}">JSON</a>
         <a href="${escapeHtml(payload.links.source_activation_queue_markdown)}">Markdown</a>
+        <a href="${escapeHtml(payload.links.revenue_conversion_queue_html)}">Revenue queue</a>
         <a href="${escapeHtml(payload.links.activation_experiments_html)}">Experiments</a>
         <a href="${escapeHtml(payload.links.activation_wave_html)}">Activation wave</a>
         <a href="${escapeHtml(payload.links.source_activation_queue_operator_json)}">Full operator queue</a>
@@ -5824,6 +5832,374 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
       </div>
     </header>
     <section class="queue">${queueCards || "<p>No priority source rows are waiting right now.</p>"}</section>
+  </main>
+</body>
+</html>`;
+}
+
+function revenueConversionQueueNextAction(row: SourceActivationExperimentQueueRow): string {
+  if (row.order_conversion_handoff) {
+    return "Send the source-preserving buyer handoff to a real buyer, reviewer, or procurement flow. Completion requires Shopify/GA4 order or revenue proof with MCP attribution, not another tool run.";
+  }
+  return "Keep source activation moving until both real MCP tool calls and qualified /r/cart landing proof exist, then use the buyer/reviewer handoff for checkout follow-through.";
+}
+
+function revenueConversionQueueRows(rows: SourceActivationExperimentQueueRow[]) {
+  return rows
+    .filter((row) => row.target_event_to_watch === "mcp_attributed_order" || Boolean(row.order_conversion_handoff))
+    .map((row, index) => {
+      const conversion = row.order_conversion_handoff;
+      const preview = row.source_order_handoff;
+      const handoff = conversion ?? preview;
+      const buyerActionUrl = conversion?.buyer_action_url ?? preview?.buyer_action_url ?? row.cart_landing_action_url;
+      const measuredCartUrl = conversion?.measured_cart_url ?? row.recent_measured_cart_urls[0] ?? null;
+      const sourcePreservingCartUrl = conversion?.fallback_source_preserving_cart_url ?? preview?.buyer_action_url ?? buyerActionUrl;
+      const product = conversion?.product ?? preview?.product ?? sourceActivationOrderHandoffProduct();
+      return {
+        revenue_rank: index + 1,
+        source: row.source,
+        priority: row.priority,
+        priority_score: row.priority_score,
+        current_stage: row.current_stage,
+        preferred_target: row.preferred_target,
+        status: conversion ? "buyer_checkout_needed" : "buyer_reviewer_handoff_available",
+        target_event_to_watch: row.target_event_to_watch,
+        recommended_action: row.recommended_action,
+        next_action: revenueConversionQueueNextAction(row),
+        external_activation_required: true,
+        source_aware_endpoint: row.source_aware_endpoint,
+        source_specific_first_run_url: row.tracked_first_run_url,
+        source_specific_first_run_shell_url: row.tracked_first_run_shell_url,
+        reviewer_activation_shell_url: row.reviewer_activation_shell_url,
+        one_command_external_runner: row.one_command_external_runner,
+        buyer_handoff_url: handoff?.buyer_handoff_url ?? null,
+        buyer_handoff_json_url: handoff?.buyer_handoff_json_url ?? null,
+        buyer_handoff_markdown_url: handoff?.buyer_handoff_markdown_url ?? null,
+        buyer_action_url: buyerActionUrl,
+        cart_landing_action_url: buyerActionUrl,
+        measured_cart_url: measuredCartUrl,
+        measured_cart_url_source_preserving: conversion?.measured_cart_url_source_preserving ?? null,
+        source_preserving_cart_url: sourcePreservingCartUrl,
+        previous_measured_cart_urls: row.recent_measured_cart_urls,
+        product,
+        copy_ready_buyer_request:
+          conversion?.copy_ready_buyer_request ??
+          sourceActivationOrderHandoffPayload(row.source, row.preferred_target).copy_ready_messages.buyer_request,
+        copy_ready_reviewer_request:
+          conversion?.copy_ready_reviewer_request ??
+          sourceActivationOrderHandoffPayload(row.source, row.preferred_target).copy_ready_messages.reviewer_request,
+        proof_gate: conversion?.proof_gate ?? "first_party_mcp_orders > 0 or first_party_mcp_order_revenue > 0 with source-preserving MCP cart attributes",
+        order_proof_watch: conversion?.order_proof_watch ?? "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+        required_shopify_cart_attributes:
+          conversion?.required_shopify_cart_attributes ?? preview?.required_shopify_cart_attributes ?? [],
+        attribution_rule:
+          conversion?.attribution_rule ??
+          "Source-specific order proof should prefer packrift_mcp_source_context, then fall back to source parsed from mcp_journey, result set, Packrift AI IDs, or UTM fields.",
+        suppression_rule:
+          conversion?.suppression_rule ??
+          "Do not count this revenue queue row, a page view, a shell runner, or a self-opened cart as order proof. Only buyer/reviewer Shopify checkout evidence can close the revenue gate.",
+        acceptance_criteria: [
+          `Source remains attributed as ${row.source}.`,
+          "Buyer or reviewer opens the source-preserving MCP /r/cart handoff after live price, inventory, shipping, tax, final total, and approval checks.",
+          "Shopify order or GA4 purchase evidence preserves packrift_mcp_source_context, packrift_mcp_install_target, mcp_handoff_id, mcp_journey, result set, or equivalent UTM identity.",
+          "Public GA4/Shopify funnel proof shows first_party_mcp_orders > 0 or first_party_mcp_order_revenue > 0 before the revenue gate is treated as proven.",
+        ],
+        current_counts: row.current_counts,
+      };
+    });
+}
+
+async function mcpRevenueConversionQueuePayload(
+  env: Env,
+  date = todayUtc(),
+  limit = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT,
+  orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
+  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
+) {
+  const sourceQueue = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+  const rows = revenueConversionQueueRows(sourceQueue.queue);
+  return {
+    release: MCP_REVENUE_CONVERSION_QUEUE_RELEASE,
+    generated_at: new Date().toISOString(),
+    date,
+    event_lookback_days: sourceQueue.event_lookback_days,
+    event_read_limit: sourceQueue.event_read_limit,
+    canonical_endpoint: sourceQueue.canonical_endpoint,
+    status: rows.length > 0 ? "buyer_checkout_needed" : "no_mature_sources_ready",
+    purpose:
+      "Public queue for Packrift MCP sources that have matured past install/run activation and now need buyer-approved Shopify order or revenue proof.",
+    source_queue_release: sourceQueue.release,
+    source_queue_status: sourceQueue.status,
+    source_snapshot: sourceQueue.source_snapshot,
+    agent_adoption_progress: sourceQueue.agent_adoption_progress,
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-revenue-conversion-queue.json", limit, orderDays, orderLimit),
+    proof_boundaries: sourceQueue.proof_boundaries,
+    blocking_goal_gates: sourceQueue.blocking_goal_gates,
+    row_count: rows.length,
+    mature_source_count: rows.length,
+    rows,
+    proof_gate: {
+      order_or_revenue_required:
+        "first_party_mcp_orders > 0 or first_party_mcp_order_revenue > 0 with source-preserving MCP cart/order attribution.",
+      current_orders: sourceQueue.source_snapshot.first_party_mcp_orders,
+      current_revenue: sourceQueue.source_snapshot.first_party_mcp_order_revenue,
+      visitor_gate_remaining: sourceQueue.source_snapshot.monthly_qualified_visitor_remaining,
+      material_tool_usage_50_plus: sourceQueue.source_snapshot.material_tool_usage_50_plus,
+      ga4_qualified_external_mcp_sessions: sourceQueue.source_snapshot.ga4_qualified_external_mcp_session_starts,
+      ga4_qualified_external_mcp_session_threshold: sourceQueue.source_snapshot.ga4_qualified_external_mcp_session_threshold,
+    },
+    suppression_rules: [
+      "Do not count this revenue queue page as buyer demand or order proof.",
+      "Do not count Packrift self-opened carts, shell runner only proof, or generated-resource fetches as Shopify checkout proof.",
+      "Keep revenue proof separate from install, first-run, tool-call, and cart-landing proof.",
+      "Only a buyer, reviewer, or real MCP host user completing Shopify checkout can close the MCP-attributed order gate.",
+    ],
+    links: {
+      revenue_conversion_queue_json: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+      revenue_conversion_queue_markdown: MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
+      revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
+      revenue_conversion_queue_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-revenue-conversion-queue.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
+      source_activation_queue_json: sourceQueue.links.source_activation_queue_json,
+      source_activation_queue_html: sourceQueue.links.source_activation_queue_html,
+      activation_wave_json: sourceQueue.links.activation_wave_json,
+      activation_wave_html: sourceQueue.links.activation_wave_html,
+      funnel_snapshot: sourceQueue.links.funnel_snapshot,
+      funnel_snapshot_operator_json: sourceQueue.links.funnel_snapshot_operator_json,
+      ga4_funnel_proof: sourceQueue.links.ga4_funnel_proof,
+      usage_snapshot: sourceQueue.links.usage_snapshot,
+      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
+      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+    },
+    operating_rule:
+      "Work this queue only for mature source rows. If a source lacks real MCP tool calls or qualified /r/cart landing proof, send it back to the activation queue instead of claiming revenue progress.",
+  };
+}
+
+type McpRevenueConversionQueuePayload = Awaited<ReturnType<typeof mcpRevenueConversionQueuePayload>>;
+
+let mcpRevenueConversionQueuePayloadCache:
+  | {
+      key: string;
+      expiresAtMs: number;
+      promise: Promise<McpRevenueConversionQueuePayload>;
+    }
+  | null = null;
+
+function mcpRevenueConversionQueueCacheKey(date: string, limit: number, orderDays: number, orderLimit: number): string {
+  return `${date}:${limit}:${orderDays}:${orderLimit}`;
+}
+
+function cachedMcpRevenueConversionQueuePayload(
+  env: Env,
+  date: string,
+  limit: number,
+  orderDays: number,
+  orderLimit: number
+): Promise<McpRevenueConversionQueuePayload> {
+  const key = mcpRevenueConversionQueueCacheKey(date, limit, orderDays, orderLimit);
+  const now = Date.now();
+  if (mcpRevenueConversionQueuePayloadCache?.key === key && mcpRevenueConversionQueuePayloadCache.expiresAtMs > now) {
+    return mcpRevenueConversionQueuePayloadCache.promise;
+  }
+  const promise = mcpRevenueConversionQueuePayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+    if (mcpRevenueConversionQueuePayloadCache?.promise === promise) mcpRevenueConversionQueuePayloadCache = null;
+    throw error;
+  });
+  mcpRevenueConversionQueuePayloadCache = {
+    key,
+    expiresAtMs: now + MCP_ACTIVATION_EXPERIMENTS_CACHE_MS,
+    promise,
+  };
+  return promise;
+}
+
+function mcpRevenueConversionQueueMarkdown(payload: McpRevenueConversionQueuePayload): string {
+  return [
+    "# Packrift MCP Revenue Conversion Queue",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Date: ${payload.date}`,
+    `Status: ${payload.status}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.purpose,
+    "",
+    "## Proof Gate",
+    "",
+    `- Current first-party MCP orders: ${payload.proof_gate.current_orders}`,
+    `- Current first-party MCP revenue: ${payload.proof_gate.current_revenue}`,
+    `- Qualified MCP cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}`,
+    `- External-qualified MCP tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}`,
+    `- GA4 qualified external MCP sessions: ${payload.proof_gate.ga4_qualified_external_mcp_sessions} / ${payload.proof_gate.ga4_qualified_external_mcp_session_threshold}`,
+    `- Monthly visitor gap: ${payload.proof_gate.visitor_gate_remaining}`,
+    `- Required evidence: ${payload.proof_gate.order_or_revenue_required}`,
+    "",
+    "## Revenue Rows",
+    "",
+    "| Rank | Source | Status | Stage | Product | Buyer handoff | Source-preserving cart | Measured cart | Proof watch | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    payload.rows
+      .map(
+        (row) =>
+          `| ${row.revenue_rank} | ${row.source} | ${row.status} | ${markdownTableCell(row.current_stage)} | ${markdownTableCell(`${row.product.sku} - ${row.product.title}`)} | ${row.buyer_handoff_url ?? ""} | ${row.source_preserving_cart_url ?? ""} | ${row.measured_cart_url ?? ""} | ${row.order_proof_watch} | ${markdownTableCell(row.next_action)} |`
+      )
+      .join("\n") ||
+      "| none | none | none | none | none | none | none | none | none | none |",
+    "",
+    "## Suppression Rules",
+    "",
+    payload.suppression_rules.map((rule) => `- ${rule}`).join("\n"),
+    "",
+    "## Links",
+    "",
+    `- HTML board: ${payload.links.revenue_conversion_queue_html}`,
+    `- Full operator queue: ${payload.links.revenue_conversion_queue_operator_json}`,
+    `- Source activation queue: ${payload.links.source_activation_queue_json}`,
+    `- Activation wave: ${payload.links.activation_wave_json}`,
+    `- Funnel snapshot: ${payload.links.funnel_snapshot}`,
+    `- GA4 funnel proof: ${payload.links.ga4_funnel_proof}`,
+    "",
+  ].join("\n");
+}
+
+function mcpRevenueConversionQueueHtml(payload: McpRevenueConversionQueuePayload): string {
+  const rows = payload.rows.slice(0, 12);
+  const rowCards = rows
+    .map((row) => {
+      const attributes = row.required_shopify_cart_attributes.map((attribute) => `<li>${escapeHtml(attribute)}</li>`).join("");
+      const carts = row.previous_measured_cart_urls
+        .slice(0, 3)
+        .map((url) => `<li><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></li>`)
+        .join("");
+      return `<article class="row ${escapeHtml(row.priority)}">
+        <div class="row-head">
+          <div>
+            <p class="eyebrow">#${row.revenue_rank} · ${escapeHtml(row.priority)} · ${escapeHtml(row.preferred_target)}</p>
+            <h2>${escapeHtml(row.source)}</h2>
+          </div>
+          <span class="target">${escapeHtml(row.status)}</span>
+        </div>
+        <p class="stage">${escapeHtml(row.current_stage)}</p>
+        <p>${escapeHtml(row.next_action)}</p>
+        <div class="product">
+          <span>SKU ${escapeHtml(row.product.sku)}</span>
+          <span>Variant ${escapeHtml(row.product.variant_id)}</span>
+          <span>${escapeHtml(row.product.family)}</span>
+        </div>
+        <p class="endpoint">Source-aware endpoint: <code>${escapeHtml(row.source_aware_endpoint)}</code></p>
+        <div class="metrics">
+          <span>tools ${row.current_counts.mcp_tool_calls}</span>
+          <span>create_cart ${row.current_counts.create_cart_url_calls}</span>
+          <span>qualified carts ${row.current_counts.qualified_cart_landings}</span>
+        </div>
+        <div class="actions">
+          ${row.buyer_handoff_url ? `<a class="button primary" href="${escapeHtml(row.buyer_handoff_url)}">Buyer handoff</a>` : ""}
+          ${row.source_preserving_cart_url ? `<a class="button" href="${escapeHtml(row.source_preserving_cart_url)}">Review source cart</a>` : ""}
+          <a class="button" href="${escapeHtml(row.order_proof_watch)}">Watch proof gate</a>
+          <a class="button" href="${escapeHtml(row.reviewer_activation_shell_url)}">Shell runner</a>
+          <a class="button" href="${escapeHtml(row.source_specific_first_run_url)}">First run</a>
+        </div>
+        <details open>
+          <summary>Buyer request</summary>
+          <pre>${escapeHtml(row.copy_ready_buyer_request)}</pre>
+        </details>
+        <details>
+          <summary>Reviewer request</summary>
+          <pre>${escapeHtml(row.copy_ready_reviewer_request)}</pre>
+        </details>
+        <details>
+          <summary>Order attribution required</summary>
+          <p>${escapeHtml(row.attribution_rule)}</p>
+          <ul>${attributes}</ul>
+        </details>
+        <details>
+          <summary>Measured carts</summary>
+          <ul>${carts || "<li>No previous measured cart URLs in this snapshot.</li>"}</ul>
+        </details>
+        <p class="safety">${escapeHtml(row.suppression_rule)}</p>
+      </article>`;
+    })
+    .join("");
+  const blocking = payload.blocking_goal_gates.map((gate) => `<span>${escapeHtml(gate)}</span>`).join("") || "<span>none</span>";
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP Revenue Conversion Queue</title>
+  <meta name="description" content="Mature Packrift MCP source queue for buyer and reviewer checkout follow-through with source-preserving cart attribution.">
+  <style>
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--amber:#96610f;--red:#9f2d20}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    main{max-width:1160px;margin:0 auto;padding:32px 18px 56px}
+    header{display:grid;gap:16px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:clamp(2rem,5vw,4.4rem);line-height:.96;letter-spacing:0}
+    h2{margin:0;font-size:1.15rem;letter-spacing:0}
+    p{margin:0;color:var(--muted);max-width:880px}
+    a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+    .status,.metrics,.actions,.blocking,.product{display:flex;flex-wrap:wrap;gap:8px}
+    .status span,.metrics span,.blocking span,.product span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
+    .queue{display:grid;gap:14px;margin-top:22px}
+    .row{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .row.critical{border-left:5px solid var(--red)}
+    .row.high{border-left:5px solid var(--amber)}
+    .row-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .eyebrow{font-size:.82rem;text-transform:uppercase;color:var(--muted);letter-spacing:0;margin-bottom:2px}
+    .target{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:.86rem;color:var(--green);white-space:nowrap}
+    .stage{font-weight:650;color:var(--ink);margin:10px 0 4px}
+    .endpoint{margin-top:8px;overflow-wrap:anywhere}
+    .safety{margin-top:12px;color:var(--red);font-weight:650}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
+    .metrics,.product{margin:12px 0}
+    .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
+    .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    details{margin-top:12px}
+    summary{cursor:pointer;font-weight:650}
+    li{margin:5px 0;color:var(--muted);overflow-wrap:anywhere}
+    .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
+    .proof-boundary{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:12px;display:grid;gap:6px}
+    .proof-boundary strong{font-size:.92rem}
+    @media (max-width:680px){.row-head{display:grid}.target{white-space:normal}.button{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Packrift MCP Revenue Conversion Queue</h1>
+      <p>${escapeHtml(payload.purpose)}</p>
+      <div class="status">
+        <span>Status: ${escapeHtml(payload.status)}</span>
+        <span>Mature rows: ${payload.row_count}</span>
+        <span>Orders: ${payload.proof_gate.current_orders}</span>
+        <span>Revenue: ${payload.proof_gate.current_revenue}</span>
+        <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
+        <span>Cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}</span>
+        <span>GA4 visitors: ${payload.proof_gate.ga4_qualified_external_mcp_sessions}/${payload.proof_gate.ga4_qualified_external_mcp_session_threshold}</span>
+      </div>
+      <div class="proof-boundary">
+        <strong>Revenue proof boundary</strong>
+        <p>${escapeHtml(payload.proof_gate.order_or_revenue_required)}</p>
+        <p>${escapeHtml(payload.proof_boundaries.commerce_gate)}</p>
+      </div>
+      <div class="blocking">${blocking}</div>
+      <div class="links">
+        <a href="${escapeHtml(payload.links.revenue_conversion_queue_json)}">JSON</a>
+        <a href="${escapeHtml(payload.links.revenue_conversion_queue_markdown)}">Markdown</a>
+        <a href="${escapeHtml(payload.links.revenue_conversion_queue_operator_json)}">Full operator queue</a>
+        <a href="${escapeHtml(payload.links.source_activation_queue_html)}">Source activation queue</a>
+        <a href="${escapeHtml(payload.links.activation_wave_html)}">Activation wave</a>
+        <a href="${escapeHtml(payload.links.ga4_funnel_proof)}">GA4 funnel proof</a>
+      </div>
+    </header>
+    <section class="queue">${rowCards || "<p>No mature source rows are waiting for buyer checkout proof right now.</p>"}</section>
   </main>
 </body>
 </html>`;
@@ -5855,6 +6231,7 @@ interface SourceActivationExperimentQueueRow {
   reviewer_activation_url: string;
   reviewer_activation_runner_url: string;
   reviewer_activation_shell_url: string;
+  one_command_external_runner: string;
   directory_update_card_json_url: string;
   directory_update_card_markdown_url: string;
   tool_discovery_json_url: string;
@@ -9665,6 +10042,10 @@ const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-autom
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
 const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
 const MCP_N8N_WORKFLOW_JSON_URL = "https://mcp.packrift.com/ai/mcp-n8n-workflow.json";
+const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R01";
+const MCP_REVENUE_CONVERSION_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
+const MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
+const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
   { source: "mcpservers_org", target: "generic_streamable_http" },
@@ -9842,6 +10223,9 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
   "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+  MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+  MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
+  MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
   MCP_SOURCE_ACTIVATION_SITEMAP_URL,
   ...MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS,
   "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
@@ -10002,6 +10386,9 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-source-activation-queue.json": "Machine-readable next-best-action queue that ranks Packrift MCP sources by the event needed to progress toward real tool calls, cart landings, and orders.",
   "/ai/mcp-source-activation-queue.md": "Crawler-readable Packrift MCP source activation queue with source-specific action URLs, target events, and acceptance criteria.",
   "/ai/mcp-source-activation-queue.html": "Human-facing Packrift MCP activation command center that ranks sources and deep-links into the real source-specific MCP runner.",
+  "/ai/mcp-revenue-conversion-queue.json": "Machine-readable queue of mature Packrift MCP sources that already have tool/cart proof and now need buyer-approved Shopify order or revenue proof.",
+  "/ai/mcp-revenue-conversion-queue.md": "Crawler-readable Packrift MCP revenue conversion queue with source-preserving buyer handoffs and order proof boundaries.",
+  "/ai/mcp-revenue-conversion-queue.html": "Human-facing Packrift MCP revenue conversion board for buyer or reviewer checkout follow-through without synthetic order proof.",
   "/ai/mcp-source-activation-sitemap.xml": "Finite crawl map for source-specific Packrift MCP start, install, first-run, and reviewer activation URLs.",
   "/ai/mcp-activation-experiments.json": "Machine-readable Packrift MCP source activation experiments with hypotheses, target events, expected snapshot deltas, and suppression rules.",
   "/ai/mcp-activation-experiments.md": "Crawler-readable Packrift MCP activation experiment plan for turning source activity into measurable tool calls, cart landings, and orders.",
@@ -10468,6 +10855,10 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-agent-adoption-progress.html") return mcpAgentAdoptionProgressHtml(await mcpAgentAdoptionProgressPayload(env));
   if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await mcpSourceActivationQueuePayload(env), null, 2);
   if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(env));
+  if (pathname === "/ai/mcp-source-activation-queue.html") return mcpSourceActivationQueueHtml(await mcpSourceActivationQueuePayload(env));
+  if (pathname === "/ai/mcp-revenue-conversion-queue.json") return JSON.stringify(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT), null, 2);
+  if (pathname === "/ai/mcp-revenue-conversion-queue.md") return mcpRevenueConversionQueueMarkdown(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-revenue-conversion-queue.html") return mcpRevenueConversionQueueHtml(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
   const sourceActivationPacketMatch = pathname.match(/^\/ai\/mcp-source-activation\/([a-z0-9_]{2,64})\.(json|md|html)$/);
   if (sourceActivationPacketMatch) {
     const source = sourceActivationPacketMatch[1] ?? "";
@@ -10708,6 +11099,8 @@ function mcpToolDiscoveryPayload() {
       source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+      revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
       activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
@@ -10785,6 +11178,7 @@ function mcpToolDiscoveryMarkdown(): string {
     "",
     `- Source activation sitemap: ${payload.conversion_urls.source_activation_sitemap}`,
     `- Source activation queue: ${payload.conversion_urls.source_activation_queue}`,
+    `- Revenue conversion queue: ${payload.conversion_urls.revenue_conversion_queue}`,
     `- Activation wave: ${payload.conversion_urls.activation_wave}`,
     `- Eval pack: ${payload.conversion_urls.eval_pack}`,
     `- Eval pack template: ${payload.conversion_urls.eval_pack_template}`,
@@ -10857,6 +11251,8 @@ function mcpManifestPayload() {
     mcp_usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
     mcp_source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
     mcp_source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+    mcp_revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+    mcp_revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
     mcp_source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
     mcp_source_activation_packet_template: "https://mcp.packrift.com/ai/mcp-source-activation/{source}.json",
     mcp_source_activation_packet_cline: "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json",
@@ -10924,6 +11320,8 @@ function mcpServerCardPayload() {
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+      revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
       source_activation_packet_template: "https://mcp.packrift.com/ai/mcp-source-activation/{source}.json",
       source_activation_packet_cline: "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json",
@@ -12911,6 +13309,54 @@ app.get("/ai/mcp-source-activation-queue.html", async (c) => {
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
   const body = mcpSourceActivationQueueHtml(await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.html", "mcp_source_activation_queue", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-revenue-conversion-queue.json", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const payload = await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit);
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-revenue-conversion-queue.json", "mcp_revenue_conversion_queue", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-revenue-conversion-queue.md", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const body = mcpRevenueConversionQueueMarkdown(await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-revenue-conversion-queue.md", "mcp_revenue_conversion_queue", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-revenue-conversion-queue.html", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const body = mcpRevenueConversionQueueHtml(await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-revenue-conversion-queue.html", "mcp_revenue_conversion_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
     ...RAW_HEADERS,

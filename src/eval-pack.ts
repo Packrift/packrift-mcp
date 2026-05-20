@@ -227,6 +227,7 @@ export function mcpEvalPackPayload(runtime: McpEvalPackRuntime, source = "mcp_ev
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      revenue_conversion_queue: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
     },
   };

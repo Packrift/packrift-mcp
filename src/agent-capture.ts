@@ -367,6 +367,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
         "Open the command center, work critical rows first, and use the source-specific real MCP runner for sources with installs or create_cart_url output but missing tool calls, measured /r/cart landings, or orders.",
     }),
     surface({
+      id: "mcp_revenue_conversion_queue",
+      name: "Packrift MCP revenue conversion queue",
+      agent_type: "revenue_conversion_measurement",
+      audience: "Buyers, reviewers, agent hosts, and Packrift operators following up on mature MCP sources that already have tool-call and cart-landing proof.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
+      install_or_call:
+        "Use the revenue conversion queue when a source row has moved past activation and needs a source-preserving buyer/reviewer handoff into Shopify checkout; the queue links buyer handoff pages, MCP /r/cart URLs, proof watches, and order-attribution requirements without creating synthetic order proof.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      next_action:
+        "Work mature rows only: send the source-preserving cart handoff to a real buyer or reviewer, then watch GA4/Shopify funnel proof for first_party_mcp_orders or MCP revenue before counting the gate complete.",
+    }),
+    surface({
       id: "mcp_activation_experiments",
       name: "Packrift MCP activation experiments",
       agent_type: "source_activation_measurement",
@@ -788,7 +804,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R23",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R24",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -806,6 +822,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      revenue_conversion_queue: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
+      revenue_conversion_queue_html: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html",
       agent_host_rollout: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json",
       agent_host_rollout_html: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html",
       activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
@@ -855,6 +873,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "When a direct MCP client skips tracked config, infer source attribution from recognizable user-agent families such as Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, or generic MCP clients.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
       "Use /r/activate/{source}?format=sh when an external reviewer or agent host prefers a shell runner that performs real JSON-RPC tools/list and tools/call requests against the hosted MCP endpoint.",
+      "Use /ai/mcp-revenue-conversion-queue.json only after a source has real MCP tool-call and qualified /r/cart landing proof; do not count queue views, shell runners, or self-opened carts as order proof.",
       "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
       "Use /ai/mcp-automation-workflows.json for n8n, Zapier, Pipedream, and similar automation hosts that need importable real-MCP flows instead of a separate Packrift CLI.",
       "Use /ai/mcp-eval-pack.json when an MCP host, marketplace, or reviewer needs copy-ready acceptance cases and report fields for real external host validation.",
@@ -901,7 +920,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, the agent host rollout sheet, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, automation workflow imports, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, the agent host rollout sheet, direct client config, usage/funnel/GA4 proof, source activation queue, revenue conversion queue, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, automation workflow imports, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",

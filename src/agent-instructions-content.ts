@@ -85,6 +85,9 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP source activation queue JSON: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
 - MCP source activation queue Markdown: https://mcp.packrift.com/ai/mcp-source-activation-queue.md
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
+- MCP revenue conversion queue JSON: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json
+- MCP revenue conversion queue Markdown: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md
+- MCP revenue conversion queue HTML: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html
 - MCP activation experiments JSON: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments Markdown: https://mcp.packrift.com/ai/mcp-activation-experiments.md
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html

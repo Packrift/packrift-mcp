@@ -408,6 +408,8 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP GA4 funnel proof: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
 - MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
+- MCP revenue conversion queue: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json
+- MCP revenue conversion queue HTML: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
