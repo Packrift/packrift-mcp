@@ -318,6 +318,13 @@ async function main() {
       "resources/list advertises source-specific activation runners",
         resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
         resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/codex_remote_mcp/codex?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/claude_remote_mcp/claude_code?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/openai_chatgpt/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/langchain_agent/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/n8n_automation/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/mcp_inspector/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/generic_streamable_http?format=sh") &&
         resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
         resourceUris.has("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
         resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory"),

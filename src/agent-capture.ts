@@ -72,7 +72,7 @@ function hostFastPath(input: { source: string; target: string; host: string; aud
   };
 }
 
-const AGENT_HOST_FAST_PATHS: AgentHostFastPath[] = [
+export const AGENT_HOST_FAST_PATHS: AgentHostFastPath[] = [
   hostFastPath({
     source: "mcp_so",
     target: "generic_streamable_http",

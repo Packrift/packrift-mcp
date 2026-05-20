@@ -5,7 +5,7 @@ import { serverCard } from "./server-card.js";
 import { llmsTxt } from "./llms-content.js";
 import { llmsFullTxt } from "./llms-full-content.js";
 import { agentInstructionsMd } from "./agent-instructions-content.js";
-import { allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture.js";
+import { AGENT_HOST_FAST_PATHS, allAgentCaptureMarkdown, allAgentCapturePayload } from "./agent-capture.js";
 import { mcpStartHtml, mcpStartMarkdown, mcpStartPayload } from "./agent-start.js";
 import { mcpAdoptionKitMarkdown, mcpAdoptionKitPayload } from "./adoption-kit.js";
 import { mcpInstallMatrixMarkdown, mcpInstallMatrixPayload } from "./install-matrix.js";
@@ -4803,6 +4803,18 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
   };
 }
 
+function sourceActivationMeasuredCartUrlIsSourcePreserving(measuredCartUrl: string | null, source: string, target: string): boolean {
+  if (!measuredCartUrl) return false;
+  try {
+    const url = new URL(measuredCartUrl);
+    const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
+    const targetSlug = normalizeMcpRuntimeSlug(target) || sourcePreferredActivationTarget(sourceSlug);
+    return url.searchParams.get("mcp_source_context") === sourceSlug && url.searchParams.get("mcp_install_target") === targetSlug;
+  } catch {
+    return false;
+  }
+}
+
 function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceActivationOrderHandoffPayload>): string {
   return [
     "# Packrift MCP Buyer/Reviewer Order Handoff",
@@ -4977,7 +4989,14 @@ function sourceActivationOrderConversionHandoff(
 ) {
   if (!sourceActivationHasToolAndCartProof(row)) return null;
   const buyerHandoff = sourceActivationOrderHandoffPayload(row.source, urls.preferred_target);
-  const sourcePreservingCartUrl = buyerHandoff.buyer_action_url;
+  const measuredCartUrl = row.recent_measured_cart_urls[0] ?? null;
+  const fallbackSourcePreservingCartUrl = buyerHandoff.buyer_action_url;
+  const measuredCartUrlSourcePreserving = sourceActivationMeasuredCartUrlIsSourcePreserving(
+    measuredCartUrl,
+    row.source,
+    urls.preferred_target
+  );
+  const buyerActionUrl = measuredCartUrlSourcePreserving ? measuredCartUrl! : fallbackSourcePreservingCartUrl;
   return {
     status: "order_proof_needed",
     release: buyerHandoff.release,
@@ -4989,8 +5008,16 @@ function sourceActivationOrderConversionHandoff(
     primary_order_handoff_url: buyerHandoff.primary_order_handoff_url,
     buyer_ready_summary: buyerHandoff.buyer_ready_summary,
     product: buyerHandoff.product,
-    buyer_action_url: sourcePreservingCartUrl,
-    previous_measured_cart_url: row.recent_measured_cart_urls[0] ?? null,
+    buyer_action_url: buyerActionUrl,
+    cart_landing_action_url: buyerActionUrl,
+    measured_cart_url: measuredCartUrl,
+    measured_cart_url_source_preserving: measuredCartUrlSourcePreserving,
+    measured_cart_url_source_preservation_gap:
+      measuredCartUrl && !measuredCartUrlSourcePreserving
+        ? "Measured cart proof is retained, but buyer action uses the fallback source-preserving cart because explicit mcp_source_context and mcp_install_target cart params are missing."
+        : null,
+    previous_measured_cart_url: measuredCartUrl,
+    fallback_source_preserving_cart_url: fallbackSourcePreservingCartUrl,
     source_aware_endpoint: firstUsefulRun.endpoint,
     source_specific_first_run_url: urls.tracked_first_run_url,
     reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
@@ -5103,7 +5130,9 @@ function sourceActivationOperatorSafetyRule(row: PostInstallActivationRow): stri
 function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
   const cartUrl = row.recent_measured_cart_urls[0] ?? "";
   if (sourceActivationHasToolAndCartProof(row)) {
-    const orderCartUrl = sourceActivationOrderCartUrl(row.source, urls.preferred_target);
+    const fallbackOrderCartUrl = sourceActivationOrderCartUrl(row.source, urls.preferred_target);
+    const cartUrlSourcePreserving = sourceActivationMeasuredCartUrlIsSourcePreserving(cartUrl || null, row.source, urls.preferred_target);
+    const orderCartUrl = cartUrlSourcePreserving ? cartUrl : fallbackOrderCartUrl;
     return [
       "Packrift MCP has source-attributed MCP tool calls and qualified cart landing proof for this source.",
       "",
@@ -5112,7 +5141,11 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Directory update card: ${urls.directory_update_card_json_url}`,
       `Buyer/reviewer handoff page: ${urls.order_handoff_html_url}`,
       `Source-preserving order cart handoff: ${orderCartUrl}`,
-      cartUrl ? `Earlier measured cart proof: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      cartUrl && cartUrlSourcePreserving
+        ? `Fallback source-preserving cart if the measured URL is not usable: ${fallbackOrderCartUrl}`
+        : cartUrl
+          ? `Earlier measured cart proof: ${cartUrl}`
+          : `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Fast first-run shell: ${urls.first_run_shell_one_liner}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
@@ -9454,7 +9487,7 @@ const MCP_DIRECTORY_UPDATE_CARD_URLS = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.fla
   `https://mcp.packrift.com/ai/mcp-directory-update/${source}.json`,
   `https://mcp.packrift.com/ai/mcp-directory-update/${source}.md`,
 ]);
-const MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
+const MCP_SEEDED_SOURCE_ACTIVATION_RESOURCE_URLS = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
   `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
   `https://mcp.packrift.com/ai/mcp-source-activation/${source}.md`,
   `https://mcp.packrift.com/ai/mcp-source-activation/${source}.html`,
@@ -9464,6 +9497,25 @@ const MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS = MCP_SOURCE_ACTIVATION_SITEMAP
   `https://mcp.packrift.com/r/activate/${source}?format=sh`,
   `https://mcp.packrift.com/r/order/${source}?format=md`,
 ]);
+const MCP_AGENT_HOST_FAST_PATH_RESOURCE_URLS = AGENT_HOST_FAST_PATHS.flatMap(({ source, target }) => [
+  `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
+  `https://mcp.packrift.com/ai/mcp-source-activation/${source}.md`,
+  `https://mcp.packrift.com/ai/mcp-source-activation/${source}.html`,
+  `https://mcp.packrift.com/r/config/${source}`,
+  `https://mcp.packrift.com/r/install/${source}/${target}?format=html`,
+  `https://mcp.packrift.com/r/install/${source}/${target}?format=json`,
+  `https://mcp.packrift.com/r/run/${source}/${target}?format=html`,
+  `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`,
+  `https://mcp.packrift.com/r/run/${source}/${target}?format=md`,
+  `https://mcp.packrift.com/r/activate/${source}?format=html`,
+  `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+  `https://mcp.packrift.com/r/order/${source}?format=html`,
+  `https://mcp.packrift.com/r/order/${source}?format=md`,
+  `https://mcp.packrift.com/r/order/${source}?format=json`,
+]);
+const MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS = Array.from(
+  new Set([...MCP_SEEDED_SOURCE_ACTIVATION_RESOURCE_URLS, ...MCP_AGENT_HOST_FAST_PATH_RESOURCE_URLS])
+);
 const APPROVED_CATALOG_BY_SKU = new Map(
   APPROVED_CATALOG.map((item) => [item.sku.toUpperCase(), item])
 );
@@ -10281,7 +10333,7 @@ function aiSitemapXml(): string {
 }
 
 function sourceActivationSitemapUrls(): string[] {
-  return MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
+  const seededSourceUrls = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.flatMap(({ source, target }) => [
     ...MCP_DIRECTORY_UPDATE_CARD_URLS.filter((url) => url.includes(`/mcp-directory-update/${source}.`)),
     `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
     `https://mcp.packrift.com/ai/mcp-source-activation/${source}.md`,
@@ -10306,6 +10358,36 @@ function sourceActivationSitemapUrls(): string[] {
     `https://mcp.packrift.com/r/order/${source}?format=md`,
     `https://mcp.packrift.com/r/order/${source}?format=json`,
   ]);
+  const agentHostFastPathUrls = AGENT_HOST_FAST_PATHS.flatMap(({ source, target }) => [
+    `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
+    `https://mcp.packrift.com/ai/mcp-source-activation/${source}.md`,
+    `https://mcp.packrift.com/ai/mcp-source-activation/${source}.html`,
+    `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${source}`,
+    `https://mcp.packrift.com/ai/mcp-eval-pack.md?source=${source}`,
+    `https://mcp.packrift.com/r/start/${source}`,
+    `https://mcp.packrift.com/start?utm_source=${source}`,
+    `https://mcp.packrift.com/r/config/${source}`,
+    trackedInstallUrl(source, target),
+    `${trackedInstallUrl(source, target)}&format=html`,
+    `${trackedInstallUrl(source, target)}&format=json`,
+    `https://mcp.packrift.com/r/install/${source}/${target}?format=html`,
+    `https://mcp.packrift.com/r/install/${source}/${target}?format=json`,
+    trackedRunUrl(source, target),
+    `${trackedRunUrl(source, target)}&format=html`,
+    `${trackedRunUrl(source, target)}&format=sh`,
+    `${trackedRunUrl(source, target)}&format=md`,
+    `https://mcp.packrift.com/r/run/${source}/${target}?format=html`,
+    `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`,
+    `https://mcp.packrift.com/r/run/${source}/${target}?format=md`,
+    `https://mcp.packrift.com/r/activate/${source}`,
+    `https://mcp.packrift.com/r/activate/${source}?format=html`,
+    `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+    `https://mcp.packrift.com/r/order/${source}`,
+    `https://mcp.packrift.com/r/order/${source}?format=html`,
+    `https://mcp.packrift.com/r/order/${source}?format=md`,
+    `https://mcp.packrift.com/r/order/${source}?format=json`,
+  ]);
+  return Array.from(new Set([...seededSourceUrls, ...agentHostFastPathUrls]));
 }
 
 function sourceActivationSitemapXml(): string {
@@ -10317,7 +10399,9 @@ function sourceActivationSitemapXml(): string {
 }
 
 function mcpToolDiscoveryPayload() {
-  const sourceActivationSources = MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.map((row) => row.source);
+  const sourceActivationSources = Array.from(
+    new Set([...MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.map((row) => row.source), ...AGENT_HOST_FAST_PATHS.map((row) => row.source)])
+  );
   const tools = TOOLS.map((tool) => ({
     name: tool.schema.name,
     description: tool.schema.description,
