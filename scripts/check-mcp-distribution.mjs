@@ -275,6 +275,7 @@ const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-r
 const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
+const MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
 const OPENAI_PRODUCT_FEED_MANIFEST_URL =
@@ -545,6 +546,7 @@ async function liveMcpCheck() {
     buyerOrderHandoffsResult,
     buyerOrderHandoffsMarkdownResult,
     buyerOrderHandoffsHtmlResult,
+    buyerOrderHandoffsTasksJsonlResult,
     sourceActivationSitemapResult,
     sourceActivationClineJsonResult,
     sourceActivationClineMarkdownResult,
@@ -692,6 +694,7 @@ async function liveMcpCheck() {
     fetchText(`${MCP_BUYER_ORDER_HANDOFFS_JSON_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText(`${MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText(`${MCP_BUYER_ORDER_HANDOFFS_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md"),
@@ -890,6 +893,9 @@ async function liveMcpCheck() {
   const sourceActivationQueue = sourceActivationQueueResult.ok ? JSON.parse(sourceActivationQueueResult.text) : null;
   const revenueConversionQueue = revenueConversionQueueResult.ok ? JSON.parse(revenueConversionQueueResult.text) : null;
   const buyerOrderHandoffs = buyerOrderHandoffsResult.ok ? JSON.parse(buyerOrderHandoffsResult.text) : null;
+  const buyerOrderHandoffTaskRows = buyerOrderHandoffsTasksJsonlResult.ok
+    ? buyerOrderHandoffsTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
+    : [];
   const sourceActivationCline = sourceActivationClineJsonResult.ok ? JSON.parse(sourceActivationClineJsonResult.text) : null;
   const sourceActivationCodex = sourceActivationCodexJsonResult.ok ? JSON.parse(sourceActivationCodexJsonResult.text) : null;
   const sourceActivationClaude = sourceActivationClaudeJsonResult.ok ? JSON.parse(sourceActivationClaudeJsonResult.text) : null;
@@ -1242,6 +1248,7 @@ async function liveMcpCheck() {
     markdown_checkout_review_contract: buyerOrderHandoffsMarkdownResult.text.includes("Checkout Review Contracts"),
     html_title: buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     html_task_count: buyerOrderHandoffsHtmlResult.text.includes("checkout tasks"),
+    html_tasks_link: buyerOrderHandoffsHtmlResult.text.includes("mcp-buyer-order-handoffs-tasks.jsonl"),
     html_copy_ready: buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request"),
     html_prepare_purchase_shortcut: buyerOrderHandoffsHtmlResult.text.includes("Prepare purchase shortcut"),
     html_checkout_review_contract: buyerOrderHandoffsHtmlResult.text.includes("Checkout review contract"),
@@ -1250,14 +1257,24 @@ async function liveMcpCheck() {
     html_analytics: mcpPageAnalyticsDiagnostics.buyer_order_handoffs_html,
     buyer_checkout_tasks:
       buyerOrderHandoffs?.buyer_checkout_task_count === buyerOrderHandoffs?.buyer_checkout_tasks?.length &&
+      buyerOrderHandoffTaskRows.length === buyerOrderHandoffs?.buyer_checkout_task_count &&
       buyerOrderHandoffs?.buyer_checkout_tasks?.some(
         (task) =>
           task.task_id === "mcp_buyer_checkout_mcp_so" &&
           task.target_event_to_watch === "mcp_attributed_order" &&
           task.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+          task.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
           task.no_order_created_by_this_task === true &&
           task.buyer_confirmation_required === true
       ),
+    buyer_checkout_task_export: buyerOrderHandoffTaskRows.some(
+      (task) =>
+        task.task_id === "mcp_buyer_checkout_mcp_so" &&
+        task.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+        task.order_handoff_shell_one_liner?.includes("/r/order/mcp_so?format=sh") &&
+        task.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
+        task.no_order_created_by_this_task === true
+    ),
   };
   const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
   const sourceAwarePreparePurchaseOk =
@@ -1644,6 +1661,7 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL) &&
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_HTML_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.html") &&
@@ -1672,7 +1690,7 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R04" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R17" &&
+      start?.release === "PACKRIFT-MCP-START-R18" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
@@ -1830,6 +1848,11 @@ async function liveMcpCheck() {
       start?.start_urls?.tracked_order_handoff_shell_template === "https://mcp.packrift.com/r/order/{source}?format=sh" &&
       start?.start_urls?.source_policy?.partner_specific_sources_allowed === true &&
       start?.start_urls?.source_policy?.accepted_source_format === "^[a-z0-9_]{2,64}$" &&
+      start?.start_urls?.source_policy?.recommended_source_count >= 60 &&
+      start?.start_urls?.source_policy?.recommended_sources?.includes("pipedream_automation") &&
+      start?.start_urls?.source_policy?.recommended_sources?.includes("anthropic_connectors_directory") &&
+      start?.start_urls?.source_policy?.preferred_targets?.cline_mcp_marketplace === "cline" &&
+      start?.start_urls?.source_policy?.preferred_targets?.anthropic_connectors_directory === "claude_code" &&
       start?.start_urls?.tracked_examples?.mcpservers_org?.startsWith("https://mcp.packrift.com/r/start/mcpservers_org") &&
       start?.start_urls?.tracked_examples?.anthropic_connectors_directory?.startsWith("https://mcp.packrift.com/r/start/anthropic_connectors_directory") &&
       start?.start_urls?.tracked_examples?.smithery?.startsWith("https://mcp.packrift.com/r/start/smithery") &&
@@ -1838,7 +1861,12 @@ async function liveMcpCheck() {
       start?.start_urls?.tracked_config_examples?.mcpfinder?.startsWith("https://mcp.packrift.com/r/config/mcpfinder") &&
       start?.start_urls?.tracked_install_examples?.mcpfinder?.codex?.startsWith("https://mcp.packrift.com/r/install/mcpfinder/codex") &&
       start?.start_urls?.tracked_install_examples?.cline_mcp_marketplace?.cline?.startsWith("https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline") &&
+      start?.start_urls?.tracked_install_examples?.pipedream_automation?.preferred?.startsWith("https://mcp.packrift.com/r/install/pipedream_automation/generic_streamable_http") &&
+      start?.start_urls?.tracked_install_examples?.mcp_marketplace_io?.preferred?.startsWith("https://mcp.packrift.com/r/install/mcp_marketplace_io/mcp_marketplace") &&
+      start?.start_urls?.tracked_install_examples?.mcp_marketplace_io?.preferred_target === "mcp_marketplace" &&
       start?.start_urls?.tracked_run_examples?.mcpfinder?.startsWith("https://mcp.packrift.com/r/run/mcpfinder/generic_streamable_http") &&
+      start?.start_urls?.tracked_run_examples?.cline_mcp_marketplace?.startsWith("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline") &&
+      start?.start_urls?.tracked_run_examples?.anthropic_connectors_directory?.startsWith("https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_code") &&
       start?.start_urls?.tracked_order_handoff_examples?.mcpfinder === "https://mcp.packrift.com/r/order/mcpfinder?format=html" &&
       start?.start_urls?.tracked_order_handoff_shell_examples?.cline_mcp_marketplace === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
       start?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&

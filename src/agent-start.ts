@@ -1,6 +1,7 @@
 import { mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
 import { packriftMcpGa4HeadScript } from "./mcp-page-analytics.js";
+import { AGENT_HOST_FAST_PATHS } from "./agent-capture.js";
 
 export interface McpStartRuntime {
   serverVersion: string;
@@ -28,7 +29,7 @@ const TRACKED_ORDER_HANDOFF_TEMPLATE = "https://mcp.packrift.com/r/order/{source
 const TRACKED_ORDER_HANDOFF_HTML_TEMPLATE = "https://mcp.packrift.com/r/order/{source}?format=html";
 const TRACKED_ORDER_HANDOFF_SHELL_TEMPLATE = "https://mcp.packrift.com/r/order/{source}?format=sh";
 const TRACKED_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
-const TRACKED_START_RECOMMENDED_SOURCES = [
+const TRACKED_START_SOURCE_SEEDS = [
   "official_registry",
   "mcpservers_org",
   "glama_connector",
@@ -62,11 +63,22 @@ const TRACKED_START_RECOMMENDED_SOURCES = [
   "docker_mcp_catalog",
   "generic",
 ] as const;
+const TRACKED_START_RECOMMENDED_SOURCES = Array.from(
+  new Set([...TRACKED_START_SOURCE_SEEDS, ...AGENT_HOST_FAST_PATHS.map((row) => row.source), "generic"])
+);
+const TRACKED_START_PREFERRED_TARGETS = Object.fromEntries(AGENT_HOST_FAST_PATHS.map((row) => [row.source, row.target]));
+
+function preferredTrackedStartTarget(source: string): string {
+  return TRACKED_START_PREFERRED_TARGETS[source] ?? "generic_streamable_http";
+}
+
 const TRACKED_START_SOURCE_POLICY = {
   accepted_source_format: TRACKED_START_SOURCE_FORMAT,
   partner_specific_sources_allowed: true,
   normalization: "The redirect lowercases source slugs before attribution. Use lowercase source labels to keep reporting clean.",
+  recommended_source_count: TRACKED_START_RECOMMENDED_SOURCES.length,
   recommended_sources: TRACKED_START_RECOMMENDED_SOURCES,
+  preferred_targets: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, preferredTrackedStartTarget(source)])),
   custom_examples: ["agency_partner", "browser_agent_demo", "newsletter_mcp"],
 } as const;
 const DEFAULT_TRACKED_SOURCE = "generic";
@@ -208,7 +220,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R17",
+    release: "PACKRIFT-MCP-START-R18",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -231,21 +243,26 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedStartUrl(source)])),
       tracked_config_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
-      tracked_run_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedRunUrl(source, "generic_streamable_http")])),
+      tracked_run_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedRunUrl(source, preferredTrackedStartTarget(source))])),
       tracked_reviewer_activation_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, `https://mcp.packrift.com/r/activate/${source}`])),
       tracked_reviewer_activation_html_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, `https://mcp.packrift.com/r/activate/${source}?format=html`])),
       tracked_order_handoff_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedOrderHandoffUrl(source, "html")])),
       tracked_order_handoff_shell_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedOrderHandoffUrl(source, "sh")])),
       tracked_install_examples: Object.fromEntries(
-        TRACKED_START_RECOMMENDED_SOURCES.map((source) => [
-          source,
-          {
-            generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
-            claude_code: trackedInstallUrl(source, "claude_code"),
-            codex: trackedInstallUrl(source, "codex"),
-            cline: trackedInstallUrl(source, "cline"),
-          },
-        ])
+        TRACKED_START_RECOMMENDED_SOURCES.map((source) => {
+          const preferredTarget = preferredTrackedStartTarget(source);
+          return [
+            source,
+            {
+              preferred_target: preferredTarget,
+              preferred: trackedInstallUrl(source, preferredTarget),
+              generic_streamable_http: trackedInstallUrl(source, "generic_streamable_http"),
+              claude_code: trackedInstallUrl(source, "claude_code"),
+              codex: trackedInstallUrl(source, "codex"),
+              cline: trackedInstallUrl(source, "cline"),
+            },
+          ];
+        })
       ),
     },
     runtime: {

@@ -158,6 +158,7 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
       "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md",
       "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
+      "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl",
       "https://mcp.packrift.com/r/order/mcp_so",
       "https://mcp.packrift.com/r/order/mcp_so?format=json",
       "https://mcp.packrift.com/r/order/mcp_so?format=md",

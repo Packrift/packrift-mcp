@@ -1434,7 +1434,7 @@ const AI_SALES_ALLOWED_EVENTS = new Set([
 
 const MCP_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
 const MCP_START_SOURCE_PATTERN = /^[a-z0-9_]{2,64}$/;
-const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
+const MCP_START_REDIRECT_SOURCE_SEEDS = [
   "official_registry",
   "mcpservers_org",
   "glama_connector",
@@ -1468,11 +1468,22 @@ const MCP_START_REDIRECT_RECOMMENDED_SOURCES = [
   "docker_mcp_catalog",
   "generic",
 ] as const;
+const MCP_START_REDIRECT_RECOMMENDED_SOURCES = Array.from(
+  new Set([...MCP_START_REDIRECT_SOURCE_SEEDS, ...AGENT_HOST_FAST_PATHS.map((row) => row.source), "generic"])
+);
+const MCP_START_PREFERRED_TARGETS = Object.fromEntries(AGENT_HOST_FAST_PATHS.map((row) => [row.source, row.target]));
+
+function preferredMcpStartTarget(source: string): string {
+  return MCP_START_PREFERRED_TARGETS[source] ?? "generic_streamable_http";
+}
+
 const MCP_START_SOURCE_POLICY = {
   accepted_source_format: MCP_START_SOURCE_FORMAT,
   partner_specific_sources_allowed: true,
   normalization: "Source slugs are lowercased before attribution. Use lowercase source labels to preserve exact reporting.",
+  recommended_source_count: MCP_START_REDIRECT_RECOMMENDED_SOURCES.length,
   recommended_sources: MCP_START_REDIRECT_RECOMMENDED_SOURCES,
+  preferred_targets: Object.fromEntries(MCP_START_REDIRECT_RECOMMENDED_SOURCES.map((source) => [source, preferredMcpStartTarget(source)])),
   custom_examples: ["agency_partner", "browser_agent_demo", "newsletter_mcp"],
 } as const;
 
@@ -7724,6 +7735,9 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     buyer_handoff_html_url: row.buyer_handoff_url,
     buyer_handoff_json_url: row.buyer_handoff_json_url,
     buyer_handoff_markdown_url: row.buyer_handoff_markdown_url,
+    buyer_handoff_shell_url: `https://mcp.packrift.com/r/order/${encodeURIComponent(row.source)}?format=sh`,
+    order_handoff_shell_url: `https://mcp.packrift.com/r/order/${encodeURIComponent(row.source)}?format=sh`,
+    order_handoff_shell_one_liner: sourceActivationShellCommand(`https://mcp.packrift.com/r/order/${encodeURIComponent(row.source)}?format=sh`),
     source_preserving_cart_url: row.source_preserving_cart_url,
     measured_cart_url: row.measured_cart_url,
     previous_measured_cart_urls: row.previous_measured_cart_urls,
@@ -7749,7 +7763,11 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     action:
       "Open the buyer handoff, confirm live product, quantity, price, shipping, tax, final total, and buyer approval in Shopify, then refresh the MCP funnel proof after any approved order.",
     buyer_handoff_url: row.buyer_handoff_url,
+    buyer_handoff_html_url: row.buyer_handoff_html_url,
     buyer_handoff_json_url: row.buyer_handoff_json_url,
+    buyer_handoff_shell_url: row.buyer_handoff_shell_url,
+    order_handoff_shell_url: row.order_handoff_shell_url,
+    order_handoff_shell_one_liner: row.order_handoff_shell_one_liner,
     source_preserving_cart_url: row.source_preserving_cart_url,
     source_preserving_prepare_purchase_handoff: row.source_preserving_prepare_purchase_handoff,
     product: row.product,
@@ -7809,6 +7827,7 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
       buyer_order_handoffs_json: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
       buyer_order_handoffs_markdown: MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
       buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+      buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
       revenue_conversion_queue_json: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
       revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       source_activation_queue_json: revenue.links.source_activation_queue_json,
@@ -7881,11 +7900,16 @@ function mcpBuyerOrderHandoffsMarkdown(payload: ReturnType<typeof mcpBuyerOrderH
     "## Links",
     "",
     `- HTML board: ${payload.links.buyer_order_handoffs_html}`,
+    `- JSONL task queue: ${payload.links.buyer_order_handoffs_tasks_jsonl}`,
     `- Revenue conversion queue: ${payload.links.revenue_conversion_queue_json}`,
     `- Source activation queue: ${payload.links.source_activation_queue_json}`,
     `- GA4 funnel proof: ${payload.links.ga4_funnel_proof}`,
     "",
   ].join("\n");
+}
+
+function mcpBuyerOrderHandoffsTasksJsonl(payload: ReturnType<typeof mcpBuyerOrderHandoffsPayload>): string {
+  return `${payload.buyer_checkout_tasks.map((task) => JSON.stringify(task)).join("\n")}\n`;
 }
 
 function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHandoffsPayload>): string {
@@ -7998,6 +8022,7 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
       <div class="links">
         <a class="button primary" href="${escapeHtml(payload.links.buyer_order_handoffs_json)}">JSON</a>
         <a class="button" href="${escapeHtml(payload.links.buyer_order_handoffs_markdown)}">Markdown</a>
+        <a class="button" href="${escapeHtml(payload.links.buyer_order_handoffs_tasks_jsonl)}">JSONL tasks</a>
         <a class="button" href="${escapeHtml(payload.links.revenue_conversion_queue_html)}">Revenue queue</a>
         <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">GA4 proof</a>
       </div>
@@ -12951,6 +12976,7 @@ const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R05"
 const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
+const MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
   { source: "mcpservers_org", target: "generic_streamable_http" },
@@ -13142,6 +13168,7 @@ const AI_DISCOVERY_URLS = [
   MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
   MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
   MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+  MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
   MCP_SOURCE_ACTIVATION_SITEMAP_URL,
   ...MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS,
   "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
@@ -13324,6 +13351,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-buyer-order-handoffs.json": "Machine-readable buyer/reviewer handoff hub for mature Packrift MCP sources, preserving source attribution into Shopify checkout without placing an order.",
   "/ai/mcp-buyer-order-handoffs.md": "Crawler-readable Packrift MCP buyer/reviewer order handoff hub with copy-ready buyer requests and proof boundaries.",
   "/ai/mcp-buyer-order-handoffs.html": "Human-facing Packrift MCP buyer order handoff board for reviewing mature source-preserving carts before buyer-approved checkout.",
+  "/ai/mcp-buyer-order-handoffs-tasks.jsonl": "Flat JSONL buyer/reviewer checkout task queue for mature Packrift MCP sources that already have tool and cart proof but still need buyer-approved order or revenue proof.",
   "/ai/mcp-source-activation-sitemap.xml": "Finite crawl map for source-specific Packrift MCP start, install, first-run, and reviewer activation URLs.",
   "/ai/mcp-activation-experiments.json": "Machine-readable Packrift MCP source activation experiments with hypotheses, target events, expected snapshot deltas, and suppression rules.",
   "/ai/mcp-activation-experiments.md": "Crawler-readable Packrift MCP activation experiment plan for turning source activity into measurable tool calls, cart landings, and orders.",
@@ -13874,6 +13902,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-buyer-order-handoffs.json") return JSON.stringify(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)), null, 2);
   if (pathname === "/ai/mcp-buyer-order-handoffs.md") return mcpBuyerOrderHandoffsMarkdown(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   if (pathname === "/ai/mcp-buyer-order-handoffs.html") return mcpBuyerOrderHandoffsHtml(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
+  if (pathname === "/ai/mcp-buyer-order-handoffs-tasks.jsonl") return mcpBuyerOrderHandoffsTasksJsonl(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   const sourceActivationPacketMatch = pathname.match(/^\/ai\/mcp-source-activation\/([a-z0-9_]{2,64})\.(json|md|html)$/);
   if (sourceActivationPacketMatch) {
     const source = sourceActivationPacketMatch[1] ?? "";
@@ -16921,6 +16950,21 @@ app.get("/ai/mcp-buyer-order-handoffs.html", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-buyer-order-handoffs.html", "mcp_buyer_order_handoffs", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-buyer-order-handoffs-tasks.jsonl", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpBuyerOrderHandoffsTasksJsonl(
+    mcpBuyerOrderHandoffsPayload(
+      await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh })
+    )
+  );
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-buyer-order-handoffs-tasks.jsonl", "mcp_buyer_order_handoff_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
     ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
