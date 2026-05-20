@@ -414,9 +414,15 @@ async function liveMcpCheck() {
     sourceActivationQueueResult,
     sourceActivationQueueHtmlResult,
     sourceActivationSitemapResult,
+    sourceActivationClineJsonResult,
+    sourceActivationClineMarkdownResult,
+    sourceActivationClineHtmlResult,
     activationExperimentsResult,
     activationExperimentsMarkdownResult,
     activationExperimentsHtmlResult,
+    activationWaveResult,
+    activationWaveMarkdownResult,
+    activationWaveHtmlResult,
     activationCommandCenterResult,
     buyerUseCasesResult,
     cartActivationResult,
@@ -504,9 +510,15 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-queue.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-queue.html"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-experiments.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-experiments.md"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-experiments.html"),
+    fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.md"),
+    fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.html"),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
@@ -577,7 +589,9 @@ async function liveMcpCheck() {
   const funnelSnapshot = funnelSnapshotResult.ok ? JSON.parse(funnelSnapshotResult.text) : null;
   const ga4FunnelProof = ga4FunnelProofResult.ok ? JSON.parse(ga4FunnelProofResult.text) : null;
   const sourceActivationQueue = sourceActivationQueueResult.ok ? JSON.parse(sourceActivationQueueResult.text) : null;
+  const sourceActivationCline = sourceActivationClineJsonResult.ok ? JSON.parse(sourceActivationClineJsonResult.text) : null;
   const activationExperiments = activationExperimentsResult.ok ? JSON.parse(activationExperimentsResult.text) : null;
+  const activationWave = activationWaveResult.ok ? JSON.parse(activationWaveResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
   const firstRunProof = firstRunProofResult.ok ? JSON.parse(firstRunProofResult.text) : null;
@@ -769,6 +783,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       serverCard?.registry_distribution?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       serverCard?.registry_distribution?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
+      serverCard?.registry_distribution?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
+      serverCard?.registry_distribution?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       serverCard?.registry_distribution?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_html_template === "https://mcp.packrift.com/r/activate/{source}?format=html" &&
@@ -796,8 +812,10 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
       resourceUris.has("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md") &&
       resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory") &&
       resourceTemplatesResult.ok &&
+      resourceTemplateUris.has("https://mcp.packrift.com/ai/mcp-source-activation/{source}.json") &&
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}") &&
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?format=sh") &&
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?execute=1&format=json") &&
@@ -819,6 +837,9 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.html") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.md") &&
@@ -857,6 +878,8 @@ async function liveMcpCheck() {
       mcpToolsDiscoveryToolNames.includes("create_cart_url") &&
       mcpToolsDiscovery?.conversion_urls?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       mcpToolsDiscovery?.conversion_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      mcpToolsDiscovery?.conversion_urls?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
+      mcpToolsDiscovery?.conversion_urls?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       mcpToolsDiscovery?.conversion_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       mcpToolsDiscovery?.conversion_urls?.eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
       mcpToolsDiscovery?.conversion_urls?.directory_update_card_template === "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json" &&
@@ -871,6 +894,7 @@ async function liveMcpCheck() {
       specFinderToolsResult.text.includes("create_cart_url") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-queue.json") &&
+      specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 35 &&
@@ -1195,6 +1219,7 @@ async function liveMcpCheck() {
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_funnel_snapshot") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_activation_experiments") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_activation_wave") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_actions") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_reviewer_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_order_handoff") &&
@@ -1210,6 +1235,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_activation_cart_ready_events === "number" &&
       typeof usageSnapshot?.counts?.reviewer_activation_resource_events === "number" &&
       typeof usageSnapshot?.counts?.order_handoff_resource_events === "number" &&
+      typeof usageSnapshot?.counts?.source_activation_packet_resource_events === "number" &&
       typeof usageSnapshot?.counts?.activation_experiments_resource_events === "number" &&
       typeof usageSnapshot?.counts?.eval_pack_resource_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
@@ -1398,6 +1424,8 @@ async function liveMcpCheck() {
       sourceActivationQueue?.links?.source_activation_queue_html === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html" &&
       sourceActivationQueue?.links?.activation_experiments_json === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       sourceActivationQueue?.links?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
+      sourceActivationQueue?.links?.activation_wave_json === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
+      sourceActivationQueue?.links?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       sourceActivationQueue?.links?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       sourceActivationQueue?.links?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
       sourceActivationQueue?.links?.directory_update_card_template === "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json" &&
@@ -1467,6 +1495,25 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
+      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R01" &&
+      sourceActivationCline?.source === "cline_mcp_marketplace" &&
+      sourceActivationCline?.preferred_target === "cline" &&
+      sourceActivationCline?.status === "real_host_tool_call_needed" &&
+      sourceActivationCline?.target_event_to_watch?.startsWith("mcp_tool_call") &&
+      sourceActivationCline?.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+      sourceActivationCline?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
+      sourceActivationCline?.cline_real_host_run?.mcp_json?.includes('"type": "streamableHttp"') &&
+      sourceActivationCline?.cline_real_host_run?.acceptance_gate?.includes("browser proof") &&
+      sourceActivationCline?.copy_ready?.agent_prompt?.includes("create_cart_url") &&
+      sourceActivationCline?.links?.source_packet_html === "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html" &&
+      sourceActivationClineMarkdownResult.ok &&
+      sourceActivationClineMarkdownResult.text.includes("Packrift MCP Source Activation Packet") &&
+      sourceActivationClineMarkdownResult.text.includes("Cline Real-Host Run") &&
+      sourceActivationClineMarkdownResult.text.includes("First-run shell one-liner") &&
+      sourceActivationClineHtmlResult.ok &&
+      sourceActivationClineHtmlResult.text.includes("Packrift MCP Source Activation") &&
+      sourceActivationClineHtmlResult.text.includes("Cline Real-Host Run") &&
+      sourceActivationClineHtmlResult.text.includes("Copy-Ready External Request") &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R08" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
       activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
@@ -1480,6 +1527,8 @@ async function liveMcpCheck() {
       Array.isArray(activationExperiments?.experiments) &&
       activationExperiments?.links?.source_activation_queue_json === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       activationExperiments?.links?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
+      activationExperiments?.links?.activation_wave_json === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
+      activationExperiments?.links?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       activationExperiments?.links?.eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
       activationExperiments?.experiments?.every(
         (experiment) =>
@@ -1525,6 +1574,49 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Copy-ready host configs") &&
       activationExperimentsHtmlResult.text.includes("First-run shell") &&
       activationExperimentsHtmlResult.text.includes("Shell script") &&
+      activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R01" &&
+      activationWave?.canonical_endpoint === MCP_ENDPOINT &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
+      activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
+      activationWave?.tool_call_gap?.material_usage_threshold === 50 &&
+      typeof activationWave?.tool_call_gap?.remaining_to_threshold === "number" &&
+      typeof activationWave?.tool_call_gap?.expected_tool_call_lift_if_all_tasks_run === "number" &&
+      Array.isArray(activationWave?.blocking_goal_gates) &&
+      Array.isArray(activationWave?.suppression_rules) &&
+      activationWave?.suppression_rules?.some((rule) => rule.includes("Do not count this activation wave page")) &&
+      Array.isArray(activationWave?.wave_tasks) &&
+      activationWave?.wave_tasks?.length > 0 &&
+      activationWave?.wave_tasks?.every(
+        (task) =>
+          typeof task.source === "string" &&
+          task.target_event_to_watch?.startsWith("mcp_tool_call") &&
+          task.source_aware_endpoint?.startsWith(`${MCP_ENDPOINT}?`) &&
+          task.tracked_install_json_url?.startsWith("https://mcp.packrift.com/r/install/") &&
+          task.tracked_first_run_shell_url?.includes("format=sh") &&
+          task.reviewer_activation_shell_url?.includes("format=sh") &&
+          task.one_command_external_runner?.includes("format=sh") &&
+          task.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
+          task.directory_update_card_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-directory-update/") &&
+          task.copy_ready_activation_request?.includes("MCP") &&
+          task.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+          task.agent_prompt?.includes("create_cart_url") &&
+          Array.isArray(task.must_not_count) &&
+          task.must_not_count.some((rule) => rule.includes("Do not ")) &&
+          task.success_gate?.includes("external-qualified MCP tool calls")
+      ) &&
+      activationWave?.wave_tasks?.some((task) => ["cline_mcp_marketplace", "glama_connector", "browse_sh"].includes(task.source)) &&
+      activationWaveMarkdownResult.ok &&
+      activationWaveMarkdownResult.text.includes("Packrift MCP Activation Wave") &&
+      activationWaveMarkdownResult.text.includes("No Duplicate Work Rule") &&
+      activationWaveMarkdownResult.text.includes("Tool-Call Gap") &&
+      activationWaveMarkdownResult.text.includes("Copy-Ready Source Requests") &&
+      activationWaveHtmlResult.ok &&
+      activationWaveHtmlResult.text.includes("Packrift MCP Activation Wave") &&
+      activationWaveHtmlResult.text.includes("No duplicate work") &&
+      activationWaveHtmlResult.text.includes("Source-aware endpoint") &&
+      activationWaveHtmlResult.text.includes("Copy-ready host configs") &&
+      activationWaveHtmlResult.text.includes("One-command external runner") &&
+      activationWaveHtmlResult.text.includes("Do not count") &&
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&

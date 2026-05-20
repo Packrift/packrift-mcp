@@ -182,6 +182,10 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - Live MCP tool discovery Markdown: https://mcp.packrift.com/ai/spec-finder-tools.md
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
+- MCP source activation packet template: https://mcp.packrift.com/ai/mcp-source-activation/{source}.json
+- Cline source activation packet: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json
+- MCP activation wave: https://mcp.packrift.com/ai/mcp-activation-wave.json
+- MCP activation wave HTML: https://mcp.packrift.com/ai/mcp-activation-wave.html
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
 - MCP reviewer activation shell script: https://mcp.packrift.com/r/activate/generic?format=sh
 - Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json

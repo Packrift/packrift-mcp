@@ -108,6 +108,27 @@ Use this when an MCP host, marketplace, or directory reviewer needs acceptance-t
 
 The eval pack includes source-aware install/run URLs, host configs, required JSON-RPC requests, expected assertions, and report fields for proving `tools/list`, `prompts/list`, live price, live inventory, and measured cart handoff through the real host.
 
+## Source Activation Packets
+
+Use this when a source already has proof-page or cart-landing signal but still needs a real MCP host run:
+
+- Template: https://mcp.packrift.com/ai/mcp-source-activation/{source}.json
+- Cline packet: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json
+- Cline Markdown: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md
+- Cline HTML: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html
+
+The packet gives one source-specific config, prompt, acceptance gate, and measurement path. For Cline, it is the fastest handoff from marketplace/browser proof into actual `tools/list`, `get_cart_handoff_candidates`, `get_pricing`, `check_inventory`, and `create_cart_url` telemetry.
+
+## Activation Wave
+
+Use this when the material tool-call gate is still open and the next move should be a coordinated set of real MCP host runs:
+
+- JSON: https://mcp.packrift.com/ai/mcp-activation-wave.json
+- Markdown: https://mcp.packrift.com/ai/mcp-activation-wave.md
+- HTML: https://mcp.packrift.com/ai/mcp-activation-wave.html
+
+The wave groups the highest-leverage sources, gives copy-ready host configs and shell runners, and keeps the work on `https://mcp.packrift.com/mcp` instead of creating a duplicate CLI or buyer surface.
+
 ## Cart Activation
 
 Use this when an agent has exact buyer intent and needs the guarded sequence from live checks to a measured MCP cart landing:
