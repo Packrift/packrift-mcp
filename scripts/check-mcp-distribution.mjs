@@ -238,6 +238,8 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const MCP_ACTIVATION_WAVE_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.jsonl";
+const MCP_ACTIVATION_WAVE_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.csv";
 const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
@@ -472,6 +474,8 @@ async function liveMcpCheck() {
     activationWaveResult,
     activationWaveMarkdownResult,
     activationWaveHtmlResult,
+    activationWaveTasksJsonlResult,
+    activationWaveTasksCsvResult,
     activationWaveRunnerResult,
     activationCommandCenterResult,
     agentAdoptionProgressResult,
@@ -585,6 +589,8 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.md"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.html"),
+    fetchText(MCP_ACTIVATION_WAVE_TASKS_JSONL_URL),
+    fetchText(MCP_ACTIVATION_WAVE_TASKS_CSV_URL),
     fetchText(MCP_ACTIVATION_WAVE_RUNNER_URL),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json"),
@@ -670,6 +676,9 @@ async function liveMcpCheck() {
   const sourceActivationAnthropic = sourceActivationAnthropicJsonResult.ok ? JSON.parse(sourceActivationAnthropicJsonResult.text) : null;
   const activationExperiments = activationExperimentsResult.ok ? JSON.parse(activationExperimentsResult.text) : null;
   const activationWave = activationWaveResult.ok ? JSON.parse(activationWaveResult.text) : null;
+  const activationWaveTaskRows = activationWaveTasksJsonlResult.ok
+    ? activationWaveTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
+    : [];
   const agentAdoptionProgress = agentAdoptionProgressResult.ok ? JSON.parse(agentAdoptionProgressResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
@@ -928,6 +937,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
       serverCard?.registry_distribution?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
       serverCard?.registry_distribution?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
+      serverCard?.registry_distribution?.activation_wave_tasks_jsonl === MCP_ACTIVATION_WAVE_TASKS_JSONL_URL &&
+      serverCard?.registry_distribution?.activation_wave_tasks_csv === MCP_ACTIVATION_WAVE_TASKS_CSV_URL &&
       serverCard?.registry_distribution?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       serverCard?.registry_distribution?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
@@ -1863,12 +1874,14 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Copy-ready host configs") &&
       activationExperimentsHtmlResult.text.includes("First-run shell") &&
       activationExperimentsHtmlResult.text.includes("Shell script") &&
-      activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R04" &&
+      activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R05" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
       activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R24" &&
       activationWave?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-wave.json?limit=20000&order_days=90&order_limit=250" &&
       activationWave?.links?.activation_wave_operator_json === activationWave?.snapshot_coverage?.operator_url &&
+      activationWave?.links?.activation_wave_tasks_jsonl === MCP_ACTIVATION_WAVE_TASKS_JSONL_URL &&
+      activationWave?.links?.activation_wave_tasks_csv === MCP_ACTIVATION_WAVE_TASKS_CSV_URL &&
       activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
       activationWave?.tool_call_gap?.material_usage_threshold === 50 &&
       activationWave?.links?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
@@ -1913,6 +1926,25 @@ async function liveMcpCheck() {
       activationWave?.suppression_rules?.some((rule) => rule.includes("Full-source capture mode")) &&
       Array.isArray(activationWave?.wave_tasks) &&
       activationWave?.wave_tasks?.length > 0 &&
+      activationWaveTasksJsonlResult.ok &&
+      activationWaveTasksCsvResult.ok &&
+      activationWaveTaskRows.length === activationWave?.full_capture_wave?.source_count &&
+      activationWaveTaskRows.some((row) => row.in_threshold_wave === true) &&
+      activationWaveTaskRows.every(
+        (row) =>
+          row.release === activationWave?.release &&
+          row.canonical_endpoint === MCP_ENDPOINT &&
+          row.external_activation_required === true &&
+          row.expected_tool_call_lift > 0 &&
+          row.one_command_external_runner?.includes("/r/run/") &&
+          row.tracked_first_run_shell_url?.includes("format=sh") &&
+          row.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
+          row.buyer_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          row.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI")
+      ) &&
+      activationWaveTasksCsvResult.text.startsWith("release,wave_rank,in_threshold_wave,source,preferred_target") &&
+      activationWaveTasksCsvResult.text.includes("one_command_external_runner") &&
+      activationWaveTasksCsvResult.text.includes("https://mcp.packrift.com/r/run/") &&
       activationWave?.wave_tasks?.every(
         (task) =>
           typeof task.source === "string" &&
@@ -1940,6 +1972,8 @@ async function liveMcpCheck() {
       activationWaveMarkdownResult.text.includes("No Duplicate Work Rule") &&
       activationWaveMarkdownResult.text.includes("Tool-Call Gap") &&
       activationWaveMarkdownResult.text.includes("Full Source Capture") &&
+      activationWaveMarkdownResult.text.includes("Automation Exports") &&
+      activationWaveMarkdownResult.text.includes(MCP_ACTIVATION_WAVE_TASKS_JSONL_URL) &&
       activationWaveMarkdownResult.text.includes("Copy-Ready Source Requests") &&
       activationWaveMarkdownResult.text.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       activationWaveHtmlResult.ok &&
@@ -1947,6 +1981,8 @@ async function liveMcpCheck() {
       activationWaveHtmlResult.text.includes("No duplicate work") &&
       activationWaveHtmlResult.text.includes("Full-source capture runner") &&
       activationWaveHtmlResult.text.includes("Full operator wave") &&
+      activationWaveHtmlResult.text.includes("JSONL tasks") &&
+      activationWaveHtmlResult.text.includes("CSV tasks") &&
       activationWaveHtmlResult.text.includes("Source-aware endpoint") &&
       activationWaveHtmlResult.text.includes("Copy-ready host configs") &&
       activationWaveHtmlResult.text.includes("One-command external runner") &&

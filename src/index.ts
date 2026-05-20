@@ -6901,9 +6901,17 @@ function activationWaveExpectedToolCallLift(row: SourceActivationExperimentQueue
 }
 
 function activationWaveCandidateRows(rows: SourceActivationExperimentQueueRow[]) {
-  const toolCallRows = rows.filter((row) => row.target_event_to_watch.startsWith("mcp_tool_call"));
-  if (toolCallRows.length > 0) return toolCallRows;
-  return rows.filter((row) => row.target_event_to_watch !== "mcp_attributed_order");
+  const targetRank = (row: SourceActivationExperimentQueueRow): number => {
+    if (row.target_event_to_watch.startsWith("mcp_tool_call")) return 0;
+    if (row.target_event_to_watch === "mcp_first_run_execution") return 1;
+    if (row.target_event_to_watch === "mcp_install_intent") return 2;
+    return 3;
+  };
+  return rows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row.target_event_to_watch !== "mcp_attributed_order" && activationWaveExpectedToolCallLift(row) > 0)
+    .sort((a, b) => targetRank(a.row) - targetRank(b.row) || a.index - b.index)
+    .map(({ row }) => row);
 }
 
 function activationWaveWhyNow(row: SourceActivationExperimentQueueRow): string {
@@ -6951,6 +6959,8 @@ function activationWaveTask(row: SourceActivationExperimentQueueRow, index: numb
     tool_discovery_json_url: row.tool_discovery_json_url,
     tool_discovery_markdown_url: row.tool_discovery_markdown_url,
     fast_activation_path: row.fast_activation_path,
+    source_order_handoff: row.source_order_handoff,
+    buyer_handoff_preview: row.buyer_handoff_preview,
     copy_ready_host_configs: row.copy_ready_host_configs,
     copy_ready_activation_request: sourceActivationCopyReadyRequest(row),
     agent_prompt: row.agent_prompt,
@@ -7000,7 +7010,7 @@ async function mcpActivationWavePayload(
   const expectedLift = waveTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   const fullExpectedLift = fullCaptureTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R04",
+    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R05",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -7032,7 +7042,7 @@ async function mcpActivationWavePayload(
       projected_external_qualified_mcp_tool_calls_after_full_capture: externalQualifiedToolCalls + fullExpectedLift,
     },
     selection_rule:
-      "Select priority queue rows whose next watched event starts with mcp_tool_call. If no such rows exist, fall back to non-order activation rows. Order-conversion rows stay in the buyer handoff lane.",
+      "Select non-order priority queue rows with positive expected tool-call lift. Rows already at mcp_tool_call come first, then first-run execution rows, then install-intent rows until the threshold wave is filled.",
     wave_count: waveTasks.length,
     wave_tasks: waveTasks,
     full_capture_wave: {
@@ -7062,6 +7072,8 @@ async function mcpActivationWavePayload(
         PUBLIC_MCP_OPERATOR_ORDER_DAYS,
         PUBLIC_MCP_OPERATOR_ORDER_LIMIT
       ),
+      activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
+      activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
       one_command_wave_runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS ${shellQuote(MCP_ACTIVATION_WAVE_RUNNER_URL)} | bash`,
       one_command_full_capture_runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS ${shellQuote(MCP_ACTIVATION_WAVE_RUNNER_URL)} | bash`,
@@ -7163,6 +7175,85 @@ function mcpActivationWaveRunnerShell(payload: Awaited<ReturnType<typeof mcpActi
   ].join("\n");
 }
 
+function activationWaveTaskExportRows(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>) {
+  const thresholdWaveIds = new Set(payload.wave_tasks.map((task) => task.wave_id));
+  return payload.full_capture_wave.tasks.map((task) => ({
+    release: payload.release,
+    generated_at: payload.generated_at,
+    canonical_endpoint: payload.canonical_endpoint,
+    source_queue_release: payload.source_queue_release,
+    wave_rank: task.wave_rank,
+    in_threshold_wave: thresholdWaveIds.has(task.wave_id),
+    source: task.source,
+    preferred_target: task.preferred_target,
+    priority: task.priority,
+    priority_score: task.priority_score,
+    current_stage: task.current_stage,
+    target_event_to_watch: task.target_event_to_watch,
+    external_activation_required: task.external_activation_required,
+    expected_tool_call_lift: task.expected_tool_call_lift,
+    subject: `Run Packrift MCP ${task.source} activation from a real ${task.preferred_target} host`,
+    short_request:
+      `Please run the Packrift MCP first-useful flow for source=${task.source} from a real external ${task.preferred_target} environment. Use only ${payload.canonical_endpoint}; do not create a duplicate CLI or checkout surface.`,
+    source_aware_endpoint: task.source_aware_endpoint,
+    primary_action_url: task.primary_action_url,
+    tracked_install_url: task.tracked_install_url,
+    tracked_install_json_url: task.tracked_install_json_url,
+    tracked_first_run_url: task.tracked_first_run_url,
+    tracked_first_run_shell_url: task.tracked_first_run_shell_url,
+    reviewer_activation_runner_url: task.reviewer_activation_runner_url,
+    reviewer_activation_shell_url: task.reviewer_activation_shell_url,
+    one_command_external_runner: task.one_command_external_runner,
+    eval_pack_json_url: task.eval_pack_json_url,
+    directory_update_card_json_url: task.directory_update_card_json_url,
+    buyer_handoff_url: task.buyer_handoff_preview?.buyer_handoff_url ?? task.source_order_handoff?.buyer_handoff_url ?? "",
+    copy_ready_activation_request: task.copy_ready_activation_request,
+    success_gate: task.success_gate,
+    measurement_source_activation_queue: task.measurement_urls.source_activation_queue,
+    measurement_funnel_snapshot: task.measurement_urls.funnel_snapshot,
+    measurement_ga4_funnel_proof: task.measurement_urls.ga4_funnel_proof,
+    no_duplicate_work_rule: payload.no_duplicate_work_rule,
+  }));
+}
+
+function mcpActivationWaveTasksJsonl(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>): string {
+  return `${activationWaveTaskExportRows(payload).map((row) => JSON.stringify(row)).join("\n")}\n`;
+}
+
+function mcpActivationWaveTasksCsv(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>): string {
+  const rows = activationWaveTaskExportRows(payload);
+  const headers = [
+    "release",
+    "wave_rank",
+    "in_threshold_wave",
+    "source",
+    "preferred_target",
+    "priority",
+    "priority_score",
+    "current_stage",
+    "target_event_to_watch",
+    "external_activation_required",
+    "expected_tool_call_lift",
+    "subject",
+    "short_request",
+    "source_aware_endpoint",
+    "primary_action_url",
+    "tracked_install_json_url",
+    "tracked_first_run_shell_url",
+    "reviewer_activation_shell_url",
+    "one_command_external_runner",
+    "eval_pack_json_url",
+    "directory_update_card_json_url",
+    "buyer_handoff_url",
+    "success_gate",
+  ];
+  return [
+    headers.join(","),
+    ...rows.map((row) => headers.map((header) => csvField(row[header as keyof typeof row])).join(",")),
+    "",
+  ].join("\n");
+}
+
 function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>): string {
   return [
     "# Packrift MCP Activation Wave",
@@ -7195,6 +7286,8 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
     `- Snapshot mode: ${payload.snapshot_coverage.snapshot_mode}`,
     `- Full operator wave: ${payload.snapshot_coverage.operator_url}`,
     `- Guarded wave runner: ${payload.links.activation_wave_runner_shell}`,
+    `- Flat JSONL task export: ${payload.links.activation_wave_tasks_jsonl}`,
+    `- Flat CSV task export: ${payload.links.activation_wave_tasks_csv}`,
     `- One-command wave runner: \`${payload.links.one_command_wave_runner}\``,
     `- One-command full-source capture runner: \`${payload.links.one_command_full_capture_runner}\``,
     "",
@@ -7217,6 +7310,13 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
     `Runner env: \`${payload.full_capture_wave.runner_env}\``,
     "",
     payload.full_capture_wave.runner_rule,
+    "",
+    "## Automation Exports",
+    "",
+    `- JSONL task queue: ${payload.links.activation_wave_tasks_jsonl}`,
+    `- CSV task queue: ${payload.links.activation_wave_tasks_csv}`,
+    "- Use these for n8n, Zapier, LangChain, LlamaIndex, Codex, or directory-review workflows that need one row per external host task.",
+    "- Each row keeps the source-aware endpoint, first-run shell URL, eval pack, buyer/reviewer handoff, success gate, and no-duplicate-work rule.",
     "",
     "| Rank | Source | Target event | Expected lift | Shell runner |",
     "| --- | --- | --- | --- | --- |",
@@ -7386,6 +7486,8 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
         <a href="${escapeHtml(payload.links.activation_wave_json)}">JSON</a>
         <a href="${escapeHtml(payload.links.activation_wave_markdown)}">Markdown</a>
         <a href="${escapeHtml(payload.links.activation_wave_runner_shell)}">Wave runner</a>
+        <a href="${escapeHtml(payload.links.activation_wave_tasks_jsonl)}">JSONL tasks</a>
+        <a href="${escapeHtml(payload.links.activation_wave_tasks_csv)}">CSV tasks</a>
         <a href="${escapeHtml(payload.links.activation_wave_operator_json)}">Full operator wave</a>
         <a href="${escapeHtml(payload.links.source_activation_queue_html)}">Source queue</a>
         <a href="${escapeHtml(payload.links.activation_experiments_html)}">Experiments</a>
@@ -9518,6 +9620,8 @@ const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PAC
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const MCP_ACTIVATION_WAVE_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.jsonl";
+const MCP_ACTIVATION_WAVE_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.csv";
 const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
@@ -9704,6 +9808,8 @@ const AI_DISCOVERY_URLS = [
   MCP_ACTIVATION_WAVE_JSON_URL,
   MCP_ACTIVATION_WAVE_MARKDOWN_URL,
   MCP_ACTIVATION_WAVE_HTML_URL,
+  MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
+  MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
   MCP_ACTIVATION_WAVE_RUNNER_URL,
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
@@ -9857,6 +9963,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-activation-wave.json": "Machine-readable Packrift MCP activation wave that groups source-specific tasks needed to move real external MCP tool calls toward the 50+ material usage gate.",
   "/ai/mcp-activation-wave.md": "Crawler-readable Packrift MCP activation wave with copy-ready host configs, shell runners, success gates, and suppression rules.",
   "/ai/mcp-activation-wave.html": "Human-facing Packrift MCP activation wave board for running the next non-duplicative source-aware MCP tool-call push.",
+  "/ai/mcp-activation-wave-tasks.jsonl": "Flat JSONL Packrift MCP activation task queue for automation tools that need one external host run per line.",
+  "/ai/mcp-activation-wave-tasks.csv": "Flat CSV Packrift MCP activation task queue for spreadsheet, n8n, Zapier, and directory-review workflows.",
   "/ai/mcp-activation-wave-runner.sh": "Guarded shell bundle for external reviewers to run the current Packrift MCP activation wave through existing source-specific first-run scripts.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
@@ -10327,6 +10435,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-activation-wave.json") return JSON.stringify(await mcpActivationWavePayload(env), null, 2);
   if (pathname === "/ai/mcp-activation-wave.md") return mcpActivationWaveMarkdown(await mcpActivationWavePayload(env));
   if (pathname === "/ai/mcp-activation-wave.html") return mcpActivationWaveHtml(await mcpActivationWavePayload(env));
+  if (pathname === "/ai/mcp-activation-wave-tasks.jsonl") return mcpActivationWaveTasksJsonl(await mcpActivationWavePayload(env));
+  if (pathname === "/ai/mcp-activation-wave-tasks.csv") return mcpActivationWaveTasksCsv(await mcpActivationWavePayload(env));
   if (pathname === "/ai/mcp-activation-wave-runner.sh") return mcpActivationWaveRunnerShell(await mcpActivationWavePayload(env));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
@@ -10546,6 +10656,8 @@ function mcpToolDiscoveryPayload() {
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
       activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
+      activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
       eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
       eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
       directory_update_card_template: "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json",
@@ -10693,9 +10805,11 @@ function mcpManifestPayload() {
     mcp_source_activation_packet_cline: "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json",
     mcp_activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
     mcp_activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
-    mcp_activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
-    mcp_activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
-    mcp_activation_command_center: "https://mcp.packrift.com/r/activate",
+      mcp_activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
+      mcp_activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      mcp_activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
+      mcp_activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
+      mcp_activation_command_center: "https://mcp.packrift.com/r/activate",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -10757,6 +10871,8 @@ function mcpServerCardPayload() {
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
+      activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
       activation_command_center: "https://mcp.packrift.com/r/activate",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
@@ -12911,6 +13027,40 @@ app.get("/ai/mcp-activation-wave.html", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave.html", "mcp_activation_wave", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-activation-wave-tasks.jsonl", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const body = mcpActivationWaveTasksJsonl(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave-tasks.jsonl", "mcp_activation_wave_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-activation-wave-tasks.csv", async (c) => {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const body = mcpActivationWaveTasksCsv(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave-tasks.csv", "mcp_activation_wave_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/csv; charset=utf-8",
     ...RAW_HEADERS,
   });
 });
