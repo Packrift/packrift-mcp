@@ -218,7 +218,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       id: "mcp_agent_host_rollout",
       name: "Packrift MCP agent host rollout",
       agent_type: "runtime_source_capture",
-      audience: "Agent builders and operators wiring Packrift MCP into recognizable hosts such as Cline, Cursor, Windsurf, Codex, Claude, OpenAI/ChatGPT, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, and MCP Inspector.",
+      audience: "Agent builders and operators wiring Packrift MCP into recognizable hosts such as Cline, Cursor, Windsurf, Codex, Claude, OpenAI/ChatGPT, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, Goose, Sourcegraph Cody, Aider, Msty, LM Studio, Ollama, AnythingLLM, Lovable, Manus, and major MCP directories.",
       status: "live",
       priority: "core",
       packrift_owned: true,

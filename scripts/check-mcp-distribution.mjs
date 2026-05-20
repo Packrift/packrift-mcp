@@ -1350,7 +1350,7 @@ async function liveMcpCheck() {
       preferredDirectProductFeedGzipOk &&
       preferredDirectProductFeedImmutableOk &&
       preferredDirectProductFeedImmutableGzipOk &&
-      marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
+      marketplaceManifest?.signals?.runtime_source_inference_release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_count >= 35 &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
       marketplaceManifest?.signals?.runtime_source_inference_rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
@@ -1772,7 +1772,7 @@ async function liveMcpCheck() {
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R26" &&
       usageSnapshot?.runtime?.default_public_event_limit === 500 &&
       usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=1000") &&
-      usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
+      usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
       usageSnapshot?.runtime_source_inference?.rule_count >= 35 &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
@@ -1892,7 +1892,7 @@ async function liveMcpCheck() {
         "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250" &&
       funnelSnapshot?.runtime?.default_public_event_limit === 1000 &&
       funnelSnapshot?.runtime?.default_public_event_lookback_days === 2 &&
-      funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
+      funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
       funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
       funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
       funnelSnapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&

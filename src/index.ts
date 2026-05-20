@@ -529,10 +529,94 @@ const MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES: readonly McpRuntimeSourceInferenceR
     user_agent_substrings: ["devin"],
   },
   {
+    source_slug: "goose_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_goose",
+    user_agent_substrings: ["block-goose", "goose"],
+  },
+  {
+    source_slug: "sourcegraph_cody",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_sourcegraph_cody",
+    user_agent_substrings: ["sourcegraph", "cody"],
+  },
+  {
+    source_slug: "aider_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_aider",
+    user_agent_substrings: ["aider"],
+  },
+  {
+    source_slug: "msty_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_msty",
+    user_agent_substrings: ["msty"],
+  },
+  {
+    source_slug: "lmstudio_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_lmstudio",
+    user_agent_substrings: ["lmstudio", "lm studio"],
+  },
+  {
+    source_slug: "ollama_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_ollama",
+    user_agent_substrings: ["ollama"],
+  },
+  {
+    source_slug: "anythingllm_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_anythingllm",
+    user_agent_substrings: ["anythingllm", "anything llm"],
+  },
+  {
+    source_slug: "jan_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_jan",
+    user_agent_substrings: ["jan-ai", "jan ai", "jan/"],
+  },
+  {
+    source_slug: "lovable_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_lovable",
+    user_agent_substrings: ["lovable"],
+  },
+  {
+    source_slug: "manus_agent",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_manus",
+    user_agent_substrings: ["manus"],
+  },
+  {
     source_slug: "docker_mcp_catalog",
     install_target: "generic_streamable_http",
     source_inference: "user_agent_docker",
     user_agent_substrings: ["docker"],
+  },
+  {
+    source_slug: "official_registry",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_official_registry",
+    user_agent_substrings: ["registry.modelcontextprotocol.io", "modelcontextprotocol-registry"],
+  },
+  {
+    source_slug: "mcpservers_org",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpservers_org",
+    user_agent_substrings: ["mcpservers.org", "mcpservers-org"],
+  },
+  {
+    source_slug: "mcp_directory",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcp_directory",
+    user_agent_substrings: ["mcp.directory"],
+  },
+  {
+    source_slug: "anthropic_connectors_directory",
+    install_target: "claude_code",
+    source_inference: "request_signal_anthropic_connectors_directory",
+    user_agent_substrings: ["claude.com/connectors", "claude connectors", "clau.de/mcp-directory"],
   },
   {
     source_slug: "mcp_so",
@@ -545,6 +629,120 @@ const MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES: readonly McpRuntimeSourceInferenceR
     install_target: "mcp_marketplace",
     source_inference: "user_agent_mcp_marketplace",
     user_agent_substrings: ["mcp-marketplace", "mcp_marketplace"],
+  },
+  {
+    source_slug: "mcpbench",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpbench",
+    user_agent_substrings: ["mcpbench"],
+  },
+  {
+    source_slug: "mcpfinder",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpfinder",
+    user_agent_substrings: ["mcpfinder.org"],
+  },
+  {
+    source_slug: "findmcp_dev",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_findmcp",
+    user_agent_substrings: ["findmcp.dev", "findmcp"],
+  },
+  {
+    source_slug: "mcplist_ai",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcplist_ai",
+    user_agent_substrings: ["mcplist.ai", "mcplist"],
+  },
+  {
+    source_slug: "mcphubz",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcphubz",
+    user_agent_substrings: ["mcphubz"],
+  },
+  {
+    source_slug: "mcp_blue",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcp_blue",
+    user_agent_substrings: ["mcp.blue"],
+  },
+  {
+    source_slug: "mcplane",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcplane",
+    user_agent_substrings: ["mcplane"],
+  },
+  {
+    source_slug: "mcpsolutions_dev",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpsolutions",
+    user_agent_substrings: ["mcpsolutions.dev", "mcpsolutions"],
+  },
+  {
+    source_slug: "gpmcp",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_gpmcp",
+    user_agent_substrings: ["gpmcp"],
+  },
+  {
+    source_slug: "theresamcpforthat",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_theresamcpforthat",
+    user_agent_substrings: ["theresamcpforthat"],
+  },
+  {
+    source_slug: "mcpserverfinder",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpserverfinder",
+    user_agent_substrings: ["mcpserverfinder"],
+  },
+  {
+    source_slug: "mcpserver_cc",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpserver_cc",
+    user_agent_substrings: ["mcpserver.cc"],
+  },
+  {
+    source_slug: "mcpserverspot",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpserverspot",
+    user_agent_substrings: ["mcpserverspot"],
+  },
+  {
+    source_slug: "mcpskills",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpskills",
+    user_agent_substrings: ["mcpskills"],
+  },
+  {
+    source_slug: "agentndx",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_agentndx",
+    user_agent_substrings: ["agentndx"],
+  },
+  {
+    source_slug: "mcpcentral",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpcentral",
+    user_agent_substrings: ["mcpcentral"],
+  },
+  {
+    source_slug: "mcpmarket_com",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_mcpmarket",
+    user_agent_substrings: ["mcpmarket.com", "mcpmarket"],
+  },
+  {
+    source_slug: "pulsemcp_packrift",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_pulsemcp",
+    user_agent_substrings: ["pulsemcp", "pulse mcp"],
+  },
+  {
+    source_slug: "chiark",
+    install_target: "generic_streamable_http",
+    source_inference: "request_signal_chiark",
+    user_agent_substrings: ["chiark"],
   },
   {
     source_slug: "mcp_inspector",
@@ -600,6 +798,25 @@ function inferMcpRuntimeSourceFromUserAgent(userAgent: string): InferredMcpRunti
     }
   }
   return null;
+}
+
+function mcpRuntimeSourceSignal(headers: Headers): string {
+  return [
+    headers.get("User-Agent"),
+    headers.get("Referer"),
+    headers.get("Origin"),
+    headers.get("X-Mcp-Client"),
+    headers.get("X-MCP-Client"),
+    headers.get("Mcp-Client"),
+    headers.get("MCP-Client"),
+    headers.get("X-Mcp-Client-Name"),
+    headers.get("X-MCP-Client-Name"),
+    headers.get("X-Client-Name"),
+    headers.get("X-Requested-With"),
+  ]
+    .map((value) => safeEventText(value, 240))
+    .filter(Boolean)
+    .join(" ");
 }
 
 function mcpSourceContinuityFromUrl(url: URL, userAgent = ""): RpcExecutionContext {
@@ -1145,7 +1362,7 @@ const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TE
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
 const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEMETRY-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
-const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02";
+const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03";
 const MCP_AGENT_HOST_ROLLOUT_RELEASE = "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02";
 const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
 const MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md";
@@ -13342,7 +13559,7 @@ function mcpMarketplaceDiscoveryPayload() {
       runtime_source_inference_rule_count: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.length,
       runtime_source_inference_rule_families: MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES,
       runtime_source_inference:
-        "MCP calls with packrift_mcp_source, mcp_source, or utm_source keep explicit source attribution. Direct untracked MCP clients are source-attributed from recognizable user-agent families such as Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, and generic MCP clients.",
+        "MCP calls with packrift_mcp_source, mcp_source, or utm_source keep explicit source attribution. Direct untracked MCP clients are source-attributed from recognizable request signals such as User-Agent, Referer, Origin, X-MCP-Client, and X-Client-Name. Families include Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, Goose, Sourcegraph Cody, Aider, Msty, LM Studio, Ollama, AnythingLLM, Jan, Lovable, Manus, official MCP Registry, MCP.so, MCP Inspector, major MCP directories, and generic MCP clients.",
       tags: [
         "mcp",
         "ecommerce",
@@ -16169,7 +16386,8 @@ app.post("/mcp", async (c) => {
   const env = c.env;
   const requestUrl = new URL(c.req.url);
   const userAgent = c.req.header("User-Agent") ?? "";
-  const continuity = mcpSourceContinuityFromUrl(requestUrl, userAgent);
+  const runtimeSignal = mcpRuntimeSourceSignal(c.req.raw.headers);
+  const continuity = mcpSourceContinuityFromUrl(requestUrl, runtimeSignal || userAgent);
   let body: unknown;
   try {
     body = await c.req.json();
