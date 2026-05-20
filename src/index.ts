@@ -1369,6 +1369,8 @@ const MCP_AGENT_HOST_ROLLOUT_RELEASE = "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03";
 const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
 const MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md";
 const MCP_AGENT_HOST_ROLLOUT_HTML_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv";
 const GENERATED_AI_RESOURCE_TELEMETRY_RELEASE = "PACKRIFT-GENERATED-AI-RESOURCE-TELEMETRY-R01";
 const MCP_ACTIVATION_CART_READY_RELEASE = "PACKRIFT-MCP-ACTIVATION-CART-READY-R01";
 const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
@@ -4874,6 +4876,8 @@ function mcpAgentHostRolloutPayload(sourceQueue?: AgentHostRolloutQueuePayload |
       json: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       markdown: MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL,
       html: MCP_AGENT_HOST_ROLLOUT_HTML_URL,
+      tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
+      tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
@@ -4882,6 +4886,107 @@ function mcpAgentHostRolloutPayload(sourceQueue?: AgentHostRolloutQueuePayload |
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
     },
   };
+}
+
+function mcpAgentHostRolloutTaskRows(payload = mcpAgentHostRolloutPayload()) {
+  return payload.rows.map((row, index) => ({
+    release: payload.release,
+    generated_at: payload.generated_at,
+    rank: index + 1,
+    source: row.source,
+    preferred_target: row.target,
+    activation_priority: row.activation_priority,
+    activation_priority_score: row.activation_priority_score,
+    activation_status: row.activation_status,
+    activation_stage: row.activation_stage,
+    target_event_to_watch: row.target_event_to_watch,
+    queue_source: row.queue_source,
+    source_inference: row.source_inference,
+    source_aware_endpoint: row.source_aware_endpoint,
+    primary_action_url: row.primary_action_url,
+    tracked_config_url: row.tracked_config_url,
+    tracked_install_url: row.tracked_install_url,
+    tracked_first_run_url: row.tracked_first_run_url,
+    tracked_first_run_shell_url: row.tracked_first_run_shell_url,
+    first_run_shell_one_liner: row.first_run_shell_one_liner,
+    reviewer_activation_url: row.reviewer_activation_url,
+    reviewer_activation_shell_url: row.reviewer_activation_shell_url,
+    reviewer_activation_shell_one_liner: row.reviewer_activation_shell_one_liner,
+    source_activation_packet: row.source_activation_packet,
+    eval_pack: row.eval_pack,
+    buyer_handoff_url: row.buyer_handoff_url ?? row.order_handoff,
+    order_handoff_shell_url: row.order_handoff_shell_url,
+    order_handoff_shell_one_liner: row.order_handoff_shell_one_liner,
+    current_starts: row.current_counts.starts,
+    current_install_intents: row.current_counts.install_intents,
+    current_first_run_executions: row.current_counts.first_run_executions,
+    current_mcp_tool_calls: row.current_counts.mcp_tool_calls,
+    current_create_cart_url_calls: row.current_counts.create_cart_url_calls,
+    current_qualified_cart_landings: row.current_counts.qualified_cart_landings,
+    recent_measured_cart_urls: row.current_counts.recent_measured_cart_urls.join(" | "),
+    short_request: `Install or verify Packrift MCP for source=${row.source} target=${row.target}, run tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066 from the real host, then stop at the returned mcp.packrift.com/r/cart URL.`,
+    success_gate: row.success_gate,
+    no_duplicate_work_rule:
+      "Use the hosted Packrift MCP endpoint and existing /r/config, /r/install, /r/run, /r/activate, /r/order, and /r/cart handoffs. Do not create a duplicate CLI, server, or checkout surface.",
+    measurement_urls: [
+      payload.links.source_activation_queue,
+      payload.links.usage_snapshot,
+      payload.links.funnel_snapshot,
+    ].join(" | "),
+  }));
+}
+
+function mcpAgentHostRolloutTasksJsonl(payload = mcpAgentHostRolloutPayload()): string {
+  return `${mcpAgentHostRolloutTaskRows(payload).map((row) => JSON.stringify(row)).join("\n")}\n`;
+}
+
+function mcpAgentHostRolloutTasksCsv(payload = mcpAgentHostRolloutPayload()): string {
+  const rows = mcpAgentHostRolloutTaskRows(payload);
+  const headers = [
+    "release",
+    "generated_at",
+    "rank",
+    "source",
+    "preferred_target",
+    "activation_priority",
+    "activation_priority_score",
+    "activation_status",
+    "activation_stage",
+    "target_event_to_watch",
+    "queue_source",
+    "source_inference",
+    "source_aware_endpoint",
+    "primary_action_url",
+    "tracked_config_url",
+    "tracked_install_url",
+    "tracked_first_run_url",
+    "tracked_first_run_shell_url",
+    "first_run_shell_one_liner",
+    "reviewer_activation_url",
+    "reviewer_activation_shell_url",
+    "reviewer_activation_shell_one_liner",
+    "source_activation_packet",
+    "eval_pack",
+    "buyer_handoff_url",
+    "order_handoff_shell_url",
+    "order_handoff_shell_one_liner",
+    "current_starts",
+    "current_install_intents",
+    "current_first_run_executions",
+    "current_mcp_tool_calls",
+    "current_create_cart_url_calls",
+    "current_qualified_cart_landings",
+    "recent_measured_cart_urls",
+    "short_request",
+    "success_gate",
+    "no_duplicate_work_rule",
+    "measurement_urls",
+  ];
+  return [
+    headers.join(","),
+    ...rows.map((row) => headers.map((header) => csvField(row[header as keyof typeof row])).join(",")),
+    "",
+  ].join("\n");
 }
 
 async function mcpAgentHostRolloutDefaultPayload(env: Env): Promise<ReturnType<typeof mcpAgentHostRolloutPayload>> {
@@ -4942,6 +5047,8 @@ function mcpAgentHostRolloutMarkdown(payload = mcpAgentHostRolloutPayload()): st
     "",
     `- Source activation queue: ${payload.links.source_activation_queue}`,
     `- Activation wave: ${payload.links.activation_wave}`,
+    `- Flat JSONL task export: ${payload.links.tasks_jsonl}`,
+    `- Flat CSV task export: ${payload.links.tasks_csv}`,
     `- Funnel snapshot: ${payload.links.funnel_snapshot}`,
     "",
   ].join("\n");
@@ -5059,6 +5166,8 @@ function mcpAgentHostRolloutHtml(payload = mcpAgentHostRolloutPayload()): string
       <div class="links">
         <a href="${escapeHtml(payload.links.json)}">JSON</a>
         <a href="${escapeHtml(payload.links.markdown)}">Markdown</a>
+        <a href="${escapeHtml(payload.links.tasks_jsonl)}">JSONL tasks</a>
+        <a href="${escapeHtml(payload.links.tasks_csv)}">CSV tasks</a>
         <a href="${escapeHtml(payload.links.source_activation_queue)}">Source activation queue</a>
         <a href="${escapeHtml(payload.links.activation_wave)}">Activation wave</a>
         <a href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel snapshot</a>
@@ -13140,6 +13249,8 @@ const AI_DISCOVERY_URLS = [
   MCP_AGENT_HOST_ROLLOUT_JSON_URL,
   MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL,
   MCP_AGENT_HOST_ROLLOUT_HTML_URL,
+  MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
+  MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
   "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
   "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
   "https://mcp.packrift.com/ai/mcp-install-matrix.json",
@@ -13323,6 +13434,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-agent-host-rollout.json": "Machine-readable source-aware Packrift MCP rollout map for recognizable agent host families, runtime attribution, tracked install paths, first-run shell runners, and activation links.",
   "/ai/mcp-agent-host-rollout.md": "Crawler-readable Packrift MCP agent host rollout sheet for source-aware installs and first useful runs across agent families.",
   "/ai/mcp-agent-host-rollout.html": "Human-facing Packrift MCP agent host rollout board with one-click install, first-run, activation, and eval links for each source family.",
+  "/ai/mcp-agent-host-rollout-tasks.jsonl": "Flat JSONL import queue for source-aware Packrift MCP agent-host rollout tasks across every recognizable host family.",
+  "/ai/mcp-agent-host-rollout-tasks.csv": "Flat CSV import queue for source-aware Packrift MCP agent-host rollout tasks across every recognizable host family.",
   "/ai/mcp-adoption-kit.json": "Machine-readable Packrift MCP adoption kit with install snippets, first-five-minute JSON-RPC calls, curl/JavaScript/Python examples, demo SKUs, useful workflows, proof URLs, and exact-match rules.",
   "/ai/mcp-adoption-kit.md": "Crawler-readable Packrift MCP adoption kit for developers, agents, marketplaces, and AI-commerce workflows with copy-paste hosted endpoint examples.",
   "/ai/mcp-install-matrix.json": "Machine-readable Packrift MCP install matrix for common agent hosts, copy-ready remote MCP config, smoke tests, and measured cart handoff rules.",
@@ -13820,6 +13933,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-agent-host-rollout.json") return JSON.stringify(await mcpAgentHostRolloutDefaultPayload(env), null, 2);
   if (pathname === "/ai/mcp-agent-host-rollout.md") return mcpAgentHostRolloutMarkdown(await mcpAgentHostRolloutDefaultPayload(env));
   if (pathname === "/ai/mcp-agent-host-rollout.html") return mcpAgentHostRolloutHtml(await mcpAgentHostRolloutDefaultPayload(env));
+  if (pathname === "/ai/mcp-agent-host-rollout-tasks.jsonl") return mcpAgentHostRolloutTasksJsonl(await mcpAgentHostRolloutDefaultPayload(env));
+  if (pathname === "/ai/mcp-agent-host-rollout-tasks.csv") return mcpAgentHostRolloutTasksCsv(await mcpAgentHostRolloutDefaultPayload(env));
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
   if (pathname === "/ai/mcp-install-matrix.json") return JSON.stringify(mcpInstallMatrixPayload(installMatrixRuntime()), null, 2);
@@ -16668,6 +16783,28 @@ app.get("/ai/mcp-agent-host-rollout.html", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-host-rollout.html", "mcp_agent_host_rollout", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-agent-host-rollout-tasks.jsonl", async (c) => {
+  const url = new URL(c.req.url);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpAgentHostRolloutTasksJsonl(await mcpAgentHostRolloutPayloadForRequest(c));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-host-rollout-tasks.jsonl", "mcp_agent_host_rollout_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-agent-host-rollout-tasks.csv", async (c) => {
+  const url = new URL(c.req.url);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpAgentHostRolloutTasksCsv(await mcpAgentHostRolloutPayloadForRequest(c));
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-host-rollout-tasks.csv", "mcp_agent_host_rollout_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/csv; charset=utf-8",
     ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });

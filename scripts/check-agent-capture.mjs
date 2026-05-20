@@ -122,12 +122,26 @@ function markdownReport(payload) {
 async function main() {
   const jsonUrl = `${BASE_URL}/ai/all-agent-capture.json`;
   const mdUrl = `${BASE_URL}/ai/all-agent-capture.md`;
-  const [jsonResult, mdResult, healthResult, resourcesResult, resourceTemplatesResult, clientConfigResult, directoryRefreshResult, directorySubmitActionsResult, outreachResult] = await Promise.all([
+  const [
+    jsonResult,
+    mdResult,
+    healthResult,
+    resourcesResult,
+    resourceTemplatesResult,
+    agentHostRolloutTasksJsonlResult,
+    agentHostRolloutTasksCsvResult,
+    clientConfigResult,
+    directoryRefreshResult,
+    directorySubmitActionsResult,
+    outreachResult,
+  ] = await Promise.all([
     fetchJson(jsonUrl),
     fetchText(mdUrl),
     fetchJson(`${BASE_URL}/health`),
     fetchMcp("resources/list"),
     fetchMcp("resources/templates/list"),
+    fetchText(`${BASE_URL}/ai/mcp-agent-host-rollout-tasks.jsonl`),
+    fetchText(`${BASE_URL}/ai/mcp-agent-host-rollout-tasks.csv`),
     fetchJson(`${BASE_URL}/ai/mcp-client-config.json`),
     fetchJson(`${BASE_URL}/ai/mcp-directory-refresh.json`),
     fetchJson(`${BASE_URL}/ai/mcp-directory-submit-actions.json`),
@@ -350,9 +364,20 @@ async function main() {
     check("resources/list advertises capture routes", hasResourceUri(resourceUris, "/ai/all-agent-capture.json") && hasResourceUri(resourceUris, "/ai/all-agent-capture.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises agent host rollout", hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.json") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.md") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.html"), {
+    check("resources/list advertises agent host rollout", hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.json") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.md") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout.html") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout-tasks.jsonl") && hasResourceUri(resourceUris, "/ai/mcp-agent-host-rollout-tasks.csv"), {
       detail: `resources=${resources.length}`,
     }),
+    check(
+      "agent host rollout flat task exports are importable",
+      agentHostRolloutTasksJsonlResult.ok &&
+        agentHostRolloutTasksCsvResult.ok &&
+        agentHostRolloutTasksJsonlResult.text.includes('"source":"cline_mcp_marketplace"') &&
+        agentHostRolloutTasksJsonlResult.text.includes('"tracked_first_run_shell_url"') &&
+        agentHostRolloutTasksJsonlResult.text.includes('"no_duplicate_work_rule"') &&
+        agentHostRolloutTasksCsvResult.text.startsWith("release,generated_at,rank,source,preferred_target") &&
+        agentHostRolloutTasksCsvResult.text.includes("cline_mcp_marketplace"),
+      { detail: `jsonl=${agentHostRolloutTasksJsonlResult.ok}, csv=${agentHostRolloutTasksCsvResult.ok}` }
+    ),
     check("resources/list advertises adoption kit", hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.json") && hasResourceUri(resourceUris, "/ai/mcp-adoption-kit.md"), {
       detail: `resources=${resources.length}`,
     }),

@@ -404,6 +404,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
+- MCP agent host rollout: https://mcp.packrift.com/ai/mcp-agent-host-rollout.json
+- MCP agent host rollout task JSONL: https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl
+- MCP agent host rollout task CSV: https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP GA4 funnel proof: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
 - MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json

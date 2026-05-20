@@ -61,6 +61,8 @@ export const serverCard = {
     mcpAgentHostRolloutJson: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json",
     mcpAgentHostRolloutMarkdown: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md",
     mcpAgentHostRolloutHtml: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html",
+    mcpAgentHostRolloutTasksJsonl: "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl",
+    mcpAgentHostRolloutTasksCsv: "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv",
     mcpAdoptionKitJson: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcpAdoptionKitMarkdown: "https://mcp.packrift.com/ai/mcp-adoption-kit.md",
     mcpInstallMatrixJson: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
