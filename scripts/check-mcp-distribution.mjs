@@ -961,14 +961,23 @@ async function liveMcpCheck() {
     sourceActivationAnthropic?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
     sourceActivationAnthropic?.real_host_run?.first_run_shell_url?.includes("/r/run/anthropic_connectors_directory/claude_code");
   const sourceActivationHostIntentRowsRequireExternalOk = ["claude_remote_mcp", "codex_remote_mcp", "glama_connector"].every((source) =>
-    sourceActivationQueue?.queue?.some(
-      (row) =>
-        row.source === source &&
-        row.current_counts?.first_run_actions > 0 &&
+    sourceActivationQueue?.queue?.some((row) => {
+      if (row.source !== source || row.external_activation_required !== true) return false;
+      const intentVisible = row.current_counts?.install_intents > 0 || row.current_counts?.first_run_actions > 0;
+      return (
+        intentVisible &&
         row.current_counts?.mcp_tool_calls === 0 &&
-        row.external_activation_required === true &&
-        row.recommended_action?.includes("first-run")
-    )
+        ["mcp_first_run_intent", "mcp_first_run_execution"].includes(row.target_event_to_watch) &&
+        row.source_aware_endpoint?.includes(`packrift_mcp_source=${source}`) &&
+        row.source_aware_endpoint?.includes("packrift_mcp_target=") &&
+        row.primary_action_url?.startsWith("https://mcp.packrift.com/r/run/") &&
+        row.tracked_first_run_url?.startsWith("https://mcp.packrift.com/r/run/") &&
+        row.tracked_first_run_shell_url?.includes("format=sh") &&
+        (row.recommended_action?.includes("first-run") ||
+          row.recommended_action?.includes("first useful run") ||
+          row.current_stage?.includes("first useful run missing"))
+      );
+    })
   );
   const sourceActivationMcpSoExternalOk = sourceActivationQueue?.queue?.some((row) => {
     if (row.source !== "mcp_so" || row.external_activation_required !== true) return false;
