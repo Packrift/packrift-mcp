@@ -17,6 +17,8 @@ interface DirectoryRefreshRow {
   tracked_run_url?: string;
   tracked_reviewer_activation_url?: string;
   tracked_reviewer_activation_html_url?: string;
+  tracked_order_handoff_url?: string;
+  tracked_order_handoff_html_url?: string;
   source_eval_pack_url?: string;
   stale_markers: readonly string[];
   next_action: string;
@@ -43,6 +45,8 @@ const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
 const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
 const TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}?format=html";
+const TRACKED_ORDER_HANDOFF_TEMPLATE = "https://mcp.packrift.com/r/order/{source}";
+const TRACKED_ORDER_HANDOFF_HTML_TEMPLATE = "https://mcp.packrift.com/r/order/{source}?format=html";
 
 function genericMcpJson() {
   return {
@@ -79,6 +83,8 @@ function agentPromptSupport(source: string, target: string) {
     agent_prompt_page: `https://mcp.packrift.com/r/run/${source}/${target}?format=html`,
     first_run_execute_url: `https://mcp.packrift.com/r/run/${source}/${target}?execute=1`,
     reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${source}?format=html`,
+    buyer_order_handoff: `https://mcp.packrift.com/r/order/${source}?format=html`,
+    buyer_order_handoff_json: `https://mcp.packrift.com/r/order/${source}?format=json`,
     generic_mcp_json: sourceAwareMcpJson(source, target),
     claude_code_command: `claude mcp add --transport http packrift "${firstUsefulRun.endpoint}"`,
     codex_command: `codex mcp add packrift --url "${firstUsefulRun.endpoint}"`,
@@ -93,6 +99,8 @@ function agentPromptSupport(source: string, target: string) {
     ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
     acceptance_rule:
       "Paste the source-aware prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before calling the source activated.",
+    order_handoff_rule:
+      "Use the source-specific /r/order/{source} page only when a real buyer or reviewer is ready to evaluate checkout after MCP tool-call and cart proof; it does not place an order.",
     suppression_rule:
       "Do not count browser-only proof, Packrift self-checks, or duplicate public issue comments as completed source activation.",
   };
@@ -121,6 +129,8 @@ function agentInstallSnippets() {
     tracked_run_template: TRACKED_RUN_TEMPLATE,
     tracked_reviewer_activation_template: TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
     tracked_reviewer_activation_html_template: TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
+    tracked_order_handoff_template: TRACKED_ORDER_HANDOFF_TEMPLATE,
+    tracked_order_handoff_html_template: TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
     generic_mcp_json: genericMcpJson(),
     claude_code: `claude mcp add --transport http packrift ${MCP_ENDPOINT}`,
     codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
@@ -184,6 +194,8 @@ function trackedUrls(rows: DirectoryRefreshRow[], source: string) {
     tracked_config_url: row?.tracked_config_url ?? TRACKED_CONFIG_TEMPLATE.replace("{source}", source),
     tracked_reviewer_activation_url: row?.tracked_reviewer_activation_url ?? TRACKED_REVIEWER_ACTIVATION_TEMPLATE.replace("{source}", source),
     tracked_reviewer_activation_html_url: row?.tracked_reviewer_activation_html_url ?? TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE.replace("{source}", source),
+    tracked_order_handoff_url: row?.tracked_order_handoff_url ?? TRACKED_ORDER_HANDOFF_TEMPLATE.replace("{source}", source),
+    tracked_order_handoff_html_url: row?.tracked_order_handoff_html_url ?? TRACKED_ORDER_HANDOFF_HTML_TEMPLATE.replace("{source}", source),
   };
 }
 
@@ -214,6 +226,10 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
       },
       supporting_copy: proofLine,
       agent_prompt_support: mcpSoPromptSupport,
+      buyer_order_handoff: "https://mcp.packrift.com/r/order/mcp_so?format=html",
+      buyer_order_handoff_json: "https://mcp.packrift.com/r/order/mcp_so?format=json",
+      order_handoff_rule:
+        "Use this after MCP.so source proof reaches real MCP tool calls and a measured cart handoff, then route a buyer or reviewer through checkout evaluation without placing an order.",
       ...mcpSo,
     },
     claude_connectors_directory: {
@@ -245,11 +261,14 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
         tracked_claude_code_first_run: "https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_code?format=html",
         tracked_claude_desktop_first_run: "https://mcp.packrift.com/r/run/anthropic_connectors_directory/claude_desktop?format=html",
         reviewer_activation_runner: "https://mcp.packrift.com/r/activate/anthropic_connectors_directory?format=html",
+        buyer_order_handoff: "https://mcp.packrift.com/r/order/anthropic_connectors_directory?format=html",
         source_aware_claude_code_command: claudePromptSupport.claude_code_command,
         source_aware_mcp_json: claudePromptSupport.generic_mcp_json,
         copy_ready_agent_prompt: claudePromptSupport.copy_ready_agent_prompt,
         acceptance_gate:
           "Review is complete only after a Claude MCP host can install the existing hosted endpoint and reach create_cart_url with source attribution.",
+        order_handoff_rule:
+          "Use the source-specific order handoff only for buyer/reviewer checkout follow-through after MCP proof; it does not place an order.",
       },
       ...claude,
     },
@@ -313,6 +332,12 @@ function evidenceLinks() {
     tracked_run_template: TRACKED_RUN_TEMPLATE,
     tracked_reviewer_activation_template: TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
     tracked_reviewer_activation_html_template: TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
+    tracked_order_handoff_template: TRACKED_ORDER_HANDOFF_TEMPLATE,
+    tracked_order_handoff_html_template: TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
+    mcp_order_handoff_generic: "https://mcp.packrift.com/r/order/generic?format=html",
+    mcp_order_handoff_mcp_so: "https://mcp.packrift.com/r/order/mcp_so?format=html",
+    mcp_order_handoff_cline: "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html",
+    mcp_order_handoff_docker: "https://mcp.packrift.com/r/order/docker_mcp_catalog?format=html",
     all_agent_capture_json: CAPTURE_JSON_URL,
     all_agent_capture_markdown: CAPTURE_MARKDOWN_URL,
     agent_capture_outreach_json: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
@@ -381,6 +406,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
     tracked_run_url: action.tracked_run_urls?.generic_streamable_http,
     tracked_reviewer_activation_url: action.proof_urls?.tracked_reviewer_activation,
     tracked_reviewer_activation_html_url: action.proof_urls?.tracked_reviewer_activation_html,
+    tracked_order_handoff_url: action.proof_urls?.tracked_order_handoff,
+    tracked_order_handoff_html_url: action.proof_urls?.tracked_order_handoff_html,
     source_eval_pack_url: action.proof_urls?.source_eval_pack,
     stale_markers: "stale_markers" in action ? Array.from(action.stale_markers ?? []) : [],
     next_action: action.next_action,
@@ -394,7 +421,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R21",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R22",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -422,6 +449,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       tracked_run_template: submitActions.tracked_run_template,
       tracked_reviewer_activation_template: submitActions.tracked_reviewer_activation_template,
       tracked_reviewer_activation_html_template: submitActions.tracked_reviewer_activation_html_template,
+      tracked_order_handoff_template: submitActions.tracked_order_handoff_template,
+      tracked_order_handoff_html_template: submitActions.tracked_order_handoff_html_template,
       source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       source_activation_wave: ACTIVATION_WAVE_URL,
       source_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
@@ -440,6 +469,11 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         activation_wave: ACTIVATION_WAVE_URL,
         activation_wave_html: ACTIVATION_WAVE_HTML_URL,
         activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
+        order_handoff_template: TRACKED_ORDER_HANDOFF_TEMPLATE,
+        order_handoff_html_template: TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
+        order_handoff_mcp_so: "https://mcp.packrift.com/r/order/mcp_so?format=html",
+        order_handoff_cline: "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html",
+        order_handoff_docker: "https://mcp.packrift.com/r/order/docker_mcp_catalog?format=html",
         eval_pack: MCP_EVAL_PACK_URL,
         eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
         usage_snapshot: USAGE_SNAPSHOT_URL,
@@ -452,6 +486,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         "Run a source-specific /r/run/{source}/{target} or /r/activate/{source}?format=html flow.",
         "Use /ai/mcp-eval-pack.json?source={source} when reviewers need copy-ready host acceptance cases.",
         "Require tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+        "Use /r/order/{source}?format=html only for buyer or reviewer checkout follow-through after source-level MCP tool-call and cart proof; it does not place an order.",
         "Do not create duplicate CLIs, storefronts, buyer pages, or duplicate public issue comments.",
       ],
     },
@@ -467,6 +502,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       "Use tracked /r/run/{source}/{target} links to move installed users into the first useful run and measure first-run intent.",
       "Use the copy-ready agent prompt from /r/run/{source}/{target}?format=html and /r/activate/{source}?format=html when the next step is a real MCP run, not another listing click.",
       "Use tracked /r/activate/{source}?format=html browser runners when proof clicks need to become real MCP client calls and create_cart_url output.",
+      "Use tracked /r/order/{source}?format=html buyer/reviewer handoffs after real MCP tool-call and cart proof when the next missing event is a source-attributed order.",
       "Use the eval pack when a host, marketplace, or reviewer needs copy-ready acceptance cases for a real external MCP install.",
       "Use the source activation queue to pick the next source-specific run that moves starts, installs, tool calls, cart landings, and orders forward.",
       "Use the start page for first install, the install matrix for host-specific setup, and the workflow gallery for demo/eval flows.",
@@ -484,13 +520,13 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
   const priorityRows = payload.priority_queue
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${action.tracked_reviewer_activation_html_url ?? ""} | ${action.source_eval_pack_url ?? ""} | ${escapeMarkdown(action.next_action)} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${action.tracked_reviewer_activation_html_url ?? ""} | ${action.tracked_order_handoff_html_url ?? ""} | ${action.source_eval_pack_url ?? ""} | ${escapeMarkdown(action.next_action)} |`
     )
     .join("\n");
   const directoryRows = payload.directory_refreshes
     .map(
       (action) =>
-        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${action.tracked_reviewer_activation_html_url ?? ""} | ${action.source_eval_pack_url ?? ""} |`
+        `| ${escapeMarkdown(action.label)} | ${action.action_status} | ${action.directory_status} | ${action.priority} | ${action.tracked_start_url} | ${action.tracked_config_url} | ${action.tracked_run_url ?? ""} | ${action.tracked_reviewer_activation_url ?? ""} | ${action.tracked_reviewer_activation_html_url ?? ""} | ${action.tracked_order_handoff_html_url ?? ""} | ${action.source_eval_pack_url ?? ""} |`
     )
     .join("\n");
   const messages = payload.directory_refreshes
@@ -518,9 +554,9 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
     "",
     "## Highest Priority Queue",
     "",
-    "| Surface | Action status | Directory status | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner | Eval pack | Next action |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-    priorityRows || "| none | pass | pass | | | | | | | |",
+    "| Surface | Action status | Directory status | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner | Order handoff | Eval pack | Next action |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    priorityRows || "| none | pass | pass | | | | | | | | |",
     "",
     "## Activation Handoff",
     "",
@@ -528,8 +564,8 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
     "",
     "## All Directory Refreshes",
     "",
-    "| Surface | Action status | Directory status | Priority | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner | Eval pack |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Surface | Action status | Directory status | Priority | Tracked start | Tracked config | Tracked first run | Activation handoff | Activation runner | Order handoff | Eval pack |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     directoryRows,
     "",
     "## Browser-Assisted Submission Payloads",

@@ -286,7 +286,8 @@ async function main() {
     }),
     check(
       "resources/list advertises source-specific activation runners",
-      resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
+        resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
         resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
         resourceUris.has("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
         resourceUris.has("https://mcp.packrift.com/r/config/anthropic_connectors_directory"),
@@ -297,7 +298,8 @@ async function main() {
       resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}") &&
         resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?format=sh") &&
         resourceTemplateUris.has("https://mcp.packrift.com/r/run/{source}/{target}?execute=1&format=json") &&
-        resourceTemplateUris.has("https://mcp.packrift.com/r/activate/{source}?format=sh"),
+        resourceTemplateUris.has("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+        resourceTemplateUris.has("https://mcp.packrift.com/r/order/{source}"),
       { detail: `templates=${resourceTemplates.length}` }
     ),
     check("resources/list advertises reviewer activation", hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-reviewer-activation.md") && hasResourceUri(resourceUris, "/r/activate/generic") && hasResourceUri(resourceUris, "/r/activate/generic?format=html") && hasResourceUri(resourceUris, "/r/activate/generic?format=sh"), {
