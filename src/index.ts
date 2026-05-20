@@ -3034,8 +3034,8 @@ function monthlyQualifiedVisitorProof(events: Array<Record<string, unknown>>, lo
   };
 }
 
-async function monthlyQualifiedVisitorProofForDate(env: Env, date: string) {
-  const ga4Proof = await mcpGa4FunnelProofPayload(env).catch(() => null);
+async function monthlyQualifiedVisitorProofForDate(env: Env, date: string, preloadedGa4Proof?: PublicMcpGa4FunnelProof | null) {
+  const ga4Proof = preloadedGa4Proof ?? (await mcpGa4FunnelProofPayload(env).catch(() => null));
   const visitorGoal = ga4Proof?.visitor_goal;
   const ga4Sessions = Number(visitorGoal?.qualified_external_mcp_session_starts);
   const threshold = Number(visitorGoal?.threshold ?? MONTHLY_QUALIFIED_VISITOR_THRESHOLD);
@@ -3328,6 +3328,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
     "mcp_directory_refresh",
     "mcp_directory_submit_actions",
     "mcp_reviewer_activation",
+    "mcp_order_handoff",
     "mcp_source_activation_queue",
     "mcp_activation_experiments",
     "claude_connector_submission",
@@ -3428,6 +3429,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
       directory_refresh_resource_events: bySource.mcp_directory_refresh ?? 0,
       directory_submit_action_resource_events: bySource.mcp_directory_submit_actions ?? 0,
       reviewer_activation_resource_events: bySource.mcp_reviewer_activation ?? 0,
+      order_handoff_resource_events: bySource.mcp_order_handoff ?? 0,
       source_activation_queue_resource_events: bySource.mcp_source_activation_queue ?? 0,
       activation_experiments_resource_events: bySource.mcp_activation_experiments ?? 0,
       cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
@@ -3628,6 +3630,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Directory refresh resource events: ${payload.counts.directory_refresh_resource_events}`,
     `- Directory submit-action resource events: ${payload.counts.directory_submit_action_resource_events}`,
     `- Reviewer activation resource events: ${payload.counts.reviewer_activation_resource_events}`,
+    `- Order handoff resource events: ${payload.counts.order_handoff_resource_events}`,
     `- Cart-handoff candidate resource events: ${payload.counts.cart_handoff_candidate_resource_events}`,
     `- Cart activation resource events: ${payload.counts.cart_activation_resource_events}`,
     `- First-run proof resource events: ${payload.counts.first_run_proof_resource_events}`,
@@ -3824,8 +3827,9 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R20";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R21";
 const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01";
+const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R01";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -3884,7 +3888,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|mcp_buyer_use_cases|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_directory_refresh|mcp_activation_experiments|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|mcp_buyer_use_cases|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_directory_refresh|mcp_activation_experiments|mcp_order_handoff|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -4255,6 +4259,10 @@ function sourceActivationUrls(source: string) {
     reviewer_activation_url: `https://mcp.packrift.com/r/activate/${slug}`,
     reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${slug}?format=html`,
     reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${slug}?format=sh`,
+    order_handoff_url: `https://mcp.packrift.com/r/order/${slug}`,
+    order_handoff_html_url: `https://mcp.packrift.com/r/order/${slug}?format=html`,
+    order_handoff_markdown_url: `https://mcp.packrift.com/r/order/${slug}?format=md`,
+    order_handoff_json_url: `https://mcp.packrift.com/r/order/${slug}?format=json`,
     directory_update_card_json_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.json`,
     directory_update_card_markdown_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.md`,
     tool_discovery_json_url: MCP_TOOL_DISCOVERY_JSON_URL,
@@ -4381,24 +4389,239 @@ function sourceActivationOrderCartUrl(source: string, target: string): string {
   return url.toString();
 }
 
+function sourceActivationOrderHandoffPayload(source: string, target = sourcePreferredActivationTarget(source)) {
+  const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
+  const targetSlug = normalizeMcpRuntimeSlug(target) || sourcePreferredActivationTarget(sourceSlug);
+  const urls = sourceActivationUrls(sourceSlug);
+  const firstUsefulRun = mcpFirstUsefulRun(sourceSlug, targetSlug);
+  const buyerActionUrl = sourceActivationOrderCartUrl(sourceSlug, targetSlug);
+  const buyerPrompt =
+    `Use Packrift MCP source ${sourceSlug} to prepare a real purchase handoff for SKU 1066. Confirm exact SKU 1066, live price, inventory, quantity 1, shipping/tax at checkout, and buyer approval before placing any order. Return the measured MCP cart URL first; continue through Shopify checkout only if the buyer confirms.`;
+  const reviewerRequest = [
+    "Packrift MCP already has source-attributed activation proof for this path.",
+    `Source: ${sourceSlug}`,
+    "Hosted endpoint: https://mcp.packrift.com/mcp",
+    `Buyer/reviewer handoff: ${urls.order_handoff_html_url}`,
+    `Source-preserving cart: ${buyerActionUrl}`,
+    `Real MCP runner: ${urls.reviewer_activation_runner_url}`,
+    `Eval pack: ${urls.eval_pack_json_url}`,
+    "",
+    "Please run this from a real MCP host or buyer/reviewer workflow. The page and MCP tools do not place an order by themselves; the remaining proof gate is a buyer-approved Shopify checkout that preserves MCP attribution.",
+  ].join("\n");
+  return {
+    release: MCP_ORDER_CONVERSION_HANDOFF_RELEASE,
+    status: "buyer_or_reviewer_checkout_needed",
+    source: sourceSlug,
+    preferred_target: targetSlug,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    no_duplicate_surface_rule:
+      "This is a thin source-specific handoff around the existing hosted MCP endpoint and measured /r/cart URL. It is not a Packrift CLI, replacement storefront, or synthetic order proof.",
+    sku: "1066",
+    quantity: 1,
+    source_aware_endpoint: firstUsefulRun.endpoint,
+    buyer_action_url: buyerActionUrl,
+    measured_cart_url: buyerActionUrl,
+    no_order_created_by_this_page: true,
+    buyer_confirmation_required: true,
+    live_confirmation_required: [
+      "Exact SKU 1066",
+      "Live price and currency from get_pricing",
+      "In-stock status from check_inventory",
+      "Buyer-selected quantity",
+      "Shipping, tax, and final total in Shopify checkout",
+    ],
+    required_mcp_sequence: firstUsefulRun.sequence,
+    buyer_prompt: buyerPrompt,
+    copy_ready_messages: {
+      buyer_request:
+        `Can you review this Packrift MCP cart handoff for SKU 1066? It came from source ${sourceSlug}. Open ${buyerActionUrl}, confirm the product/price/quantity/shipping in Shopify, and only place the order if it is actually approved.`,
+      reviewer_request: reviewerRequest,
+      agent_prompt: buyerPrompt,
+      directory_comment:
+        `Packrift MCP source ${sourceSlug} has a buyer/reviewer handoff for the hosted endpoint: ${urls.order_handoff_html_url}. It preserves source attribution and requires buyer confirmation before Shopify checkout.`,
+    },
+    proof_gate: {
+      name: "mcp_attributed_order",
+      required_evidence:
+        "first_party_mcp_orders > 0 or first_party_mcp_order_revenue > 0 with source-preserving MCP cart attributes in the public GA4/Shopify funnel proof.",
+      watch_url: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+    },
+    suppression_rules: [
+      "Do not treat this page view as order proof.",
+      "Do not treat shell-runner proof as order proof.",
+      "Do not self-open the cart to close the order gate.",
+      "Only a buyer, reviewer, or real MCP host user completing Shopify checkout can close the MCP-attributed order gate.",
+    ],
+    links: {
+      order_handoff_json: urls.order_handoff_json_url,
+      order_handoff_markdown: urls.order_handoff_markdown_url,
+      order_handoff_html: urls.order_handoff_html_url,
+      source_preserving_cart: buyerActionUrl,
+      reviewer_activation: urls.reviewer_activation_runner_url,
+      reviewer_activation_shell: urls.reviewer_activation_shell_url,
+      first_run: urls.tracked_first_run_url,
+      eval_pack: urls.eval_pack_json_url,
+      ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+    },
+  };
+}
+
+function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceActivationOrderHandoffPayload>): string {
+  return [
+    "# Packrift MCP Buyer/Reviewer Order Handoff",
+    "",
+    `Release: ${payload.release}`,
+    `Status: ${payload.status}`,
+    `Source: ${payload.source}`,
+    `Preferred target: ${payload.preferred_target}`,
+    `Endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.no_duplicate_surface_rule,
+    "",
+    "## Buyer Action",
+    "",
+    `- SKU: ${payload.sku}`,
+    `- Quantity: ${payload.quantity}`,
+    `- Source-preserving cart: ${payload.buyer_action_url}`,
+    `- No order created by this page: ${payload.no_order_created_by_this_page ? "yes" : "no"}`,
+    `- Buyer confirmation required: ${payload.buyer_confirmation_required ? "yes" : "no"}`,
+    "",
+    "## Live Confirmation Required",
+    "",
+    payload.live_confirmation_required.map((item) => `- ${item}`).join("\n"),
+    "",
+    "## Copy-Ready Buyer Request",
+    "",
+    payload.copy_ready_messages.buyer_request,
+    "",
+    "## Copy-Ready Reviewer Request",
+    "",
+    payload.copy_ready_messages.reviewer_request,
+    "",
+    "## Agent Prompt",
+    "",
+    payload.copy_ready_messages.agent_prompt,
+    "",
+    "## Proof Gate",
+    "",
+    `- Name: ${payload.proof_gate.name}`,
+    `- Required evidence: ${payload.proof_gate.required_evidence}`,
+    `- Watch: ${payload.proof_gate.watch_url}`,
+    "",
+    "## Suppression Rules",
+    "",
+    payload.suppression_rules.map((rule) => `- ${rule}`).join("\n"),
+    "",
+    "## Links",
+    "",
+    Object.entries(payload.links)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+  ].join("\n");
+}
+
+function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActivationOrderHandoffPayload>): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP Buyer Handoff</title>
+  <meta name="description" content="Source-specific Packrift MCP buyer and reviewer handoff that preserves attribution into Shopify checkout.">
+  <style>
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--red:#9f2d20;--blue:#245f9b}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    main{max-width:980px;margin:0 auto;padding:32px 18px 56px}
+    header{display:grid;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:clamp(2rem,5vw,4.1rem);line-height:.98;letter-spacing:0}
+    h2{margin:0 0 8px;font-size:1.1rem;letter-spacing:0}
+    p{margin:0;color:var(--muted);max-width:820px}
+    a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+    .status,.actions{display:flex;flex-wrap:wrap;gap:8px}
+    .status span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
+    section{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .button{display:inline-flex;align-items:center;min-height:42px;border:1px solid var(--ink);border-radius:6px;padding:9px 12px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
+    .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    .warning{color:var(--red);font-weight:650}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
+    li{margin:5px 0;color:var(--muted)}
+    @media (max-width:680px){.button{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Packrift MCP Buyer Handoff</h1>
+      <p>${escapeHtml(payload.no_duplicate_surface_rule)}</p>
+      <div class="status">
+        <span>Source: ${escapeHtml(payload.source)}</span>
+        <span>Target: ${escapeHtml(payload.preferred_target)}</span>
+        <span>SKU ${escapeHtml(payload.sku)}</span>
+        <span>Qty ${payload.quantity}</span>
+        <span>No order created here</span>
+      </div>
+      <div class="actions">
+        <a class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Open source-preserving cart</a>
+        <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Run real MCP check</a>
+        <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">Watch proof gate</a>
+      </div>
+    </header>
+    <section>
+      <h2>Required Before Checkout</h2>
+      <ul>${payload.live_confirmation_required.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <p class="warning">Only continue through Shopify checkout when the buyer approves. This page and MCP tools do not place an order.</p>
+    </section>
+    <section>
+      <h2>Buyer Request</h2>
+      <pre>${escapeHtml(payload.copy_ready_messages.buyer_request)}</pre>
+    </section>
+    <section>
+      <h2>Reviewer Request</h2>
+      <pre>${escapeHtml(payload.copy_ready_messages.reviewer_request)}</pre>
+    </section>
+    <section>
+      <h2>Agent Prompt</h2>
+      <pre>${escapeHtml(payload.copy_ready_messages.agent_prompt)}</pre>
+    </section>
+    <section>
+      <h2>Proof Gate</h2>
+      <p>${escapeHtml(payload.proof_gate.required_evidence)}</p>
+      <ul>${payload.suppression_rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
 function sourceActivationOrderConversionHandoff(
   row: PostInstallActivationRow,
   urls: ReturnType<typeof sourceActivationUrls>,
   firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>
 ) {
   if (!sourceActivationHasToolAndCartProof(row)) return null;
-  const sourcePreservingCartUrl = sourceActivationOrderCartUrl(row.source, urls.preferred_target);
+  const buyerHandoff = sourceActivationOrderHandoffPayload(row.source, urls.preferred_target);
+  const sourcePreservingCartUrl = buyerHandoff.buyer_action_url;
   return {
     status: "order_proof_needed",
+    release: buyerHandoff.release,
     source: row.source,
     preferred_target: urls.preferred_target,
+    buyer_handoff_url: buyerHandoff.links.order_handoff_html,
+    buyer_handoff_json_url: buyerHandoff.links.order_handoff_json,
+    buyer_handoff_markdown_url: buyerHandoff.links.order_handoff_markdown,
     buyer_action_url: sourcePreservingCartUrl,
     previous_measured_cart_url: row.recent_measured_cart_urls[0] ?? null,
     source_aware_endpoint: firstUsefulRun.endpoint,
     source_specific_first_run_url: urls.tracked_first_run_url,
     reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
-    buyer_prompt:
-      `Use Packrift MCP from source ${row.source} to prepare a real purchase handoff for SKU 1066. Confirm live product, price, and inventory, then call prepare_purchase_handoff or create_cart_url only after buyer confirmation. Continue to Shopify checkout only if the buyer approves.`,
+    buyer_prompt: buyerHandoff.buyer_prompt,
+    copy_ready_buyer_request: buyerHandoff.copy_ready_messages.buyer_request,
+    copy_ready_reviewer_request: buyerHandoff.copy_ready_messages.reviewer_request,
     order_proof_watch: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
     proof_gate: "first_party_mcp_orders > 0 or first_party_mcp_order_revenue > 0 with source-preserving MCP cart attributes",
     required_shopify_cart_attributes: [
@@ -4512,6 +4735,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Source: ${row.source}`,
       "Endpoint: https://mcp.packrift.com/mcp",
       `Directory update card: ${urls.directory_update_card_json_url}`,
+      `Buyer/reviewer handoff page: ${urls.order_handoff_html_url}`,
       `Source-preserving order cart handoff: ${orderCartUrl}`,
       cartUrl ? `Earlier measured cart proof: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
       `Fast first-run shell: ${urls.first_run_shell_one_liner}`,
@@ -4796,6 +5020,8 @@ async function mcpSourceActivationQueuePayload(
         run_real_mcp_check_url: row.reviewer_activation_runner_url,
         run_real_mcp_shell_url: row.reviewer_activation_shell_url,
         one_command_external_runner: row.one_command_external_runner,
+        order_conversion_handoff: row.order_conversion_handoff,
+        buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? null,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
         fast_activation_path: row.fast_activation_path,
@@ -4876,15 +5102,15 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     "## Priority Queue",
     "",
-    "| Priority | Source | Current stage | Target event | Primary action | Action URL | First-run shell | Activation shell | Update card | Host install | Recent measured cart URL |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Buyer handoff | First-run shell | Activation shell | Update card | Host install | Recent measured cart URL |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.queue
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.order_conversion_handoff?.buyer_handoff_url ?? ""} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
       )
-      .join("\n") || "| none | none | none | none | none | none | none | none | none | none | none |",
+      .join("\n") || "| none | none | none | none | none | none | none | none | none | none | none | none |",
     "",
     "## Acceptance Rule",
     "",
@@ -4921,6 +5147,9 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         cartLandingActionUrl && row.reviewer_activation_runner_url !== row.primary_action_url
           ? `<a class="button" href="${escapeHtml(row.reviewer_activation_runner_url)}">Run real MCP check</a>`
           : "";
+      const buyerHandoffLink = row.order_conversion_handoff?.buyer_handoff_url
+        ? `<a class="button primary" href="${escapeHtml(row.order_conversion_handoff.buyer_handoff_url)}">Buyer handoff</a>`
+        : "";
       const hostConfigLink =
         needsHostToolCall && row.tracked_install_json_url
           ? `<a class="button" href="${escapeHtml(row.tracked_install_json_url)}">Copy host config</a>`
@@ -4987,6 +5216,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         </div>
         <div class="actions">
           <a class="button primary" href="${escapeHtml(row.primary_action_url)}">${primaryLabel}</a>
+          ${buyerHandoffLink}
           ${secondaryCheckLink}
           ${hostConfigLink}
           <a class="button" href="${escapeHtml(row.eval_pack_json_url)}">Eval pack</a>
@@ -5700,10 +5930,10 @@ async function mcpFunnelSnapshotPayload(
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
-  const events = await readAiSalesEventsRollingWindow(env, date, PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS, limit);
-  const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
-  const uniqueIdentityProof = uniqueQualifiedMcpIdentityProof(events);
   const ga4CanonicalProof = await mcpGa4FunnelProofPayload(env);
+  const events = await readAiSalesEventsRollingWindow(env, date, PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS, limit);
+  const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date, ga4CanonicalProof);
+  const uniqueIdentityProof = uniqueQualifiedMcpIdentityProof(events);
   const ga4CanonicalVisitorProofIsAvailable =
     ga4CanonicalProof.status === "proven" || ga4CanonicalProof.status === "not_proven";
   const ga4QualifiedMcpSessions = Number(ga4CanonicalProof.visitor_goal?.qualified_external_mcp_session_starts ?? 0);
@@ -7403,6 +7633,7 @@ const MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS = MCP_SOURCE_ACTIVATION_SITEMAP
   `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`,
   `https://mcp.packrift.com/r/run/${source}/${target}?format=md`,
   `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+  `https://mcp.packrift.com/r/order/${source}?format=md`,
 ]);
 const APPROVED_CATALOG_BY_SKU = new Map(
   APPROVED_CATALOG.map((item) => [item.sku.toUpperCase(), item])
@@ -7668,6 +7899,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-reviewer-activation.md": "Crawler-readable Packrift MCP reviewer activation handoff with source-specific install, proof, JSON-RPC, and cart URL acceptance rules.",
   "/r/activate": "Packrift MCP activation command center for working the source queue without creating a duplicate CLI or buyer surface.",
   "/r/activate/generic": "Source-attributed Packrift MCP activation packet and browser runner that converts review/proof interest into a real MCP client run.",
+  "/r/order/generic": "Source-attributed Packrift MCP buyer/reviewer order handoff that preserves MCP cart attribution into buyer-approved Shopify checkout.",
   "/ai/claude-connector-submission.json": "Machine-readable Claude Connectors Directory submission packet for Packrift MCP with form fields, proof URLs, and safety rules.",
   "/ai/claude-connector-submission.md": "Crawler-readable Claude Connectors Directory submission packet for reviewers and Packrift operators.",
   "/ai/agent-capture-outreach.json": "Machine-readable Packrift MCP outreach packet combining install snippets, proof links, tracked directory URLs, recrawl messages, and browser-agent handoff rules.",
@@ -7705,7 +7937,7 @@ function resourceName(pathname: string): string {
 }
 
 type DynamicMcpRuntimeResource = {
-  kind: "config" | "install" | "run" | "activate";
+  kind: "config" | "install" | "run" | "activate" | "order";
   source: string;
   target?: NonNullable<ReturnType<typeof normalizeInstallTarget>>;
   format: "json" | "html" | "md" | "sh" | "text";
@@ -7770,6 +8002,11 @@ function dynamicMcpRuntimeResource(parsed: URL): DynamicMcpRuntimeResource | nul
     const source = normalizeDynamicResourceSource(activateMatch[1] ?? "");
     return source ? { kind: "activate", source, format, mimeType: dynamicResourceMimeType(format), execute: false } : null;
   }
+  const orderMatch = parsed.pathname.match(/^\/r\/order\/([^/]+)$/);
+  if (orderMatch) {
+    const source = normalizeDynamicResourceSource(orderMatch[1] ?? "");
+    return source ? { kind: "order", source, format, mimeType: dynamicResourceMimeType(format), execute: false } : null;
+  }
   return null;
 }
 
@@ -7788,6 +8025,9 @@ function resourceDescription(pathname: string): string {
   }
   if (pathname.match(/^\/r\/activate\/[a-z0-9_]{2,64}$/)) {
     return "Source-specific Packrift MCP reviewer activation resource for moving directory proof into a real MCP client run.";
+  }
+  if (pathname.match(/^\/r\/order\/[a-z0-9_]{2,64}$/)) {
+    return "Source-specific Packrift MCP buyer/reviewer order handoff for converting measured cart proof into buyer-approved Shopify checkout.";
   }
   return RESOURCE_DESCRIPTIONS[pathname] ?? "Packrift MCP discovery resource.";
 }
@@ -7914,6 +8154,13 @@ const MCP_RESOURCE_TEMPLATES = [
       "Source-specific reviewer activation shell runner that moves directory or marketplace proof into real MCP client calls and cart handoff.",
     mimeType: "text/x-shellscript",
   },
+  {
+    uriTemplate: "https://mcp.packrift.com/r/order/{source}",
+    name: "Packrift source-aware MCP buyer order handoff",
+    description:
+      "Source-specific buyer/reviewer handoff that preserves MCP attribution into buyer-approved Shopify checkout after live MCP checks.",
+    mimeType: "application/json",
+  },
 ];
 
 const AI_SALES_PRIORITY_SKU_RESOURCE_URLS = AI_SALES_PRIORITY_SKUS.flatMap((sku) => [
@@ -7939,7 +8186,7 @@ const MCP_RESOURCES = Array.from(new Set([...AI_DISCOVERY_URLS, ...AI_SALES_PRIO
           ? "text/markdown"
         : explicitFormat === "text" || explicitFormat === "txt"
           ? "text/plain"
-        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/") || pathname.startsWith("/r/install/") || pathname.startsWith("/r/run/") || pathname.startsWith("/r/activate/")
+        : pathname === "/manifest" || pathname === "/resources" || pathname === "/health" || pathname.startsWith("/r/config/") || pathname.startsWith("/r/install/") || pathname.startsWith("/r/run/") || pathname.startsWith("/r/activate/") || pathname.startsWith("/r/order/")
           ? "application/json"
         : pathname.endsWith(".jsonl")
           ? "application/x-ndjson"
@@ -7998,6 +8245,12 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
       }
       if (dynamicResource.format === "md") return mcpReviewerActivationMarkdown(reviewerActivationRuntime(), dynamicResource.source);
       return JSON.stringify(mcpReviewerActivationPayload(reviewerActivationRuntime(), dynamicResource.source), null, 2);
+    }
+    if (dynamicResource.kind === "order") {
+      const payload = sourceActivationOrderHandoffPayload(dynamicResource.source);
+      if (dynamicResource.format === "html") return sourceActivationOrderHandoffHtml(payload);
+      if (dynamicResource.format === "md") return sourceActivationOrderHandoffMarkdown(payload);
+      return JSON.stringify(payload, null, 2);
     }
   }
   if (pathname === "/llms.txt") return llmsTxt;
@@ -8149,6 +8402,10 @@ function sourceActivationSitemapUrls(): string[] {
     `https://mcp.packrift.com/r/activate/${source}`,
     `https://mcp.packrift.com/r/activate/${source}?format=html`,
     `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+    `https://mcp.packrift.com/r/order/${source}`,
+    `https://mcp.packrift.com/r/order/${source}?format=html`,
+    `https://mcp.packrift.com/r/order/${source}?format=md`,
+    `https://mcp.packrift.com/r/order/${source}?format=json`,
   ]);
 }
 
@@ -11283,6 +11540,72 @@ app.get("/r/activate/:source", async (c) => {
   return c.json(payload, 200, {
     ...RAW_HEADERS,
     Link: `<${trackedReviewerActivationUrl(source)}>; rel="canonical"`,
+  });
+});
+
+app.get("/r/order/:source", async (c) => {
+  const requestUrl = new URL(c.req.url);
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").trim();
+  const source = rawSource.toLowerCase();
+  if (!MCP_START_SOURCE_PATTERN.test(source)) {
+    return c.json(
+      {
+        error: "invalid_mcp_order_handoff_source",
+        message: "Use /r/order/{source} with a lowercase source slug containing only letters, numbers, and underscores.",
+        valid_format: MCP_START_SOURCE_POLICY.accepted_source_format,
+        partner_specific_sources_allowed: MCP_START_SOURCE_POLICY.partner_specific_sources_allowed,
+        recommended_sources: MCP_START_SOURCE_POLICY.recommended_sources,
+        custom_examples: MCP_START_SOURCE_POLICY.custom_examples,
+        template: "https://mcp.packrift.com/r/order/{source}",
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+
+  const payload = sourceActivationOrderHandoffPayload(source, sourcePreferredActivationTarget(source));
+  const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
+  const accept = c.req.header("Accept") ?? "";
+  const wantsHtml = format === "html" || (!format && accept.toLowerCase().includes("text/html") && !wantsJson(accept));
+  if (format === "md" || format === "markdown") {
+    const body = sourceActivationOrderHandoffMarkdown(payload);
+    await recordGeneratedAiResourceFetch(c, `/r/order/${source}`, "mcp_order_handoff", jsonByteSize(body), {
+      sourceSlug: source,
+      utmMedium: requestUrl.searchParams.get("utm_medium") || "buyer_reviewer_handoff",
+      utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_order_handoff",
+      utmContent: requestUrl.searchParams.get("utm_content") || "order_handoff_markdown",
+      mcpKeyPrefix: "order",
+    });
+    return c.body(body, 200, {
+      "Content-Type": "text/markdown; charset=utf-8",
+      ...RAW_HEADERS,
+    });
+  }
+  if (wantsHtml) {
+    const body = sourceActivationOrderHandoffHtml(payload);
+    await recordGeneratedAiResourceFetch(c, `/r/order/${source}`, "mcp_order_handoff", jsonByteSize(body), {
+      sourceSlug: source,
+      utmMedium: requestUrl.searchParams.get("utm_medium") || "buyer_reviewer_handoff",
+      utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_order_handoff",
+      utmContent: requestUrl.searchParams.get("utm_content") || "order_handoff_html",
+      mcpKeyPrefix: "order",
+    });
+    return c.body(body, 200, {
+      "Content-Type": "text/html; charset=utf-8",
+      ...RAW_HEADERS,
+      Link: `<${payload.links.order_handoff_html}>; rel="canonical"`,
+    });
+  }
+  await recordGeneratedAiResourceFetch(c, `/r/order/${source}`, "mcp_order_handoff", jsonByteSize(payload), {
+    sourceSlug: source,
+    utmMedium: requestUrl.searchParams.get("utm_medium") || "buyer_reviewer_handoff",
+    utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_order_handoff",
+    utmContent: requestUrl.searchParams.get("utm_content") || "order_handoff_json",
+    mcpKeyPrefix: "order",
+  });
+  return c.json(payload, 200, {
+    ...RAW_HEADERS,
+    Link: `<${payload.links.order_handoff_html}>; rel="canonical"`,
   });
 });
 
