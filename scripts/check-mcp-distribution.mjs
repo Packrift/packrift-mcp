@@ -1910,9 +1910,9 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
       sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
-      sourceActivationQueue?.event_read_limit === 1000 &&
+      sourceActivationQueue?.event_read_limit === 20000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
-      sourceActivationQueue?.snapshot_coverage?.snapshot_mode === "fast_public_snapshot" &&
+      sourceActivationQueue?.snapshot_coverage?.snapshot_mode === "full_operator_snapshot" &&
       sourceActivationQueue?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250" &&
       sourceActivationQueue?.links?.source_activation_queue_operator_json === sourceActivationQueue?.snapshot_coverage?.operator_url &&
@@ -2355,7 +2355,7 @@ async function liveMcpCheck() {
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
       agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       agentAdoptionProgress?.source_funnel_release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23" &&
-      agentAdoptionProgress?.snapshot_coverage?.snapshot_mode === "fast_public_snapshot" &&
+      agentAdoptionProgress?.snapshot_coverage?.snapshot_mode === "full_operator_snapshot" &&
       agentAdoptionProgress?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json?limit=20000&order_days=90&order_limit=250" &&
       agentAdoptionProgress?.links?.funnel_snapshot_operator_json === funnelSnapshot?.snapshot_coverage?.operator_url &&

@@ -7,6 +7,39 @@ export interface DirectorySubmitActionsRuntime {
   resourcesCount: number;
   promptsCount: number;
   toolNames?: string[];
+  sourceActivationQueue?: DirectorySubmitSourceActivationQueue;
+}
+
+export interface DirectorySubmitSourceActivationCounts {
+  starts?: number;
+  tracked_config_fetches?: number;
+  install_intents?: number;
+  first_run_actions?: number;
+  first_run_executions?: number;
+  preferred_target?: string;
+  mcp_tool_calls?: number;
+  create_cart_url_calls?: number;
+  external_qualified_create_cart_url_calls?: number;
+  qualified_cart_landings?: number;
+}
+
+export interface DirectorySubmitSourceActivationState {
+  source: string;
+  priority?: string;
+  priority_score?: number;
+  current_stage?: string;
+  target_event_to_watch?: string;
+  recommended_action?: string;
+  primary_action_url?: string;
+  buyer_handoff_url?: string | null;
+  current_counts?: DirectorySubmitSourceActivationCounts;
+}
+
+export interface DirectorySubmitSourceActivationQueue {
+  release?: string | null;
+  status?: string | null;
+  operator_url?: string | null;
+  rows?: DirectorySubmitSourceActivationState[];
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
@@ -701,6 +734,11 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
     "stale_markers" in action && action.stale_markers?.length
       ? `Current stale/missing markers: ${action.stale_markers.join(", ")}.`
       : "Current stale/missing markers: none.";
+  const sourceActivation = sourceActivationStateFor(runtime, action.id);
+  const sourceActivationLine = sourceActivationReviewLine(sourceActivation);
+  const sourceActivationNextAction = sourceActivation?.recommended_action
+    ? `Source-specific next action: ${sourceActivation.recommended_action}`
+    : null;
   const proofUrls = {
     endpoint: MCP_ENDPOINT,
     health: "https://mcp.packrift.com/health",
@@ -729,6 +767,8 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       "",
       `Current proof: ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, ${runtime.promptsCount} prompts; exact-spec packaging search, live price, live inventory, no-match handling, and measured cart handoff are all exposed through MCP.`,
       staleLine,
+      ...(sourceActivationLine ? [sourceActivationLine] : []),
+      ...(sourceActivationNextAction ? [sourceActivationNextAction] : []),
       "",
       "Fast review links:",
       `- Tool discovery: ${MCP_TOOL_DISCOVERY_URL}`,
@@ -748,6 +788,7 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       "Packrift",
     ].join("\n"),
     proof_urls: proofUrls,
+    source_activation_state: sourceActivation ?? null,
     acceptance_check: [
       "Install the existing hosted Packrift MCP endpoint only.",
       "Run tools/list from a real MCP host.",
@@ -756,6 +797,34 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       "Do not count browser-only proof, Packrift self-checks, or duplicate public comments as source activation.",
     ],
   };
+}
+
+function sourceActivationStateFor(runtime: DirectorySubmitActionsRuntime, source: string): DirectorySubmitSourceActivationState | undefined {
+  return runtime.sourceActivationQueue?.rows?.find((row) => row.source === source);
+}
+
+function sourceActivationReviewLine(state?: DirectorySubmitSourceActivationState): string | null {
+  if (!state) return null;
+  const counts = state.current_counts ?? {};
+  const proof = [
+    `${counts.mcp_tool_calls ?? 0} MCP tool calls`,
+    `${counts.create_cart_url_calls ?? 0} create_cart_url calls`,
+    `${counts.qualified_cart_landings ?? 0} qualified cart landings`,
+  ].join(", ");
+  return `Source-specific activation state: ${state.current_stage ?? "activation state available"}; target event: ${state.target_event_to_watch ?? "unknown"}; current proof: ${proof}.`;
+}
+
+function sourceActivationRecrawlLines(runtime: DirectorySubmitActionsRuntime, source: string): string[] {
+  const state = sourceActivationStateFor(runtime, source);
+  if (!state) return [];
+  return [
+    sourceActivationReviewLine(state) ?? "",
+    state.recommended_action ? `Source-specific next action: ${state.recommended_action}` : "",
+    state.primary_action_url ? `- Source-specific primary action: ${state.primary_action_url}` : "",
+    state.buyer_handoff_url ? `- Buyer/reviewer handoff for this source: ${state.buyer_handoff_url}` : "",
+    runtime.sourceActivationQueue?.operator_url ? `- Full source activation queue: ${runtime.sourceActivationQueue.operator_url}` : "",
+    "",
+  ].filter(Boolean);
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
@@ -795,6 +864,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "It requires no buyer-side API key and exposes exact-spec packaging search, live price, live inventory, no-match handling, and measured cart handoff.",
     "",
     ...staleMarkers,
+    ...sourceActivationRecrawlLines(runtime, action.id),
     "Please recrawl/update Packrift and run the post-install cart verification using:",
     "- Server name: io.github.Packrift/packrift-mcp",
     "- Title: Packrift MCP",
@@ -870,32 +940,35 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
 
 export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActionsRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
-  const actions = ACTIONS.map((action) => ({
-    ...action,
-    tracked_start_url: trackedStartUrl(action.id),
-    tracked_config_url: trackedConfigUrl(action.id),
-    tracked_install_urls: {
-      generic_streamable_http: trackedInstallUrl(action.id, "generic_streamable_http"),
-      claude_code: trackedInstallUrl(action.id, "claude_code"),
-      codex: trackedInstallUrl(action.id, "codex"),
-      cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
-      cline: trackedInstallUrl(action.id, "cline"),
-      glama_connector: trackedInstallUrl(action.id, "glama_connector"),
-      mcp_marketplace: trackedInstallUrl(action.id, "mcp_marketplace"),
-    },
-    tracked_run_urls: {
-      generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
-      generic_streamable_http_browser: `${trackedRunUrl(action.id, "generic_streamable_http")}&format=html`,
-      generic_streamable_http_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
-      claude_code: trackedRunUrl(action.id, "claude_code"),
-      codex: trackedRunUrl(action.id, "codex"),
-      cursor_windsurf_vscode: trackedRunUrl(action.id, "cursor_windsurf_vscode"),
-      cline: trackedRunUrl(action.id, "cline"),
-      glama_connector: trackedRunUrl(action.id, "glama_connector"),
-      mcp_marketplace: trackedRunUrl(action.id, "mcp_marketplace"),
-    },
-    first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
-    proof_urls: {
+  const actions = ACTIONS.map((action) => {
+    const sourceActivation = sourceActivationStateFor(runtime, action.id);
+    return {
+      ...action,
+      source_activation_state: sourceActivation ?? null,
+      tracked_start_url: trackedStartUrl(action.id),
+      tracked_config_url: trackedConfigUrl(action.id),
+      tracked_install_urls: {
+        generic_streamable_http: trackedInstallUrl(action.id, "generic_streamable_http"),
+        claude_code: trackedInstallUrl(action.id, "claude_code"),
+        codex: trackedInstallUrl(action.id, "codex"),
+        cursor_windsurf_vscode: trackedInstallUrl(action.id, "cursor_windsurf_vscode"),
+        cline: trackedInstallUrl(action.id, "cline"),
+        glama_connector: trackedInstallUrl(action.id, "glama_connector"),
+        mcp_marketplace: trackedInstallUrl(action.id, "mcp_marketplace"),
+      },
+      tracked_run_urls: {
+        generic_streamable_http: trackedRunUrl(action.id, "generic_streamable_http"),
+        generic_streamable_http_browser: `${trackedRunUrl(action.id, "generic_streamable_http")}&format=html`,
+        generic_streamable_http_execute: `${trackedRunUrl(action.id, "generic_streamable_http")}&execute=1`,
+        claude_code: trackedRunUrl(action.id, "claude_code"),
+        codex: trackedRunUrl(action.id, "codex"),
+        cursor_windsurf_vscode: trackedRunUrl(action.id, "cursor_windsurf_vscode"),
+        cline: trackedRunUrl(action.id, "cline"),
+        glama_connector: trackedRunUrl(action.id, "glama_connector"),
+        mcp_marketplace: trackedRunUrl(action.id, "mcp_marketplace"),
+      },
+      first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
+      proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
       start_page: MCP_START_URL,
       tracked_start: trackedStartUrl(action.id),
@@ -946,8 +1019,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       browserbase_browse_skill_pack: BROWSERBASE_BROWSE_SKILL_PACK_URL,
       canonical_browserbase_browse_skill_md: CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL,
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
-    },
-    activation_packet: {
+      },
+      activation_packet: {
       source: action.id,
       endpoint: MCP_ENDPOINT,
       reviewer_runner: `https://mcp.packrift.com/r/activate/${action.id}?format=html`,
@@ -990,11 +1063,12 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         source_eval_pack: sourceEvalPackUrl(action.id),
         ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
       },
-    },
-    concise_email: conciseDirectoryEmail(runtime, action),
-    source_release_readiness: sourceReleaseReadiness(action),
-    recrawl_message: recrawlMessage(runtime, action),
-  }));
+      },
+      concise_email: conciseDirectoryEmail(runtime, action),
+      source_release_readiness: sourceReleaseReadiness(action),
+      recrawl_message: recrawlMessage(runtime, action),
+    };
+  });
   return {
     release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R43",
     generated_at: new Date().toISOString(),
@@ -1011,6 +1085,12 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     tracked_order_handoff_html_template: MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
     source_directory_refresh: DIRECTORY_REFRESH_URL,
     source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+    source_activation_queue_runtime: {
+      release: runtime.sourceActivationQueue?.release ?? null,
+      status: runtime.sourceActivationQueue?.status ?? null,
+      operator_url: runtime.sourceActivationQueue?.operator_url ?? null,
+      row_count: runtime.sourceActivationQueue?.rows?.length ?? 0,
+    },
     source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
     source_activation_experiments: ACTIVATION_EXPERIMENTS_URL,
     source_activation_wave: ACTIVATION_WAVE_URL,
@@ -1056,6 +1136,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const action = payload.actions.find((row) => row.id === sourceSlug);
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
+  const sourceActivationState = action.source_activation_state ?? null;
   return {
     release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13",
     generated_at: new Date().toISOString(),
@@ -1073,6 +1154,8 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       stale_markers: "stale_markers" in action ? action.stale_markers ?? [] : [],
       next_action: action.next_action,
     },
+    source_activation_queue_runtime: payload.source_activation_queue_runtime,
+    source_activation_state: sourceActivationState,
     canonical_listing: {
       server_name: "Packrift MCP",
       registry_name: "io.github.Packrift/packrift-mcp",
@@ -1171,6 +1254,20 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Submission URL: ${payload.directory.submission_url}`,
     `Stale markers: ${payload.directory.stale_markers.length ? payload.directory.stale_markers.join(", ") : "none"}`,
     "",
+    ...(payload.source_activation_state
+      ? [
+          "## Source Activation State",
+          "",
+          `Queue release: ${payload.source_activation_queue_runtime.release ?? "unknown"}`,
+          `Current stage: ${payload.source_activation_state.current_stage ?? "unknown"}`,
+          `Target event: ${payload.source_activation_state.target_event_to_watch ?? "unknown"}`,
+          `Primary action: ${payload.source_activation_state.primary_action_url ?? "none"}`,
+          `Buyer handoff: ${payload.source_activation_state.buyer_handoff_url ?? "none"}`,
+          "",
+          fencedJson(payload.source_activation_state.current_counts ?? {}),
+          "",
+        ]
+      : []),
     "## Tracked URLs",
     "",
     fencedJson(payload.tracked_urls),
