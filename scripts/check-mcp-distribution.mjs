@@ -2040,7 +2040,7 @@ async function liveMcpCheck() {
       revenueConversionQueueHtmlResult.text.includes("Packrift MCP Revenue Conversion Queue") &&
       revenueConversionQueueHtmlResult.text.includes("Revenue proof boundary") &&
       revenueConversionQueueHtmlResult.text.includes("Buyer handoff") &&
-      trackedOrderCline?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R04" &&
+      trackedOrderCline?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R05" &&
       trackedOrderCline?.source === "cline_mcp_marketplace" &&
       trackedOrderCline?.preferred_target === "cline" &&
       trackedOrderCline?.mcp_source_context === "cline_mcp_marketplace" &&
@@ -2051,10 +2051,17 @@ async function liveMcpCheck() {
       trackedOrderCline?.buyer_action_url?.includes("mcp_install_target=cline") &&
       trackedOrderCline?.copy_ready_messages?.buyer_request?.includes("only place the order if it is actually approved") &&
       trackedOrderCline?.copy_ready_messages?.agent_prompt?.includes("mcp_source_context=\"cline_mcp_marketplace\"") &&
-      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R04" &&
+      trackedOrderCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
+      trackedOrderCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R05" &&
       trackedOrderMcpSo?.source === "mcp_so" &&
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http" &&
+      trackedOrderMcpSo?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      trackedOrderMcpSo?.source_activation_queue_runtime?.operator_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250" &&
+      trackedOrderMcpSo?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
+      Number(trackedOrderMcpSo?.source_activation_state?.current_counts?.mcp_tool_calls ?? 0) >= 1 &&
+      Number(trackedOrderMcpSo?.source_activation_state?.current_counts?.qualified_cart_landings ?? 0) >= 1 &&
       trackedOrderMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       trackedOrderMcpSo?.primary_order_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       trackedOrderMcpSo?.source_specific_first_run_url?.includes("/r/run/mcp_so/generic_streamable_http") &&
@@ -2082,7 +2089,8 @@ async function liveMcpCheck() {
       trackedOrderMcpSo?.proof_gate?.name === "mcp_attributed_order" &&
       trackedOrderMcpSoHtmlResult.ok &&
       trackedOrderMcpSoHtmlResult.text.includes("Packrift MCP Buyer Handoff") &&
-      trackedOrderMcpSoHtmlResult.text.includes("Review cart in Shopify") &&
+      trackedOrderMcpSoHtmlResult.text.includes("Review source-preserved cart") &&
+      trackedOrderMcpSoHtmlResult.text.includes("Current source proof") &&
       trackedOrderMcpSoHtmlResult.text.includes("Run live MCP confirmation") &&
       trackedOrderMcpSoHtmlResult.text.includes("Live MCP Confirmation") &&
       trackedOrderMcpSoHtmlResult.text.includes("Review fresh MCP cart") &&
@@ -2092,6 +2100,7 @@ async function liveMcpCheck() {
       trackedOrderMcpSoHtmlResult.text.includes("Product") &&
       trackedOrderMcpSoMarkdownResult.ok &&
       trackedOrderMcpSoMarkdownResult.text.includes("Buyer/Reviewer Order Handoff") &&
+      trackedOrderMcpSoMarkdownResult.text.includes("Current Source Proof") &&
       trackedOrderMcpSoMarkdownResult.text.includes("Browser Live Confirmation") &&
       trackedOrderMcpSoMarkdownResult.text.includes("Source Attribution Required") &&
       sourceOrderResourceMarkdownResult.value?.result?.contents?.[0]?.text?.includes("Buyer/Reviewer Order Handoff") &&

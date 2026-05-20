@@ -3960,7 +3960,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
 
 const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23";
 const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02";
-const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R04";
+const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R05";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -4940,7 +4940,24 @@ function sourceActivationOrderCartUrl(source: string, target: string): string {
   return url.toString();
 }
 
-function sourceActivationOrderHandoffProduct() {
+interface SourceActivationOrderHandoffProductPayload {
+  sku: string;
+  title: string;
+  variant_id: string;
+  product_id: string;
+  handle: string;
+  family: string;
+  image_url: string | null;
+  catalog_price: string | null;
+  catalog_inventory: string | null;
+  pack_count: string | null;
+  dimension_display: string | null;
+  product_url: string;
+  catalog_status: string;
+  static_price_inventory_rule: string;
+}
+
+function sourceActivationOrderHandoffProduct(): SourceActivationOrderHandoffProductPayload {
   const fallback = {
     sku: "1066",
     productId: "15061650243952",
@@ -4949,8 +4966,14 @@ function sourceActivationOrderHandoffProduct() {
     title: "10x6x6 ECT-32 Kraft Long Corrugated Boxes - 25 Bundle",
     family: "boxes",
     riskFlags: "chatgpt_paid_priority",
+    image_url: "https://packrift.com/cdn/shop/files/1066.jpg?v=1774901704",
+    price: "",
+    inventory: "",
+    pack_count: null,
+    dimension_display: "",
   };
   const item = APPROVED_CATALOG_BY_SKU.get(fallback.sku) ?? fallback;
+  const itemRecord = item as unknown as Record<string, unknown>;
   return {
     sku: item.sku,
     title: item.title,
@@ -4958,6 +4981,14 @@ function sourceActivationOrderHandoffProduct() {
     product_id: item.productId,
     handle: item.handle,
     family: item.family,
+    image_url: typeof itemRecord.image_url === "string" && itemRecord.image_url.trim() ? itemRecord.image_url : fallback.image_url,
+    catalog_price: typeof itemRecord.price === "string" || typeof itemRecord.price === "number" ? String(itemRecord.price) : null,
+    catalog_inventory: typeof itemRecord.inventory === "string" || typeof itemRecord.inventory === "number" ? String(itemRecord.inventory) : null,
+    pack_count: typeof itemRecord.pack_count === "string" || typeof itemRecord.pack_count === "number" ? String(itemRecord.pack_count) : null,
+    dimension_display:
+      typeof itemRecord.dimension_display === "string" && itemRecord.dimension_display.trim()
+        ? itemRecord.dimension_display
+        : null,
     product_url: `https://packrift.com/products/${encodeURIComponent(item.handle)}`,
     catalog_status: "AI_APPROVE",
     static_price_inventory_rule:
@@ -4965,7 +4996,115 @@ function sourceActivationOrderHandoffProduct() {
   };
 }
 
-function sourceActivationOrderHandoffPayload(source: string, target = sourcePreferredActivationTarget(source)) {
+interface SourceActivationOrderHandoffSourceCounts {
+  mcp_tool_calls: number;
+  create_cart_url_calls: number;
+  qualified_cart_landings: number;
+}
+
+interface SourceActivationOrderHandoffSourceState {
+  source: string;
+  priority: string;
+  priority_score: number;
+  current_stage: string;
+  target_event_to_watch: string;
+  recommended_action: string;
+  primary_action_url: string;
+  buyer_handoff_url: string | null;
+  current_counts: SourceActivationOrderHandoffSourceCounts;
+}
+
+interface SourceActivationOrderHandoffQueueRuntime {
+  release?: string | null;
+  status?: string | null;
+  operator_url?: string | null;
+  row_count?: number | null;
+}
+
+interface SourceActivationOrderHandoffPayload {
+  [key: string]: any;
+  release: string;
+  status: string;
+  source: string;
+  preferred_target: string;
+  product: SourceActivationOrderHandoffProductPayload;
+  source_activation_queue_runtime: SourceActivationOrderHandoffQueueRuntime | null;
+  source_activation_state: SourceActivationOrderHandoffSourceState | null;
+  live_confirmation_required: string[];
+  checkout_guardrails: string[];
+  required_shopify_cart_attributes: string[];
+  suppression_rules: string[];
+  browser_live_confirmation: {
+    [key: string]: any;
+    endpoint: string;
+    sequence: ReturnType<typeof mcpFirstUsefulRun>["sequence"];
+    required_cart_url_prefix: string;
+  };
+  copy_ready_messages: {
+    buyer_request: string;
+    reviewer_request: string;
+    agent_prompt: string;
+    directory_comment: string;
+  };
+  proof_gate: {
+    [key: string]: any;
+    required_evidence: string;
+  };
+  links: Record<string, string> & {
+    order_handoff_json: string;
+    order_handoff_markdown: string;
+    order_handoff_html: string;
+    source_preserving_cart: string;
+    source_specific_first_run: string;
+    source_specific_first_run_shell: string;
+    reviewer_activation: string;
+    reviewer_activation_shell: string;
+    first_run: string;
+    eval_pack: string;
+    ga4_funnel_proof: string;
+    source_activation_queue: string;
+  };
+}
+
+interface SourceActivationOrderConversionHandoffPayload {
+  [key: string]: any;
+  buyer_handoff_url: string;
+  buyer_handoff_json_url: string;
+  buyer_handoff_markdown_url: string;
+  primary_order_handoff_url: string;
+  buyer_ready_summary: string;
+  product: SourceActivationOrderHandoffProductPayload;
+  buyer_action_url: string;
+  cart_landing_action_url: string;
+  measured_cart_url: string | null;
+  fallback_source_preserving_cart_url: string;
+  copy_ready_buyer_request: string;
+  copy_ready_reviewer_request: string;
+  proof_gate: string;
+  order_proof_watch: string;
+  required_shopify_cart_attributes: string[];
+  attribution_rule: string;
+  suppression_rule: string;
+}
+
+interface SourceActivationSourceOrderHandoffPayload {
+  [key: string]: any;
+  buyer_handoff_url: string;
+  buyer_handoff_json_url: string;
+  buyer_handoff_markdown_url: string;
+  buyer_action_url: string;
+  product: SourceActivationOrderHandoffProductPayload;
+  required_shopify_cart_attributes: string[];
+  proof_boundary: string;
+  checkout_guardrail: string;
+}
+
+function sourceActivationOrderHandoffPayload(
+  source: string,
+  target = sourcePreferredActivationTarget(source),
+  sourceActivationState?: SourceActivationOrderHandoffSourceState | null,
+  sourceActivationQueueRuntime?: SourceActivationOrderHandoffQueueRuntime | null
+): SourceActivationOrderHandoffPayload {
   const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
   const targetSlug = normalizeMcpRuntimeSlug(target) || sourcePreferredActivationTarget(sourceSlug);
   const urls = sourceActivationUrls(sourceSlug);
@@ -5026,6 +5165,20 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
     product,
     buyer_ready_summary: buyerReadySummary,
     source_aware_endpoint: firstUsefulRun.endpoint,
+    source_activation_queue_runtime: sourceActivationQueueRuntime ?? null,
+    source_activation_state: sourceActivationState
+      ? {
+          source: sourceActivationState.source,
+          priority: sourceActivationState.priority,
+          priority_score: sourceActivationState.priority_score,
+          current_stage: sourceActivationState.current_stage,
+          target_event_to_watch: sourceActivationState.target_event_to_watch,
+          recommended_action: sourceActivationState.recommended_action,
+          primary_action_url: sourceActivationState.primary_action_url,
+          buyer_handoff_url: sourceActivationState.buyer_handoff_url,
+          current_counts: sourceActivationState.current_counts,
+        }
+      : null,
     buyer_action_url: buyerActionUrl,
     buyer_handoff_url: urls.order_handoff_html_url,
     buyer_handoff_json_url: urls.order_handoff_json_url,
@@ -5100,6 +5253,47 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
   };
 }
 
+async function sourceActivationOrderHandoffPayloadForRequest(
+  env: Env,
+  requestUrl: string | URL,
+  source: string,
+  target = sourcePreferredActivationTarget(source)
+): Promise<SourceActivationOrderHandoffPayload> {
+  const url = new URL(requestUrl.toString());
+  const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const queuePayload = await cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit, { refresh });
+  const queueRow = queuePayload.queue.find((row) => row.source === sourceSlug) ?? null;
+  const sourceActivationState: SourceActivationOrderHandoffSourceState | null = queueRow
+    ? {
+        source: queueRow.source,
+        priority: queueRow.priority,
+        priority_score: queueRow.priority_score,
+        current_stage: queueRow.current_stage,
+        target_event_to_watch: queueRow.target_event_to_watch,
+        recommended_action: queueRow.recommended_action,
+        primary_action_url: queueRow.primary_action_url,
+        buyer_handoff_url: queueRow.order_conversion_handoff?.buyer_handoff_url ?? queueRow.source_order_handoff?.buyer_handoff_url ?? null,
+        current_counts: {
+          mcp_tool_calls: queueRow.current_counts.mcp_tool_calls,
+          create_cart_url_calls: queueRow.current_counts.create_cart_url_calls,
+          qualified_cart_landings: queueRow.current_counts.qualified_cart_landings,
+        },
+      }
+    : null;
+  return sourceActivationOrderHandoffPayload(
+    sourceSlug,
+    queueRow?.preferred_target ?? target,
+    sourceActivationState,
+    {
+      release: queuePayload.release,
+      status: queuePayload.status,
+      operator_url: queuePayload.links.source_activation_queue_operator_json,
+      row_count: queuePayload.queue_count,
+    }
+  );
+}
+
 function sourceActivationMeasuredCartUrlIsSourcePreserving(measuredCartUrl: string | null, source: string, target: string): boolean {
   if (!measuredCartUrl) return false;
   try {
@@ -5131,11 +5325,27 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
     `- Product: ${payload.product.title}`,
     `- Variant ID: ${payload.product.variant_id}`,
     `- Product URL: ${payload.product.product_url}`,
+    ...(payload.product.catalog_price ? [`- Catalog price hint: ${payload.product.catalog_price}`] : []),
+    ...(payload.product.catalog_inventory ? [`- Catalog inventory hint: ${payload.product.catalog_inventory}`] : []),
     `- Buyer-ready summary: ${payload.buyer_ready_summary}`,
     `- Source-preserving cart: ${payload.buyer_action_url}`,
     `- No order created by this page: ${payload.no_order_created_by_this_page ? "yes" : "no"}`,
     `- Buyer confirmation required: ${payload.buyer_confirmation_required ? "yes" : "no"}`,
     "",
+    ...(payload.source_activation_state
+      ? [
+          "## Current Source Proof",
+          "",
+          `- Queue release: ${payload.source_activation_queue_runtime?.release ?? "unknown"}`,
+          `- Current stage: ${payload.source_activation_state.current_stage}`,
+          `- Target event: ${payload.source_activation_state.target_event_to_watch}`,
+          `- Recommended action: ${payload.source_activation_state.recommended_action}`,
+          `- MCP tool calls: ${payload.source_activation_state.current_counts.mcp_tool_calls}`,
+          `- create_cart_url calls: ${payload.source_activation_state.current_counts.create_cart_url_calls}`,
+          `- Qualified cart landings: ${payload.source_activation_state.current_counts.qualified_cart_landings}`,
+          "",
+        ]
+      : []),
     "## Live Confirmation Required",
     "",
     payload.live_confirmation_required.map((item) => `- ${item}`).join("\n"),
@@ -5194,6 +5404,31 @@ function htmlScriptJson(value: unknown): string {
 }
 
 function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActivationOrderHandoffPayload>): string {
+  const sourceState = payload.source_activation_state;
+  const sourceCounts = sourceState?.current_counts;
+  const sourceProofHtml = sourceState
+    ? `<section class="proof-strip">
+      <h2>Current source proof</h2>
+      <p>${escapeHtml(sourceState.current_stage)} Next gate: ${escapeHtml(sourceState.target_event_to_watch)}.</p>
+      <div class="metric-row">
+        <span>${sourceCounts?.mcp_tool_calls ?? 0} MCP tool calls</span>
+        <span>${sourceCounts?.create_cart_url_calls ?? 0} create_cart_url calls</span>
+        <span>${sourceCounts?.qualified_cart_landings ?? 0} qualified cart landings</span>
+      </div>
+      <p>${escapeHtml(sourceState.recommended_action)}</p>
+    </section>`
+    : "";
+  const productImageHtml = payload.product.image_url
+    ? `<figure class="product-media"><img src="${escapeHtml(payload.product.image_url)}" alt="${escapeHtml(payload.product.title)}"><figcaption>SKU ${escapeHtml(payload.product.sku)}</figcaption></figure>`
+    : "";
+  const catalogHints = [
+    payload.product.catalog_price ? `<span>Catalog price hint ${escapeHtml(payload.product.catalog_price)}</span>` : "",
+    payload.product.catalog_inventory ? `<span>Inventory hint ${escapeHtml(payload.product.catalog_inventory)}</span>` : "",
+    payload.product.pack_count ? `<span>Pack ${escapeHtml(payload.product.pack_count)}</span>` : "",
+    payload.product.dimension_display ? `<span>${escapeHtml(payload.product.dimension_display)}</span>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -5202,19 +5437,27 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
   <title>Packrift MCP Buyer Handoff</title>
   <meta name="description" content="Source-specific Packrift MCP buyer and reviewer handoff that preserves attribution into Shopify checkout.">
   <style>
-    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--red:#9f2d20;--blue:#245f9b}
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--red:#9f2d20;--blue:#245f9b;--soft:#eef4ef}
     *{box-sizing:border-box}
     body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
     main{max-width:980px;margin:0 auto;padding:32px 18px 56px}
-    header{display:grid;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
-    h1{margin:0;font-size:clamp(2rem,5vw,4.1rem);line-height:.98;letter-spacing:0}
+    header{padding-bottom:22px;border-bottom:1px solid var(--line)}
+    .hero{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(220px,.55fr);gap:20px;align-items:center}
+    .hero-copy{display:grid;gap:14px}
+    .eyebrow{font-size:.85rem;font-weight:700;text-transform:uppercase;color:var(--green);letter-spacing:.04em}
+    h1{margin:0;font-size:clamp(2rem,4.8vw,3.8rem);line-height:1;letter-spacing:0}
     h2{margin:0 0 8px;font-size:1.1rem;letter-spacing:0}
     p{margin:0;color:var(--muted);max-width:820px}
     a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
-    .status,.actions,.product-grid{display:flex;flex-wrap:wrap;gap:8px}
+    .status,.actions,.product-grid,.metric-row{display:flex;flex-wrap:wrap;gap:8px}
     .status span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
     section{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
-    .product-grid span{border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--muted);background:#f9faf8}
+    .proof-strip{background:var(--soft);border-color:#c9d8ce}
+    .product-grid span,.metric-row span{border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--muted);background:#f9faf8}
+    .metric-row span{font-weight:650;color:var(--ink);background:#fff}
+    .product-media{margin:0;justify-self:end;max-width:260px}
+    .product-media img{display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+    .product-media figcaption{margin-top:6px;color:var(--muted);font-size:.85rem;text-align:center}
     .button{display:inline-flex;align-items:center;min-height:42px;border:1px solid var(--ink);border-radius:6px;padding:9px 12px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650;cursor:pointer;font:inherit}
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
     .button:disabled{opacity:.58;cursor:wait}
@@ -5224,32 +5467,36 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
     code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
     li{margin:5px 0;color:var(--muted)}
-    @media (max-width:680px){.button{width:100%;justify-content:center}}
+    @media (max-width:760px){.hero{grid-template-columns:1fr}.product-media{justify-self:start;max-width:220px}.button{width:100%;justify-content:center}}
   </style>
 </head>
 <body>
   <main>
-    <header>
-      <h1>Packrift MCP Buyer Handoff</h1>
-      <p>${escapeHtml(payload.no_duplicate_surface_rule)}</p>
-      <p>${escapeHtml(payload.buyer_ready_summary)}</p>
-      <div class="status">
-        <span>Source: ${escapeHtml(payload.source)}</span>
-        <span>Target: ${escapeHtml(payload.preferred_target)}</span>
-        <span>SKU ${escapeHtml(payload.sku)}</span>
-        <span>Qty ${payload.quantity}</span>
-        <span>No order created here</span>
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Source-preserved MCP buyer review</p>
+        <h1>${escapeHtml(payload.product.title)}</h1>
+        <p>${escapeHtml(payload.buyer_ready_summary)}</p>
+        <div class="status">
+          <span>Source: ${escapeHtml(payload.source)}</span>
+          <span>Target: ${escapeHtml(payload.preferred_target)}</span>
+          <span>SKU ${escapeHtml(payload.sku)}</span>
+          <span>Qty ${payload.quantity}</span>
+          <span>No order created here</span>
+        </div>
+        <div class="actions">
+          <a id="review-cart" class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Review source-preserved cart</a>
+          <button id="run-live-confirmation" class="button" type="button">Run live MCP confirmation</button>
+          <a class="button" href="${escapeHtml(payload.product.product_url)}">View product</a>
+          <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Activation runner</a>
+          <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">Watch proof gate</a>
+          <button id="copy-buyer-request" class="button" type="button">Copy buyer request</button>
+          <button id="copy-agent-prompt" class="button" type="button">Copy agent prompt</button>
+        </div>
       </div>
-      <div class="actions">
-        <a id="review-cart" class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Review cart in Shopify</a>
-        <button id="run-live-confirmation" class="button" type="button">Run live MCP confirmation</button>
-        <a class="button" href="${escapeHtml(payload.product.product_url)}">View product</a>
-        <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Activation runner</a>
-        <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">Watch proof gate</a>
-        <button id="copy-buyer-request" class="button" type="button">Copy buyer request</button>
-        <button id="copy-agent-prompt" class="button" type="button">Copy agent prompt</button>
-      </div>
+      ${productImageHtml}
     </header>
+    ${sourceProofHtml}
     <section>
       <h2>Product</h2>
       <p>${escapeHtml(payload.product.title)}</p>
@@ -5258,6 +5505,7 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
         <span>Variant ${escapeHtml(payload.product.variant_id)}</span>
         <span>${escapeHtml(payload.product.family)}</span>
         <span>${escapeHtml(payload.product.catalog_status)}</span>
+        ${catalogHints}
       </div>
       <p>${escapeHtml(payload.product.static_price_inventory_rule)}</p>
     </section>
@@ -5509,7 +5757,7 @@ function sourceActivationOrderConversionHandoff(
   row: PostInstallActivationRow,
   urls: ReturnType<typeof sourceActivationUrls>,
   firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>
-) {
+): SourceActivationOrderConversionHandoffPayload | null {
   if (!sourceActivationHasToolAndCartProof(row)) return null;
   const buyerHandoff = sourceActivationOrderHandoffPayload(row.source, urls.preferred_target);
   const measuredCartUrl = row.recent_measured_cart_urls[0] ?? null;
@@ -5572,7 +5820,7 @@ function sourceActivationSourceOrderHandoff(
   row: PostInstallActivationRow,
   urls: ReturnType<typeof sourceActivationUrls>,
   firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>
-) {
+): SourceActivationSourceOrderHandoffPayload {
   const buyerHandoff = sourceActivationOrderHandoffPayload(row.source, urls.preferred_target);
   return {
     status: sourceActivationHasToolAndCartProof(row) ? "checkout_proof_needed" : "preview_only_activation_still_required",
@@ -6922,9 +7170,9 @@ interface SourceActivationExperimentQueueRow {
   eval_pack_markdown_url: string;
   source_aware_endpoint: string;
   fast_activation_path: ReturnType<typeof sourceActivationFastPath>;
-  source_order_handoff: ReturnType<typeof sourceActivationSourceOrderHandoff>;
-  buyer_handoff_preview: ReturnType<typeof sourceActivationSourceOrderHandoff>;
-  order_conversion_handoff: ReturnType<typeof sourceActivationOrderConversionHandoff>;
+  source_order_handoff: SourceActivationSourceOrderHandoffPayload;
+  buyer_handoff_preview: SourceActivationSourceOrderHandoffPayload;
+  order_conversion_handoff: SourceActivationOrderConversionHandoffPayload | null;
   copy_ready_host_configs: ReturnType<typeof sourceActivationCopyReadyHostConfigs>;
   agent_prompt: string;
   acceptance_criteria: string[];
@@ -11637,7 +11885,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
       return JSON.stringify(mcpReviewerActivationPayload(reviewerActivationRuntime(), dynamicResource.source), null, 2);
     }
     if (dynamicResource.kind === "order") {
-      const payload = sourceActivationOrderHandoffPayload(dynamicResource.source);
+      const payload = await sourceActivationOrderHandoffPayloadForRequest(env, parsed, dynamicResource.source);
       if (dynamicResource.format === "html") return sourceActivationOrderHandoffHtml(payload);
       if (dynamicResource.format === "md") return sourceActivationOrderHandoffMarkdown(payload);
       return JSON.stringify(payload, null, 2);
@@ -15417,7 +15665,8 @@ app.get("/r/order/:source", async (c) => {
     );
   }
 
-  const payload = sourceActivationOrderHandoffPayload(source, sourcePreferredActivationTarget(source));
+  const refresh = publicMcpDerivedResourceFreshRequested(requestUrl);
+  const payload = await sourceActivationOrderHandoffPayloadForRequest(c.env, requestUrl, source, sourcePreferredActivationTarget(source));
   const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
   const accept = c.req.header("Accept") ?? "";
   const wantsHtml = format === "html" || (!format && accept.toLowerCase().includes("text/html") && !wantsJson(accept));
@@ -15432,7 +15681,7 @@ app.get("/r/order/:source", async (c) => {
     });
     return c.body(body, 200, {
       "Content-Type": "text/markdown; charset=utf-8",
-      ...RAW_HEADERS,
+      ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
     });
   }
   if (wantsHtml) {
@@ -15446,7 +15695,7 @@ app.get("/r/order/:source", async (c) => {
     });
     return c.body(body, 200, {
       "Content-Type": "text/html; charset=utf-8",
-      ...RAW_HEADERS,
+      ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
       Link: `<${payload.links.order_handoff_html}>; rel="canonical"`,
     });
   }
@@ -15458,7 +15707,7 @@ app.get("/r/order/:source", async (c) => {
     mcpKeyPrefix: "order",
   });
   return c.json(payload, 200, {
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
     Link: `<${payload.links.order_handoff_html}>; rel="canonical"`,
   });
 });
