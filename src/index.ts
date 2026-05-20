@@ -5051,6 +5051,33 @@ function sourceActivationOrderConversionHandoff(
   };
 }
 
+function sourceActivationSourceOrderHandoff(
+  row: PostInstallActivationRow,
+  urls: ReturnType<typeof sourceActivationUrls>,
+  firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>
+) {
+  const buyerHandoff = sourceActivationOrderHandoffPayload(row.source, urls.preferred_target);
+  return {
+    status: sourceActivationHasToolAndCartProof(row) ? "checkout_proof_needed" : "preview_only_activation_still_required",
+    release: buyerHandoff.release,
+    source: row.source,
+    preferred_target: urls.preferred_target,
+    buyer_handoff_url: buyerHandoff.links.order_handoff_html,
+    buyer_handoff_json_url: buyerHandoff.links.order_handoff_json,
+    buyer_handoff_markdown_url: buyerHandoff.links.order_handoff_markdown,
+    buyer_action_url: buyerHandoff.buyer_action_url,
+    product: buyerHandoff.product,
+    source_aware_endpoint: firstUsefulRun.endpoint,
+    source_specific_first_run_url: urls.tracked_first_run_url,
+    reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
+    required_shopify_cart_attributes: buyerHandoff.required_shopify_cart_attributes,
+    proof_boundary:
+      "This handoff is available for real buyer or reviewer follow-through, but it is not source activation proof or order proof until public snapshots show non-suppressed MCP host activity and Shopify/GA4 order evidence.",
+    checkout_guardrail:
+      "Open Shopify checkout only after live price, inventory, shipping, tax, final total, and buyer approval are confirmed; this handoff does not place an order.",
+  };
+}
+
 function sourceActivationHasToolAndCartProof(row: PostInstallActivationRow): boolean {
   return row.qualified_cart_landings > 0 && row.mcp_tool_calls > 0;
 }
@@ -5277,6 +5304,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
       const installAction = mcpInstallActionPayload({ source: row.source, target: urls.preferred_target })!;
       const targetEvent = sourceActivationTargetEvent(row);
       const orderConversionHandoff = sourceActivationOrderConversionHandoff(row, urls, firstUsefulRun);
+      const sourceOrderHandoff = sourceActivationSourceOrderHandoff(row, urls, firstUsefulRun);
       const fastActivationPath = sourceActivationFastPath({ row, urls, firstUsefulRun, installAction });
       return {
         source: row.source,
@@ -5314,6 +5342,8 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
         fast_activation_path: fastActivationPath,
+        source_order_handoff: sourceOrderHandoff,
+        buyer_handoff_preview: sourceOrderHandoff,
         order_conversion_handoff: orderConversionHandoff,
         copy_ready_host_configs: sourceActivationCopyReadyHostConfigs({
           source: row.source,
@@ -5368,7 +5398,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R23",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R24",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -5441,7 +5471,9 @@ async function mcpSourceActivationQueuePayload(
         run_real_mcp_shell_url: row.reviewer_activation_shell_url,
         one_command_external_runner: row.one_command_external_runner,
         order_conversion_handoff: row.order_conversion_handoff,
-        buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? null,
+        source_order_handoff: row.source_order_handoff,
+        buyer_handoff_preview: row.buyer_handoff_preview,
+        buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? row.source_order_handoff?.buyer_handoff_url ?? null,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
         fast_activation_path: row.fast_activation_path,
@@ -5551,7 +5583,7 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.order_conversion_handoff?.buyer_handoff_url ?? ""} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.order_conversion_handoff?.buyer_handoff_url ?? row.source_order_handoff?.buyer_handoff_url ?? ""} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
       )
       .join("\n") || "| none | none | none | none | none | none | none | none | none | none | none | none |",
     "",
@@ -5583,6 +5615,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
       const counts = row.current_counts;
       const cartLandingActionUrl = row.cart_landing_action_url || "";
       const buyerHandoffUrl = row.order_conversion_handoff?.buyer_handoff_url ?? "";
+      const buyerHandoffPreviewUrl = row.source_order_handoff?.buyer_handoff_url ?? "";
       const needsHostToolCall = row.target_event_to_watch.startsWith("mcp_tool_call") && counts.mcp_tool_calls === 0;
       const primaryLabel = buyerHandoffUrl
         ? "Buyer handoff"
@@ -5597,8 +5630,16 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         cartLandingActionUrl && row.reviewer_activation_runner_url !== row.primary_action_url
           ? `<a class="button" href="${escapeHtml(row.reviewer_activation_runner_url)}">Run real MCP check</a>`
           : "";
-      const buyerHandoffLink = buyerHandoffUrl && buyerHandoffUrl !== row.primary_action_url
-        ? `<a class="button primary" href="${escapeHtml(buyerHandoffUrl)}">Buyer handoff</a>`
+      const buyerHandoffLink = buyerHandoffPreviewUrl && buyerHandoffPreviewUrl !== row.primary_action_url
+        ? `<a class="button${buyerHandoffUrl ? " primary" : ""}" href="${escapeHtml(buyerHandoffPreviewUrl)}">${buyerHandoffUrl ? "Buyer handoff" : "Buyer/reviewer handoff"}</a>`
+        : "";
+      const sourceOrderHandoff = row.source_order_handoff
+        ? `<details class="source-order-handoff">
+          <summary>Buyer/reviewer handoff</summary>
+          <p class="endpoint">${escapeHtml(row.source_order_handoff.proof_boundary)}</p>
+          <p class="endpoint">${escapeHtml(row.source_order_handoff.checkout_guardrail)}</p>
+          <p><a href="${escapeHtml(row.source_order_handoff.buyer_handoff_url)}">${escapeHtml(row.source_order_handoff.buyer_handoff_url)}</a></p>
+        </details>`
         : "";
       const hostConfigLink =
         needsHostToolCall && row.tracked_install_json_url
@@ -5677,6 +5718,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           <a class="button" href="${escapeHtml(row.tracked_first_run_execute_url)}">Live proof</a>
         </div>
         ${externalMessage}
+        ${sourceOrderHandoff}
         ${fastPathBlock}
         <details>
           <summary>Acceptance criteria</summary>
@@ -5811,6 +5853,8 @@ interface SourceActivationExperimentQueueRow {
   eval_pack_markdown_url: string;
   source_aware_endpoint: string;
   fast_activation_path: ReturnType<typeof sourceActivationFastPath>;
+  source_order_handoff: ReturnType<typeof sourceActivationSourceOrderHandoff>;
+  buyer_handoff_preview: ReturnType<typeof sourceActivationSourceOrderHandoff>;
   order_conversion_handoff: ReturnType<typeof sourceActivationOrderConversionHandoff>;
   copy_ready_host_configs: ReturnType<typeof sourceActivationCopyReadyHostConfigs>;
   agent_prompt: string;
@@ -5984,6 +6028,8 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       primary_action_url: row.primary_action_url,
       cart_landing_action_url: row.cart_landing_action_url,
       recent_measured_cart_urls: row.recent_measured_cart_urls,
+      source_order_handoff: row.source_order_handoff,
+      buyer_handoff_preview: row.buyer_handoff_preview,
       order_conversion_handoff: row.order_conversion_handoff,
       source_aware_endpoint: row.source_aware_endpoint,
       fast_activation_path: row.fast_activation_path,
@@ -6023,7 +6069,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R12",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R13",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -6153,6 +6199,8 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
       required_cart_url_prefix: row.fast_activation_path.required_cart_url_prefix,
       no_order_created_by_tool_run: row.fast_activation_path.no_order_created,
     },
+    source_order_handoff: row.source_order_handoff,
+    buyer_handoff_preview: row.buyer_handoff_preview,
     order_conversion_handoff: row.order_conversion_handoff,
     buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? null,
     buyer_action_url: row.order_conversion_handoff?.buyer_action_url ?? null,
@@ -6841,10 +6889,14 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
 
 function activationWaveExpectedToolCallLift(row: SourceActivationExperimentQueueRow): number {
   const target = row.target_event_to_watch;
+  if (target === "mcp_attributed_order") return 0;
   if (target === "mcp_tool_call:create_cart_url") return 1;
   if (target === "mcp_tool_call:check_inventory") return 2;
   if (target === "mcp_tool_call:get_pricing") return 3;
+  if (target === "mcp_tool_call:get_cart_handoff_candidates") return 4;
   if (target.startsWith("mcp_tool_call")) return 4;
+  if (target === "mcp_first_run_execution" || target === "mcp_install_intent") return 4;
+  if (row.current_counts.mcp_tool_calls === 0) return 4;
   return 0;
 }
 
@@ -6878,6 +6930,7 @@ function activationWaveTask(row: SourceActivationExperimentQueueRow, index: numb
     preferred_target: row.preferred_target,
     current_stage: row.current_stage,
     target_event_to_watch: row.target_event_to_watch,
+    external_activation_required: row.external_activation_required,
     expected_tool_call_lift: activationWaveExpectedToolCallLift(row),
     why_now: activationWaveWhyNow(row),
     recommended_action: row.recommended_action,
@@ -6947,7 +7000,7 @@ async function mcpActivationWavePayload(
   const expectedLift = waveTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   const fullExpectedLift = fullCaptureTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R03",
+    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R04",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -9461,7 +9514,7 @@ const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
-const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03";
+const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
