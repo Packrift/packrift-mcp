@@ -29,6 +29,9 @@ interface DirectoryRefreshRow {
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const CAPTURE_JSON_URL = "https://mcp.packrift.com/ai/all-agent-capture.json";
 const CAPTURE_MARKDOWN_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
+const OUTREACH_JSON_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
+const OUTREACH_MARKDOWN_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.md";
+const OUTREACH_HTML_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.html";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
 const SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.md";
@@ -343,8 +346,9 @@ function evidenceLinks() {
     mcp_order_handoff_docker: "https://mcp.packrift.com/r/order/docker_mcp_catalog?format=html",
     all_agent_capture_json: CAPTURE_JSON_URL,
     all_agent_capture_markdown: CAPTURE_MARKDOWN_URL,
-    agent_capture_outreach_json: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
-    agent_capture_outreach_markdown: "https://mcp.packrift.com/ai/agent-capture-outreach.md",
+    agent_capture_outreach_json: OUTREACH_JSON_URL,
+    agent_capture_outreach_markdown: OUTREACH_MARKDOWN_URL,
+    agent_capture_outreach_html: OUTREACH_HTML_URL,
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
@@ -398,6 +402,63 @@ function fencedJson(value: unknown): string {
   return ["```json", JSON.stringify(value, null, 2), "```"].join("\n");
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function htmlShell(title: string, description: string, body: string): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <style>
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--amber:#8a5a12}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    main{max-width:1180px;margin:0 auto;padding:32px 18px 56px}
+    header{display:grid;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:clamp(2rem,5vw,4.1rem);line-height:.98;letter-spacing:0}
+    h2{margin:28px 0 10px;font-size:1.2rem;letter-spacing:0}
+    h3{margin:0 0 6px;font-size:1.02rem;letter-spacing:0}
+    p{margin:0;color:var(--muted);max-width:880px}
+    a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+    .status,.links,.row-links,.chips{display:flex;flex-wrap:wrap;gap:8px}
+    .status span,.chips span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+    article,.rules,.config,.messages,.handoff{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:15px}
+    article.high{border-color:#c9a24d}
+    ul,ol{margin:8px 0 0;padding-left:20px;color:var(--muted)}
+    li{margin:5px 0}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
+    .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
+    .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    .button.warn{border-color:var(--amber);color:var(--amber)}
+    details{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+    summary{cursor:pointer;font-weight:650}
+    @media (max-width:680px){.button{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>${body}</main>
+</body>
+</html>`;
+}
+
+function linkButton(label: string, url: string | undefined, variant = ""): string {
+  if (!url) return "";
+  const className = variant ? `button ${variant}` : "button";
+  return `<a class="${className}" href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
+}
+
 export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime) {
   const capture = allAgentCapturePayload(runtime);
   const submitActions = mcpDirectorySubmitActionsPayload(runtime);
@@ -429,7 +490,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R22",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R23",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -524,6 +585,145 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
     success_gate:
       "This outreach packet succeeds only when it drives qualified external installs, tools/list calls, get_cart_handoff_candidates calls, measured /r/cart landings, and MCP-attributed orders.",
   };
+}
+
+export function agentCaptureOutreachHtml(runtime: AgentCaptureOutreachRuntime): string {
+  const payload = agentCaptureOutreachPayload(runtime);
+  const priorityRows = payload.priority_queue.slice(0, 12);
+  const queue = priorityRows.length
+    ? priorityRows
+        .map(
+          (action) => `<article class="high">
+            <h3>${escapeHtml(action.label)}</h3>
+            <p>${escapeHtml(action.next_action)}</p>
+            <div class="chips">
+              <span>${escapeHtml(action.id)}</span>
+              <span>${escapeHtml(action.action_status)}</span>
+              <span>${escapeHtml(action.directory_status)}</span>
+              <span>${escapeHtml(action.priority)} priority</span>
+            </div>
+            <div class="row-links">
+              ${linkButton("Start", action.tracked_start_url, "primary")}
+              ${linkButton("Config", action.tracked_config_url)}
+              ${linkButton("First run", action.tracked_run_url)}
+              ${linkButton("Activation runner", action.tracked_reviewer_activation_html_url)}
+              ${linkButton("Order handoff", action.tracked_order_handoff_html_url, "warn")}
+              ${linkButton("Eval pack", action.source_eval_pack_url)}
+            </div>
+          </article>`
+        )
+        .join("")
+    : `<article><h3>No urgent queue rows</h3><p>Use the generic start and activation links until the source queue changes.</p></article>`;
+  const installSnippets = payload.agent_install_snippets;
+  const sourceMessages = payload.directory_refreshes
+    .filter((action) => action.recrawl_message && action.action_status !== "monitor_upstream_registry")
+    .slice(0, 6)
+    .map(
+      (action) => `<details>
+        <summary>${escapeHtml(action.label)}</summary>
+        <pre>${escapeHtml(action.recrawl_message ?? "")}</pre>
+      </details>`
+    )
+    .join("");
+  const links = ([
+    ["Start MCP", "https://mcp.packrift.com/start", "primary"],
+    ["Activation queue", payload.evidence.mcp_source_activation_queue, ""],
+    ["Activation wave", payload.evidence.mcp_activation_wave_html, ""],
+    ["Revenue queue", payload.evidence.mcp_revenue_conversion_queue_html, "warn"],
+    ["JSON", OUTREACH_JSON_URL, ""],
+    ["Markdown", OUTREACH_MARKDOWN_URL, ""],
+  ] satisfies Array<[string, string, string]>)
+    .map(([label, url, variant]) => linkButton(label, url, variant))
+    .join("");
+  return htmlShell(
+    "Packrift Agent Capture Outreach",
+    payload.purpose,
+    `<header>
+      <h1>Packrift Agent Capture Outreach</h1>
+      <p>${escapeHtml(payload.purpose)}</p>
+      <div class="status">
+        <span>${escapeHtml(payload.release)}</span>
+        <span>${payload.runtime.tools_count} tools</span>
+        <span>${payload.runtime.resources_count} resources</span>
+        <span>${payload.runtime.prompts_count} prompts</span>
+        <span>${payload.capture_summary.total_surfaces} capture surfaces</span>
+      </div>
+      <div class="links">${links}</div>
+    </header>
+    <section>
+      <h2>Use This, Not A Duplicate Surface</h2>
+      <div class="handoff">
+        <p>${escapeHtml(payload.activation_handoff.goal)}</p>
+        <ul>${payload.activation_handoff.reviewer_acceptance_gate.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+      </div>
+    </section>
+    <section>
+      <h2>Priority Agent Capture Queue</h2>
+      <div class="grid">${queue}</div>
+    </section>
+    <section>
+      <h2>Install Snippets</h2>
+      <div class="grid">
+        <article>
+          <h3>Claude Code</h3>
+          <pre>${escapeHtml(installSnippets.claude_code)}</pre>
+        </article>
+        <article>
+          <h3>Codex</h3>
+          <pre>${escapeHtml(installSnippets.codex)}</pre>
+        </article>
+        <article>
+          <h3>Generic MCP JSON</h3>
+          <pre>${escapeHtml(JSON.stringify(installSnippets.generic_mcp_json, null, 2))}</pre>
+        </article>
+      </div>
+    </section>
+    <section>
+      <h2>Browser And Directory Proof</h2>
+      <div class="grid">
+        <article>
+          <h3>Browse.sh</h3>
+          <p>${escapeHtml(payload.browserbase_browse_candidate.product_positioning)}</p>
+          <div class="chips">
+            <span>${escapeHtml(payload.browserbase_browse_candidate.status)}</span>
+            <span>${payload.browserbase_browse_candidate.install_count_observed} observed installs</span>
+            <span>${escapeHtml(payload.browserbase_browse_candidate.catalog_slug)}</span>
+          </div>
+          <div class="row-links">
+            ${linkButton("Catalog", payload.browserbase_browse_candidate.catalog_url, "primary")}
+            ${linkButton("Skill", payload.browserbase_browse_candidate.skill_md_url)}
+            ${linkButton("Skill pack", payload.browserbase_browse_candidate.skill_pack_url)}
+          </div>
+        </article>
+        <article>
+          <h3>MCP.so</h3>
+          <p>${escapeHtml(payload.browser_assisted_submissions.mcp_so.order_handoff_rule)}</p>
+          <div class="row-links">
+            ${linkButton("Issue", payload.browser_assisted_submissions.mcp_so.submission_url, "primary")}
+            ${linkButton("Activation runner", payload.browser_assisted_submissions.mcp_so.tracked_reviewer_activation_html_url)}
+            ${linkButton("Order handoff", payload.browser_assisted_submissions.mcp_so.buyer_order_handoff, "warn")}
+          </div>
+        </article>
+        <article>
+          <h3>Claude Connectors</h3>
+          <p>${escapeHtml(payload.browser_assisted_submissions.claude_connectors_directory.auth_gate)}</p>
+          <div class="row-links">
+            ${linkButton("Submission", payload.browser_assisted_submissions.claude_connectors_directory.submission_url, "primary")}
+            ${linkButton("Claude packet", payload.browser_assisted_submissions.claude_connectors_directory.source_packet)}
+            ${linkButton("Activation runner", payload.browser_assisted_submissions.claude_connectors_directory.tracked_reviewer_activation_html_url)}
+          </div>
+        </article>
+      </div>
+    </section>
+    <section>
+      <h2>Copy-Ready Directory Messages</h2>
+      <div class="messages">${sourceMessages || "<p>No copy-ready messages required right now.</p>"}</div>
+    </section>
+    <section>
+      <h2>Success Gate</h2>
+      <div class="rules"><p>${escapeHtml(payload.success_gate)}</p></div>
+    </section>`
+  );
 }
 
 export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntime): string {

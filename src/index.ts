@@ -56,7 +56,7 @@ import {
 } from "./directory-submit-actions.js";
 import { mcpReviewerActivationHtml, mcpReviewerActivationMarkdown, mcpReviewerActivationPayload, trackedReviewerActivationUrl } from "./reviewer-activation.js";
 import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } from "./claude-connector-submission.js";
-import { agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
+import { agentCaptureOutreachHtml, agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 import { isMcpCommerceHeldSku, MCP_COMMERCE_HELD_SKUS, MCP_COMMERCE_HOLD_REASON } from "./mcp-commerce-holds.js";
@@ -1164,10 +1164,10 @@ const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_USAGE_EVENT_LIMIT_MAX = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_PACKET_EVENT_LIMIT = 1000;
-const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE = "PACKRIFT-PUBLIC-MCP-DERIVED-RESOURCE-CACHE-R04";
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE = "PACKRIFT-PUBLIC-MCP-DERIVED-RESOURCE-CACHE-R05";
 const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS = 5 * 60;
 const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_HEAVY_TTL_SECONDS = 30 * 60;
-const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX = "cache:public-mcp-derived-resource:r04:";
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX = "cache:public-mcp-derived-resource:r05:";
 const PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS = rawCacheHeaders(PUBLIC_MCP_DERIVED_RESOURCE_CACHE_HEAVY_TTL_SECONDS);
 const PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS = {
   ...RAW_HEADERS,
@@ -5446,14 +5446,15 @@ async function mcpSourceActivationQueuePayload(
   date = todayUtc(),
   limit = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT,
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
-  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
+  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ) {
-  const funnel = await cachedMcpFunnelSnapshotPayload(env, date, limit, orderDays, orderLimit);
+  const funnel = await cachedMcpFunnelSnapshotPayload(env, date, limit, orderDays, orderLimit, options);
   const blockingGates = Object.entries(funnel.proof_gate)
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R24",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -5715,21 +5716,24 @@ function cachedMcpSourceActivationQueuePayload(
   date: string,
   limit: number,
   orderDays: number,
-  orderLimit: number
+  orderLimit: number,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ): Promise<McpSourceActivationQueuePayload> {
   const key = mcpSourceActivationQueueCacheKey(date, limit, orderDays, orderLimit);
   const now = Date.now();
-  if (mcpSourceActivationQueuePayloadCache?.key === key && mcpSourceActivationQueuePayloadCache.expiresAtMs > now) {
+  if (!options.refresh && mcpSourceActivationQueuePayloadCache?.key === key && mcpSourceActivationQueuePayloadCache.expiresAtMs > now) {
     return mcpSourceActivationQueuePayloadCache.promise;
   }
   const promise = (async () => {
-    const cached = await readPublicMcpDerivedResourceCache<McpSourceActivationQueuePayload>(
-      env,
-      "source_activation_queue",
-      key
-    );
+    const cached = options.refresh
+      ? null
+      : await readPublicMcpDerivedResourceCache<McpSourceActivationQueuePayload>(
+          env,
+          "source_activation_queue",
+          key
+        );
     if (cached) return cached;
-    const payload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+    const payload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit, options);
     await writePublicMcpDerivedResourceCache(env, "source_activation_queue", key, payload);
     return payload;
   })().catch((error) => {
@@ -6110,9 +6114,10 @@ async function mcpRevenueConversionQueuePayload(
   date = todayUtc(),
   limit = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT,
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
-  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
+  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ) {
-  const sourceQueue = await cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+  const sourceQueue = await cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit, options);
   const rows = revenueConversionQueueRows(sourceQueue.queue);
   return {
     release: MCP_REVENUE_CONVERSION_QUEUE_RELEASE,
@@ -6195,21 +6200,24 @@ function cachedMcpRevenueConversionQueuePayload(
   date: string,
   limit: number,
   orderDays: number,
-  orderLimit: number
+  orderLimit: number,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ): Promise<McpRevenueConversionQueuePayload> {
   const key = mcpRevenueConversionQueueCacheKey(date, limit, orderDays, orderLimit);
   const now = Date.now();
-  if (mcpRevenueConversionQueuePayloadCache?.key === key && mcpRevenueConversionQueuePayloadCache.expiresAtMs > now) {
+  if (!options.refresh && mcpRevenueConversionQueuePayloadCache?.key === key && mcpRevenueConversionQueuePayloadCache.expiresAtMs > now) {
     return mcpRevenueConversionQueuePayloadCache.promise;
   }
   const promise = (async () => {
-    const cached = await readPublicMcpDerivedResourceCache<McpRevenueConversionQueuePayload>(
-      env,
-      "revenue_conversion_queue",
-      key
-    );
+    const cached = options.refresh
+      ? null
+      : await readPublicMcpDerivedResourceCache<McpRevenueConversionQueuePayload>(
+          env,
+          "revenue_conversion_queue",
+          key
+        );
     if (cached) return cached;
-    const payload = await mcpRevenueConversionQueuePayload(env, date, limit, orderDays, orderLimit);
+    const payload = await mcpRevenueConversionQueuePayload(env, date, limit, orderDays, orderLimit, options);
     await writePublicMcpDerivedResourceCache(env, "revenue_conversion_queue", key, payload);
     return payload;
   })().catch((error) => {
@@ -10407,7 +10415,7 @@ const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-autom
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
 const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
 const MCP_N8N_WORKFLOW_JSON_URL = "https://mcp.packrift.com/ai/mcp-n8n-workflow.json";
-const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R01";
+const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R02";
 const MCP_REVENUE_CONVERSION_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
 const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
@@ -10639,6 +10647,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/claude-connector-submission.md",
   "https://mcp.packrift.com/ai/agent-capture-outreach.json",
   "https://mcp.packrift.com/ai/agent-capture-outreach.md",
+  "https://mcp.packrift.com/ai/agent-capture-outreach.html",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md",
   "https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json",
@@ -10799,6 +10808,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/claude-connector-submission.md": "Crawler-readable Claude Connectors Directory submission packet for reviewers and Packrift operators.",
   "/ai/agent-capture-outreach.json": "Machine-readable Packrift MCP outreach packet combining install snippets, proof links, tracked directory URLs, recrawl messages, and browser-agent handoff rules.",
   "/ai/agent-capture-outreach.md": "Crawler-readable Packrift MCP outreach packet for directory reviewers, partners, agent hosts, and Packrift operators.",
+  "/ai/agent-capture-outreach.html": "Human-facing Packrift MCP outreach board for directory reviewers, partners, agent hosts, and Packrift operators.",
   "/ai/mcp-cart-handoff-candidates.json": "Machine-readable MCP cart handoff candidates for priority exact-spec SKUs with create_cart_url arguments and UTM-stamped cart candidates.",
   "/ai/mcp-cart-handoff-candidates.md": "Crawler-readable MCP cart handoff playbook for turning exact-spec SKU retrieval into tracked cart handoff.",
   "/ai/packrift-agent-endpoints-status.json": "Machine-readable status map for Packrift agent, MCP, UCP, corpus, and reserved root routes.",
@@ -11340,6 +11350,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/claude-connector-submission.md") return claudeConnectorSubmissionMarkdown(claudeConnectorSubmissionRuntime());
   if (pathname === "/ai/agent-capture-outreach.json") return JSON.stringify(agentCaptureOutreachPayload(agentCaptureOutreachRuntime()), null, 2);
   if (pathname === "/ai/agent-capture-outreach.md") return agentCaptureOutreachMarkdown(agentCaptureOutreachRuntime());
+  if (pathname === "/ai/agent-capture-outreach.html") return agentCaptureOutreachHtml(agentCaptureOutreachRuntime());
   if (pathname === "/ai/mcp-cart-handoff-candidates.json") return JSON.stringify(cartHandoffCandidatesPayload(), null, 2);
   if (pathname === "/ai/mcp-cart-handoff-candidates.md") return cartHandoffCandidatesMarkdown();
   if (pathname === "/ai/first20-exact-spec-routes.json") return JSON.stringify(first20ExactSpecRoutePayload(), null, 2);
@@ -13706,9 +13717,10 @@ app.get("/ai/mcp-source-activation-queue.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const payload = await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh });
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.json", "mcp_source_activation_queue", jsonByteSize(payload));
-  return c.json(payload, 200, RAW_HEADERS);
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS);
 });
 
 app.get("/ai/mcp-source-activation-queue.md", async (c) => {
@@ -13720,11 +13732,12 @@ app.get("/ai/mcp-source-activation-queue.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpSourceActivationQueueMarkdown(await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpSourceActivationQueueMarkdown(await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.md", "mcp_source_activation_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
 
@@ -13737,11 +13750,12 @@ app.get("/ai/mcp-source-activation-queue.html", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpSourceActivationQueueHtml(await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpSourceActivationQueueHtml(await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.html", "mcp_source_activation_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
 
@@ -13754,9 +13768,10 @@ app.get("/ai/mcp-revenue-conversion-queue.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const payload = await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh });
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-revenue-conversion-queue.json", "mcp_revenue_conversion_queue", jsonByteSize(payload));
-  return c.json(payload, 200, RAW_HEADERS);
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS);
 });
 
 app.get("/ai/mcp-revenue-conversion-queue.md", async (c) => {
@@ -13768,11 +13783,12 @@ app.get("/ai/mcp-revenue-conversion-queue.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpRevenueConversionQueueMarkdown(await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpRevenueConversionQueueMarkdown(await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-revenue-conversion-queue.md", "mcp_revenue_conversion_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
 
@@ -13785,11 +13801,12 @@ app.get("/ai/mcp-revenue-conversion-queue.html", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpRevenueConversionQueueHtml(await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpRevenueConversionQueueHtml(await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh }));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-revenue-conversion-queue.html", "mcp_revenue_conversion_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
 
@@ -14294,6 +14311,15 @@ app.get("/ai/agent-capture-outreach.md", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/agent-capture-outreach.md", "agent_capture_outreach", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/agent-capture-outreach.html", async (c) => {
+  const body = agentCaptureOutreachHtml(agentCaptureOutreachRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/agent-capture-outreach.html", "agent_capture_outreach", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
     ...RAW_HEADERS,
   });
 });

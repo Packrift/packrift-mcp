@@ -765,8 +765,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       canonical_url: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       install_or_call:
         "Use the outreach packet as the single public distribution handoff: it combines all-agent capture, directory submit actions, tracked start/config URLs, Claude/Codex/Cursor install snippets, Browserbase Browse catalog guidance, and copy-ready recrawl messages.",
-      proof_url: "https://mcp.packrift.com/ai/agent-capture-outreach.md",
-      fallback_url: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      proof_url: "https://mcp.packrift.com/ai/agent-capture-outreach.html",
+      fallback_url: "https://mcp.packrift.com/ai/agent-capture-outreach.md",
       next_action:
         "Use this packet when pushing stale directories, agent platforms, partners, and Browse-style agents toward the canonical hosted MCP endpoint.",
     }),
