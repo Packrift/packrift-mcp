@@ -214,6 +214,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - Cline source activation packet: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json
 - MCP activation wave: https://mcp.packrift.com/ai/mcp-activation-wave.json
 - MCP activation wave HTML: https://mcp.packrift.com/ai/mcp-activation-wave.html
+- MCP external activation brief: https://mcp.packrift.com/ai/mcp-external-activation-brief.json
+- MCP external activation brief HTML: https://mcp.packrift.com/ai/mcp-external-activation-brief.html
 - MCP activation wave runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS 'https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh' | bash`
 - MCP full-source capture runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS 'https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh' | bash`
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html

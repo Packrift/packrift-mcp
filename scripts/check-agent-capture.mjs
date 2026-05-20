@@ -383,7 +383,7 @@ async function main() {
     check("resources/list advertises activation experiments", hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.html"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises activation wave exports", hasResourceUri(resourceUris, "/ai/mcp-activation-wave.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave.html") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave-tasks.jsonl") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave-tasks.csv"), {
+    check("resources/list advertises activation wave exports", hasResourceUri(resourceUris, "/ai/mcp-activation-wave.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave.html") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave-tasks.jsonl") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave-tasks.csv") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief.json") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief.md") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief.html"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises buyer use cases", hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.json") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.md") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.html"), {

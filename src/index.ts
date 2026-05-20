@@ -3666,6 +3666,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
     "mcp_activation_experiments",
     "mcp_activation_wave",
     "mcp_activation_wave_runner",
+    "mcp_external_activation_brief",
     "claude_connector_submission",
     "agent_capture_outreach",
     "mcp_cart_handoff_candidates",
@@ -3771,6 +3772,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
       activation_experiments_resource_events: bySource.mcp_activation_experiments ?? 0,
       activation_wave_resource_events: bySource.mcp_activation_wave ?? 0,
       activation_wave_runner_resource_events: bySource.mcp_activation_wave_runner ?? 0,
+      external_activation_brief_resource_events: bySource.mcp_external_activation_brief ?? 0,
       cart_handoff_candidate_resource_events: bySource.mcp_cart_handoff_candidates ?? 0,
       cart_activation_resource_events: bySource.mcp_cart_activation ?? 0,
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
@@ -4236,7 +4238,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -7472,7 +7474,7 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
       return `<article class="handoff">
         <div class="row-head">
           <div>
-            <p class="eyebrow">#${row.rank} · ${escapeHtml(row.preferred_target)}</p>
+            <p class="eyebrow">#${row.rank} - ${escapeHtml(row.preferred_target)}</p>
             <h2>${escapeHtml(row.source)}</h2>
           </div>
           <span>${escapeHtml(row.status)}</span>
@@ -9353,6 +9355,273 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
       </details>
     </header>
 	    <section class="tasks">${cards || "<p>No tool-call wave tasks are ready right now.</p>"}</section>
+  </main>
+</body>
+</html>`;
+}
+
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R01";
+
+function mcpExternalActivationBriefTask(task: McpActivationWavePayload["wave_tasks"][number]) {
+  return {
+    rank: task.wave_rank,
+    source: task.source,
+    preferred_target: task.preferred_target,
+    current_stage: task.current_stage,
+    target_event_to_watch: task.target_event_to_watch,
+    expected_tool_call_lift: task.expected_tool_call_lift,
+    source_aware_endpoint: task.source_aware_endpoint,
+    tracked_install_json_url: task.tracked_install_json_url,
+    tracked_first_run_shell_url: task.tracked_first_run_shell_url,
+    reviewer_activation_shell_url: task.reviewer_activation_shell_url,
+    one_command_external_runner: task.one_command_external_runner,
+    eval_pack_json_url: task.eval_pack_json_url,
+    directory_update_card_json_url: task.directory_update_card_json_url,
+    buyer_handoff_url: task.buyer_handoff_preview?.buyer_handoff_url ?? task.source_order_handoff?.buyer_handoff_url ?? null,
+    success_gate: task.success_gate,
+    current_counts: task.current_counts,
+    short_request:
+      `Run Packrift MCP source=${task.source} from a real external ${task.preferred_target} host, complete tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066, then stop at the returned mcp.packrift.com/r/cart URL.`,
+  };
+}
+
+function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
+  const selectedRuns = payload.wave_tasks.map(mcpExternalActivationBriefTask);
+  const visitorThreshold = Number(payload.source_snapshot.ga4_qualified_external_mcp_session_threshold ?? 1000);
+  const visitorCount = Number(payload.source_snapshot.ga4_qualified_external_mcp_session_starts ?? 0);
+  const cartLandings = Number(payload.source_snapshot.qualified_first_party_mcp_cart_landings ?? 0);
+  const orders = Number(payload.source_snapshot.first_party_mcp_orders ?? 0);
+  const revenue = Number(payload.source_snapshot.first_party_mcp_order_revenue ?? 0);
+  return {
+    release: MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE,
+    generated_at: new Date().toISOString(),
+    canonical_endpoint: payload.canonical_endpoint,
+    status:
+      payload.tool_call_gap.enough_to_clear_material_tool_usage_gate
+        ? "ready_for_external_wave_run"
+        : "more_external_sources_needed",
+    purpose:
+      "Compact external-run brief for getting real Packrift MCP hosts to execute the current source-aware tool-call wave. This is an activation handoff, not visitor, cart, order, or revenue proof.",
+    source_queue_release: payload.source_queue_release,
+    activation_wave_release: payload.release,
+    source_queue_status: payload.source_queue_status,
+    snapshot_coverage: payload.snapshot_coverage,
+    goal_summary: {
+      material_usage: {
+        current_external_qualified_mcp_tool_calls: payload.tool_call_gap.current_external_qualified_mcp_tool_calls,
+        threshold: payload.tool_call_gap.material_usage_threshold,
+        remaining_to_threshold: payload.tool_call_gap.remaining_to_threshold,
+        selected_wave_size: payload.tool_call_gap.selected_wave_size,
+        required_sources_to_clear_gate: payload.tool_call_gap.required_sources_to_clear_gate,
+        expected_tool_call_lift_if_selected_runs_complete: payload.tool_call_gap.expected_tool_call_lift_if_all_tasks_run,
+        projected_external_qualified_mcp_tool_calls_after_selected_runs:
+          payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_wave,
+        enough_to_clear_material_tool_usage_gate: payload.tool_call_gap.enough_to_clear_material_tool_usage_gate,
+      },
+      qualified_visitors: {
+        current_ga4_qualified_external_mcp_sessions: visitorCount,
+        threshold: visitorThreshold,
+        remaining_to_threshold: Math.max(0, visitorThreshold - visitorCount),
+      },
+      cart_and_order: {
+        qualified_first_party_mcp_cart_landings: cartLandings,
+        first_party_mcp_orders: orders,
+        first_party_mcp_order_revenue: revenue,
+      },
+    },
+    selected_external_runs: selectedRuns,
+    selected_external_run_count: selectedRuns.length,
+    external_runner: {
+      threshold_wave: payload.links.one_command_wave_runner,
+      full_source_capture: payload.links.one_command_full_capture_runner,
+      guarded_runner_shell: payload.links.activation_wave_runner_shell,
+      required_env: "PACKRIFT_EXTERNAL_ACTIVATION=1",
+      optional_full_capture_env: "PACKRIFT_ACTIVATION_WAVE_SCOPE=full",
+    },
+    proof_urls: {
+      external_activation_brief_json: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_markdown: MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      activation_wave_json: payload.links.activation_wave_json,
+      activation_wave_html: payload.links.activation_wave_html,
+      activation_wave_runner_shell: payload.links.activation_wave_runner_shell,
+      source_activation_queue_json: payload.links.source_activation_queue_json,
+      source_activation_queue_html: payload.links.source_activation_queue_html,
+      funnel_snapshot: payload.links.funnel_snapshot,
+      ga4_funnel_proof: payload.links.ga4_funnel_proof,
+      usage_snapshot: payload.links.usage_snapshot,
+      eval_pack_template: payload.links.eval_pack_template,
+    },
+    safety_rules: [
+      "Run from a real external MCP host, reviewer machine, directory validator, or automation platform. Local Packrift self-runs do not prove adoption.",
+      "Use only the hosted Packrift endpoint at https://mcp.packrift.com/mcp and existing /r/install, /r/run, /r/activate, and /r/cart handoffs.",
+      "Do not create a separate Packrift CLI, alternate marketplace server, or duplicate checkout surface.",
+      "Do not place an order from this brief. create_cart_url should stop at the measured mcp.packrift.com/r/cart handoff.",
+      "Count success only when the public source activation queue and funnel snapshots show non-suppressed external MCP tool calls.",
+    ],
+    suppression_rules: payload.suppression_rules,
+    blocking_goal_gates: payload.blocking_goal_gates,
+    next_operator_action:
+      selectedRuns.length > 0
+        ? "Copy the guarded runner or one selected source run into a real external MCP host, then recheck source activation and funnel snapshots after telemetry settles."
+        : "No external activation runs are currently selected; inspect the source activation queue before running a new wave.",
+  };
+}
+
+type McpExternalActivationBriefPayload = ReturnType<typeof mcpExternalActivationBriefPayload>;
+
+function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefPayload): string {
+  const rows = payload.selected_external_runs
+    .map(
+      (row) =>
+        `| ${row.rank} | ${row.source} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.eval_pack_json_url} |`
+    )
+    .join("\n");
+  return [
+    "# Packrift MCP External Activation Brief",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Status: ${payload.status}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.purpose,
+    "",
+    "## Current Gate",
+    "",
+    `- External-qualified MCP tool calls: ${payload.goal_summary.material_usage.current_external_qualified_mcp_tool_calls} / ${payload.goal_summary.material_usage.threshold}`,
+    `- Remaining tool calls: ${payload.goal_summary.material_usage.remaining_to_threshold}`,
+    `- Selected external runs: ${payload.selected_external_run_count}`,
+    `- Expected lift: ${payload.goal_summary.material_usage.expected_tool_call_lift_if_selected_runs_complete}`,
+    `- Projected after selected runs: ${payload.goal_summary.material_usage.projected_external_qualified_mcp_tool_calls_after_selected_runs}`,
+    `- GA4 qualified external MCP sessions: ${payload.goal_summary.qualified_visitors.current_ga4_qualified_external_mcp_sessions} / ${payload.goal_summary.qualified_visitors.threshold}`,
+    `- Qualified MCP cart landings: ${payload.goal_summary.cart_and_order.qualified_first_party_mcp_cart_landings}`,
+    `- MCP orders: ${payload.goal_summary.cart_and_order.first_party_mcp_orders}`,
+    `- MCP revenue: ${payload.goal_summary.cart_and_order.first_party_mcp_order_revenue}`,
+    "",
+    "## External Runner",
+    "",
+    `- Threshold wave: \`${payload.external_runner.threshold_wave}\``,
+    `- Full-source capture: \`${payload.external_runner.full_source_capture}\``,
+    `- Guarded runner shell: ${payload.external_runner.guarded_runner_shell}`,
+    "",
+    "## Selected Runs",
+    "",
+    "| Rank | Source | Target event | Expected lift | Shell runner | Eval pack |",
+    "| --- | --- | --- | --- | --- | --- |",
+    rows || "| none | none | none | 0 | none | none |",
+    "",
+    "## Copy-Ready Requests",
+    "",
+    payload.selected_external_runs
+      .map(
+        (row) =>
+          [`### ${row.rank}. ${row.source}`, "", row.short_request, "", `Success gate: ${row.success_gate}`, "", `Run: \`${row.one_command_external_runner}\``].join("\n")
+      )
+      .join("\n\n") || "No selected external runs.",
+    "",
+    "## Safety Rules",
+    "",
+    payload.safety_rules.map((rule) => `- ${rule}`).join("\n"),
+    "",
+    "## Proof URLs",
+    "",
+    `- External activation brief JSON: ${payload.proof_urls.external_activation_brief_json}`,
+    `- External activation brief HTML: ${payload.proof_urls.external_activation_brief_html}`,
+    `- Source activation queue: ${payload.proof_urls.source_activation_queue_json}`,
+    `- Funnel snapshot: ${payload.proof_urls.funnel_snapshot}`,
+    `- GA4 proof: ${payload.proof_urls.ga4_funnel_proof}`,
+    `- Full activation wave: ${payload.proof_urls.activation_wave_json}`,
+    "",
+  ].join("\n");
+}
+
+function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPayload): string {
+  const taskCards = payload.selected_external_runs
+    .map(
+      (row) => `<article>
+        <div class="task-head">
+          <div>
+            <p class="eyebrow">#${row.rank} - ${escapeHtml(row.preferred_target)}</p>
+            <h2>${escapeHtml(row.source)}</h2>
+          </div>
+          <span>${escapeHtml(row.target_event_to_watch)}</span>
+        </div>
+        <p>${escapeHtml(row.short_request)}</p>
+        <p class="gate">${escapeHtml(row.success_gate)}</p>
+        <div class="links">
+          <a href="${escapeHtml(row.tracked_first_run_shell_url)}">Shell runner</a>
+          <a href="${escapeHtml(row.tracked_install_json_url)}">Host config</a>
+          <a href="${escapeHtml(row.eval_pack_json_url)}">Eval pack</a>
+          <a href="${escapeHtml(row.directory_update_card_json_url)}">Update card</a>
+          ${row.buyer_handoff_url ? `<a href="${escapeHtml(row.buyer_handoff_url)}">Buyer handoff</a>` : ""}
+        </div>
+        <pre>${escapeHtml(row.one_command_external_runner)}</pre>
+      </article>`
+    )
+    .join("");
+  const safety = payload.safety_rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("");
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packrift MCP External Activation Brief</title>
+  <meta name="description" content="Compact Packrift MCP external activation brief for real host-side MCP tool-call runs.">
+  <style>
+    :root{color-scheme:light;--ink:#17211d;--muted:#5b6861;--line:#d9dfda;--paper:#f7f8f5;--panel:#fff;--green:#0e684d;--blue:#225c96;--red:#98291d}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    main{max-width:1040px;margin:0 auto;padding:30px 18px 52px}
+    header{display:grid;gap:16px;border-bottom:1px solid var(--line);padding-bottom:22px}
+    h1{margin:0;font-size:clamp(2rem,5vw,4rem);line-height:1;letter-spacing:0}
+    h2{margin:0;font-size:1.15rem;letter-spacing:0}
+    p{margin:0;color:var(--muted);max-width:860px}
+    a{color:var(--blue);text-underline-offset:3px}
+    .metrics,.links{display:flex;flex-wrap:wrap;gap:8px}
+    .metrics span{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted)}
+    .runner,.safety,article{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+    .runner strong{display:block;margin-bottom:8px}
+    .tasks{display:grid;gap:12px;margin-top:18px}
+    .task-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .task-head span{border:1px solid var(--line);border-radius:999px;padding:5px 9px;color:var(--green);white-space:nowrap}
+    .eyebrow{text-transform:uppercase;font-size:.8rem;margin-bottom:2px}
+    .gate{margin-top:10px;color:var(--red);font-weight:650}
+    .links{margin-top:12px}
+    .links a{display:inline-flex;align-items:center;min-height:34px;border:1px solid var(--ink);border-radius:6px;padding:7px 10px;text-decoration:none;color:var(--ink);background:#fff;font-weight:650}
+    pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88rem}
+    li{margin:6px 0;color:var(--muted)}
+    @media (max-width:680px){.task-head{display:grid}.task-head span{white-space:normal}.links a{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Packrift MCP External Activation Brief</h1>
+      <p>${escapeHtml(payload.purpose)}</p>
+      <div class="metrics">
+        <span>Tool calls ${payload.goal_summary.material_usage.current_external_qualified_mcp_tool_calls}/${payload.goal_summary.material_usage.threshold}</span>
+        <span>Remaining ${payload.goal_summary.material_usage.remaining_to_threshold}</span>
+        <span>Selected runs ${payload.selected_external_run_count}</span>
+        <span>Expected lift ${payload.goal_summary.material_usage.expected_tool_call_lift_if_selected_runs_complete}</span>
+        <span>GA4 sessions ${payload.goal_summary.qualified_visitors.current_ga4_qualified_external_mcp_sessions}/${payload.goal_summary.qualified_visitors.threshold}</span>
+        <span>Carts ${payload.goal_summary.cart_and_order.qualified_first_party_mcp_cart_landings}</span>
+        <span>Orders ${payload.goal_summary.cart_and_order.first_party_mcp_orders}</span>
+      </div>
+      <div class="runner">
+        <strong>Guarded threshold runner</strong>
+        <pre>${escapeHtml(payload.external_runner.threshold_wave)}</pre>
+      </div>
+      <div class="links">
+        <a href="${escapeHtml(payload.proof_urls.external_activation_brief_json)}">JSON</a>
+        <a href="${escapeHtml(payload.proof_urls.external_activation_brief_markdown)}">Markdown</a>
+        <a href="${escapeHtml(payload.proof_urls.activation_wave_html)}">Full activation wave</a>
+        <a href="${escapeHtml(payload.proof_urls.source_activation_queue_html)}">Source queue</a>
+        <a href="${escapeHtml(payload.proof_urls.funnel_snapshot)}">Funnel snapshot</a>
+      </div>
+      <div class="safety"><ul>${safety}</ul></div>
+    </header>
+    <section class="tasks">${taskCards || "<p>No external activation runs are selected right now.</p>"}</section>
   </main>
 </body>
 </html>`;
@@ -11573,6 +11842,9 @@ const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation
 const MCP_ACTIVATION_WAVE_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.jsonl";
 const MCP_ACTIVATION_WAVE_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.csv";
 const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.md";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
 const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
 const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
@@ -11780,6 +12052,9 @@ const AI_DISCOVERY_URLS = [
   MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
   MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
   MCP_ACTIVATION_WAVE_RUNNER_URL,
+  MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+  MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL,
+  MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.html",
@@ -11946,6 +12221,9 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-activation-wave-tasks.jsonl": "Flat JSONL Packrift MCP activation task queue for automation tools that need one external host run per line.",
   "/ai/mcp-activation-wave-tasks.csv": "Flat CSV Packrift MCP activation task queue for spreadsheet, n8n, Zapier, and directory-review workflows.",
   "/ai/mcp-activation-wave-runner.sh": "Guarded shell bundle for external reviewers to run the current Packrift MCP activation wave through existing source-specific first-run scripts.",
+  "/ai/mcp-external-activation-brief.json": "Compact machine-readable Packrift MCP external activation brief with the selected real-host runs needed to move the material tool-call gate.",
+  "/ai/mcp-external-activation-brief.md": "Compact crawler-readable Packrift MCP external activation brief with copy-ready source requests, guarded runner commands, and proof boundaries.",
+  "/ai/mcp-external-activation-brief.html": "Human-facing Packrift MCP external activation brief for external hosts, reviewers, and operators running the current source-aware tool-call wave.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
   "/ai/mcp-buyer-use-cases.html": "Human-facing and browser-agent-readable Packrift MCP buyer use-case guide for qualified AI-commerce demand.",
@@ -12491,6 +12769,9 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-activation-wave-tasks.jsonl") return mcpActivationWaveTasksJsonl(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
   if (pathname === "/ai/mcp-activation-wave-tasks.csv") return mcpActivationWaveTasksCsv(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
   if (pathname === "/ai/mcp-activation-wave-runner.sh") return mcpActivationWaveRunnerShell(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-external-activation-brief.json") return JSON.stringify(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)), null, 2);
+  if (pathname === "/ai/mcp-external-activation-brief.md") return mcpExternalActivationBriefMarkdown(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
+  if (pathname === "/ai/mcp-external-activation-brief.html") return mcpExternalActivationBriefHtml(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-buyer-use-cases.html") return mcpBuyerUseCasesHtml(buyerUseCasesRuntime());
@@ -12721,6 +13002,8 @@ function mcpToolDiscoveryPayload() {
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
       activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
       activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       automation_workflows: MCP_AUTOMATION_WORKFLOWS_JSON_URL,
       automation_workflows_html: MCP_AUTOMATION_WORKFLOWS_HTML_URL,
       n8n_workflow_import: MCP_N8N_WORKFLOW_JSON_URL,
@@ -12797,6 +13080,7 @@ function mcpToolDiscoveryMarkdown(): string {
     `- Revenue conversion queue: ${payload.conversion_urls.revenue_conversion_queue}`,
     `- Buyer order handoffs: ${payload.conversion_urls.buyer_order_handoffs}`,
     `- Activation wave: ${payload.conversion_urls.activation_wave}`,
+    `- External activation brief: ${payload.conversion_urls.external_activation_brief}`,
     `- Eval pack: ${payload.conversion_urls.eval_pack}`,
     `- Eval pack template: ${payload.conversion_urls.eval_pack_template}`,
     `- Directory update card template: ${payload.conversion_urls.directory_update_card_template}`,
@@ -12881,6 +13165,8 @@ function mcpManifestPayload() {
       mcp_activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
       mcp_activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
       mcp_activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
+      mcp_external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      mcp_external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       mcp_activation_command_center: "https://mcp.packrift.com/r/activate",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -12953,6 +13239,8 @@ function mcpServerCardPayload() {
       activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
       activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       automation_workflows: MCP_AUTOMATION_WORKFLOWS_JSON_URL,
       automation_workflows_html: MCP_AUTOMATION_WORKFLOWS_HTML_URL,
       n8n_workflow_import: MCP_N8N_WORKFLOW_JSON_URL,
@@ -13536,6 +13824,8 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       mcp_activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
       mcp_activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      mcp_external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      mcp_external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -15187,6 +15477,42 @@ app.get("/ai/mcp-activation-wave-runner.sh", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave-runner.sh", "mcp_activation_wave_runner", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/x-shellscript; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-external-activation-brief.json", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const payload = mcpExternalActivationBriefPayload(
+    await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit, { refresh })
+  );
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-external-activation-brief.json", "mcp_external_activation_brief", jsonByteSize(payload));
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS);
+});
+
+app.get("/ai/mcp-external-activation-brief.md", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpExternalActivationBriefMarkdown(
+    mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit, { refresh }))
+  );
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-external-activation-brief.md", "mcp_external_activation_brief", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-external-activation-brief.html", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpExternalActivationBriefHtml(
+    mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit, { refresh }))
+  );
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-external-activation-brief.html", "mcp_external_activation_brief", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
     ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
