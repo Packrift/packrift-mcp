@@ -410,6 +410,8 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
 - MCP revenue conversion queue: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json
 - MCP revenue conversion queue HTML: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html
+- MCP buyer order handoffs: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json
+- MCP buyer order handoffs HTML: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html

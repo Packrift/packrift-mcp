@@ -383,6 +383,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
         "Work mature rows only: send the source-preserving cart handoff to a real buyer or reviewer, then watch GA4/Shopify funnel proof for first_party_mcp_orders or MCP revenue before counting the gate complete.",
     }),
     surface({
+      id: "mcp_buyer_order_handoffs",
+      name: "Packrift MCP buyer order handoffs",
+      agent_type: "revenue_conversion_handoff",
+      audience: "Real buyers, reviewers, procurement operators, and agent hosts who need a source-preserving checkout handoff for already-mature MCP sources.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
+      install_or_call:
+        "Use this thin buyer/reviewer handoff hub when a source already has MCP tool-call and cart-landing proof. It points to existing /r/order/{source} and /r/cart handoffs, preserves MCP attribution, and never places an order.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
+      next_action:
+        "Send the copy-ready buyer request to a real buyer or reviewer only when checkout evaluation is approved, then watch GA4/Shopify proof for MCP-attributed order or revenue.",
+    }),
+    surface({
       id: "mcp_activation_experiments",
       name: "Packrift MCP activation experiments",
       agent_type: "source_activation_measurement",
@@ -804,7 +820,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R24",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R25",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -824,6 +840,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
       revenue_conversion_queue: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
       revenue_conversion_queue_html: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html",
+      buyer_order_handoffs: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
+      buyer_order_handoffs_html: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
       agent_host_rollout: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json",
       agent_host_rollout_html: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html",
       activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",

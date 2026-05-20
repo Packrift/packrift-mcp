@@ -47,6 +47,8 @@ const SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-so
 const REVENUE_CONVERSION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
 const REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
+const BUYER_ORDER_HANDOFFS_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
+const BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
 const ACTIVATION_EXPERIMENTS_URL = "https://mcp.packrift.com/ai/mcp-activation-experiments.json";
 const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
@@ -372,6 +374,8 @@ function evidenceLinks() {
     mcp_revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
     mcp_revenue_conversion_queue_markdown: REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
     mcp_revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
+    mcp_buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
+    mcp_buyer_order_handoffs_html: BUYER_ORDER_HANDOFFS_HTML_URL,
     mcp_activation_experiments: ACTIVATION_EXPERIMENTS_URL,
     mcp_activation_wave: ACTIVATION_WAVE_URL,
     mcp_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
@@ -551,6 +555,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
+        buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
+        buyer_order_handoffs_html: BUYER_ORDER_HANDOFFS_HTML_URL,
         order_handoff_template: TRACKED_ORDER_HANDOFF_TEMPLATE,
         order_handoff_html_template: TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
         order_handoff_mcp_so: "https://mcp.packrift.com/r/order/mcp_so?format=html",
@@ -588,6 +594,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       "Use the eval pack when a host, marketplace, or reviewer needs copy-ready acceptance cases for a real external MCP install.",
       "Use the source activation queue to pick the next source-specific run that moves starts, installs, tool calls, cart landings, and orders forward.",
       "Use the revenue conversion queue only for mature sources that already have real MCP tool-call and qualified cart-landing proof.",
+      "Use the buyer order handoffs hub when the next missing proof is a real buyer or reviewer opening a source-preserving checkout handoff.",
       "Use the start page for first install, the install matrix for host-specific setup, and the workflow gallery for demo/eval flows.",
       "Route Browserbase Browse and other browser agents through read-first public resources, then confirm live commerce facts through MCP.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer interface.",
@@ -641,6 +648,7 @@ export function agentCaptureOutreachHtml(runtime: AgentCaptureOutreachRuntime): 
     ["Activation queue", payload.evidence.mcp_source_activation_queue, ""],
     ["Activation wave", payload.evidence.mcp_activation_wave_html, ""],
     ["Revenue queue", payload.evidence.mcp_revenue_conversion_queue_html, "warn"],
+    ["Buyer handoffs", payload.evidence.mcp_buyer_order_handoffs_html, "warn"],
     ["JSON", OUTREACH_JSON_URL, ""],
     ["Markdown", OUTREACH_MARKDOWN_URL, ""],
   ] satisfies Array<[string, string, string]>)

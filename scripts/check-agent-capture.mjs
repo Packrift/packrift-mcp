@@ -369,6 +369,9 @@ async function main() {
     check("resources/list advertises revenue conversion queue", hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.json") && hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.md") && hasResourceUri(resourceUris, "/ai/mcp-revenue-conversion-queue.html"), {
       detail: `resources=${resources.length}`,
     }),
+    check("resources/list advertises buyer order handoffs", hasResourceUri(resourceUris, "/ai/mcp-buyer-order-handoffs.json") && hasResourceUri(resourceUris, "/ai/mcp-buyer-order-handoffs.md") && hasResourceUri(resourceUris, "/ai/mcp-buyer-order-handoffs.html"), {
+      detail: `resources=${resources.length}`,
+    }),
     check("resources/list advertises activation experiments", hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.html"), {
       detail: `resources=${resources.length}`,
     }),
