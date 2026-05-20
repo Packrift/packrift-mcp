@@ -2945,12 +2945,19 @@ function boundedPublicMcpEventLimit(requestedLimit: number, fallbackLimit: numbe
   return Number.isFinite(requestedLimit) ? Math.max(1, Math.min(PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX, requestedLimit)) : fallbackLimit;
 }
 
-function publicMcpSnapshotUrl(pathname: string, limit: number, orderDays: number, orderLimit: number): string {
+function publicMcpSnapshotUrl(
+  pathname: string,
+  limit: number,
+  orderDays: number,
+  orderLimit: number,
+  options: PublicMcpDerivedResourceCacheOptions = {}
+): string {
   const params = new URLSearchParams({
     limit: String(limit),
     order_days: String(orderDays),
     order_limit: String(orderLimit),
   });
+  if (options.refresh) params.set("fresh", "1");
   return `https://mcp.packrift.com${pathname}?${params.toString()}`;
 }
 
@@ -2971,11 +2978,19 @@ function publicMcpSnapshotCoverage(pathname: string, limit: number, orderDays: n
     full_operator_order_days: PUBLIC_MCP_OPERATOR_ORDER_DAYS,
     full_operator_order_limit: PUBLIC_MCP_OPERATOR_ORDER_LIMIT,
     current_url: publicMcpSnapshotUrl(pathname, limit, orderDays, orderLimit),
+    current_fresh_url: publicMcpSnapshotUrl(pathname, limit, orderDays, orderLimit, { refresh: true }),
     operator_url: publicMcpSnapshotUrl(
       pathname,
       PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
       PUBLIC_MCP_OPERATOR_ORDER_DAYS,
       PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+    ),
+    operator_fresh_url: publicMcpSnapshotUrl(
+      pathname,
+      PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+      PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+      PUBLIC_MCP_OPERATOR_ORDER_LIMIT,
+      { refresh: true }
     ),
     extended_backfill_url: publicMcpSnapshotUrl(
       pathname,
@@ -2983,8 +2998,15 @@ function publicMcpSnapshotCoverage(pathname: string, limit: number, orderDays: n
       PUBLIC_MCP_OPERATOR_ORDER_DAYS,
       PUBLIC_MCP_OPERATOR_ORDER_LIMIT
     ),
+    extended_backfill_fresh_url: publicMcpSnapshotUrl(
+      pathname,
+      PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX,
+      PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+      PUBLIC_MCP_OPERATOR_ORDER_LIMIT,
+      { refresh: true }
+    ),
     rule:
-      "Use the fast public default for agent-facing resources and the full operator URL when reviewing adoption history, source-priority drift, or revenue attribution.",
+      "Use the fast public default for agent-facing resources, the full operator URL when reviewing adoption history, and the fresh URLs when verifying newly created cart, visitor, or revenue proof.",
   };
 }
 
