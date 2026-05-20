@@ -1,5 +1,5 @@
 export const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
-export const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R01";
+export const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 
 interface PackriftMcpGa4HeadScriptOptions {
   pageType: string;
@@ -57,7 +57,11 @@ export function packriftMcpGa4HeadScript(options: PackriftMcpGa4HeadScriptOption
           var currentUrl = new URL(window.location.href);
           var changed = false;
           new URLSearchParams(qualifiedMcpQuery).forEach(function (value, key) {
-            if (!currentUrl.searchParams.has(key)) {
+            var existing = currentUrl.searchParams.get(key);
+            if (key.indexOf("utm_") === 0 && existing && existing !== value && !currentUrl.searchParams.has("packrift_original_" + key)) {
+              currentUrl.searchParams.set("packrift_original_" + key, existing);
+            }
+            if (existing !== value) {
               currentUrl.searchParams.set(key, value);
               changed = true;
             }

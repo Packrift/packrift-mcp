@@ -11,7 +11,7 @@ const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
-const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R01";
+const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
 const FETCH_TIMEOUT_MS = 20000;
 const execFileAsync = promisify(execFile);
@@ -288,27 +288,42 @@ function cacheBustedUrl(url) {
 }
 
 async function fetchText(url) {
-  try {
-    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    const text = await response.text();
-    return { ok: response.ok, status: response.status, url: response.url, text };
-  } catch (error) {
-    return { ok: false, status: 0, url, text: "", error: error.message };
+  let lastResult = { ok: false, status: 0, url, text: "", error: "not attempted", attempts: 0 };
+  const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) ? 3 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      const text = await response.text();
+      lastResult = { ok: response.ok, status: response.status, url: response.url, text, attempts: attempt };
+      if (response.ok || response.status < 500) return lastResult;
+    } catch (error) {
+      lastResult = { ok: false, status: 0, url, text: "", error: error.message, attempts: attempt };
+    }
+    await sleep(200 * attempt);
   }
+  return lastResult;
 }
 
 async function fetchRedirect(url) {
-  try {
-    const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    return {
-      ok: response.status >= 300 && response.status < 400,
-      status: response.status,
-      url: response.url,
-      location: response.headers.get("location") ?? "",
-    };
-  } catch (error) {
-    return { ok: false, status: 0, url, location: "", error: error.message };
+  let lastResult = { ok: false, status: 0, url, location: "", error: "not attempted", attempts: 0 };
+  const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) ? 3 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      lastResult = {
+        ok: response.status >= 300 && response.status < 400,
+        status: response.status,
+        url: response.url,
+        location: response.headers.get("location") ?? "",
+        attempts: attempt,
+      };
+      if (lastResult.ok || response.status < 500) return lastResult;
+    } catch (error) {
+      lastResult = { ok: false, status: 0, url, location: "", error: error.message, attempts: attempt };
+    }
+    await sleep(200 * attempt);
   }
+  return lastResult;
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -959,6 +974,12 @@ async function liveMcpCheck() {
       row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
       row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
       row.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+      row.source_order_handoff?.buyer_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+      row.source_order_handoff?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+      row.source_order_handoff?.order_handoff_shell_one_liner?.includes("/r/order/cline_mcp_marketplace?format=sh") &&
+      row.source_order_handoff?.order_handoff_shell_one_liner?.includes("curl -sS") &&
+      row.order_handoff_shell_url === row.source_order_handoff?.order_handoff_shell_url &&
+      row.order_handoff_shell_one_liner === row.source_order_handoff?.order_handoff_shell_one_liner &&
       row.source_order_handoff?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
       row.source_order_handoff?.buyer_action_url?.includes("mcp_install_target=cline") &&
       row.source_order_handoff?.proof_boundary?.includes("not source activation proof") &&
@@ -987,6 +1008,9 @@ async function liveMcpCheck() {
       row.primary_action_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
       row.order_conversion_handoff?.buyer_handoff_url === row.primary_action_url &&
       row.order_conversion_handoff?.primary_order_handoff_url === row.primary_action_url &&
+      row.order_conversion_handoff?.buyer_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+      row.order_conversion_handoff?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+      row.order_conversion_handoff?.order_handoff_shell_one_liner?.includes("/r/order/cline_mcp_marketplace?format=sh") &&
       row.order_conversion_handoff?.buyer_ready_summary?.includes("Exact SKU 1066") &&
       row.order_conversion_handoff?.product?.sku === "1066" &&
       row.order_conversion_handoff?.product?.variant_id === "53472879935856" &&
@@ -1016,9 +1040,21 @@ async function liveMcpCheck() {
   const buyerOrderHandoffRows = Array.isArray(buyerOrderHandoffs?.handoffs) ? buyerOrderHandoffs.handoffs : [];
   const mcpPageAnalyticsDiagnostics = {
     start_html: hasMcpPageAnalytics(trackedStartHtmlPartnerResult.text, "mcp_start"),
-    install_html: hasMcpPageAnalytics(trackedInstallCodexHtmlResult.text, "mcp_install"),
-    first_run_html: hasMcpPageAnalytics(trackedFirstRunHtmlResult.text, "mcp_first_run"),
-    activation_html: hasMcpPageAnalytics(trackedReviewerActivationHtmlResult.text, "mcp_activation"),
+    install_html: hasMcpPageAnalytics(trackedInstallCodexHtmlResult.text, "mcp_install", [
+      "utm_source=chatgpt-mcp",
+      "utm_medium=mcp_tool",
+      "mcp_source_context=generic",
+    ]),
+    first_run_html: hasMcpPageAnalytics(trackedFirstRunHtmlResult.text, "mcp_first_run", [
+      "utm_source=chatgpt-mcp",
+      "utm_medium=mcp_tool",
+      "mcp_source_context=generic",
+    ]),
+    activation_html: hasMcpPageAnalytics(trackedReviewerActivationHtmlResult.text, "mcp_activation", [
+      "utm_source=chatgpt-mcp",
+      "utm_medium=mcp_tool",
+      "mcp_source_context=generic",
+    ]),
     source_activation_queue_html: hasMcpPageAnalytics(sourceActivationQueueHtmlResult.text, "mcp_source_activation_queue"),
     source_activation_packet_html: hasMcpPageAnalytics(sourceActivationClineHtmlResult.text, "mcp_source_activation_packet"),
     activation_experiments_html: hasMcpPageAnalytics(activationExperimentsHtmlResult.text, "mcp_activation_experiments"),
@@ -2281,6 +2317,9 @@ async function liveMcpCheck() {
       sourceActivationQueue?.critical_actions?.every(
         (row) =>
           row.source_order_handoff?.buyer_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          row.source_order_handoff?.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          row.source_order_handoff?.order_handoff_shell_url?.includes("format=sh") &&
+          row.source_order_handoff?.order_handoff_shell_one_liner?.includes("curl -sS") &&
           row.buyer_handoff_preview?.buyer_action_url?.includes(`mcp_source_context=${row.source}`) &&
           row.buyer_handoff_url === row.source_order_handoff?.buyer_handoff_url
       ) &&
@@ -2294,6 +2333,8 @@ async function liveMcpCheck() {
             row.tracked_first_run_shell_url?.includes("format=sh") &&
             row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
             row.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+            row.source_order_handoff?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
+            row.source_order_handoff?.order_handoff_shell_one_liner?.includes("/r/order/mcp_so?format=sh") &&
             row.source_order_handoff?.buyer_action_url?.includes("mcp_source_context=mcp_so") &&
             row.source_order_handoff?.buyer_action_url?.includes("mcp_install_target=generic_streamable_http") &&
             row.source_order_handoff?.proof_boundary?.includes("not source activation proof") &&
@@ -2523,6 +2564,8 @@ async function liveMcpCheck() {
       sourceActivationCline?.cline_real_host_run?.acceptance_gate?.includes("browser proof") &&
       sourceActivationCline?.copy_ready?.agent_prompt?.includes("create_cart_url") &&
       sourceActivationCline?.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+      sourceActivationCline?.source_order_handoff?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+      sourceActivationCline?.source_order_handoff?.order_handoff_shell_one_liner?.includes("curl -sS") &&
       sourceActivationCline?.buyer_handoff_preview?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
       sourceActivationCline?.links?.source_packet_html === "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html" &&
       sourceActivationClineMarkdownResult.ok &&
@@ -2567,6 +2610,8 @@ async function liveMcpCheck() {
           experiment.first_run_shell_one_liner?.includes("format=sh") &&
           experiment.directory_update_card_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-directory-update/") &&
           experiment.source_order_handoff?.buyer_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          experiment.source_order_handoff?.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          experiment.source_order_handoff?.order_handoff_shell_one_liner?.includes("format=sh") &&
           experiment.buyer_handoff_preview?.checkout_guardrail?.includes("does not place an order") &&
           experiment.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
           experiment.copy_ready_activation_request?.includes("mcp-directory-update/") &&
@@ -2740,9 +2785,13 @@ async function liveMcpCheck() {
           run.source_preserving_prepare_purchase_handoff?.copy_ready_unconfirmed_json_rpc?.includes('"buyer_confirmed": false') &&
           run.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval?.includes(
             '"buyer_confirmed": true'
-          )
+          ) &&
+          run.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          run.order_handoff_shell_url?.includes("format=sh") &&
+          run.order_handoff_shell_one_liner?.includes("curl -sS")
       ) &&
       externalActivationBriefMarkdownResult.text.includes("prepare_purchase_handoff") &&
+      externalActivationBriefMarkdownResult.text.includes("Guarded order shell") &&
       externalActivationBriefHtmlResult.text.includes("prepare_purchase_handoff shortcut") &&
       externalActivationBrief?.goal_summary?.material_usage?.threshold === 50 &&
       externalActivationBrief?.goal_summary?.material_usage?.expected_tool_call_lift_if_selected_runs_complete ===
@@ -2764,6 +2813,8 @@ async function liveMcpCheck() {
           typeof task.priority_score === "number" &&
           task.activation_status?.includes("needed") &&
           task.tracked_first_run_shell_url?.includes("format=sh") &&
+          task.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          task.order_handoff_shell_one_liner?.includes("curl -sS") &&
           task.one_command_external_runner?.includes("/r/run/") &&
           task.review_handoff_primary_surface &&
           task.copy_ready_generic_mcp_json?.includes('"mcpServers"') &&
@@ -2775,6 +2826,7 @@ async function liveMcpCheck() {
       ) &&
       externalActivationBriefTasksCsvResult.ok &&
       externalActivationBriefTasksCsvResult.text.includes("selected_rank,selected_contact_rank,wave_rank,source,preferred_target,priority,priority_score,activation_status") &&
+      externalActivationBriefTasksCsvResult.text.includes("order_handoff_shell_url") &&
       externalActivationBriefTasksCsvResult.text.includes("copy_ready_codex_command") &&
       externalActivationBriefTasksCsvResult.text.includes("fast_activation_path_required_final_tool") &&
       externalActivationBriefTasksCsvResult.text.includes("review_handoff_primary_surface") &&
@@ -2786,6 +2838,8 @@ async function liveMcpCheck() {
           typeof task.priority_score === "number" &&
           task.activation_status?.includes("needed") &&
           task.tracked_first_run_shell_url?.includes("format=sh") &&
+          task.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          task.order_handoff_shell_one_liner?.includes("curl -sS") &&
           task.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
           task.one_command_external_runner?.includes("/r/run/") &&
           task.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&

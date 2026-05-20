@@ -4243,7 +4243,7 @@ function matchesPublicFunnelSelfGenerated(text: string): boolean {
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
-  return /(chatgpt-mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
+  return /(chatgpt-mcp|chatgpt\s*\/\s*mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
 }
 
 function publicFunnelEventText(event: Record<string, unknown>): string {
@@ -5348,6 +5348,9 @@ interface SourceActivationOrderConversionHandoffPayload {
   buyer_handoff_url: string;
   buyer_handoff_json_url: string;
   buyer_handoff_markdown_url: string;
+  buyer_handoff_shell_url: string;
+  order_handoff_shell_url: string;
+  order_handoff_shell_one_liner: string;
   primary_order_handoff_url: string;
   buyer_ready_summary: string;
   product: SourceActivationOrderHandoffProductPayload;
@@ -5370,6 +5373,9 @@ interface SourceActivationSourceOrderHandoffPayload {
   buyer_handoff_url: string;
   buyer_handoff_json_url: string;
   buyer_handoff_markdown_url: string;
+  buyer_handoff_shell_url: string;
+  order_handoff_shell_url: string;
+  order_handoff_shell_one_liner: string;
   buyer_action_url: string;
   product: SourceActivationOrderHandoffProductPayload;
   source_preserving_prepare_purchase_handoff: ReturnType<typeof sourceActivationPreparePurchaseHandoff>;
@@ -6167,6 +6173,9 @@ function sourceActivationOrderConversionHandoff(
     buyer_handoff_url: buyerHandoff.links.order_handoff_html,
     buyer_handoff_json_url: buyerHandoff.links.order_handoff_json,
     buyer_handoff_markdown_url: buyerHandoff.links.order_handoff_markdown,
+    buyer_handoff_shell_url: buyerHandoff.links.order_handoff_shell,
+    order_handoff_shell_url: buyerHandoff.links.order_handoff_shell,
+    order_handoff_shell_one_liner: sourceActivationShellCommand(buyerHandoff.links.order_handoff_shell),
     primary_order_handoff_url: buyerHandoff.primary_order_handoff_url,
     buyer_ready_summary: buyerHandoff.buyer_ready_summary,
     product: buyerHandoff.product,
@@ -6222,6 +6231,9 @@ function sourceActivationSourceOrderHandoff(
     buyer_handoff_url: buyerHandoff.links.order_handoff_html,
     buyer_handoff_json_url: buyerHandoff.links.order_handoff_json,
     buyer_handoff_markdown_url: buyerHandoff.links.order_handoff_markdown,
+    buyer_handoff_shell_url: buyerHandoff.links.order_handoff_shell,
+    order_handoff_shell_url: buyerHandoff.links.order_handoff_shell,
+    order_handoff_shell_one_liner: sourceActivationShellCommand(buyerHandoff.links.order_handoff_shell),
     buyer_action_url: buyerHandoff.buyer_action_url,
     product: buyerHandoff.product,
     source_preserving_prepare_purchase_handoff: buyerHandoff.source_preserving_prepare_purchase_handoff,
@@ -6491,6 +6503,8 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         reviewer_activation_runner_url: urls.reviewer_activation_runner_url,
         reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
         one_command_external_runner: sourceActivationShellCommand(urls.reviewer_activation_shell_url),
+        order_handoff_shell_url: urls.order_handoff_shell_url,
+        order_handoff_shell_one_liner: sourceActivationShellCommand(urls.order_handoff_shell_url),
         directory_update_card_json_url: urls.directory_update_card_json_url,
         directory_update_card_markdown_url: urls.directory_update_card_markdown_url,
         tool_discovery_json_url: urls.tool_discovery_json_url,
@@ -6902,15 +6916,15 @@ function mcpSourceActivationQueueMarkdown(payload: McpSourceActivationQueuePaylo
     "",
     "## Priority Queue",
     "",
-    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Buyer handoff | First-run shell | Activation shell | Update card | Host install | Recent measured cart URL |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Buyer handoff | Order shell | First-run shell | Activation shell | Update card | Host install | Recent measured cart URL |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.queue
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.order_conversion_handoff?.buyer_handoff_url ?? row.source_order_handoff?.buyer_handoff_url ?? ""} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.order_conversion_handoff?.buyer_handoff_url ?? row.source_order_handoff?.buyer_handoff_url ?? ""} | ${row.order_handoff_shell_url ?? row.source_order_handoff?.order_handoff_shell_url ?? ""} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
       )
-      .join("\n") || "| none | none | none | none | none | none | none | none | none | none | none | none |",
+      .join("\n") || "| none | none | none | none | none | none | none | none | none | none | none | none | none |",
     "",
     "## Acceptance Rule",
     "",
@@ -6935,8 +6949,13 @@ function mcpSourceActivationQueueMarkdown(payload: McpSourceActivationQueuePaylo
 }
 
 function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload): string {
+  const htmlPreview = (value: string | null | undefined, maxLength = 2200) => {
+    const text = String(value ?? "");
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength)}\n\n[HTML preview truncated. Use the JSON, Markdown, update-card, or shell links for the full source-specific payload.]`;
+  };
   const criticalRows = payload.queue.filter((row) => row.priority === "critical");
-  const rows = (criticalRows.length ? criticalRows : payload.queue).slice(0, 12);
+  const rows = (criticalRows.length ? criticalRows : payload.queue).slice(0, 8);
   const queueCards = rows
     .map((row, index) => {
       const counts = row.current_counts;
@@ -6966,6 +6985,8 @@ function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload):
           <p class="endpoint">${escapeHtml(row.source_order_handoff.proof_boundary)}</p>
           <p class="endpoint">${escapeHtml(row.source_order_handoff.checkout_guardrail)}</p>
           <p><a href="${escapeHtml(row.source_order_handoff.buyer_handoff_url)}">${escapeHtml(row.source_order_handoff.buyer_handoff_url)}</a></p>
+          <p class="endpoint">Guarded order shell runner:</p>
+          <pre>${escapeHtml(row.source_order_handoff.order_handoff_shell_one_liner)}</pre>
         </details>`
         : "";
       const hostConfigLink =
@@ -6998,8 +7019,7 @@ function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload):
           <pre>${escapeHtml(hostConfigs.generic_mcp_json)}</pre>
           <h3>Cline MCP JSON</h3>
           <pre>${escapeHtml(hostConfigs.cline_mcp_json)}</pre>
-          <h3>Pasteable curl script</h3>
-          <pre>${escapeHtml(hostConfigs.curl_script)}</pre>
+          <p class="endpoint">Full shell runner: <a href="${escapeHtml(row.reviewer_activation_shell_url)}">${escapeHtml(row.reviewer_activation_shell_url)}</a></p>
         </details>`
         : "";
       const recentCartUrls = firstRecentCartUrl
@@ -7007,9 +7027,9 @@ function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload):
         : "";
       const safetyRule = row.operator_safety_rule ? `<p class="safety">${escapeHtml(row.operator_safety_rule)}</p>` : "";
       const externalMessage = row.external_activation_message
-        ? `<details class="activation-message" open>
+        ? `<details class="activation-message">
           <summary>External activation message</summary>
-          <pre>${escapeHtml(row.external_activation_message)}</pre>
+          <pre>${escapeHtml(htmlPreview(row.external_activation_message, 2200))}</pre>
         </details>`
         : "";
       return `<article class="row ${escapeHtml(row.priority)}">
@@ -7053,7 +7073,7 @@ function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload):
         </details>
         <details>
           <summary>Source-specific agent prompt</summary>
-          <pre>${escapeHtml(agentPrompt)}</pre>
+          <pre>${escapeHtml(htmlPreview(agentPrompt, 1800))}</pre>
         </details>
         ${hostConfigBlocks}
       </article>`;
@@ -8138,6 +8158,9 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
     ...row.source_order_handoff,
     preferred_target: preferredTarget,
     buyer_action_url: sourceActivationOrderHandoffPayload(sourceSlug, preferredTarget).buyer_action_url,
+    buyer_handoff_shell_url: packetUrls.order_handoff_shell_url,
+    order_handoff_shell_url: packetUrls.order_handoff_shell_url,
+    order_handoff_shell_one_liner: sourceActivationShellCommand(packetUrls.order_handoff_shell_url),
     source_aware_endpoint: packetFirstUsefulRun.endpoint,
     source_specific_first_run_url: packetUrls.tracked_first_run_url,
     reviewer_activation_shell_url: packetUrls.reviewer_activation_shell_url,
@@ -9679,6 +9702,16 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_cap
     task.source_order_handoff?.source_preserving_prepare_purchase_handoff ??
     task.buyer_handoff_preview?.source_preserving_prepare_purchase_handoff ??
     null;
+  const orderHandoffShellUrl =
+    task.source_order_handoff?.order_handoff_shell_url ??
+    task.source_order_handoff?.buyer_handoff_shell_url ??
+    task.buyer_handoff_preview?.order_handoff_shell_url ??
+    task.buyer_handoff_preview?.buyer_handoff_shell_url ??
+    null;
+  const orderHandoffShellOneLiner =
+    task.source_order_handoff?.order_handoff_shell_one_liner ??
+    task.buyer_handoff_preview?.order_handoff_shell_one_liner ??
+    (orderHandoffShellUrl ? sourceActivationShellCommand(orderHandoffShellUrl) : null);
   return {
     rank: task.wave_rank,
     selected_rank: selectedIndex + 1,
@@ -9707,6 +9740,9 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_cap
     directory_update_card_json_url: task.directory_update_card_json_url,
     directory_update_card_markdown_url: task.directory_update_card_markdown_url,
     buyer_handoff_url: task.buyer_handoff_preview?.buyer_handoff_url ?? task.source_order_handoff?.buyer_handoff_url ?? null,
+    buyer_handoff_shell_url: orderHandoffShellUrl,
+    order_handoff_shell_url: orderHandoffShellUrl,
+    order_handoff_shell_one_liner: orderHandoffShellOneLiner,
     source_preserving_prepare_purchase_handoff: preparePurchaseShortcut,
     external_review_handoff: reviewHandoff,
     copy_ready_host_configs: task.copy_ready_host_configs,
@@ -9851,6 +9887,9 @@ function mcpExternalActivationBriefTaskExportRows(payload: McpExternalActivation
     directory_update_card_json_url: task.directory_update_card_json_url,
     directory_update_card_markdown_url: task.directory_update_card_markdown_url,
     buyer_handoff_url: task.buyer_handoff_url ?? "",
+    buyer_handoff_shell_url: task.buyer_handoff_shell_url ?? "",
+    order_handoff_shell_url: task.order_handoff_shell_url ?? "",
+    order_handoff_shell_one_liner: task.order_handoff_shell_one_liner ?? "",
     prepare_purchase_tool: task.source_preserving_prepare_purchase_handoff?.tool_name ?? "",
     prepare_purchase_endpoint: task.source_preserving_prepare_purchase_handoff?.endpoint ?? "",
     prepare_purchase_unconfirmed_json_rpc: task.source_preserving_prepare_purchase_handoff?.copy_ready_unconfirmed_json_rpc ?? "",
@@ -9914,6 +9953,9 @@ function mcpExternalActivationBriefTasksCsv(payload: McpExternalActivationBriefP
     "tool_discovery_json_url",
     "directory_update_card_json_url",
     "buyer_handoff_url",
+    "buyer_handoff_shell_url",
+    "order_handoff_shell_url",
+    "order_handoff_shell_one_liner",
     "prepare_purchase_tool",
     "prepare_purchase_endpoint",
     "prepare_purchase_unconfirmed_json_rpc",
@@ -9945,7 +9987,7 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
   const rows = payload.selected_external_runs
     .map(
       (row) =>
-        `| ${row.selected_rank} | ${row.source} | ${row.priority} | ${row.activation_status} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.eval_pack_json_url} | ${row.external_review_handoff.primary_surface} |`
+        `| ${row.selected_rank} | ${row.source} | ${row.priority} | ${row.activation_status} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.order_handoff_shell_url ?? ""} | ${row.eval_pack_json_url} | ${row.external_review_handoff.primary_surface} |`
     )
     .join("\n");
   return [
@@ -9980,9 +10022,9 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
     "",
     "## Selected Runs",
     "",
-    "| Rank | Source | Priority | Status | Target event | Expected lift | Shell runner | Eval pack | Reviewer surface |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-    rows || "| none | none | none | none | none | 0 | none | none | none |",
+    "| Rank | Source | Priority | Status | Target event | Expected lift | Activation shell | Order shell | Eval pack | Reviewer surface |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    rows || "| none | none | none | none | none | 0 | none | none | none | none |",
     "",
     "## Copy-Ready Requests",
     "",
@@ -10000,6 +10042,7 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
             `Reviewer handoff: ${row.external_review_handoff.primary_surface}`,
             `Contact status: ${row.external_review_handoff.status}`,
             `Next contact action: ${row.external_review_handoff.next_contact_action}`,
+            row.order_handoff_shell_one_liner ? `Guarded order shell: \`${row.order_handoff_shell_one_liner}\`` : "",
             "",
             "Copy-ready host config:",
             "",
@@ -14200,7 +14243,7 @@ function mcpFirstRunActionHtml(payload: ReturnType<typeof mcpFirstRunActionPaylo
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP First Run</title>
-  ${packriftMcpGa4HeadScript({ pageType: "mcp_first_run", source: payload.source, target: payload.target, utmCampaign: "packrift_mcp_first_run" })}
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_first_run", source: payload.source, target: payload.target, utmCampaign: "packrift_mcp_first_run", forceQualifiedMcpUtm: true })}
   <style>
     body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f6f3;color:#1b2533}
     main{max-width:980px;margin:0 auto;padding:28px 18px 48px}

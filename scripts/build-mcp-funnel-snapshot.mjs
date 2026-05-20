@@ -822,7 +822,7 @@ function matchesSelfGeneratedDistribution(text) {
 }
 
 function matchesExternalQualifiedDemand(text) {
-  return /(chatgpt-mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
+  return /(chatgpt-mcp|chatgpt\s*\/\s*mcp|mcp_tool|create_cart_url|get_cart_handoff_candidates|get_pricing|check_inventory|get_product|search_products|cart_click|quote_click|reorder_click)/i.test(text);
 }
 
 function matchesMcpCartAttribution(text) {
