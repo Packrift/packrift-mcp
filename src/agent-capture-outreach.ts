@@ -53,6 +53,8 @@ const ACTIVATION_EXPERIMENTS_URL = "https://mcp.packrift.com/ai/mcp-activation-e
 const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
 const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
+const EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
+const EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
 const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const GA4_FUNNEL_PROOF_URL = "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json";
@@ -380,6 +382,8 @@ function evidenceLinks() {
     mcp_activation_wave: ACTIVATION_WAVE_URL,
     mcp_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
     mcp_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
+    mcp_external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
+    mcp_external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
     mcp_usage_snapshot: USAGE_SNAPSHOT_URL,
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -539,6 +543,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       source_activation_wave: ACTIVATION_WAVE_URL,
       source_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       source_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
+      external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
+      external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
     },
@@ -553,6 +559,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         activation_wave: ACTIVATION_WAVE_URL,
         activation_wave_html: ACTIVATION_WAVE_HTML_URL,
         activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
+        external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
+        external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
         buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -593,6 +601,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       "Use tracked /r/order/{source}?format=html buyer/reviewer handoffs after real MCP tool-call and cart proof when the next missing event is a source-attributed order.",
       "Use the eval pack when a host, marketplace, or reviewer needs copy-ready acceptance cases for a real external MCP install.",
       "Use the source activation queue to pick the next source-specific run that moves starts, installs, tool calls, cart landings, and orders forward.",
+      "Use the external activation brief when a reviewer, agent host, or automation platform needs the smallest current set of real external MCP runs to move the material tool-call gate.",
       "Use the revenue conversion queue only for mature sources that already have real MCP tool-call and qualified cart-landing proof.",
       "Use the buyer order handoffs hub when the next missing proof is a real buyer or reviewer opening a source-preserving checkout handoff.",
       "Use the start page for first install, the install matrix for host-specific setup, and the workflow gallery for demo/eval flows.",
@@ -647,6 +656,7 @@ export function agentCaptureOutreachHtml(runtime: AgentCaptureOutreachRuntime): 
     ["Start MCP", "https://mcp.packrift.com/start", "primary"],
     ["Activation queue", payload.evidence.mcp_source_activation_queue, ""],
     ["Activation wave", payload.evidence.mcp_activation_wave_html, ""],
+    ["External brief", payload.evidence.mcp_external_activation_brief_html, ""],
     ["Revenue queue", payload.evidence.mcp_revenue_conversion_queue_html, "warn"],
     ["Buyer handoffs", payload.evidence.mcp_buyer_order_handoffs_html, "warn"],
     ["JSON", OUTREACH_JSON_URL, ""],
