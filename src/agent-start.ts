@@ -14,6 +14,11 @@ const START_HTML_URL = "https://mcp.packrift.com/start";
 const START_JSON_URL = "https://mcp.packrift.com/ai/mcp-start.json";
 const START_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-start.md";
 const START_HTML_RESOURCE_URL = "https://mcp.packrift.com/ai/mcp-start.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const TRACKED_START_TEMPLATE = "https://mcp.packrift.com/r/start/{source}";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
@@ -196,7 +201,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R14",
+    release: "PACKRIFT-MCP-START-R15",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -245,6 +250,19 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
     },
     first_flow: FIRST_FLOW,
     first_useful_run: mcpFirstUsefulRun("generic", "generic_streamable_http"),
+    external_activation_handoff: {
+      status: "selected_contact_ready_runs_available",
+      purpose:
+        "Use this when an external agent host, MCP directory, marketplace reviewer, or automation platform needs the smallest current set of real Packrift MCP runs that can move the adoption proof gates.",
+      selected_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      selected_tasks_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+      brief_json: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      guarded_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
+      success_gate:
+        "Progress only counts when a real external MCP host or reviewer executes the hosted MCP flow and produces external-qualified MCP tool calls, measured cart landings, or an MCP-attributed order.",
+      no_duplicate_work_rule: "Do not build a separate Packrift CLI, storefront, scraper, or buyer surface.",
+    },
     buyer_prompts: BUYER_PROMPTS,
     proof_urls: {
       health: "https://mcp.packrift.com/health",
@@ -261,6 +279,11 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_selected_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_selected_tasks_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+      external_activation_selected_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       root_skill_md: "https://mcp.packrift.com/SKILL.md",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
@@ -280,6 +303,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use /r/run/{source}/{target} tracked first-run links when a directory, partner, or agent host needs a source-specific MCP call sequence with cart-handoff proof.",
       "Use /r/activate/{source}?format=html tracked reviewer activation browser runners when a proof click needs to become a real MCP call sequence ending in create_cart_url.",
       "Use the source activation queue to choose the next source-specific first run, tool call, cart landing, or order progression.",
+      "Use the selected external activation JSONL/CSV task feed when a reviewer or automation platform needs the smallest current contact-ready source set; success requires real external MCP tool calls, not Packrift self-runs.",
       "Custom /r/start/{source}, /r/config/{source}, /r/install/{source}/{target}, /r/run/{source}/{target}, and /r/activate/{source}?format=html source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
       "Do not create or promote a separate Packrift CLI or duplicate buyer surface.",
       "Confirm exact SKU, live price, and live inventory before cart handoff.",
@@ -389,6 +413,17 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "",
     fencedShell(payload.first_useful_run.curl_script),
     "",
+    "## External Activation Handoff",
+    "",
+    payload.external_activation_handoff.purpose,
+    "",
+    `Selected tasks JSONL: ${payload.external_activation_handoff.selected_tasks_jsonl}`,
+    `Selected tasks CSV: ${payload.external_activation_handoff.selected_tasks_csv}`,
+    `Brief: ${payload.external_activation_handoff.brief_html}`,
+    `Guarded runner: ${payload.external_activation_handoff.guarded_runner_shell}`,
+    "",
+    payload.external_activation_handoff.success_gate,
+    "",
     "## Buyer Prompts",
     "",
     payload.buyer_prompts.map((prompt) => `- ${escapeMarkdown(prompt)}`).join("\n"),
@@ -453,6 +488,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   const firstUsefulPrompt = `${firstUsefulRun.buyer_prompt}\n\nUse endpoint: ${firstUsefulRun.endpoint}`;
   const firstUsefulSequence = JSON.stringify(firstUsefulRun.sequence, null, 2);
   const firstUsefulCurlScript = firstUsefulRun.curl_script;
+  const externalActivationRunner = `PACKRIFT_EXTERNAL_ACTIVATION=1 bash <(curl -sS ${shellQuote(payload.external_activation_handoff.guarded_runner_shell)})`;
   const flow = payload.first_flow
     .map(
       (step) => `<li>
@@ -670,6 +706,32 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <div>
           <h3>Config Examples</h3>
           <div class="proof">${trackedConfigs}</div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>External Activation</h2>
+      <p>Use the selected contact-ready task feed when an agent host, marketplace reviewer, or automation platform needs the smallest current set of real MCP runs. This is for external proof against the hosted endpoint, not a new CLI.</p>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><strong>Selected JSONL tasks</strong>${copyButton(payload.external_activation_handoff.selected_tasks_jsonl, "Copy", "external_activation_tasks_jsonl")}</div>
+          <pre>${codeBlock(payload.external_activation_handoff.selected_tasks_jsonl)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Selected CSV tasks</strong>${copyButton(payload.external_activation_handoff.selected_tasks_csv, "Copy", "external_activation_tasks_csv")}</div>
+          <pre>${codeBlock(payload.external_activation_handoff.selected_tasks_csv)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Guarded selected-runner</strong>${copyButton(externalActivationRunner, "Copy", "external_activation_runner")}</div>
+          <pre>${codeBlock(externalActivationRunner)}</pre>
+        </div>
+        <div class="panel">
+          <h3>Review handoff</h3>
+          <div class="proof">
+            <a href="${escapeHtml(payload.external_activation_handoff.brief_html)}">Activation brief</a>
+            <a href="${escapeHtml(payload.external_activation_handoff.brief_json)}">Brief JSON</a>
+            <a href="${escapeHtml(payload.external_activation_handoff.guarded_runner_shell)}">Runner shell</a>
+          </div>
         </div>
       </div>
     </section>

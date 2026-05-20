@@ -1382,7 +1382,7 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R04" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R14" &&
+      start?.release === "PACKRIFT-MCP-START-R15" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
@@ -1392,6 +1392,14 @@ async function liveMcpCheck() {
       start?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       start?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       start?.first_useful_run?.curl_commands?.length >= 5 &&
+      start?.external_activation_handoff?.status === "selected_contact_ready_runs_available" &&
+      start?.external_activation_handoff?.selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      start?.external_activation_handoff?.selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      start?.external_activation_handoff?.brief_json === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+      start?.external_activation_handoff?.brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      start?.external_activation_handoff?.guarded_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
+      start?.external_activation_handoff?.success_gate?.includes("real external MCP host") &&
+      start?.external_activation_handoff?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
       marketplaceManifest?.mcp_server?.tools?.length >= 15 &&
       marketplaceManifest?.mcp_server?.tools?.some((tool) => tool?.name === "prepare_purchase_handoff") &&
       marketplaceManifest?.signals?.tool_count >= 15 &&
@@ -1513,6 +1521,12 @@ async function liveMcpCheck() {
       start?.proof_urls?.first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       start?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       start?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      start?.proof_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+      start?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      start?.proof_urls?.external_activation_selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      start?.proof_urls?.external_activation_selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      start?.proof_urls?.external_activation_selected_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
+      start?.operating_rules?.some((rule) => rule.includes("selected external activation JSONL/CSV task feed")) &&
       trackedStartPartnerResult.status === 302 &&
       trackedStartTarget?.origin === PACKRIFT_ORIGIN &&
       trackedStartTarget?.pathname === "/start" &&
@@ -1527,6 +1541,9 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/cline") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/run/partner_demo/generic_streamable_http") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/activate/partner_demo?format=html") &&
+      trackedStartHtmlPartnerResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
+      trackedStartHtmlPartnerResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
+      trackedStartHtmlPartnerResult.text.includes("External Activation") &&
       trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=generic_streamable_http") &&
       trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=claude_code") &&
       trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=codex") &&
@@ -1685,7 +1702,7 @@ async function liveMcpCheck() {
           surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json" &&
           surface.proof_url === "https://mcp.packrift.com/ai/agent-capture-outreach.html"
       ) &&
-      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R10" &&
+      adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R11" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
       adoptionKit?.developer_examples?.length >= 4 &&
       adoptionKit?.developer_examples?.some((example) => example.id === "curl-tools-list" && example.code?.includes("accept: application/json, text/event-stream")) &&
@@ -1701,9 +1718,20 @@ async function liveMcpCheck() {
       adoptionKit?.developer_share_pack?.shareable_source_links?.every((link) => link.reviewer_activation_runner?.includes("/r/activate/")) &&
       adoptionKit?.developer_share_pack?.shareable_source_links?.every((link) => link.one_command_external_runner?.includes("format=sh")) &&
       adoptionKit?.developer_share_pack?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
+      adoptionKit?.developer_share_pack?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+      adoptionKit?.developer_share_pack?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      adoptionKit?.developer_share_pack?.external_activation_selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      adoptionKit?.developer_share_pack?.external_activation_selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      adoptionKit?.developer_share_pack?.external_activation_selected_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
+      adoptionKit?.developer_share_pack?.external_activation_success_gate?.includes("real external MCP host") &&
       adoptionKit?.install?.reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
       adoptionKit?.install?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
       adoptionKit?.install?.activation_wave_html === MCP_ACTIVATION_WAVE_HTML_URL &&
+      adoptionKit?.install?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+      adoptionKit?.install?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      adoptionKit?.install?.external_activation_selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      adoptionKit?.install?.external_activation_selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      adoptionKit?.install?.external_activation_selected_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       adoptionKit?.proof_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.command === "npx" &&
       adoptionKit?.install?.stdio_mcp_remote?.mcpServers?.packrift?.args?.includes("mcp-remote") &&
@@ -1714,7 +1742,14 @@ async function liveMcpCheck() {
       adoptionKit?.proof_urls?.reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
       adoptionKit?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       adoptionKit?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
+      adoptionKit?.proof_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+      adoptionKit?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      adoptionKit?.proof_urls?.external_activation_selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      adoptionKit?.proof_urls?.external_activation_selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      adoptionKit?.proof_urls?.external_activation_selected_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       adoptionKit?.expected_first_flow_outcomes?.some((outcome) => outcome.includes("https://mcp.packrift.com/r/cart/")) &&
+      adoptionKit?.expected_first_flow_outcomes?.some((outcome) => outcome.includes("external_activation_selected_tasks_jsonl")) &&
+      adoptionKit?.rules?.some((rule) => rule.includes("selected external activation task feed")) &&
       installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R09" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.hosts?.some(

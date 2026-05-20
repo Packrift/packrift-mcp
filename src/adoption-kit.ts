@@ -11,6 +11,11 @@ export interface AdoptionKitRuntime {
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const SHAREABLE_SOURCES = [
   "generic",
   "cline_mcp_marketplace",
@@ -233,7 +238,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   const shareableSourceLinks = SHAREABLE_SOURCES.map(shareableSourceLink);
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R10",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R11",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -283,6 +288,11 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       activation_wave: ACTIVATION_WAVE_URL,
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_selected_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_selected_tasks_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+      external_activation_selected_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       self_hosted_container_optional: "docker pull ghcr.io/packrift/packrift-mcp:latest",
     },
     developer_share_pack: {
@@ -295,6 +305,13 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       activation_wave: ACTIVATION_WAVE_URL,
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_selected_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_selected_tasks_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+      external_activation_selected_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
+      external_activation_success_gate:
+        "Use the selected task feed only for real external MCP host or reviewer runs. Packrift self-runs, crawlers, and resource fetches are not adoption proof.",
       measurement_urls: {
         usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
         funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
@@ -374,6 +391,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Agents must call get_product, get_pricing, and check_inventory before presenting create_cart_url output to a buyer.",
       "Directory reviewers can use https://mcp.packrift.com/r/activate/generic?format=html to run the real MCP sequence in a browser.",
       "Developers and reviewers can use developer_share_pack.shareable_source_links to preserve source attribution from start/config/install through first useful run and activation proof.",
+      "External agent hosts can use developer_share_pack.external_activation_selected_tasks_jsonl or .csv to pick the current contact-ready source runs that close the material tool-call gap.",
       "Stdio-only hosts can use npx mcp-remote as a thin bridge to the hosted endpoint; this is not a Packrift CLI.",
     ],
     useful_workflows: [
@@ -422,6 +440,11 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
       activation_wave: ACTIVATION_WAVE_URL,
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_selected_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
+      external_activation_selected_tasks_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+      external_activation_selected_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       measured_handoffs: "https://mcp.packrift.com/ai/measured-handoffs.json",
       product_corpus: "https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl",
@@ -447,6 +470,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       "Use the eval pack when a host or directory needs acceptance-test cases with expected assertions.",
       "Use the source activation queue to prioritize the next external source that needs a real MCP run, measured cart landing, or order.",
       "Use the activation wave when the material tool-call gate is open; it packages the next source-aware real host runs without creating a duplicate CLI or buyer surface.",
+      "Use the selected external activation task feed when a reviewer or automation platform needs the smallest contact-ready source set; count only real external MCP host runs.",
       "If any required spec differs, return no exact match and route to bulk quote recovery.",
     ],
   };
@@ -507,11 +531,22 @@ export function mcpAdoptionKitMarkdown(runtime: AdoptionKitRuntime): string {
     "",
     `Activation wave: ${payload.install.activation_wave_html}`,
     "",
+    `External activation brief: ${payload.install.external_activation_brief_html}`,
+    `Selected task feed JSONL: ${payload.install.external_activation_selected_tasks_jsonl}`,
+    `Selected task feed CSV: ${payload.install.external_activation_selected_tasks_csv}`,
+    `Guarded selected-runner: ${payload.install.external_activation_selected_runner_shell}`,
+    "",
     "## Developer Share Pack",
     "",
     payload.developer_share_pack.purpose,
     "",
     payload.developer_share_pack.rule,
+    "",
+    `Selected external task JSONL: ${payload.developer_share_pack.external_activation_selected_tasks_jsonl}`,
+    `Selected external task CSV: ${payload.developer_share_pack.external_activation_selected_tasks_csv}`,
+    `Selected external runner: ${payload.developer_share_pack.external_activation_selected_runner_shell}`,
+    "",
+    payload.developer_share_pack.external_activation_success_gate,
     "",
     "| Source | Target | Start | Config | Install | First-run shell | Activation runner | Packet |",
     "| --- | --- | --- | --- | --- | --- | --- | --- |",
