@@ -138,16 +138,17 @@ const SURFACE_GUIDANCE = {
   },
   findmcp_dev: {
     listing_url: "https://findmcp.dev/",
-    submission_url: "https://findmcp.dev/submit",
+    submission_url: "mailto:hello@coderai.dev",
     priority: "medium",
     follow_up_action:
-      "FindMCP /submit renders the homepage and the submit CTA errors; find a real contact, repository, or fixed submit endpoint before retrying.",
+      "FindMCP /submit renders the homepage and the submit CTA errors; review and send the hello@coderai.dev draft instead of retrying the broken submit page.",
   },
   mcplane: {
     listing_url: "https://mcplane.com/mcp_servers?query=packrift",
-    submission_url: "https://mcplane.com/mcp_servers/new",
+    submission_url: "https://github.com/MCPlane",
     priority: "medium",
-    follow_up_action: "MCPLane rejected the public Packrift GitHub repository as not found/private; contact MCPLane or retry after validator repair.",
+    follow_up_action:
+      "MCPLane rejected the public Packrift GitHub repository as not found/private; use the public GitHub/LinkedIn owner routes or retry after validator repair.",
   },
   mcpsolutions_dev: {
     listing_url: "https://mcpsolutions.dev/explore/",
@@ -2559,7 +2560,7 @@ async function liveMcpCheck() {
       activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
       activationWaveRunnerResult.text.includes("/r/run/") &&
       activationWaveRunnerResult.text.includes("format=sh") &&
-      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R02" &&
+      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R03" &&
       externalActivationBrief?.canonical_endpoint === MCP_ENDPOINT &&
       externalActivationBrief?.activation_wave_release === activationWave?.release &&
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
@@ -2812,7 +2813,7 @@ async function liveMcpCheck() {
       directoryRefresh?.recrawl_request?.includes("mcp-activation-wave.json") &&
       directoryRefresh?.recrawl_request?.includes("mcp-tools.json") &&
       directoryRefresh?.recrawl_request?.includes(".well-known/mcp-marketplace.json") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R44" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R45" &&
       directorySubmitActions?.source_mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       directorySubmitActions?.actions?.length >= 28 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory" && action.action_status === "auth_gated_manual") &&
@@ -2822,8 +2823,12 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some((action) => action.id === "mcplist_ai" && action.action_status === "email_draft_ready") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcphubz" && action.action_status === "login_required_contact_broken") &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_blue" && action.action_status === "parked_domain_blocked") &&
-      directorySubmitActions?.actions?.some((action) => action.id === "findmcp_dev" && action.action_status === "submit_cta_broken") &&
-      directorySubmitActions?.actions?.some((action) => action.id === "mcplane" && action.action_status === "validator_rejected_public_repo") &&
+      directorySubmitActions?.actions?.some(
+        (action) => action.id === "findmcp_dev" && action.action_status === "email_draft_ready" && action.submission_url === "mailto:hello@coderai.dev"
+      ) &&
+      directorySubmitActions?.actions?.some(
+        (action) => action.id === "mcplane" && action.action_status === "validator_rejected_contact_route_identified" && action.submission_url === "https://github.com/MCPlane"
+      ) &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcpsolutions_dev" && action.action_status === "submitted_pending") &&
       directorySubmitActions?.actions?.some(
         (action) => action.id === "mcpserverfinder" && action.action_status === "email_draft_ready" && action.submission_url === "mailto:info@mcpserverfinder.com"
@@ -3142,7 +3147,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
       agentCaptureOutreach?.directory_refreshes?.every((action) => action.concise_email?.release === "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R01") &&
       agentCaptureOutreach?.directory_refreshes?.some((action) => action.id === "glama_server_listing" && action.source_release_readiness?.status === "ready_for_glama_admin_release") &&
-      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R44" &&
+      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R45" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&

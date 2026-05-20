@@ -156,17 +156,18 @@ const DIRECT_STATUS = {
     next_action: "Do not spend time submitting until the directory domain is live again; monitor only.",
   },
   findmcp_dev: {
-    status: "submit_cta_broken",
-    method: "Submit route renders the directory landing page and the submit CTA is broken",
+    status: "email_draft_ready",
+    method: "Submit route renders the directory landing page; owner contact route now has an unsent Gmail draft",
     evidence:
-      "https://findmcp.dev/submit renders the homepage instead of a form; the visible List Your Server CTA triggers the frontend error openWaitlist is not defined.",
-    next_action: "Find a real contact, repository, or fixed submit endpoint before attempting another submission.",
+      "https://findmcp.dev/submit renders the homepage instead of a form; Coder AI is the listed parent project for FindMCP/MCPfinder, and an unsent draft to hello@coderai.dev is ready with the source-aware activation request.",
+    next_action: "Review and send the hello@coderai.dev draft; do not retry the broken submit page unless it is fixed.",
   },
   mcplane: {
-    status: "validator_rejected_public_repo",
-    method: "Publish Server form attempted and rejected the public GitHub repository",
-    evidence: "On 2026-05-19, MCPLane /mcp_servers/new returned 'Repository not found or private' for the public https://github.com/Packrift/packrift-mcp repo, which GitHub confirms is public.",
-    next_action: "Contact MCPLane or retry only after their GitHub validator accepts public org repositories.",
+    status: "validator_rejected_contact_route_identified",
+    method: "Publish Server form attempted and rejected the public GitHub repository; public owner routes are identified",
+    evidence:
+      "On 2026-05-19, MCPLane /mcp_servers/new returned 'Repository not found or private' for the public https://github.com/Packrift/packrift-mcp repo. The current MCPlane site links to https://github.com/MCPlane and its LinkedIn company page as public owner routes.",
+    next_action: "Use the MCPlane GitHub organization or LinkedIn company route, or retry only after their GitHub validator accepts public org repositories.",
   },
   mcpsolutions_dev: {
     status: "submitted_pending",
