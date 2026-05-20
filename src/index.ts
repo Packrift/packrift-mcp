@@ -4180,7 +4180,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
 
 const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23";
 const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02";
-const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R05";
+const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R06";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -5216,6 +5216,60 @@ function sourceActivationOrderHandoffProduct(): SourceActivationOrderHandoffProd
   };
 }
 
+function jsonRpcToolCall(id: string, name: string, args: Record<string, unknown>) {
+  return { jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } };
+}
+
+function sourceActivationPreparePurchaseHandoff(
+  source: string,
+  target: string,
+  product: SourceActivationOrderHandoffProductPayload
+) {
+  const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
+  const targetSlug = normalizeMcpRuntimeSlug(target) || sourcePreferredActivationTarget(sourceSlug);
+  const day = compactDate();
+  const sourceContext = `${sourceSlug}_purchase_handoff`.slice(0, 80);
+  const journeyId = `mcp_order_handoff_${sourceSlug}_${product.sku}_${day}`;
+  const resultSetId = `mcp_order_handoff_${day}`;
+  const baseArgs = {
+    sku: product.sku,
+    quantity: 1,
+    source_context: sourceContext,
+    mcp_source_context: sourceSlug,
+    mcp_install_target: targetSlug,
+    journey_id: journeyId,
+    result_set_id: resultSetId,
+    utm_term: product.sku,
+  };
+  const unconfirmedArgs = { ...baseArgs, buyer_confirmed: false };
+  const confirmedArgs = { ...baseArgs, buyer_confirmed: true };
+  return {
+    tool_name: "prepare_purchase_handoff",
+    endpoint: sourceAwareMcpEndpoint(sourceSlug, targetSlug),
+    source_context: sourceContext,
+    mcp_source_context: sourceSlug,
+    mcp_install_target: targetSlug,
+    unconfirmed_arguments: unconfirmedArgs,
+    confirmed_arguments_after_buyer_approval: confirmedArgs,
+    unconfirmed_json_rpc: jsonRpcToolCall(`prepare-${product.sku}-unconfirmed`, "prepare_purchase_handoff", unconfirmedArgs),
+    confirmed_json_rpc_after_buyer_approval: jsonRpcToolCall(`prepare-${product.sku}-confirmed`, "prepare_purchase_handoff", confirmedArgs),
+    copy_ready_unconfirmed_json_rpc: JSON.stringify(
+      jsonRpcToolCall(`prepare-${product.sku}-unconfirmed`, "prepare_purchase_handoff", unconfirmedArgs),
+      null,
+      2
+    ),
+    copy_ready_confirmed_json_rpc_after_buyer_approval: JSON.stringify(
+      jsonRpcToolCall(`prepare-${product.sku}-confirmed`, "prepare_purchase_handoff", confirmedArgs),
+      null,
+      2
+    ),
+    buyer_confirmation_rule:
+      "Run buyer_confirmed=false first for live product, price, and inventory confirmation. Run buyer_confirmed=true only after the buyer or reviewer approves exact SKU, quantity, and checkout review.",
+    success_rule:
+      `The confirmed call should return a measured https://mcp.packrift.com/r/cart/${product.sku} URL containing mcp_source_context=${sourceSlug} and mcp_install_target=${targetSlug}; it still does not place an order.`,
+  };
+}
+
 interface SourceActivationOrderHandoffSourceCounts {
   mcp_tool_calls: number;
   create_cart_url_calls: number;
@@ -5260,6 +5314,7 @@ interface SourceActivationOrderHandoffPayload {
     sequence: ReturnType<typeof mcpFirstUsefulRun>["sequence"];
     required_cart_url_prefix: string;
   };
+  source_preserving_prepare_purchase_handoff: ReturnType<typeof sourceActivationPreparePurchaseHandoff>;
   copy_ready_messages: {
     buyer_request: string;
     reviewer_request: string;
@@ -5298,6 +5353,7 @@ interface SourceActivationOrderConversionHandoffPayload {
   cart_landing_action_url: string;
   measured_cart_url: string | null;
   fallback_source_preserving_cart_url: string;
+  source_preserving_prepare_purchase_handoff: ReturnType<typeof sourceActivationPreparePurchaseHandoff>;
   copy_ready_buyer_request: string;
   copy_ready_reviewer_request: string;
   proof_gate: string;
@@ -5314,6 +5370,7 @@ interface SourceActivationSourceOrderHandoffPayload {
   buyer_handoff_markdown_url: string;
   buyer_action_url: string;
   product: SourceActivationOrderHandoffProductPayload;
+  source_preserving_prepare_purchase_handoff: ReturnType<typeof sourceActivationPreparePurchaseHandoff>;
   required_shopify_cart_attributes: string[];
   proof_boundary: string;
   checkout_guardrail: string;
@@ -5331,6 +5388,7 @@ function sourceActivationOrderHandoffPayload(
   const firstUsefulRun = mcpFirstUsefulRun(sourceSlug, targetSlug);
   const buyerActionUrl = sourceActivationOrderCartUrl(sourceSlug, targetSlug);
   const product = sourceActivationOrderHandoffProduct();
+  const preparePurchaseHandoff = sourceActivationPreparePurchaseHandoff(sourceSlug, targetSlug, product);
   const buyerReadySummary =
     `Exact SKU ${product.sku} (${product.title}), quantity 1, source-preserving MCP cart handoff. Buyer must confirm live price, inventory, shipping, tax, and final total in Shopify before placing any order.`;
   const buyerPrompt =
@@ -5340,6 +5398,7 @@ function sourceActivationOrderHandoffPayload(
     "",
     "Buyer-side checkout rule:",
     buyerReadySummary,
+    "Shortcut: after buyer approval, use prepare_purchase_handoff with the source-preserving arguments in this handoff instead of rebuilding attribution by hand.",
     "Open the source-preserving cart only for buyer/reviewer review. Do not place an order unless the buyer explicitly approves after seeing the Shopify checkout totals.",
   ].join("\n");
   const reviewerRequest = [
@@ -5350,6 +5409,7 @@ function sourceActivationOrderHandoffPayload(
     `Source-preserving cart: ${buyerActionUrl}`,
     `Product: ${product.title} (${product.sku})`,
     `Real MCP runner: ${urls.reviewer_activation_runner_url}`,
+    "Shortcut tool: prepare_purchase_handoff with mcp_source_context and mcp_install_target from this handoff",
     `Eval pack: ${urls.eval_pack_json_url}`,
     "",
     "Please run this from a real MCP host or buyer/reviewer workflow. The page and MCP tools do not place an order by themselves; the remaining proof gate is a buyer-approved Shopify checkout that preserves MCP attribution.",
@@ -5433,6 +5493,7 @@ function sourceActivationOrderHandoffPayload(
       success_rule:
         "The buyer/reviewer page can run the same source-aware MCP sequence in-browser and replace the cart button with the fresh measured /r/cart URL returned by create_cart_url. This still does not place an order.",
     },
+    source_preserving_prepare_purchase_handoff: preparePurchaseHandoff,
     buyer_prompt: buyerPrompt,
     copy_ready_messages: {
       buyer_request:
@@ -5581,6 +5642,25 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
     `- Required final tool: ${payload.browser_live_confirmation.required_final_tool}`,
     `- Required cart URL prefix: ${payload.browser_live_confirmation.required_cart_url_prefix}`,
     `- Success rule: ${payload.browser_live_confirmation.success_rule}`,
+    "",
+    "## Source-Preserving Prepare Purchase Shortcut",
+    "",
+    `- Tool: ${payload.source_preserving_prepare_purchase_handoff.tool_name}`,
+    `- Endpoint: ${payload.source_preserving_prepare_purchase_handoff.endpoint}`,
+    `- Buyer confirmation rule: ${payload.source_preserving_prepare_purchase_handoff.buyer_confirmation_rule}`,
+    `- Success rule: ${payload.source_preserving_prepare_purchase_handoff.success_rule}`,
+    "",
+    "Unconfirmed JSON-RPC:",
+    "",
+    "```json",
+    payload.source_preserving_prepare_purchase_handoff.copy_ready_unconfirmed_json_rpc,
+    "```",
+    "",
+    "Confirmed JSON-RPC after buyer approval:",
+    "",
+    "```json",
+    payload.source_preserving_prepare_purchase_handoff.copy_ready_confirmed_json_rpc_after_buyer_approval,
+    "```",
     "",
     "## Source Attribution Required",
     "",
@@ -5740,10 +5820,23 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
 	      <p>${escapeHtml(payload.attribution_rule)}</p>
 	      <ul>${payload.required_shopify_cart_attributes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
 	    </section>
-	    <section>
-	      <h2>Checkout Guardrails</h2>
-	      <ul>${payload.checkout_guardrails.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-	    </section>
+    <section>
+      <h2>Checkout Guardrails</h2>
+      <ul>${payload.checkout_guardrails.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+    <section>
+      <h2>Prepare Purchase Shortcut</h2>
+      <p>${escapeHtml(payload.source_preserving_prepare_purchase_handoff.buyer_confirmation_rule)}</p>
+      <p>${escapeHtml(payload.source_preserving_prepare_purchase_handoff.success_rule)}</p>
+      <details open>
+        <summary>Unconfirmed live-check call</summary>
+        <pre>${escapeHtml(payload.source_preserving_prepare_purchase_handoff.copy_ready_unconfirmed_json_rpc)}</pre>
+      </details>
+      <details>
+        <summary>Confirmed call after buyer approval</summary>
+        <pre>${escapeHtml(payload.source_preserving_prepare_purchase_handoff.copy_ready_confirmed_json_rpc_after_buyer_approval)}</pre>
+      </details>
+    </section>
     <section id="live-confirmation">
       <h2>Live MCP Confirmation</h2>
       <p>Run the source-aware MCP sequence from this page before buyer checkout review. The fresh cart URL replaces the cart button when <code>create_cart_url</code> succeeds.</p>
@@ -6012,6 +6105,7 @@ function sourceActivationOrderConversionHandoff(
         : null,
     previous_measured_cart_url: measuredCartUrl,
     fallback_source_preserving_cart_url: fallbackSourcePreservingCartUrl,
+    source_preserving_prepare_purchase_handoff: buyerHandoff.source_preserving_prepare_purchase_handoff,
     source_aware_endpoint: firstUsefulRun.endpoint,
     source_specific_first_run_url: urls.tracked_first_run_url,
     reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
@@ -6055,6 +6149,7 @@ function sourceActivationSourceOrderHandoff(
     buyer_handoff_markdown_url: buyerHandoff.links.order_handoff_markdown,
     buyer_action_url: buyerHandoff.buyer_action_url,
     product: buyerHandoff.product,
+    source_preserving_prepare_purchase_handoff: buyerHandoff.source_preserving_prepare_purchase_handoff,
     source_aware_endpoint: firstUsefulRun.endpoint,
     source_specific_first_run_url: urls.tracked_first_run_url,
     reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
@@ -7025,6 +7120,10 @@ function revenueConversionQueueRows(rows: SourceActivationExperimentQueueRow[]) 
         source_preserving_cart_url: sourcePreservingCartUrl,
         previous_measured_cart_urls: row.recent_measured_cart_urls,
         product,
+        source_preserving_prepare_purchase_handoff:
+          conversion?.source_preserving_prepare_purchase_handoff ??
+          preview?.source_preserving_prepare_purchase_handoff ??
+          sourceActivationOrderHandoffPayload(row.source, row.preferred_target).source_preserving_prepare_purchase_handoff,
         copy_ready_buyer_request:
           conversion?.copy_ready_buyer_request ??
           sourceActivationOrderHandoffPayload(row.source, row.preferred_target).copy_ready_messages.buyer_request,
@@ -7271,6 +7370,11 @@ function mcpRevenueConversionQueueHtml(payload: McpRevenueConversionQueuePayload
           <pre>${escapeHtml(row.copy_ready_reviewer_request)}</pre>
         </details>
         <details>
+          <summary>Prepare purchase shortcut</summary>
+          <p>${escapeHtml(row.source_preserving_prepare_purchase_handoff.buyer_confirmation_rule)}</p>
+          <pre>${escapeHtml(row.source_preserving_prepare_purchase_handoff.copy_ready_confirmed_json_rpc_after_buyer_approval)}</pre>
+        </details>
+        <details>
           <summary>Order attribution required</summary>
           <p>${escapeHtml(row.attribution_rule)}</p>
           <ul>${attributes}</ul>
@@ -7379,6 +7483,7 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     source_preserving_cart_url: row.source_preserving_cart_url,
     measured_cart_url: row.measured_cart_url,
     previous_measured_cart_urls: row.previous_measured_cart_urls,
+    source_preserving_prepare_purchase_handoff: row.source_preserving_prepare_purchase_handoff,
     copy_ready_buyer_request: row.copy_ready_buyer_request,
     copy_ready_reviewer_request: row.copy_ready_reviewer_request,
     proof_gate: row.proof_gate,
@@ -7506,6 +7611,11 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
         <details>
           <summary>Copy-ready reviewer request</summary>
           <pre>${escapeHtml(row.copy_ready_reviewer_request)}</pre>
+        </details>
+        <details>
+          <summary>Prepare purchase shortcut</summary>
+          <p>${escapeHtml(row.source_preserving_prepare_purchase_handoff.buyer_confirmation_rule)}</p>
+          <pre>${escapeHtml(row.source_preserving_prepare_purchase_handoff.copy_ready_confirmed_json_rpc_after_buyer_approval)}</pre>
         </details>
         <details>
           <summary>Required attribution</summary>
@@ -12220,11 +12330,11 @@ const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-autom
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
 const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
 const MCP_N8N_WORKFLOW_JSON_URL = "https://mcp.packrift.com/ai/mcp-n8n-workflow.json";
-const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R02";
+const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R03";
 const MCP_REVENUE_CONVERSION_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
 const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
-const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R01";
+const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R02";
 const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
