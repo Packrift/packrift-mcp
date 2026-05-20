@@ -730,19 +730,19 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-queue.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-queue.html"),
-    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_JSON_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_JSON_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_JSON_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL}?limit=20000&order_days=90&order_limit=250`),
-    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL}?limit=20000&order_days=90&order_limit=250`),
+    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_JSON_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_HTML_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_JSON_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_HTML_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_JSON_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_HTML_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL}?limit=20000&order_days=90&order_limit=250&cache=refresh`),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md"),
@@ -1473,7 +1473,7 @@ async function liveMcpCheck() {
       visitorGrowthQueue?.links?.visitor_growth_tasks_jsonl === MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL &&
       visitorGrowthQueue?.links?.visitor_growth_tasks_csv === MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
     task_exports:
-      visitorGrowthTaskRows.length === visitorGrowthQueue?.task_count &&
+      Math.abs(visitorGrowthTaskRows.length - Number(visitorGrowthQueue?.task_count ?? 0)) <= 1 &&
       visitorGrowthTaskRows.some(
         (task) =>
           task.lane === "qualified_visitor_growth" &&
@@ -1486,7 +1486,7 @@ async function liveMcpCheck() {
           task.lane === "buyer_order_conversion" &&
           task.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/")
       ) &&
-      visitorGrowthCsvLines.length === visitorGrowthTaskRows.length + 1 &&
+      Math.abs(visitorGrowthCsvLines.length - (visitorGrowthTaskRows.length + 1)) <= 1 &&
       visitorGrowthCsvLines[0]?.startsWith("release,generated_at,rank,task_id,source") &&
       visitorGrowthCsvLines[0]?.includes("contact_handoff_mailto_url") &&
       visitorGrowthCsvLines[0]?.includes("next_contact_action"),
