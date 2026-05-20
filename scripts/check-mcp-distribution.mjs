@@ -238,6 +238,7 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
@@ -442,6 +443,7 @@ async function liveMcpCheck() {
     activationWaveResult,
     activationWaveMarkdownResult,
     activationWaveHtmlResult,
+    activationWaveRunnerResult,
     activationCommandCenterResult,
     buyerUseCasesResult,
     cartActivationResult,
@@ -544,6 +546,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.md"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.html"),
+    fetchText(MCP_ACTIVATION_WAVE_RUNNER_URL),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
@@ -827,6 +830,7 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
       serverCard?.registry_distribution?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
       serverCard?.registry_distribution?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
+      serverCard?.registry_distribution?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       serverCard?.registry_distribution?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_html_template === "https://mcp.packrift.com/r/activate/{source}?format=html" &&
@@ -836,6 +840,7 @@ async function liveMcpCheck() {
       serverCard?.resource_links?.openaiStrictPublicProductFeedTsv === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL &&
       serverCard?.resource_links?.openaiPreferredDirectProductFeedTsv === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL &&
       serverCard?.resource_links?.openaiPreferredDirectProductFeedGzip === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL &&
+      serverCard?.resource_links?.mcpActivationWaveRunnerShell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
       serverCard.tools.some((tool) => tool?.name === "create_cart_url" && tool?.inputSchema) &&
@@ -1301,6 +1306,7 @@ async function liveMcpCheck() {
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_funnel_snapshot") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_activation_experiments") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_activation_wave") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_activation_wave_runner") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_actions") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_reviewer_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_order_handoff") &&
@@ -1319,6 +1325,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.order_handoff_resource_events === "number" &&
       typeof usageSnapshot?.counts?.source_activation_packet_resource_events === "number" &&
       typeof usageSnapshot?.counts?.activation_experiments_resource_events === "number" &&
+      typeof usageSnapshot?.counts?.activation_wave_runner_resource_events === "number" &&
       typeof usageSnapshot?.counts?.eval_pack_resource_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.counts?.unique_mcp_handoff_ids === "number" &&
@@ -1661,6 +1668,9 @@ async function liveMcpCheck() {
       activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
       activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
       activationWave?.tool_call_gap?.material_usage_threshold === 50 &&
+      activationWave?.links?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
+      activationWave?.links?.one_command_wave_runner?.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
+      activationWave?.links?.one_command_wave_runner?.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       typeof activationWave?.tool_call_gap?.remaining_to_threshold === "number" &&
       typeof activationWave?.tool_call_gap?.expected_tool_call_lift_if_all_tasks_run === "number" &&
       Array.isArray(activationWave?.blocking_goal_gates) &&
@@ -1692,6 +1702,7 @@ async function liveMcpCheck() {
       activationWaveMarkdownResult.text.includes("No Duplicate Work Rule") &&
       activationWaveMarkdownResult.text.includes("Tool-Call Gap") &&
       activationWaveMarkdownResult.text.includes("Copy-Ready Source Requests") &&
+      activationWaveMarkdownResult.text.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       activationWaveHtmlResult.ok &&
       activationWaveHtmlResult.text.includes("Packrift MCP Activation Wave") &&
       activationWaveHtmlResult.text.includes("No duplicate work") &&
@@ -1699,6 +1710,13 @@ async function liveMcpCheck() {
       activationWaveHtmlResult.text.includes("Copy-ready host configs") &&
       activationWaveHtmlResult.text.includes("One-command external runner") &&
       activationWaveHtmlResult.text.includes("Do not count") &&
+      activationWaveRunnerResult.ok &&
+      activationWaveRunnerResult.text.includes("#!/usr/bin/env bash") &&
+      activationWaveRunnerResult.text.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
+      activationWaveRunnerResult.text.includes("Refusing to execute") &&
+      activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
+      activationWaveRunnerResult.text.includes("/r/run/") &&
+      activationWaveRunnerResult.text.includes("format=sh") &&
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
@@ -2140,6 +2158,7 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
+      resourceUris.has(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.json") &&
@@ -2372,6 +2391,7 @@ async function liveMcpCheck() {
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],
       usage_snapshot_agent_host_rollout_resource_events: usageSnapshot?.counts?.agent_host_rollout_resource_events ?? null,
       usage_snapshot_activation_experiments_resource_events: usageSnapshot?.counts?.activation_experiments_resource_events ?? null,
+      usage_snapshot_activation_wave_runner_resource_events: usageSnapshot?.counts?.activation_wave_runner_resource_events ?? null,
       usage_snapshot_eval_pack_resource_events: usageSnapshot?.counts?.eval_pack_resource_events ?? null,
       funnel_snapshot_release: funnelSnapshot?.release ?? null,
       funnel_snapshot_status: funnelSnapshot?.status ?? null,

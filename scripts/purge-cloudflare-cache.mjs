@@ -144,6 +144,7 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
       "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
+      "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh",
       "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
       "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",

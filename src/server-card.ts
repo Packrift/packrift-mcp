@@ -76,6 +76,7 @@ export const serverCard = {
     mcpActivationWaveJson: "https://mcp.packrift.com/ai/mcp-activation-wave.json",
     mcpActivationWaveMarkdown: "https://mcp.packrift.com/ai/mcp-activation-wave.md",
     mcpActivationWaveHtml: "https://mcp.packrift.com/ai/mcp-activation-wave.html",
+    mcpActivationWaveRunnerShell: "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh",
     mcpActivationCommandCenter: "https://mcp.packrift.com/r/activate",
     mcpBuyerUseCasesJson: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcpBuyerUseCasesMarkdown: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
