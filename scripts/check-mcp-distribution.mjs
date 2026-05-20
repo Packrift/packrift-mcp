@@ -694,6 +694,8 @@ async function liveMcpCheck() {
   const mcpToolsDiscovery = mcpToolsDiscoveryResult.ok ? JSON.parse(mcpToolsDiscoveryResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const agentHostRollout = agentHostRolloutResult.ok ? JSON.parse(agentHostRolloutResult.text) : null;
+  const agentHostRolloutMcpSo = agentHostRollout?.rows?.find((row) => row.source === "mcp_so");
+  const agentHostRolloutGlama = agentHostRollout?.rows?.find((row) => row.source === "glama_connector");
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
   const installMatrix = installMatrixResult.ok ? JSON.parse(installMatrixResult.text) : null;
   const installActions = installActionsResult.ok ? JSON.parse(installActionsResult.text) : null;
@@ -1076,6 +1078,15 @@ async function liveMcpCheck() {
     agent_progress:
       agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       agentAdoptionProgressHtmlResult.ok,
+    agent_host_rollout:
+      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02" &&
+      agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
+      agentHostRolloutMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+      ["mcp_first_run_execution", "mcp_tool_call", "mcp_cart_landing", "mcp_attributed_order"].includes(agentHostRolloutMcpSo?.target_event_to_watch) &&
+      agentHostRolloutGlama?.activation_priority === "critical" &&
+      ["real_mcp_tool_call_needed", "cart_landing_needed", "buyer_checkout_needed"].includes(agentHostRolloutGlama?.activation_status) &&
+      typeof agentHostRolloutGlama?.current_counts?.mcp_tool_calls === "number",
     commerce_hold_guard:
       cartHandoffExcludesHeldSkus &&
       measuredHandoffsExcludeHeldSkus &&
@@ -1407,11 +1418,35 @@ async function liveMcpCheck() {
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_agent_host_rollout" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json") &&
       agentCapture?.hub_urls?.agent_host_rollout === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json" &&
-      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R01" &&
+      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02" &&
       agentHostRollout?.source_count >= 35 &&
+      agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      agentHostRollout?.activation_queue?.status === "activation_needed" &&
+      agentHostRollout?.activation_queue?.blocking_goal_gates?.includes("material_tool_usage_50_plus") &&
+      typeof agentHostRollout?.activation_queue?.source_snapshot?.external_qualified_mcp_tool_calls === "number" &&
+      Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
       agentHostRollout?.rows?.some((row) => row.source === "openai_chatgpt" && row.source_aware_endpoint?.includes("packrift_mcp_source=openai_chatgpt")) &&
       agentHostRollout?.rows?.some((row) => row.source === "langchain_agent" && row.tracked_first_run_shell_url?.includes("/r/run/langchain_agent/")) &&
       agentHostRollout?.rows?.some((row) => row.source === "n8n_automation" && row.reviewer_activation_shell_url === "https://mcp.packrift.com/r/activate/n8n_automation?format=sh") &&
+      agentHostRollout?.rows?.some(
+        (row) =>
+          row.source === "mcp_so" &&
+          row.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+          ["mcp_first_run_execution", "mcp_tool_call", "mcp_cart_landing", "mcp_attributed_order"].includes(row.target_event_to_watch) &&
+          typeof row.current_counts?.first_run_actions === "number"
+      ) &&
+      agentHostRollout?.rows?.some(
+        (row) =>
+          row.source === "glama_connector" &&
+          row.activation_priority === "critical" &&
+          ["real_mcp_tool_call_needed", "cart_landing_needed", "buyer_checkout_needed"].includes(row.activation_status) &&
+          typeof row.current_counts?.mcp_tool_calls === "number" &&
+          (
+            row.primary_action_url?.startsWith("https://mcp.packrift.com/r/activate/glama_connector") ||
+            row.primary_action_url?.startsWith("https://mcp.packrift.com/r/cart/") ||
+            row.buyer_handoff_url === "https://mcp.packrift.com/r/order/glama_connector?format=html"
+          )
+      ) &&
       agentCapture?.surfaces?.some(
         (surface) =>
           surface.id === "mcp_install_actions" &&
@@ -1873,7 +1908,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/generic_streamable_http?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 1000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
@@ -1984,7 +2019,7 @@ async function liveMcpCheck() {
       revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R02" &&
       revenueConversionQueue?.canonical_endpoint === MCP_ENDPOINT &&
       revenueConversionQueue?.status === "buyer_checkout_needed" &&
-      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25" &&
+      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       revenueConversionQueue?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json?limit=20000&order_days=90&order_limit=250" &&
       revenueConversionQueue?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
@@ -2067,7 +2102,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
       revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R02" &&
       revenueConversionQueue?.canonical_endpoint === MCP_ENDPOINT &&
-      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25" &&
+      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       revenueConversionQueue?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json?limit=20000&order_days=90&order_limit=250" &&
       revenueConversionQueue?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
@@ -2132,7 +2167,7 @@ async function liveMcpCheck() {
       sourceActivationHostPacketsOk &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R13" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       activationExperiments?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-experiments.json?limit=20000&order_days=90&order_limit=250" &&
@@ -2196,7 +2231,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R05" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
-      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25" &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       activationWave?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-wave.json?limit=20000&order_days=90&order_limit=250" &&
       activationWave?.links?.activation_wave_operator_json === activationWave?.snapshot_coverage?.operator_url &&
@@ -3115,6 +3150,26 @@ async function liveMcpCheck() {
       },
       agent_capture_release: agentCapture?.release ?? null,
       agent_capture_surfaces: agentCapture?.surfaces?.length ?? 0,
+      agent_host_rollout_release: agentHostRollout?.release ?? null,
+      agent_host_rollout_source_count: agentHostRollout?.source_count ?? null,
+      agent_host_rollout_priority_source_count: agentHostRollout?.priority_source_count ?? null,
+      agent_host_rollout_activation_queue_release: agentHostRollout?.activation_queue?.release ?? null,
+      agent_host_rollout_activation_queue_status: agentHostRollout?.activation_queue?.status ?? null,
+      agent_host_rollout_mcp_so: {
+        activation_priority: agentHostRolloutMcpSo?.activation_priority ?? null,
+        activation_status: agentHostRolloutMcpSo?.activation_status ?? null,
+        target_event_to_watch: agentHostRolloutMcpSo?.target_event_to_watch ?? null,
+        buyer_handoff_url: agentHostRolloutMcpSo?.buyer_handoff_url ?? null,
+        current_counts: agentHostRolloutMcpSo?.current_counts ?? null,
+      },
+      agent_host_rollout_glama_connector: {
+        activation_priority: agentHostRolloutGlama?.activation_priority ?? null,
+        activation_status: agentHostRolloutGlama?.activation_status ?? null,
+        target_event_to_watch: agentHostRolloutGlama?.target_event_to_watch ?? null,
+        primary_action_url: agentHostRolloutGlama?.primary_action_url ?? null,
+        buyer_handoff_url: agentHostRolloutGlama?.buyer_handoff_url ?? null,
+        current_counts: agentHostRolloutGlama?.current_counts ?? null,
+      },
       adoption_kit_release: adoptionKit?.release ?? null,
       adoption_kit_steps: adoptionKit?.first_five_minutes?.length ?? 0,
       adoption_kit_developer_examples: adoptionKit?.developer_examples?.length ?? 0,

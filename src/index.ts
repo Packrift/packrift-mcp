@@ -1146,7 +1146,7 @@ const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TEL
 const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEMETRY-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
 const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02";
-const MCP_AGENT_HOST_ROLLOUT_RELEASE = "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R01";
+const MCP_AGENT_HOST_ROLLOUT_RELEASE = "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02";
 const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
 const MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md";
 const MCP_AGENT_HOST_ROLLOUT_HTML_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html";
@@ -4132,11 +4132,11 @@ function postInstallMissingNextStep(row: {
   if (row.first_run_actions === 0) return "open_tracked_first_run_action";
   if (row.first_run_executions === 0 && row.mcp_tool_calls === 0) return "execute_first_run_browser_or_curl_sequence";
   if (row.first_run_executions > 0 && row.mcp_tool_calls === 0) return "convert_browser_execution_into_real_mcp_tool_call_or_cart_landing";
+  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return "open_returned_mcp_cart_url_to_record_cart_landing";
   if (row.get_cart_handoff_candidates === 0) return "call_get_cart_handoff_candidates_for_sku_1066";
   if (row.get_pricing === 0) return "call_get_pricing_for_sku_1066";
   if (row.check_inventory === 0) return "call_check_inventory_for_sku_1066";
   if (row.create_cart_url_calls === 0) return "call_create_cart_url_for_sku_1066_no_order_created";
-  if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return "open_returned_mcp_cart_url_to_record_cart_landing";
   return "monitor_cart_landing_and_order_progression";
 }
 
@@ -4407,50 +4407,194 @@ function sourceActivationShellCommand(url: string): string {
   return `curl -sS ${shellQuote(url)} | bash`;
 }
 
-function mcpAgentHostRolloutRows() {
+interface AgentHostRolloutQueueCounts {
+  starts?: number;
+  tracked_config_fetches?: number;
+  install_intents?: number;
+  first_run_actions?: number;
+  first_run_executions?: number;
+  mcp_tool_calls?: number;
+  create_cart_url_calls?: number;
+  external_qualified_create_cart_url_calls?: number;
+  qualified_cart_landings?: number;
+  recent_measured_cart_urls?: string[];
+}
+
+interface AgentHostRolloutQueueRow {
+  source: string;
+  priority?: string;
+  priority_score?: number;
+  current_stage?: string;
+  target_event_to_watch?: string;
+  recommended_action?: string;
+  primary_action_url?: string;
+  preferred_target?: string;
+  source_aware_endpoint?: string;
+  tracked_install_url?: string;
+  tracked_first_run_url?: string;
+  tracked_first_run_shell_url?: string;
+  reviewer_activation_runner_url?: string;
+  reviewer_activation_shell_url?: string;
+  order_conversion_handoff?: { buyer_handoff_url?: string | null } | null;
+  source_order_handoff?: { buyer_handoff_url?: string | null } | null;
+  buyer_handoff_url?: string | null;
+  current_counts?: AgentHostRolloutQueueCounts;
+}
+
+interface AgentHostRolloutQueuePayload {
+  release?: string;
+  status?: string;
+  snapshot_coverage?: { snapshot_mode?: string; operator_url?: string };
+  blocking_goal_gates?: string[];
+  source_snapshot?: {
+    external_qualified_mcp_tool_calls?: number;
+    qualified_first_party_mcp_cart_landings?: number;
+    first_party_mcp_orders?: number;
+    first_party_mcp_order_revenue?: number;
+    monthly_qualified_visitor_signals?: number;
+    monthly_qualified_visitor_threshold?: number;
+    monthly_qualified_visitor_remaining?: number;
+    unique_qualified_mcp_identity_signals?: number;
+  };
+  agent_adoption_progress?: { release?: string; status?: string; agent_progress_status?: string };
+  queue?: AgentHostRolloutQueueRow[];
+}
+
+function emptyAgentHostRolloutCounts(): Required<AgentHostRolloutQueueCounts> {
+  return {
+    starts: 0,
+    tracked_config_fetches: 0,
+    install_intents: 0,
+    first_run_actions: 0,
+    first_run_executions: 0,
+    mcp_tool_calls: 0,
+    create_cart_url_calls: 0,
+    external_qualified_create_cart_url_calls: 0,
+    qualified_cart_landings: 0,
+    recent_measured_cart_urls: [],
+  };
+}
+
+function normalizeAgentHostRolloutCounts(counts: AgentHostRolloutQueueCounts | undefined): Required<AgentHostRolloutQueueCounts> {
+  return {
+    ...emptyAgentHostRolloutCounts(),
+    ...(counts ?? {}),
+    recent_measured_cart_urls: counts?.recent_measured_cart_urls ?? [],
+  };
+}
+
+function mcpAgentHostRolloutQueueBySource(sourceQueue?: AgentHostRolloutQueuePayload | null) {
+  const rows = sourceQueue?.queue ?? [];
+  return new Map(rows.map((row) => [row.source, row]));
+}
+
+function mcpAgentHostRolloutActivationStatus(queueRow?: AgentHostRolloutQueueRow): string {
+  if (!queueRow) return "not_in_priority_queue";
+  if (queueRow.target_event_to_watch === "mcp_attributed_order") return "buyer_checkout_needed";
+  if (queueRow.target_event_to_watch?.startsWith("mcp_tool_call")) return "real_mcp_tool_call_needed";
+  if (queueRow.target_event_to_watch === "mcp_cart_landing") return "cart_landing_needed";
+  return "activation_needed";
+}
+
+function enrichAgentHostRolloutRow<T extends ReturnType<typeof mcpAgentHostRolloutBaseRow>>(
+  base: T,
+  queueRow?: AgentHostRolloutQueueRow
+) {
+  const counts = normalizeAgentHostRolloutCounts(queueRow?.current_counts);
+  const buyerHandoff =
+    queueRow?.order_conversion_handoff?.buyer_handoff_url ??
+    queueRow?.source_order_handoff?.buyer_handoff_url ??
+    queueRow?.buyer_handoff_url ??
+    null;
+  const nextAction = queueRow?.recommended_action ?? base.recommended_action;
+  return {
+    ...base,
+    activation_status: mcpAgentHostRolloutActivationStatus(queueRow),
+    activation_priority: queueRow?.priority ?? "watch",
+    activation_priority_score: queueRow?.priority_score ?? 0,
+    activation_stage: queueRow?.current_stage ?? "not currently in the source activation queue",
+    target_event_to_watch: queueRow?.target_event_to_watch ?? "monitor",
+    next_action: nextAction,
+    recommended_action: nextAction,
+    primary_action_url: queueRow?.primary_action_url ?? base.tracked_install_url,
+    buyer_handoff_url: buyerHandoff,
+    current_counts: counts,
+    queue_source: queueRow ? "mcp_source_activation_queue" : "agent_host_rollout_static",
+    success_gate:
+      queueRow?.target_event_to_watch === "mcp_attributed_order"
+        ? "This source already has MCP tool and measured cart proof. The next gate is buyer/reviewer checkout that produces first_party_mcp_orders or measurable MCP revenue."
+        : base.success_gate,
+  };
+}
+
+function mcpAgentHostRolloutBaseRow(source: string, target: string, sourceInference: string, userAgentSubstrings: readonly string[] = [], userAgentRegex: readonly string[] = []) {
+  const runUrl = trackedRunUrl(source, target);
+  const firstRunShellUrl = `${runUrl}&format=sh`;
+  const activationShellUrl = `https://mcp.packrift.com/r/activate/${source}?format=sh`;
+  return {
+    source,
+    target,
+    source_inference: sourceInference,
+    user_agent_substrings: userAgentSubstrings,
+    user_agent_regex: userAgentRegex,
+    source_aware_endpoint: sourceAwareMcpEndpoint(source, target),
+    tracked_config_url: `https://mcp.packrift.com/r/config/${source}`,
+    tracked_install_url: trackedInstallUrl(source, target),
+    tracked_first_run_url: runUrl,
+    tracked_first_run_shell_url: firstRunShellUrl,
+    first_run_shell_one_liner: sourceActivationShellCommand(firstRunShellUrl),
+    reviewer_activation_url: `https://mcp.packrift.com/r/activate/${source}?format=html`,
+    reviewer_activation_shell_url: activationShellUrl,
+    reviewer_activation_shell_one_liner: sourceActivationShellCommand(activationShellUrl),
+    source_activation_packet: `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
+    eval_pack: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${source}`,
+    order_handoff: `https://mcp.packrift.com/r/order/${source}?format=html`,
+    recommended_action:
+      "Use the source-aware endpoint or tracked install link in this agent host, then run the first useful SKU 1066 sequence through create_cart_url without placing an order.",
+    success_gate:
+      "Count progress only when non-suppressed source-attributed MCP tool calls, measured /r/cart landings, or buyer-approved MCP-attributed orders appear in public snapshots.",
+  };
+}
+
+function mcpAgentHostRolloutRows(sourceQueue?: AgentHostRolloutQueuePayload | null) {
   const seen = new Set<string>();
-  return MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.filter((rule) => {
+  const queueBySource = mcpAgentHostRolloutQueueBySource(sourceQueue);
+  const baseRows = MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.filter((rule) => {
     if (seen.has(rule.source_slug)) return false;
     seen.add(rule.source_slug);
     return true;
   }).map((rule) => {
     const source = rule.source_slug;
     const target = normalizeInstallTarget(rule.install_target)?.id ?? "generic_streamable_http";
-    const runUrl = trackedRunUrl(source, target);
-    const firstRunShellUrl = `${runUrl}&format=sh`;
-    const activationShellUrl = `https://mcp.packrift.com/r/activate/${source}?format=sh`;
-    return {
-      source,
-      target,
-      source_inference: rule.source_inference,
-      user_agent_substrings: rule.user_agent_substrings,
-      user_agent_regex: rule.user_agent_regex ?? [],
-      source_aware_endpoint: sourceAwareMcpEndpoint(source, target),
-      tracked_config_url: `https://mcp.packrift.com/r/config/${source}`,
-      tracked_install_url: trackedInstallUrl(source, target),
-      tracked_first_run_url: runUrl,
-      tracked_first_run_shell_url: firstRunShellUrl,
-      first_run_shell_one_liner: sourceActivationShellCommand(firstRunShellUrl),
-      reviewer_activation_url: `https://mcp.packrift.com/r/activate/${source}?format=html`,
-      reviewer_activation_shell_url: activationShellUrl,
-      reviewer_activation_shell_one_liner: sourceActivationShellCommand(activationShellUrl),
-      source_activation_packet: `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
-      eval_pack: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${source}`,
-      order_handoff: `https://mcp.packrift.com/r/order/${source}?format=html`,
-      recommended_action:
-        "Use the source-aware endpoint or tracked install link in this agent host, then run the first useful SKU 1066 sequence through create_cart_url without placing an order.",
-      success_gate:
-        "Count progress only when non-suppressed source-attributed MCP tool calls, measured /r/cart landings, or buyer-approved MCP-attributed orders appear in public snapshots.",
-    };
+    return enrichAgentHostRolloutRow(
+      mcpAgentHostRolloutBaseRow(source, target, rule.source_inference, rule.user_agent_substrings, rule.user_agent_regex ?? []),
+      queueBySource.get(source)
+    );
   });
+  const queueOnlyRows = (sourceQueue?.queue ?? [])
+    .filter((row) => !seen.has(row.source))
+    .map((row) =>
+      enrichAgentHostRolloutRow(
+        mcpAgentHostRolloutBaseRow(
+          row.source,
+          normalizeInstallTarget(row.preferred_target ?? sourcePreferredActivationTarget(row.source))?.id ?? "generic_streamable_http",
+          "source_activation_queue"
+        ),
+        row
+      )
+    );
+  return [...baseRows, ...queueOnlyRows].sort(
+    (a, b) => b.activation_priority_score - a.activation_priority_score || a.source.localeCompare(b.source)
+  );
 }
 
-function mcpAgentHostRolloutPayload() {
-  const rows = mcpAgentHostRolloutRows();
+function mcpAgentHostRolloutPayload(sourceQueue?: AgentHostRolloutQueuePayload | null) {
+  const rows = mcpAgentHostRolloutRows(sourceQueue);
   const targetCounts = rows.reduce<Record<string, number>>((acc, row) => {
     acc[row.target] = (acc[row.target] ?? 0) + 1;
     return acc;
   }, {});
+  const prioritizedRows = rows.filter((row) => row.activation_priority_score > 0);
   return {
     release: MCP_AGENT_HOST_ROLLOUT_RELEASE,
     generated_at: new Date().toISOString(),
@@ -4460,7 +4604,17 @@ function mcpAgentHostRolloutPayload() {
       "Fast source-aware rollout map for every recognizable MCP agent host family Packrift can attribute at runtime. Use it to put the existing hosted endpoint into more agents without creating a duplicate Packrift CLI or buyer surface.",
     runtime_source_inference_release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
     source_count: rows.length,
+    priority_source_count: prioritizedRows.length,
     target_counts: targetCounts,
+    activation_queue: {
+      release: sourceQueue?.release ?? null,
+      status: sourceQueue?.status ?? "not_loaded",
+      snapshot_mode: sourceQueue?.snapshot_coverage?.snapshot_mode ?? null,
+      operator_url: sourceQueue?.snapshot_coverage?.operator_url ?? null,
+      blocking_goal_gates: sourceQueue?.blocking_goal_gates ?? [],
+      source_snapshot: sourceQueue?.source_snapshot ?? null,
+      agent_adoption_progress: sourceQueue?.agent_adoption_progress ?? null,
+    },
     no_duplicate_work_rule:
       "Every row points to https://mcp.packrift.com/mcp through source-aware config, install, first-run, and activation links. Do not create a separate Packrift CLI, checkout, or buyer surface.",
     activation_rule:
@@ -4489,6 +4643,8 @@ function mcpAgentHostRolloutMarkdown(payload = mcpAgentHostRolloutPayload()): st
     `Status: ${payload.status}`,
     `Canonical endpoint: ${payload.canonical_endpoint}`,
     `Runtime source inference: ${payload.runtime_source_inference_release}`,
+    `Activation queue: ${payload.activation_queue.release ?? "not loaded"} (${payload.activation_queue.status})`,
+    `Priority sources: ${payload.priority_source_count}`,
     "",
     payload.purpose,
     "",
@@ -4500,14 +4656,24 @@ function mcpAgentHostRolloutMarkdown(payload = mcpAgentHostRolloutPayload()): st
     "",
     payload.activation_rule,
     "",
+    "## Live Activation Queue",
+    "",
+    `- Queue release: ${payload.activation_queue.release ?? "not loaded"}`,
+    `- Queue status: ${payload.activation_queue.status}`,
+    `- Blocking gates: ${payload.activation_queue.blocking_goal_gates.join(", ") || "none"}`,
+    `- External-qualified MCP tool calls: ${payload.activation_queue.source_snapshot?.external_qualified_mcp_tool_calls ?? "unknown"}`,
+    `- Qualified MCP cart landings: ${payload.activation_queue.source_snapshot?.qualified_first_party_mcp_cart_landings ?? "unknown"}`,
+    `- First-party MCP orders: ${payload.activation_queue.source_snapshot?.first_party_mcp_orders ?? "unknown"}`,
+    `- Qualified monthly visitor signals: ${payload.activation_queue.source_snapshot?.monthly_qualified_visitor_signals ?? "unknown"} / ${payload.activation_queue.source_snapshot?.monthly_qualified_visitor_threshold ?? "unknown"}`,
+    "",
     "## Agent Host Sources",
     "",
-    "| Source | Target | Inference | Endpoint | Install | First-run shell | Activation shell | Eval pack |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Target | Stage | Target event | Tool calls | Cart landings | Primary action | Buyer handoff | Endpoint | Install | First-run shell | Activation shell | Eval pack |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.rows
       .map(
         (row) =>
-          `| ${row.source} | ${row.target} | ${row.source_inference} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.eval_pack} |`
+          `| ${row.activation_priority} | ${row.source} | ${row.target} | ${markdownTableCell(row.activation_stage)} | ${row.target_event_to_watch} | ${row.current_counts.mcp_tool_calls} | ${row.current_counts.qualified_cart_landings} | ${row.primary_action_url} | ${row.buyer_handoff_url ?? ""} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.eval_pack} |`
       )
       .join("\n"),
     "",
@@ -4523,27 +4689,47 @@ function mcpAgentHostRolloutMarkdown(payload = mcpAgentHostRolloutPayload()): st
 function mcpAgentHostRolloutHtml(payload = mcpAgentHostRolloutPayload()): string {
   const rows = payload.rows
     .map(
-      (row) => `<article>
+      (row) => `<article class="${escapeHtml(row.activation_priority)}">
         <div class="head">
           <div>
-            <p class="eyebrow">${escapeHtml(row.target)}</p>
+            <p class="eyebrow">${escapeHtml(row.activation_priority)} · ${escapeHtml(row.target)}</p>
             <h2>${escapeHtml(row.source)}</h2>
           </div>
-          <span>${escapeHtml(row.source_inference)}</span>
+          <span>${escapeHtml(row.target_event_to_watch)}</span>
+        </div>
+        <p class="stage">${escapeHtml(row.activation_stage)}</p>
+        <div class="metrics">
+          <span>starts ${row.current_counts.starts}</span>
+          <span>installs ${row.current_counts.install_intents}</span>
+          <span>runs ${row.current_counts.first_run_executions}</span>
+          <span>tools ${row.current_counts.mcp_tool_calls}</span>
+          <span>carts ${row.current_counts.qualified_cart_landings}</span>
         </div>
         <p>Endpoint: <code>${escapeHtml(row.source_aware_endpoint)}</code></p>
-        <p>${escapeHtml(row.recommended_action)}</p>
+        <p>${escapeHtml(row.next_action)}</p>
         <div class="actions">
-          <a class="button primary" href="${escapeHtml(row.tracked_install_url)}">Install</a>
+          <a class="button primary" href="${escapeHtml(row.primary_action_url)}">Next action</a>
+          <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_url)}">First run</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_shell_url)}">Shell run</a>
           <a class="button" href="${escapeHtml(row.reviewer_activation_url)}">Activation</a>
+          ${row.buyer_handoff_url ? `<a class="button warn" href="${escapeHtml(row.buyer_handoff_url)}">Buyer handoff</a>` : ""}
           <a class="button" href="${escapeHtml(row.eval_pack)}">Eval pack</a>
         </div>
         <details>
           <summary>Copy commands</summary>
           <pre>${escapeHtml(row.first_run_shell_one_liner)}</pre>
           <pre>${escapeHtml(row.reviewer_activation_shell_one_liner)}</pre>
+        </details>
+        <details>
+          <summary>Live queue details</summary>
+          <pre>${escapeHtml(JSON.stringify({
+            activation_status: row.activation_status,
+            source_inference: row.source_inference,
+            primary_action_url: row.primary_action_url,
+            current_counts: row.current_counts,
+            success_gate: row.success_gate,
+          }, null, 2))}</pre>
         </details>
       </article>`
     )
@@ -4556,7 +4742,7 @@ function mcpAgentHostRolloutHtml(payload = mcpAgentHostRolloutPayload()): string
   <title>Packrift MCP Agent Host Rollout</title>
   <meta name="description" content="Source-aware Packrift MCP rollout map for recognizable agent host families.">
   <style>
-    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b}
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--amber:#96610f;--red:#9f2d20}
     *{box-sizing:border-box}
     body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
     main{max-width:1160px;margin:0 auto;padding:32px 18px 56px}
@@ -4565,15 +4751,20 @@ function mcpAgentHostRolloutHtml(payload = mcpAgentHostRolloutPayload()): string
     h2{margin:0;font-size:1.08rem;letter-spacing:0}
     p{margin:0;color:var(--muted);max-width:880px}
     a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
-    .status,.actions,.links{display:flex;flex-wrap:wrap;gap:8px}
-    .status span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
+    .status,.actions,.links,.metrics{display:flex;flex-wrap:wrap;gap:8px}
+    .status span,.metrics span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:22px}
     article{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+    article.critical{border-left:5px solid var(--red)}
+    article.high{border-left:5px solid var(--amber)}
     .head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .head span{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:.82rem;color:var(--green);white-space:nowrap}
     .eyebrow{font-size:.78rem;text-transform:uppercase;color:var(--muted);letter-spacing:0;margin-bottom:2px}
+    .stage{font-weight:650;color:var(--ink);margin:10px 0 8px}
+    .metrics{margin:10px 0}
     .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    .button.warn{border-color:var(--amber);color:var(--amber)}
     code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     code{overflow-wrap:anywhere}
     pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.86rem}
@@ -4589,13 +4780,23 @@ function mcpAgentHostRolloutHtml(payload = mcpAgentHostRolloutPayload()): string
       <p>${escapeHtml(payload.purpose)}</p>
       <div class="status">
         <span>${payload.source_count} source families</span>
+        <span>${payload.priority_source_count} live priority sources</span>
         <span>${escapeHtml(payload.runtime_source_inference_release)}</span>
+        <span>${escapeHtml(payload.activation_queue.release ?? "queue not loaded")}</span>
         <span>Endpoint: ${escapeHtml(payload.canonical_endpoint)}</span>
       </div>
+      <div class="status">
+        <span>Tool calls: ${payload.activation_queue.source_snapshot?.external_qualified_mcp_tool_calls ?? 0}</span>
+        <span>Cart landings: ${payload.activation_queue.source_snapshot?.qualified_first_party_mcp_cart_landings ?? 0}</span>
+        <span>Orders: ${payload.activation_queue.source_snapshot?.first_party_mcp_orders ?? 0}</span>
+        <span>Qualified visitors: ${payload.activation_queue.source_snapshot?.monthly_qualified_visitor_signals ?? 0}/${payload.activation_queue.source_snapshot?.monthly_qualified_visitor_threshold ?? 1000}</span>
+      </div>
       <p>${escapeHtml(payload.no_duplicate_work_rule)}</p>
+      <p>Live activation queue: ${escapeHtml(payload.activation_queue.status)}. Blocking gates: ${escapeHtml(payload.activation_queue.blocking_goal_gates.join(", ") || "none")}.</p>
       <div class="links">
         <a href="${escapeHtml(payload.links.json)}">JSON</a>
         <a href="${escapeHtml(payload.links.markdown)}">Markdown</a>
+        <a href="${escapeHtml(payload.links.source_activation_queue)}">Source activation queue</a>
         <a href="${escapeHtml(payload.links.activation_wave)}">Activation wave</a>
         <a href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel snapshot</a>
       </div>
@@ -5693,7 +5894,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R25",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -5783,6 +5984,10 @@ async function mcpSourceActivationQueuePayload(
         cart_landing_action_url: row.cart_landing_action_url,
         recent_measured_cart_urls: row.recent_measured_cart_urls,
         primary_action_url: row.primary_action_url,
+        priority: row.priority,
+        priority_score: row.priority_score,
+        preferred_target: row.preferred_target,
+        current_counts: row.current_counts,
       })),
     queue: funnel.source_activation_priority_queue,
     links: {
@@ -13721,27 +13926,47 @@ app.get("/ai/all-agent-capture.md", async (c) => {
   });
 });
 
+async function mcpAgentHostRolloutPayloadForRequest(c: AppContext): Promise<ReturnType<typeof mcpAgentHostRolloutPayload>> {
+  const url = new URL(c.req.url);
+  const date = normalizeAiSalesDate(url.searchParams.get("date"));
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const sourceQueue = await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh });
+  return mcpAgentHostRolloutPayload(sourceQueue);
+}
+
 app.get("/ai/mcp-agent-host-rollout.json", async (c) => {
-  const payload = mcpAgentHostRolloutPayload();
+  const url = new URL(c.req.url);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const payload = await mcpAgentHostRolloutPayloadForRequest(c);
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-host-rollout.json", "mcp_agent_host_rollout", jsonByteSize(payload));
-  return c.json(payload, 200, RAW_HEADERS);
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS);
 });
 
 app.get("/ai/mcp-agent-host-rollout.md", async (c) => {
-  const body = mcpAgentHostRolloutMarkdown();
+  const url = new URL(c.req.url);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpAgentHostRolloutMarkdown(await mcpAgentHostRolloutPayloadForRequest(c));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-host-rollout.md", "mcp_agent_host_rollout", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
 
 app.get("/ai/mcp-agent-host-rollout.html", async (c) => {
-  const body = mcpAgentHostRolloutHtml();
+  const url = new URL(c.req.url);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const body = mcpAgentHostRolloutHtml(await mcpAgentHostRolloutPayloadForRequest(c));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-host-rollout.html", "mcp_agent_host_rollout", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });
 
