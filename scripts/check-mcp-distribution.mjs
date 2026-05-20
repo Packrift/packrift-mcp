@@ -277,6 +277,8 @@ const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-b
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
+const OPENAI_PRODUCT_FEED_MANIFEST_URL =
+  "https://mcp.packrift.com/ai/openai-product-feed-manifest.json";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL =
@@ -285,6 +287,16 @@ const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4837-20260520.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4837-20260520.tsv.gz";
+const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_SHA256 =
+  "7707ab0f9d390bb68ac6b606e2c34a22f311ba0099cfba92515a2f5550197b2b";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_SHA256 =
+  "bc434184c2537ec85264ac002d5e59846a5d5a8ccfee87c206e17b618188364a";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_SHA256 =
+  "2254cafff11bab3a2ed5ff3f6b14a900f5afdc48622f9689c534e6c98ae28517";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_SHA256 =
+  "061a34c42b35f500c942d7e438ee2d835270a7754bb6b3803667c06709da00dc";
+const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_SHA256 =
+  "55f20495b8ad5bbe592d404a5caf6cb1a20b1d75e9f1c0d48dd0993f2bfb8874";
 
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
@@ -506,6 +518,7 @@ async function liveMcpCheck() {
     marketplaceManifestResult,
     llmsTxtResult,
     llmsFullTxtResult,
+    openaiProductFeedManifestResult,
     strictPublicProductFeedResult,
     preferredDirectProductFeedResult,
     preferredDirectProductFeedGzipResult,
@@ -652,6 +665,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/.well-known/mcp-marketplace.json"),
     fetchText("https://mcp.packrift.com/llms.txt"),
     fetchText("https://mcp.packrift.com/llms-full.txt"),
+    fetchText(OPENAI_PRODUCT_FEED_MANIFEST_URL),
     fetchText(OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL),
     fetchText(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL),
     fetchText(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL),
@@ -843,6 +857,31 @@ async function liveMcpCheck() {
     wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
     wellKnownAiPluginJson?.mcp?.endpoint === MCP_ENDPOINT;
   const marketplaceManifest = marketplaceManifestResult.ok ? JSON.parse(marketplaceManifestResult.text) : null;
+  const openaiProductFeedManifest = openaiProductFeedManifestResult.ok ? JSON.parse(openaiProductFeedManifestResult.text) : null;
+  const openaiProductFeedManifestOk =
+    openaiProductFeedManifestResult.ok &&
+    openaiProductFeedManifest?.release === "PACKRIFT-OPENAI-PRODUCT-FEED-MANIFEST-R01" &&
+    openaiProductFeedManifest?.status === "ready_for_approved_ingestion_handoff" &&
+    openaiProductFeedManifest?.canonical_mcp_endpoint === MCP_ENDPOINT &&
+    openaiProductFeedManifest?.source_reality?.public_self_serve_openai_ingestion === false &&
+    openaiProductFeedManifest?.source_reality?.current_best_handoff === "preferred_direct_current" &&
+    openaiProductFeedManifest?.source_reality?.no_duplicate_surface_rule?.includes("do not create a separate Packrift CLI") &&
+    openaiProductFeedManifest?.validation_summary?.all_expected_row_counts_ok === true &&
+    openaiProductFeedManifest?.feeds?.strict_public_current?.url === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL &&
+    openaiProductFeedManifest?.feeds?.strict_public_current?.observed_rows === 3405 &&
+    openaiProductFeedManifest?.feeds?.strict_public_current?.sha256 === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_SHA256 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_current?.url === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_current?.observed_rows === 4847 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_current?.sha256 === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_SHA256 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_current_gzip?.url === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_current_gzip?.sha256 === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_SHA256 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_immutable_4837_20260520?.url === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_immutable_4837_20260520?.observed_rows === 4837 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_immutable_4837_20260520?.sha256 === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_SHA256 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_immutable_4837_20260520_gzip?.url === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_URL &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_immutable_4837_20260520_gzip?.sha256 === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_SHA256 &&
+    openaiProductFeedManifest?.related_mcp_surfaces?.mcp_endpoint === MCP_ENDPOINT &&
+    openaiProductFeedManifest?.related_mcp_surfaces?.adoption_progress === "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json";
   const trackedConfigGeneric = trackedConfigGenericResult.ok ? JSON.parse(trackedConfigGenericResult.text) : null;
   const trackedFirstRunExecute = trackedFirstRunExecuteResult.ok ? JSON.parse(trackedFirstRunExecuteResult.text) : null;
   const usageSnapshot = usageSnapshotResult.ok ? JSON.parse(usageSnapshotResult.text) : null;
@@ -1606,6 +1645,7 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_AUTOMATION_WORKFLOWS_HTML_URL) &&
       resourceUris.has(MCP_N8N_WORKFLOW_JSON_URL) &&
       resourceUris.has(OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL) &&
+      resourceUris.has(OPENAI_PRODUCT_FEED_MANIFEST_URL) &&
       resourceUris.has(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
       resourceUris.has(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
@@ -1710,6 +1750,7 @@ async function liveMcpCheck() {
       specFinderToolsResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL) &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       strictPublicProductFeedOk &&
+      openaiProductFeedManifestOk &&
       preferredDirectProductFeedOk &&
       preferredDirectProductFeedGzipOk &&
       preferredDirectProductFeedImmutableOk &&
@@ -1749,6 +1790,7 @@ async function liveMcpCheck() {
       llmsTxtResult.text.includes(MCP_OPENAPI_JSON_URL) &&
       llmsTxtResult.text.includes(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      llmsTxtResult.text.includes(OPENAI_PRODUCT_FEED_MANIFEST_URL) &&
       llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
       llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL) &&
       llmsFullTxtResult.ok &&
@@ -1757,6 +1799,7 @@ async function liveMcpCheck() {
       llmsFullTxtResult.text.includes(MCP_OPENAPI_JSON_URL) &&
       llmsFullTxtResult.text.includes(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
       llmsFullTxtResult.text.includes("Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh") &&
+      llmsFullTxtResult.text.includes(OPENAI_PRODUCT_FEED_MANIFEST_URL) &&
       llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
       llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL) &&
       start?.start_urls?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
@@ -4218,6 +4261,11 @@ async function liveMcpCheck() {
       tracked_first_run_execute_mcp_handoff_id_present: String(trackedFirstRunExecute?.cart?.url ?? "").includes("mcp_handoff_id="),
       tracked_first_run_execute_records_mcp_tool_call_telemetry: trackedFirstRunExecute?.records_mcp_tool_call_telemetry ?? null,
       tracked_first_run_execute_tool_call_sequence: trackedFirstRunExecute?.mcp_tool_call_sequence?.map((row) => row.name) ?? null,
+      openai_product_feed_manifest_status: openaiProductFeedManifestResult.status,
+      openai_product_feed_manifest_ok: openaiProductFeedManifestOk,
+      openai_product_feed_manifest_release: openaiProductFeedManifest?.release ?? null,
+      openai_product_feed_manifest_preferred_direct_rows: openaiProductFeedManifest?.feeds?.preferred_direct_current?.observed_rows ?? null,
+      openai_product_feed_manifest_strict_rows: openaiProductFeedManifest?.feeds?.strict_public_current?.observed_rows ?? null,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,

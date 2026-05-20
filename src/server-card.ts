@@ -45,6 +45,7 @@ export const serverCard = {
     topAiSalesSkuSitemap: "https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml",
     openaiStrictPublicProductFeedTsv:
       "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv",
+    openaiProductFeedManifest: "https://mcp.packrift.com/ai/openai-product-feed-manifest.json",
     openaiPreferredDirectProductFeedTsv:
       "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv",
     openaiPreferredDirectProductFeedGzip:

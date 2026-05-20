@@ -12646,6 +12646,10 @@ const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string; bodyT
     key: "ai/packrift-openai-products-strict-stable-current.tsv",
     contentType: "text/tab-separated-values; charset=utf-8",
   },
+  "/ai/openai-product-feed-manifest.json": {
+    key: "ai/openai-product-feed-manifest.json",
+    contentType: "application/json; charset=utf-8",
+  },
   "/ai/packrift-openai-products-preferred-direct-current.tsv": {
     key: "ai/packrift-openai-products-preferred-direct-current.tsv",
     contentType: "text/tab-separated-values; charset=utf-8",
@@ -13043,6 +13047,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml",
   "https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml",
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv",
+  "https://mcp.packrift.com/ai/openai-product-feed-manifest.json",
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv",
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv",
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv",
@@ -13224,6 +13229,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/top-1000-ai-sales-sitemap.xml": "Crawl map for top AI-sales SKU-level markdown pages.",
   "/ai/all-ai-approved-sku-sitemap.xml": "Full crawl map for every AI_APPROVE SKU-level markdown and JSON page.",
   "/ai/packrift-openai-products-strict-stable-current.tsv": "Strict stable OpenAI-shaped product snapshot for QA.",
+  "/ai/openai-product-feed-manifest.json": "Current OpenAI product-feed manifest with feed URLs, row counts, checksums, validation status, source reality, and ingestion blockers.",
   "/ai/packrift-openai-products-preferred-direct-current.tsv": "Current preferred direct OpenAI-shaped product feed handoff for access review.",
   "/ai/packrift-openai-products-preferred-direct-4835-20260519.tsv": "Immutable 4,835-row preferred direct OpenAI-shaped product feed handoff from the 2026-05-19 validation packet.",
   "/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv": "Immutable 4,836-row preferred direct OpenAI-shaped product feed handoff from the 2026-05-20 validation packet.",

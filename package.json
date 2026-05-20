@@ -43,6 +43,7 @@
     "snapshot:funnel": "node scripts/build-mcp-funnel-snapshot.mjs",
     "publish:ga4-funnel-proof": "node scripts/publish-mcp-ga4-funnel-proof.mjs",
     "build:attribution-funnel-note": "node scripts/build-mcp-attribution-funnel-note.mjs",
+    "build:openai-feed-manifest": "node scripts/build-openai-product-feed-manifest.mjs",
     "check:static-availability": "node scripts/check-static-availability.mjs",
     "check:cart-continuity": "npm run build && node scripts/check-create-cart-continuity.mjs",
     "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
