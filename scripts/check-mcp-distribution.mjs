@@ -982,6 +982,76 @@ async function liveMcpCheck() {
       row.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html"
     );
   });
+  const requiredCoreResourceUris = [
+    "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+    "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+    "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+    "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
+    "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+    MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+    MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
+    MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
+    "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
+    "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md",
+    "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html",
+    "https://mcp.packrift.com/r/order/mcp_so?format=md",
+    MCP_ACTIVATION_WAVE_RUNNER_URL,
+  ];
+  const liveMcpFailureDiagnostics = {
+    core_server:
+      health?.version === EXPECTED_VERSION &&
+      health?.resources_count >= 68 &&
+      health?.tools_count >= 15 &&
+      serverCard?.serverInfo?.name === "Packrift MCP" &&
+      serverCard?.authentication?.required === false &&
+      serverCard?.endpoint_url === MCP_ENDPOINT,
+    mcp_lists:
+      toolNames.length >= 15 &&
+      toolNames.includes("create_cart_url") &&
+      resourcesCount >= 68 &&
+      promptsCount >= 7,
+    feeds:
+      strictPublicProductFeedOk &&
+      preferredDirectProductFeedOk &&
+      preferredDirectProductFeedGzipOk &&
+      preferredDirectProductFeedImmutableOk &&
+      preferredDirectProductFeedImmutableGzipOk,
+    usage_and_funnel:
+      usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R26" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23" &&
+      funnelSnapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01",
+    source_activation:
+      sourceActivationCriticalActionsOk &&
+      sourceActivationClineRowOk &&
+      sourceActivationHostPacketsOk &&
+      sourceActivationHostIntentRowsRequireExternalOk &&
+      sourceActivationMcpSoExternalOk,
+    revenue_conversion:
+      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R01" &&
+      revenueConversionQueue?.status === "buyer_checkout_needed" &&
+      revenueConversionRowsOk,
+    tracked_orders:
+      trackedOrderCline?.mcp_source_context === "cline_mcp_marketplace" &&
+      trackedOrderCline?.mcp_install_target === "cline" &&
+      trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
+      trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http",
+    agent_progress:
+      agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      agentAdoptionProgressHtmlResult.ok,
+    commerce_hold_guard:
+      cartHandoffExcludesHeldSkus &&
+      measuredHandoffsExcludeHeldSkus &&
+      purchasePathsExcludeHeldSkus &&
+      heldSkuPagesAvoidCartUrls &&
+      cartHandoffHoldPolicyOk,
+    cart_handoff:
+      firstCartUrl.startsWith("https://mcp.packrift.com/r/cart/") &&
+      firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
+      hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
+      hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]),
+    required_core_resource_uris_missing: requiredCoreResourceUris.filter((uri) => !resourceUris.has(uri)),
+  };
   return check(
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
@@ -2855,6 +2925,7 @@ async function liveMcpCheck() {
       ? "pass"
       : "fail",
     {
+      failure_diagnostics: liveMcpFailureDiagnostics,
       health,
       server_card_schema: {
         status: serverCardResult.status,
