@@ -23,9 +23,19 @@ The server is designed for buyers and AI agents that need packaging supplies by 
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - Live tool discovery JSON: https://mcp.packrift.com/ai/mcp-tools.json
 - Live tool discovery Markdown: https://mcp.packrift.com/ai/spec-finder-tools.md
+- MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
+- MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
 - MCP directory update card template: https://mcp.packrift.com/ai/mcp-directory-update/{source}.json
+- MCP external activation brief: https://mcp.packrift.com/ai/mcp-external-activation-brief.json
+- MCP external activation brief HTML: https://mcp.packrift.com/ai/mcp-external-activation-brief.html
+- MCP external activation selected-task JSONL: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl
+- MCP external activation selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv
+- MCP external activation guarded runner: https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
+- MCP adoption kit: https://mcp.packrift.com/ai/mcp-adoption-kit.json
+- MCP agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Source repository: https://github.com/Packrift/packrift-mcp
 
 ## Category
@@ -44,6 +54,7 @@ Business Tools
 - Map buyer use cases into exact MCP tool paths for qualified AI-commerce demand.
 - Provide structured JSON plus agent-readable summaries for buyer workflows.
 - Expose public REST discovery surfaces for tools, resources, server cards, and health checks.
+- Expose selected external activation task feeds so marketplaces, reviewers, and automation hosts can run source-attributed MCP workflows without creating a duplicate Packrift CLI or checkout surface.
 
 ## Getting Started
 - "Find 10 x 6 x 6 corrugated boxes and give me the live Packrift price."
