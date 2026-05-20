@@ -480,13 +480,16 @@ async function main() {
     ),
     check(
       "visitor growth queue is importable and non-duplicative",
-      visitorGrowth?.release === "PACKRIFT-MCP-VISITOR-GROWTH-QUEUE-R01" &&
+      visitorGrowth?.release === "PACKRIFT-MCP-VISITOR-GROWTH-QUEUE-R02" &&
         visitorGrowth?.proof_summary?.ga4_qualified_external_mcp_sessions?.threshold >= 1000 &&
+        visitorGrowth?.contact_handoff_summary?.email_handoff_count >= 1 &&
         visitorGrowth?.tasks?.some((row) => row.lane === "qualified_visitor_growth" && row.tracked_start_url?.includes("/r/start/")) &&
         visitorGrowth?.tasks?.some((row) => row.lane === "buyer_order_conversion" && /order|checkout/i.test(row.success_gate ?? "")) &&
+        visitorGrowth?.tasks?.some((row) => row.contact_handoff?.mailto_url?.startsWith("mailto:")) &&
         visitorGrowth?.operating_rules?.some((rule) => /duplicate/.test(rule)) &&
         visitorGrowthTasksJsonlResult.ok &&
         visitorGrowthTasksJsonlResult.text.includes('"no_duplicate_work_rule"') &&
+        visitorGrowthTasksJsonlResult.text.includes('"contact_handoff_mailto_url"') &&
         visitorGrowthTasksCsvResult.ok &&
         visitorGrowthTasksCsvResult.text.startsWith("release,generated_at,rank,task_id,source"),
       { detail: visitorGrowthResult.ok ? `${visitorGrowth?.task_count ?? 0} visitor tasks` : "visitor queue failed" }

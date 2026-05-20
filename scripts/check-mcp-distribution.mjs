@@ -1401,7 +1401,7 @@ async function liveMcpCheck() {
     html_ok: visitorGrowthQueueHtmlResult.ok,
     tasks_jsonl_ok: visitorGrowthTasksJsonlResult.ok,
     tasks_csv_ok: visitorGrowthTasksCsvResult.ok,
-    release: visitorGrowthQueue?.release === "PACKRIFT-MCP-VISITOR-GROWTH-QUEUE-R01",
+    release: visitorGrowthQueue?.release === "PACKRIFT-MCP-VISITOR-GROWTH-QUEUE-R02",
     status: [
       "visitor_and_order_growth_needed",
       "visitor_growth_needed",
@@ -1450,6 +1450,22 @@ async function liveMcpCheck() {
     no_duplicate_rule:
       visitorGrowthQueue?.operating_rules?.some((rule) => String(rule).includes("not to create another Packrift product surface")) &&
       visitorGrowthQueue?.tasks?.every((task) => task.no_duplicate_work_rule?.includes("Do not create a separate Packrift CLI")),
+    contact_handoff_summary:
+      visitorGrowthQueue?.contact_handoff_summary?.release === "PACKRIFT-MCP-VISITOR-GROWTH-CONTACT-HANDOFF-R01" &&
+      Number(visitorGrowthQueue?.contact_handoff_summary?.email_handoff_count ?? 0) >= 1 &&
+      visitorGrowthQueue?.contact_handoff_summary?.no_send_rule?.includes("copy-ready only"),
+    contact_handoff_rows:
+      visitorGrowthQueue?.tasks?.some(
+        (task) =>
+          task.contact_handoff?.mailto_url?.startsWith("mailto:") &&
+          task.contact_handoff?.body?.includes("https://mcp.packrift.com/mcp") &&
+          task.contact_handoff?.no_send_rule?.includes("does not send email")
+      ) &&
+      visitorGrowthQueue?.tasks?.every(
+        (task) =>
+          task.contact_handoff?.release === "PACKRIFT-MCP-VISITOR-GROWTH-CONTACT-HANDOFF-R01" &&
+          task.next_contact_action === task.contact_handoff?.next_contact_action
+      ),
     links:
       visitorGrowthQueue?.links?.visitor_growth_queue_json === MCP_VISITOR_GROWTH_QUEUE_JSON_URL &&
       visitorGrowthQueue?.links?.visitor_growth_queue_markdown === MCP_VISITOR_GROWTH_QUEUE_MARKDOWN_URL &&
@@ -1462,6 +1478,7 @@ async function liveMcpCheck() {
         (task) =>
           task.lane === "qualified_visitor_growth" &&
           task.tracked_start_url?.startsWith("https://mcp.packrift.com/r/start/") &&
+          task.contact_handoff_mailto_url !== undefined &&
           task.no_duplicate_work_rule?.includes("Do not create a separate Packrift CLI")
       ) &&
       visitorGrowthTaskRows.some(
@@ -1470,11 +1487,14 @@ async function liveMcpCheck() {
           task.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/")
       ) &&
       visitorGrowthCsvLines.length === visitorGrowthTaskRows.length + 1 &&
-      visitorGrowthCsvLines[0]?.startsWith("release,generated_at,rank,task_id,source"),
+      visitorGrowthCsvLines[0]?.startsWith("release,generated_at,rank,task_id,source") &&
+      visitorGrowthCsvLines[0]?.includes("contact_handoff_mailto_url") &&
+      visitorGrowthCsvLines[0]?.includes("next_contact_action"),
     markdown_title: visitorGrowthQueueMarkdownResult.text.includes("Packrift MCP Visitor Growth Queue"),
     markdown_tasks: visitorGrowthQueueMarkdownResult.text.includes("Tasks"),
     html_title: visitorGrowthQueueHtmlResult.text.includes("Packrift MCP Visitor Growth Queue"),
     html_task_exports: visitorGrowthQueueHtmlResult.text.includes("mcp-visitor-growth-tasks.jsonl"),
+    html_contact_handoff: visitorGrowthQueueHtmlResult.text.includes("Contact handoff"),
     html_analytics: mcpPageAnalyticsDiagnostics.visitor_growth_queue_html,
   };
   const visitorGrowthQueueOk = Object.values(visitorGrowthDiagnostics).every(Boolean);

@@ -7972,7 +7972,7 @@ function visitorGrowthCopyReadyRequest(input: {
     input.listingUrl ? `Listing or submission URL: ${input.listingUrl}` : "",
     `Current proof and gap: ${input.proofUrl}. Remaining qualified external MCP sessions to 1,000: ${input.visitorRemaining}.`,
     "Do not ask users to install a separate Packrift CLI, clone a duplicate server, or use a separate checkout surface. Everything should route through the hosted Packrift MCP endpoint and source-aware /r/ links.",
-	  ].filter(Boolean).join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function visitorGrowthMailtoRecipient(url?: string | null): string | null {
@@ -8206,13 +8206,13 @@ async function mcpVisitorGrowthQueuePayload(
       reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
       buyer_handoff_url: buyerHandoffUrl,
       order_handoff_shell_url: urls.order_handoff_shell_url,
-	      source_activation_packet_url: `https://mcp.packrift.com/ai/mcp-source-activation/${encodeURIComponent(source)}.json`,
-	      directory_update_card_url: urls.directory_update_card_json_url,
-	      eval_pack_url: urls.eval_pack_json_url,
-	      copy_ready_request: copyReadyRequest,
-	      contact_handoff: contactHandoff,
-	      next_contact_action: contactHandoff.next_contact_action,
-	      success_gate: successGate,
+      source_activation_packet_url: `https://mcp.packrift.com/ai/mcp-source-activation/${encodeURIComponent(source)}.json`,
+      directory_update_card_url: urls.directory_update_card_json_url,
+      eval_pack_url: urls.eval_pack_json_url,
+      copy_ready_request: copyReadyRequest,
+      contact_handoff: contactHandoff,
+      next_contact_action: contactHandoff.next_contact_action,
+      success_gate: successGate,
       no_duplicate_work_rule:
         "Use the hosted Packrift MCP endpoint plus existing /r/start, /r/config, /r/install, /r/run, /r/activate, /r/order, and /r/cart handoffs. Do not create a separate Packrift CLI, buyer app, checkout, or duplicate MCP server.",
       proof_urls: {
@@ -8278,23 +8278,23 @@ async function mcpVisitorGrowthQueuePayload(
       external_qualified_mcp_tool_calls: adoption.counts.external_qualified_mcp_tool_calls,
     },
     task_count: tasks.length,
-	    lane_counts: tasks.reduce<Record<McpVisitorGrowthLane, number>>(
-	      (acc, task) => {
-	        acc[task.lane] = (acc[task.lane] ?? 0) + 1;
-	        return acc;
-	      },
-	      { qualified_visitor_growth: 0, external_mcp_activation: 0, buyer_order_conversion: 0 }
-	    ),
-	    contact_handoff_summary: {
-	      release: "PACKRIFT-MCP-VISITOR-GROWTH-CONTACT-HANDOFF-R01",
-	      contact_ready_count: tasks.filter((task) => task.contact_handoff.channel !== "review_surface").length,
-	      email_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "email").length,
-	      public_comment_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "public_comment").length,
-	      support_url_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "support_url").length,
-	      no_send_rule:
-	        "Visitor growth contact handoffs are copy-ready only; they do not send email, post comments, create duplicate Packrift surfaces, or place orders.",
-	    },
-	    tasks,
+    lane_counts: tasks.reduce<Record<McpVisitorGrowthLane, number>>(
+      (acc, task) => {
+        acc[task.lane] = (acc[task.lane] ?? 0) + 1;
+        return acc;
+      },
+      { qualified_visitor_growth: 0, external_mcp_activation: 0, buyer_order_conversion: 0 }
+    ),
+    contact_handoff_summary: {
+      release: "PACKRIFT-MCP-VISITOR-GROWTH-CONTACT-HANDOFF-R01",
+      contact_ready_count: tasks.filter((task) => task.contact_handoff.channel !== "review_surface").length,
+      email_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "email").length,
+      public_comment_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "public_comment").length,
+      support_url_handoff_count: tasks.filter((task) => task.contact_handoff.channel === "support_url").length,
+      no_send_rule:
+        "Visitor growth contact handoffs are copy-ready only; they do not send email, post comments, create duplicate Packrift surfaces, or place orders.",
+    },
+    tasks,
     snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-visitor-growth-queue.json", limit, orderDays, orderLimit),
     operating_rules: [
       "Work this queue for distribution and demand proof, not to create another Packrift product surface.",
@@ -8411,6 +8411,18 @@ function mcpVisitorGrowthQueueTaskRows(payload: McpVisitorGrowthQueuePayload) {
     current_mcp_tool_calls: task.current_counts.mcp_tool_calls,
     current_qualified_cart_landings: task.current_counts.qualified_cart_landings,
     copy_ready_request: task.copy_ready_request,
+    contact_handoff_release: task.contact_handoff.release,
+    contact_handoff_channel: task.contact_handoff.channel,
+    contact_handoff_status: task.contact_handoff.status,
+    contact_handoff_primary_surface: task.contact_handoff.primary_surface,
+    contact_handoff_support_email: task.contact_handoff.support_email ?? "",
+    contact_handoff_support_url: task.contact_handoff.support_url ?? "",
+    contact_handoff_public_comment_url: task.contact_handoff.public_comment_url ?? "",
+    contact_handoff_subject: task.contact_handoff.subject,
+    contact_handoff_body: task.contact_handoff.body,
+    contact_handoff_mailto_url: task.contact_handoff.mailto_url ?? "",
+    contact_handoff_no_send_rule: task.contact_handoff.no_send_rule,
+    next_contact_action: task.next_contact_action,
     success_gate: task.success_gate,
     no_duplicate_work_rule: task.no_duplicate_work_rule,
     measurement_urls: [
@@ -8463,6 +8475,18 @@ function mcpVisitorGrowthQueueTasksCsv(payload: McpVisitorGrowthQueuePayload): s
     "current_mcp_tool_calls",
     "current_qualified_cart_landings",
     "copy_ready_request",
+    "contact_handoff_release",
+    "contact_handoff_channel",
+    "contact_handoff_status",
+    "contact_handoff_primary_surface",
+    "contact_handoff_support_email",
+    "contact_handoff_support_url",
+    "contact_handoff_public_comment_url",
+    "contact_handoff_subject",
+    "contact_handoff_body",
+    "contact_handoff_mailto_url",
+    "contact_handoff_no_send_rule",
+    "next_contact_action",
     "success_gate",
     "no_duplicate_work_rule",
     "measurement_urls",
@@ -8499,15 +8523,17 @@ function mcpVisitorGrowthQueueMarkdown(payload: McpVisitorGrowthQueuePayload): s
     `- Qualified visitor growth: ${payload.lane_counts.qualified_visitor_growth}`,
     `- External MCP activation: ${payload.lane_counts.external_mcp_activation}`,
     `- Buyer order conversion: ${payload.lane_counts.buyer_order_conversion}`,
+    `- Contact-ready handoffs: ${payload.contact_handoff_summary.contact_ready_count}`,
+    `- Email handoffs: ${payload.contact_handoff_summary.email_handoff_count}`,
     "",
     "## Tasks",
     "",
-    "| Rank | Priority | Lane | Source | Target event | Current stage | Primary action | Tracked start | Install | First run | Buyer handoff | Success gate |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Rank | Priority | Lane | Source | Contact | Target event | Current stage | Primary action | Tracked start | Install | First run | Buyer handoff | Success gate |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.tasks
       .map(
         (task, index) =>
-          `| ${index + 1} | ${task.priority} | ${task.lane} | ${task.source} | ${task.target_event_to_watch} | ${markdownTableCell(task.current_stage)} | ${task.primary_action_url} | ${task.tracked_start_url} | ${task.tracked_install_url} | ${task.tracked_first_run_url} | ${task.buyer_handoff_url ?? ""} | ${markdownTableCell(task.success_gate)} |`
+          `| ${index + 1} | ${task.priority} | ${task.lane} | ${task.source} | ${markdownTableCell(task.contact_handoff.channel)} | ${task.target_event_to_watch} | ${markdownTableCell(task.current_stage)} | ${task.primary_action_url} | ${task.tracked_start_url} | ${task.tracked_install_url} | ${task.tracked_first_run_url} | ${task.buyer_handoff_url ?? ""} | ${markdownTableCell(task.success_gate)} |`
       )
       .join("\n"),
     "",
@@ -8542,6 +8568,7 @@ function mcpVisitorGrowthQueueHtml(payload: McpVisitorGrowthQueuePayload): strin
       </div>
       <p>${escapeHtml(task.current_stage)}</p>
       <p>${escapeHtml(task.why)}</p>
+      <p><strong>Contact path:</strong> ${escapeHtml(task.contact_handoff.channel)} · ${escapeHtml(task.contact_handoff.status)} · ${escapeHtml(task.next_contact_action)}</p>
       <div class="metrics">
         <span>starts ${task.current_counts.starts}</span>
         <span>installs ${task.current_counts.install_intents}</span>
@@ -8557,10 +8584,17 @@ function mcpVisitorGrowthQueueHtml(payload: McpVisitorGrowthQueuePayload): strin
         <a class="button" href="${escapeHtml(task.reviewer_activation_html_url)}">Activation</a>
         ${task.buyer_handoff_url ? `<a class="button" href="${escapeHtml(task.buyer_handoff_url)}">Buyer handoff</a>` : ""}
         <a class="button" href="${escapeHtml(task.eval_pack_url)}">Eval pack</a>
+        ${task.contact_handoff.mailto_url ? `<a class="button" href="${escapeHtml(task.contact_handoff.mailto_url)}">Email handoff</a>` : ""}
+        <a class="button" href="${escapeHtml(task.contact_handoff.primary_surface)}">Contact surface</a>
       </div>
       <details>
         <summary>Copy-ready request</summary>
         <pre>${escapeHtml(task.copy_ready_request)}</pre>
+      </details>
+      <details>
+        <summary>Contact handoff</summary>
+        <p>${escapeHtml(task.contact_handoff.no_send_rule)}</p>
+        <pre>${escapeHtml(task.contact_handoff.body)}</pre>
       </details>
       <details>
         <summary>Proof and guardrails</summary>
@@ -8621,6 +8655,8 @@ function mcpVisitorGrowthQueueHtml(payload: McpVisitorGrowthQueuePayload): strin
         <span>Remaining ${payload.proof_summary.ga4_qualified_external_mcp_sessions.remaining_to_threshold}</span>
         <span>Cart landings ${payload.proof_summary.qualified_cart_landings}</span>
         <span>Orders ${payload.proof_summary.first_party_mcp_orders.count}</span>
+        <span>Contact-ready ${payload.contact_handoff_summary.contact_ready_count}</span>
+        <span>Email handoffs ${payload.contact_handoff_summary.email_handoff_count}</span>
       </div>
       <div class="exports">
         <a class="button primary" href="${escapeHtml(payload.links.visitor_growth_queue_json)}">JSON</a>
