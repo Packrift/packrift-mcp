@@ -5,7 +5,7 @@ export interface McpInstallActionRuntime {
   promptsCount: number;
 }
 
-export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R11";
+export const MCP_INSTALL_ACTION_RELEASE = "PACKRIFT-MCP-INSTALL-ACTION-R12";
 export const MCP_INSTALL_ACTIONS_RELEASE = "PACKRIFT-MCP-INSTALL-ACTIONS-R11";
 export const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 export const MCP_SOURCE_QUERY_PARAM = "packrift_mcp_source";
@@ -369,6 +369,14 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
+function trackedRunShellUrlForInstall(source: string, target: string): string {
+  return `${trackedRunUrlForInstall(source, target)}&format=sh`;
+}
+
+function trackedRunShellOneLinerForInstall(source: string, target: string): string {
+  return `curl -sS ${shellQuote(trackedRunShellUrlForInstall(source, target))} | bash`;
+}
+
 function mcpCurlCommand(endpoint: string, request: Record<string, unknown>): string {
   return [
     `curl -sS ${shellQuote(endpoint)} \\`,
@@ -542,6 +550,32 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
   const sourceAware = sourceAwareInstallForTarget(target, input.source);
   const firstUsefulRun = mcpFirstUsefulRun(input.source, target.id);
   const installSteps = hostInstallSteps(target, input.source, sourceAware.endpoint);
+  const trackedRun = trackedRunUrlForInstall(input.source, target.id);
+  const trackedRunHtml = `${trackedRun}&format=html`;
+  const trackedRunShell = trackedRunShellUrlForInstall(input.source, target.id);
+  const shellOneLiner = trackedRunShellOneLinerForInstall(input.source, target.id);
+  const fastestActivationPath = {
+    label: "3-minute first useful run",
+    purpose:
+      "Move a directory reviewer, developer, or agent host from Packrift MCP install to a real source-attributed create_cart_url proof without creating an order.",
+    steps: [
+      `Copy the ${target.label} install block from this page and add it to the MCP host.`,
+      "Reload the MCP host until Packrift tools are visible from the source-aware endpoint.",
+      "Run the source-specific agent prompt or shell one-liner from this page.",
+      "Confirm get_pricing and check_inventory pass before create_cart_url.",
+      "Count the source only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+    ],
+    primary_action_label: "Run first useful check",
+    primary_action_url: trackedRunHtml,
+    shell_url: trackedRunShell,
+    shell_one_liner: shellOneLiner,
+    agent_prompt: firstUsefulRun.agent_prompt,
+    required_final_tool: "create_cart_url",
+    required_cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
+    no_order_created: true,
+    browser_proof_rule:
+      "Browser proof alone is review evidence. Source activation requires host-side MCP tool telemetry plus the measured /r/cart handoff URL.",
+  };
   return {
     release: MCP_INSTALL_ACTION_RELEASE,
     generated_at: new Date().toISOString(),
@@ -569,13 +603,17 @@ export function mcpInstallActionPayload(input: { source: string; target: string 
     tracked_install_url: trackedInstallUrl(input.source, target.id),
     tracked_install_html_url: `${trackedInstallUrl(input.source, target.id)}&format=html`,
     tracked_config_url: trackedConfigUrl(input.source),
-    tracked_run_url: trackedRunUrlForInstall(input.source, target.id),
-    tracked_run_html_url: `${trackedRunUrlForInstall(input.source, target.id)}&format=html`,
-    tracked_run_execute_url: `${trackedRunUrlForInstall(input.source, target.id)}&execute=1`,
+    tracked_run_url: trackedRun,
+    tracked_run_html_url: trackedRunHtml,
+    tracked_run_execute_url: `${trackedRun}&execute=1`,
+    tracked_run_shell_url: trackedRunShell,
     tracked_reviewer_activation_html_url: `https://mcp.packrift.com/r/activate/${input.source}?format=html`,
     copy_text: sourceAware.copyText,
+    copy_ready_agent_prompt: firstUsefulRun.agent_prompt,
+    copy_ready_shell_one_liner: shellOneLiner,
     install: sourceAware.install,
     first_tests: target.firstTests,
+    fastest_activation_path: fastestActivationPath,
     required_post_install_verification: {
       required: true,
       no_order_created: true,
@@ -629,6 +667,8 @@ export function mcpInstallActionsPayload(runtime: McpInstallActionRuntime, sourc
       first_tests: target.firstTests,
       first_useful_run_endpoint: sourceAwareMcpEndpoint(source, target.id),
       tracked_run_html_url: `${trackedRunUrlForInstall(source, target.id)}&format=html`,
+      tracked_run_shell_url: trackedRunShellUrlForInstall(source, target.id),
+      shell_one_liner: trackedRunShellOneLinerForInstall(source, target.id),
       required_post_install_final_tool: "create_cart_url",
     })),
     required_post_install_verification: {
@@ -687,6 +727,20 @@ export function mcpInstallActionMarkdown(payload: NonNullable<ReturnType<typeof 
     `Endpoint: ${payload.canonical_endpoint}`,
     "",
     payload.operating_rule,
+    "",
+    "## Fastest Activation Path",
+    "",
+    `${payload.fastest_activation_path.label}: ${payload.fastest_activation_path.purpose}`,
+    "",
+    payload.fastest_activation_path.steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
+    "",
+    `Primary action: ${payload.fastest_activation_path.primary_action_url}`,
+    "",
+    "Shell one-liner:",
+    "",
+    fencedShell(payload.fastest_activation_path.shell_one_liner),
+    "",
+    payload.fastest_activation_path.browser_proof_rule,
     "",
     "## Copy Text",
     "",
@@ -776,10 +830,25 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
     <div class="bar">
       <button data-copy-target="${escapeHtml(payload.target.id)}" data-copy="${escapeHtml(copyBlock)}">Copy install</button>
       <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_agent_prompt`)}" data-copy="${escapeHtml(payload.first_useful_run.agent_prompt)}">Copy agent prompt</button>
+      <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_shell_one_liner`)}" data-copy="${escapeHtml(payload.fastest_activation_path.shell_one_liner)}">Copy shell one-liner</button>
       <a class="button secondary" href="${escapeHtml(payload.tracked_run_html_url)}">Open first run</a>
       <a class="button secondary" href="${escapeHtml(payload.tracked_reviewer_activation_html_url)}">Run real MCP check</a>
       <a class="button secondary" href="${escapeHtml(payload.tracked_config_url)}">Config JSON</a>
     </div>
+    <section class="panel">
+      <h2>Fastest Activation Path</h2>
+      <p>${escapeHtml(payload.fastest_activation_path.purpose)}</p>
+      <ol>
+        ${payload.fastest_activation_path.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+      </ol>
+      <div class="bar">
+        <a class="button" href="${escapeHtml(payload.fastest_activation_path.primary_action_url)}">${escapeHtml(payload.fastest_activation_path.primary_action_label)}</a>
+        <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_fast_agent_prompt`)}" data-copy="${escapeHtml(payload.fastest_activation_path.agent_prompt)}">Copy agent prompt</button>
+        <button class="secondary" data-copy-target="${escapeHtml(`${payload.target.id}_fast_shell_one_liner`)}" data-copy="${escapeHtml(payload.fastest_activation_path.shell_one_liner)}">Copy shell one-liner</button>
+      </div>
+      <pre>${escapeHtml(payload.fastest_activation_path.shell_one_liner)}</pre>
+      <p>${escapeHtml(payload.fastest_activation_path.browser_proof_rule)}</p>
+    </section>
     <section class="panel">
       <h2>Install Copy</h2>
       <pre>${escapeHtml(copyBlock)}</pre>
@@ -868,7 +937,7 @@ export function mcpInstallActionHtml(payload: NonNullable<ReturnType<typeof mcpI
         button.textContent = "Select text";
       }
       window.setTimeout(() => {
-        button.textContent = target.includes("agent_prompt") ? "Copy agent prompt" : target.includes("endpoint") ? "Copy endpoint" : target.includes("curl") ? "Copy curl script" : target.includes("json") ? "Copy JSON-RPC" : "Copy install";
+        button.textContent = target.includes("agent_prompt") ? "Copy agent prompt" : target.includes("endpoint") ? "Copy endpoint" : target.includes("one_liner") ? "Copy shell one-liner" : target.includes("curl") ? "Copy curl script" : target.includes("json") ? "Copy JSON-RPC" : "Copy install";
         button.classList.remove("copied");
       }, 1400);
     });

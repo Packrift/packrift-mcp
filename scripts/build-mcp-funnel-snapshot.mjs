@@ -161,7 +161,7 @@ async function buildFirstPartyMcpSummary() {
   if (!token) {
     return { ok: false, date, error: "MCP_STATS_TOKEN is not available in the local environment." };
   }
-  const limit = String(args["mcp-limit"] || "5000");
+  const limit = String(args["mcp-limit"] || "20000");
   const url = new URL("https://mcp.packrift.com/admin/mcp-stats");
   url.searchParams.set("date", date);
   url.searchParams.set("limit", limit);

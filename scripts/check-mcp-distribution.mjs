@@ -641,6 +641,92 @@ async function liveMcpCheck() {
   const sourceRunResourceMarkdownText = sourceRunResourceMarkdownResult.value?.result?.contents?.[0]?.text ?? "";
   const sourceActivateResourceShellText = sourceActivateResourceShellResult.value?.result?.contents?.[0]?.text ?? "";
   const promptsCount = promptsResult.value?.result?.prompts?.length ?? 0;
+  const sourceActivationCriticalActions = Array.isArray(sourceActivationQueue?.critical_actions) ? sourceActivationQueue.critical_actions : [];
+  const sourceActivationCriticalActionsOk =
+    Array.isArray(sourceActivationQueue?.critical_actions) &&
+    (Number(sourceActivationQueue?.critical_count ?? 0) === 0
+      ? sourceActivationQueue?.queue?.some(
+          (row) =>
+            row.external_activation_required === true &&
+            row.operator_safety_rule?.includes("Do not ") &&
+            row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+            row.one_command_external_runner?.includes("curl -sS") &&
+            row.one_command_external_runner?.includes("| bash")
+        )
+      : sourceActivationCriticalActions.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not ")) &&
+        sourceActivationCriticalActions.some(
+          (row) =>
+            row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+            row.run_real_mcp_shell_url?.includes("format=sh") &&
+            row.one_command_external_runner?.includes("curl -sS") &&
+            row.one_command_external_runner?.includes("| bash")
+        ));
+  const sourceActivationClineRowOk = sourceActivationQueue?.queue?.some((row) => {
+    if (row.source !== "cline_mcp_marketplace" || row.preferred_target !== "cline") return false;
+    const targetEventOk = ["mcp_install_intent", "mcp_first_run_execution", "mcp_attributed_order"].includes(row.target_event_to_watch);
+    const primaryActionOk =
+      row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
+      row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") ||
+      row.primary_action_url?.includes("/r/run/cline_mcp_marketplace/cline?format=html") ||
+      row.primary_action_url?.includes("/r/cart/1066");
+    const commonOk =
+      targetEventOk &&
+      row.external_activation_required === true &&
+      row.operator_safety_rule?.includes("real MCP") &&
+      row.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+      row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
+      row.eval_pack_json_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace" &&
+      row.eval_pack_markdown_url === "https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace" &&
+      row.agent_prompt?.includes("target=cline") &&
+      row.copy_ready_host_configs?.claude_code_command?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+      row.copy_ready_host_configs?.codex_command?.startsWith("codex mcp add packrift --url") &&
+      row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
+      row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
+      row.copy_ready_host_configs?.success_gate?.includes("create_cart_url") &&
+      row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
+      row.external_activation_message?.includes("One-command external runner") &&
+      (row.external_activation_message?.includes("does not place an order") ||
+        row.external_activation_message?.includes("without placing an order") ||
+        row.external_activation_message?.includes("MCP-attributed order")) &&
+      row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
+      row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
+      row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
+      row.external_activation_message?.includes("Shell activation script") &&
+      row.reviewer_activation_shell_url?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
+      primaryActionOk &&
+      row.acceptance_criteria?.some((rule) => rule.includes("create_cart_url") || rule.includes("first_party_mcp_orders")) &&
+      row.tracked_install_json_url?.includes("/r/install/cline_mcp_marketplace/cline?format=json") &&
+      row.tracked_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline");
+    if (!commonOk) return false;
+    if (!row.order_conversion_handoff) {
+      return (
+        row.cart_landing_action_url == null &&
+        (row.current_stage?.includes("discovery only") ||
+          row.current_stage?.includes("first-run action") ||
+          row.current_stage?.includes("tool calls missing") ||
+          row.current_stage?.includes("install"))
+      );
+    }
+    return (
+      row.order_conversion_handoff?.status === "order_proof_needed" &&
+      row.order_conversion_handoff?.source === "cline_mcp_marketplace" &&
+      row.primary_action_url?.includes("/r/cart/1066") &&
+      row.primary_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+      row.primary_action_url?.includes("mcp_install_target=cline") &&
+      row.cart_landing_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+      row.order_conversion_handoff?.buyer_action_url?.includes("/r/cart/1066") &&
+      row.order_conversion_handoff?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+      row.order_conversion_handoff?.buyer_action_url?.includes("mcp_install_target=cline") &&
+      row.order_conversion_handoff?.previous_measured_cart_url?.includes("/r/cart/1066") &&
+      row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+      row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
+      row.order_conversion_handoff?.source_specific_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
+      row.order_conversion_handoff?.required_shopify_cart_attributes?.includes("packrift_mcp_source_context") &&
+      row.order_conversion_handoff?.required_shopify_cart_attributes?.includes("packrift_mcp_install_target") &&
+      row.order_conversion_handoff?.proof_gate?.includes("first_party_mcp_orders") &&
+      row.order_conversion_handoff?.attribution_rule?.includes("packrift_mcp_source_context")
+    );
+  });
   return check(
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
@@ -946,6 +1032,7 @@ async function liveMcpCheck() {
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/generic/codex")) &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_install_html_url?.includes("format=html")) &&
       installActions?.targets?.some((target) => target.id === "codex" && target.tracked_run_html_url?.startsWith("https://mcp.packrift.com/r/run/generic/codex")) &&
+      installActions?.targets?.some((target) => target.id === "codex" && target.tracked_run_shell_url?.startsWith("https://mcp.packrift.com/r/run/generic/codex") && target.shell_one_liner?.includes("format=sh")) &&
       installActions?.targets?.some((target) => target.id === "codex" && target.source_aware_endpoint?.includes("packrift_mcp_source=generic")) &&
       installActions?.targets?.some(
         (target) =>
@@ -973,21 +1060,32 @@ async function liveMcpCheck() {
       trackedInstallCodexHtmlResult.text.includes("Packrift MCP Install") &&
       trackedInstallCodexHtmlResult.text.includes("Copy install") &&
       trackedInstallCodexHtmlResult.text.includes("Copy agent prompt") &&
+      trackedInstallCodexHtmlResult.text.includes("Copy shell one-liner") &&
+      trackedInstallCodexHtmlResult.text.includes("Fastest Activation Path") &&
       trackedInstallCodexHtmlResult.text.includes("mcp_install_copy") &&
       trackedInstallCodexHtmlResult.text.includes("Open first run") &&
       trackedInstallCodexHtmlResult.text.includes("Run real MCP check") &&
       trackedInstallClineHtmlResult.ok &&
       trackedInstallClineJsonResult.ok &&
-      trackedInstallClineJson?.release === "PACKRIFT-MCP-INSTALL-ACTION-R11" &&
+      trackedInstallClineJson?.release === "PACKRIFT-MCP-INSTALL-ACTION-R12" &&
       trackedInstallClineJson?.install?.mcpServers?.packrift?.type === "streamableHttp" &&
       trackedInstallClineJson?.install?.mcpServers?.packrift?.url?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
       trackedInstallClineJson?.install?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=cline") &&
+      trackedInstallClineJson?.tracked_run_shell_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
+      trackedInstallClineJson?.tracked_run_shell_url?.includes("format=sh") &&
+      trackedInstallClineJson?.copy_ready_shell_one_liner?.includes("format=sh") &&
+      trackedInstallClineJson?.copy_ready_agent_prompt?.includes("create_cart_url") &&
+      trackedInstallClineJson?.fastest_activation_path?.required_final_tool === "create_cart_url" &&
+      trackedInstallClineJson?.fastest_activation_path?.shell_one_liner?.includes("format=sh") &&
+      trackedInstallClineJson?.fastest_activation_path?.browser_proof_rule?.includes("Browser proof alone") &&
       trackedInstallClineJson?.host_install_steps?.some((step) => step.includes("Cline's MCP Servers settings")) &&
       trackedInstallClineJson?.activation_acceptance_gate?.real_host_required === true &&
       trackedInstallClineJson?.activation_acceptance_gate?.browser_proof_is_not_enough === true &&
       trackedInstallClineJson?.activation_acceptance_gate?.required_host_target === "cline" &&
       trackedInstallClineHtmlResult.text.includes("Packrift MCP Install") &&
       trackedInstallClineHtmlResult.text.includes("Host Install Steps") &&
+      trackedInstallClineHtmlResult.text.includes("Fastest Activation Path") &&
+      trackedInstallClineHtmlResult.text.includes("Copy shell one-liner") &&
       trackedInstallClineHtmlResult.text.includes("Cline&#39;s MCP Servers settings") &&
       trackedInstallClineHtmlResult.text.includes("Browser proof alone is review evidence") &&
       trackedInstallClineHtmlResult.text.includes("packrift_mcp_target=cline") &&
@@ -1063,7 +1161,7 @@ async function liveMcpCheck() {
       trackedConfigGeneric?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=tracked_config") &&
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R26" &&
       usageSnapshot?.runtime?.default_public_event_limit === 500 &&
-      usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=5000") &&
+      usageSnapshot?.runtime?.full_event_limit_hint?.includes("limit=1000") &&
       usageSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       usageSnapshot?.runtime_source_inference?.rule_count >= 35 &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
@@ -1162,8 +1260,8 @@ async function liveMcpCheck() {
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
       funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
-      funnelSnapshot?.limit === 5000 &&
-      funnelSnapshot?.runtime?.default_public_event_limit === 5000 &&
+      funnelSnapshot?.limit === 20000 &&
+      funnelSnapshot?.runtime?.default_public_event_limit === 20000 &&
       funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
       funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
@@ -1249,7 +1347,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
       sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
-      sourceActivationQueue?.event_read_limit === 5000 &&
+      sourceActivationQueue?.event_read_limit === 20000 &&
       sourceActivationQueue?.source_context_normalization?.release === "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01" &&
       sourceActivationQueue?.source_context_normalization?.examples?.some(
         (example) => example.raw === "cline_mcp_marketplace_first_cart_run" && example.normalized === "cline_mcp_marketplace"
@@ -1272,75 +1370,13 @@ async function liveMcpCheck() {
       sourceActivationQueue?.source_snapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
-      Array.isArray(sourceActivationQueue?.critical_actions) &&
-      sourceActivationQueue?.critical_actions?.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not ")) &&
-      sourceActivationQueue?.critical_actions?.some(
-        (row) =>
-          row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
-          row.run_real_mcp_shell_url?.includes("format=sh") &&
-          row.one_command_external_runner?.includes("curl -sS") &&
-          row.one_command_external_runner?.includes("| bash")
-      ) &&
+      sourceActivationCriticalActionsOk &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
       Array.isArray(sourceActivationQueue?.blocking_goal_gates) &&
       Array.isArray(sourceActivationQueue?.queue) &&
       sourceActivationQueue?.queue?.some((row) => row.primary_action_url?.startsWith("https://mcp.packrift.com/r/")) &&
-      sourceActivationQueue?.queue?.some(
-        (row) =>
-          row.source === "cline_mcp_marketplace" &&
-          row.preferred_target === "cline" &&
-          row.target_event_to_watch === "mcp_attributed_order" &&
-          row.current_stage?.includes("order and revenue missing") &&
-          row.external_activation_required === true &&
-          (row.operator_safety_rule?.includes("real MCP host") ||
-            row.operator_safety_rule?.includes("real MCP client run") ||
-            row.operator_safety_rule?.includes("source-aware links") ||
-            row.operator_safety_rule?.includes("MCP-attributed order")) &&
-          row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
-          row.eval_pack_json_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace" &&
-          row.eval_pack_markdown_url === "https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace" &&
-          row.agent_prompt?.includes("target=cline") &&
-          row.copy_ready_host_configs?.claude_code_command?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
-          row.copy_ready_host_configs?.codex_command?.startsWith("codex mcp add packrift --url") &&
-          row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
-          row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
-          row.copy_ready_host_configs?.success_gate?.includes("packrift_mcp_source_context") &&
-          row.order_conversion_handoff?.status === "order_proof_needed" &&
-          row.order_conversion_handoff?.source === "cline_mcp_marketplace" &&
-          row.primary_action_url?.includes("/r/cart/1066") &&
-          row.primary_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
-          row.primary_action_url?.includes("mcp_install_target=cline") &&
-          row.cart_landing_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
-          row.order_conversion_handoff?.buyer_action_url?.includes("/r/cart/1066") &&
-          row.order_conversion_handoff?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
-          row.order_conversion_handoff?.buyer_action_url?.includes("mcp_install_target=cline") &&
-          row.order_conversion_handoff?.previous_measured_cart_url?.includes("/r/cart/1066") &&
-          row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
-          row.order_conversion_handoff?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
-          row.order_conversion_handoff?.source_specific_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
-          row.order_conversion_handoff?.required_shopify_cart_attributes?.includes("packrift_mcp_source_context") &&
-          row.order_conversion_handoff?.required_shopify_cart_attributes?.includes("packrift_mcp_install_target") &&
-          row.order_conversion_handoff?.proof_gate?.includes("first_party_mcp_orders") &&
-          row.order_conversion_handoff?.attribution_rule?.includes("packrift_mcp_source_context") &&
-          row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
-          row.external_activation_message?.includes("One-command external runner") &&
-          (row.external_activation_message?.includes("does not place an order") ||
-            row.external_activation_message?.includes("without placing an order") ||
-            row.external_activation_message?.includes("MCP-attributed order")) &&
-          row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.json" &&
-          row.directory_update_card_markdown_url === "https://mcp.packrift.com/ai/mcp-directory-update/cline_mcp_marketplace.md" &&
-          row.external_activation_message?.includes("mcp-directory-update/cline_mcp_marketplace.json") &&
-          row.external_activation_message?.includes("Shell activation script") &&
-          row.reviewer_activation_shell_url?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
-          (row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
-            row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") ||
-            row.primary_action_url?.includes("/r/run/cline_mcp_marketplace/cline?format=html") ||
-            row.primary_action_url?.includes("/r/cart/1066")) &&
-          row.acceptance_criteria?.some((rule) => rule.includes("first_party_mcp_orders")) &&
-          row.tracked_install_json_url?.includes("/r/install/cline_mcp_marketplace/cline?format=json") &&
-          row.tracked_first_run_url?.includes("/r/run/cline_mcp_marketplace/cline")
-      ) &&
+      sourceActivationClineRowOk &&
       sourceActivationQueueHtmlResult.ok &&
       sourceActivationQueueHtmlResult.text.includes("Packrift MCP Activation Command Center") &&
       sourceActivationQueueHtmlResult.text.includes("External activation message") &&
