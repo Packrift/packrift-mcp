@@ -197,6 +197,11 @@ function markdown(snapshot, paths) {
   const chatgptFeed = sourceFunnel(snapshot, csvRows, "chatgpt.com / feed");
   const currency = orders.currency || "USD";
   const generatedDate = dateStamp(snapshot.generated_at);
+  const visitorThreshold = num(snapshot.agent_adoption_progress?.progress_bars?.monthly_ga4_qualified_visitors_1000?.threshold || 1000);
+  const visitorRemaining = Math.max(0, visitorThreshold - num(metrics.qualified_external_mcp_session_starts));
+  const toolCallThreshold = num(snapshot.agent_adoption_progress?.progress_bars?.material_tool_usage_50?.threshold || 50);
+  const toolCallRemaining = Math.max(0, toolCallThreshold - num(fp.total_tool_calls));
+  const qualifiedCartLandings = num(metrics.qualified_external_cart_landings);
 
   return [
     "# Packrift MCP Attribution Funnel",
@@ -223,13 +228,13 @@ function markdown(snapshot, paths) {
     "| --- | ---: | ---: | --- |",
     `| First-party MCP discovery events | ${count(fp.mcp_discovery_events)} | n/a | tools/list, prompts/list, resources/list, resources/read |`,
     `| First-party MCP tool calls | ${count(fp.total_tool_calls)} | ${pct(fp.total_tool_calls, fp.mcp_discovery_events)} of discovery | top tool: ${(fp.top_tools ?? [])[0]?.key ?? "none"} |`,
-    `| create_cart_url calls | ${count(fp.create_cart_url_calls)} | ${pct(fp.create_cart_url_calls, fp.total_tool_calls)} of tool calls | first-party handoff event needed before real cart proof |`,
+    `| create_cart_url calls | ${count(fp.create_cart_url_calls)} | ${pct(fp.create_cart_url_calls, fp.total_tool_calls)} of tool calls | measured handoffs exist; now needs external volume and buyer-approved order proof |`,
     `| First-party cart clicks | ${count(fp.cart_clicks)} | ${pct(fp.cart_clicks, fp.create_cart_url_calls)} of create_cart_url calls | 0 means no measured clickthrough yet |`,
     `| First-party MCP cart landings | ${count(fp.mcp_cart_landings)} | ${pct(fp.mcp_cart_landings, fp.create_cart_url_calls)} of create_cart_url calls | explicit first-party /r/cart landing receipts |`,
     `| GA4 raw MCP-specific sessions | ${count(metrics.raw_mcp_specific_session_starts)} | n/a | source-level, not all qualified buyer demand |`,
     `| GA4 qualified external MCP sessions | ${count(metrics.qualified_external_mcp_session_starts)} | ${pct(metrics.qualified_external_mcp_session_starts, metrics.raw_mcp_specific_session_starts)} of raw MCP sessions | current qualified visitor proof |`,
     `| GA4 raw stamped MCP cart landings | ${count(metrics.raw_stamped_mcp_cart_landings)} | n/a | includes internal/synthetic traffic |`,
-    `| Qualified external cart landing receipts | ${count(metrics.qualified_external_cart_landings)} | ${pct(metrics.qualified_external_cart_landings, Math.max(num(metrics.raw_stamped_mcp_cart_landings), num(metrics.raw_first_party_mcp_cart_landings)))} of raw receipts | GA4 or first-party receipts must rise above 0 before goal can be proven |`,
+    `| Qualified external cart landing receipts | ${count(metrics.qualified_external_cart_landings)} | ${pct(metrics.qualified_external_cart_landings, Math.max(num(metrics.raw_stamped_mcp_cart_landings), num(metrics.raw_first_party_mcp_cart_landings)))} of raw receipts | cart-landing gate is visible; order and visitor-scale gates remain open |`,
     `| First-party MCP-attributed orders | ${count(orders.attributed_order_count)} | ${pct(orders.attributed_order_count, metrics.qualified_external_cart_landings)} of qualified cart landings | scanned ${count(orders.scanned_order_count)} Shopify orders |`,
     `| First-party MCP-attributed revenue | ${money(orders.attributed_revenue, currency)} | n/a | ${count(metrics.first_party_mcp_orders)} orders / ${money(metrics.first_party_mcp_order_revenue, currency)} in proof metrics |`,
     "",
@@ -261,8 +266,11 @@ function markdown(snapshot, paths) {
     "",
     "## Current Blockers",
     "",
-    "- No thousands-of-visitors proof: qualified external MCP sessions are still in single digits.",
-    "- No qualified cart-landing proof yet: current raw cart-landing receipts are internal/synthetic or not externally qualified.",
+    `- No thousands-of-visitors proof: qualified external MCP sessions are ${count(metrics.qualified_external_mcp_session_starts)} / ${count(visitorThreshold)}; ${count(visitorRemaining)} more are needed.`,
+    `- Material MCP tool usage is still thin: ${count(fp.total_tool_calls)} / ${count(toolCallThreshold)} first-party MCP tool calls; ${count(toolCallRemaining)} more are needed for the material-usage gate.`,
+    qualifiedCartLandings > 0
+      ? `- Cart-landing proof is visible (${count(qualifiedCartLandings)} qualified external cart landings), but it has not converted into a first-party MCP-attributed order.`
+      : "- No qualified cart-landing proof yet: current raw cart-landing receipts are internal/synthetic or not externally qualified.",
     "- No MCP sales proof: first-party Shopify scan found no MCP-attributed orders.",
     "- Per-tool attribution is incomplete: first-party tool calls are not yet joined to GA4 view_item, add_to_cart, checkout, or purchase rows.",
     `- Directory distribution still has recrawl drag: ${distributionLine(snapshot.distribution)}.`,
