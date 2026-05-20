@@ -7719,6 +7719,8 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     mcp_source_context: row.mcp_source_context,
     mcp_install_target: row.mcp_install_target,
     product: row.product,
+    buyer_handoff_url: row.buyer_handoff_url,
+    primary_buyer_handoff_url: row.buyer_handoff_url,
     buyer_handoff_html_url: row.buyer_handoff_url,
     buyer_handoff_json_url: row.buyer_handoff_json_url,
     buyer_handoff_markdown_url: row.buyer_handoff_markdown_url,
@@ -7738,6 +7740,27 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     acceptance_criteria: row.acceptance_criteria,
     current_counts: row.current_counts,
   }));
+  const buyerCheckoutTasks = handoffs.map((row) => ({
+    task_id: `mcp_buyer_checkout_${row.source}`,
+    rank: row.rank,
+    source: row.source,
+    status: row.status,
+    target_event_to_watch: "mcp_attributed_order",
+    action:
+      "Open the buyer handoff, confirm live product, quantity, price, shipping, tax, final total, and buyer approval in Shopify, then refresh the MCP funnel proof after any approved order.",
+    buyer_handoff_url: row.buyer_handoff_url,
+    buyer_handoff_json_url: row.buyer_handoff_json_url,
+    source_preserving_cart_url: row.source_preserving_cart_url,
+    source_preserving_prepare_purchase_handoff: row.source_preserving_prepare_purchase_handoff,
+    product: row.product,
+    current_counts: row.current_counts,
+    copy_ready_buyer_request: row.copy_ready_buyer_request,
+    proof_gate: row.proof_gate,
+    order_proof_watch: row.order_proof_watch,
+    buyer_confirmation_required: true,
+    no_order_created_by_this_task: true,
+    safety_rule: row.suppression_rule,
+  }));
   const matureRevenueSources = revenue.rows.map((row) => row.source);
   const handoffSources = handoffs.map((row) => row.source);
   const handoffSourceSet = new Set(handoffSources);
@@ -7756,8 +7779,11 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     source_queue_release: revenue.source_queue_release,
     revenue_conversion_queue_release: revenue.release,
     revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+    row_count: handoffs.length,
     mature_revenue_source_count: matureRevenueSources.length,
+    buyer_handoff_count: handoffs.length,
     order_handoff_count: handoffs.length,
+    buyer_checkout_task_count: buyerCheckoutTasks.length,
     source_coverage: {
       release: "PACKRIFT-MCP-BUYER-HANDOFF-COVERAGE-R01",
       status: missingHandoffSources.length ? "missing_handoffs" : "all_mature_sources_have_buyer_handoffs",
@@ -7769,6 +7795,7 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     },
     snapshot_coverage: revenue.snapshot_coverage,
     handoffs,
+    buyer_checkout_tasks: buyerCheckoutTasks,
     proof_gate: revenue.proof_gate,
     proof_boundaries: revenue.proof_boundaries,
     safety_rules: [
@@ -7815,6 +7842,7 @@ function mcpBuyerOrderHandoffsMarkdown(payload: ReturnType<typeof mcpBuyerOrderH
     `- Handoff coverage: ${payload.source_coverage.status}`,
     `- Mature revenue sources: ${payload.source_coverage.mature_revenue_sources.join(", ") || "none"}`,
     `- Missing handoff sources: ${payload.source_coverage.missing_handoff_sources.join(", ") || "none"}`,
+    `- Buyer checkout tasks: ${payload.buyer_checkout_task_count}`,
     "",
     "## Handoffs",
     "",
@@ -7827,6 +7855,15 @@ function mcpBuyerOrderHandoffsMarkdown(payload: ReturnType<typeof mcpBuyerOrderH
       )
       .join("\n") ||
       "| none | none | none | none | none | none | none |",
+    "",
+    "## Buyer Checkout Tasks",
+    "",
+    payload.buyer_checkout_tasks
+      .map(
+        (task) =>
+          `- ${task.task_id}: ${task.action} Buyer handoff: ${task.buyer_handoff_url ?? "none"}. Proof watch: ${task.order_proof_watch}.`
+      )
+      .join("\n") || "- none",
     "",
     "## Checkout Review Contracts",
     "",
@@ -7952,6 +7989,7 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
       <div class="status">
         <span>${escapeHtml(payload.release)}</span>
         <span>${payload.order_handoff_count}/${payload.mature_revenue_source_count} handoffs</span>
+        <span>${payload.buyer_checkout_task_count} checkout tasks</span>
         <span>${escapeHtml(payload.source_coverage.status)}</span>
         <span>orders ${payload.proof_gate.current_orders}</span>
         <span>revenue ${payload.proof_gate.current_revenue}</span>
@@ -12909,7 +12947,7 @@ const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QU
 const MCP_REVENUE_CONVERSION_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
 const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
-const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R04";
+const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R05";
 const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";

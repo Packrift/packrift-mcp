@@ -250,7 +250,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R28", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R29", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -268,8 +268,8 @@ async function main() {
     }),
     check(
       "agent host fast paths source-aware",
-      capture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R02" &&
-        capture?.counts?.agent_host_fast_paths >= 12 &&
+      capture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R03" &&
+        capture?.counts?.agent_host_fast_paths >= 60 &&
         capture?.agent_host_fast_paths?.some(
           (row) =>
             row.source === "cline_mcp_marketplace" &&
@@ -287,6 +287,19 @@ async function main() {
             row.source_aware_endpoint ===
               "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http" &&
             row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/browse_sh?format=sh"
+        ) &&
+        capture?.agent_host_fast_paths?.some(
+          (row) =>
+            row.source === "pipedream_automation" &&
+            row.target === "generic_streamable_http" &&
+            row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/pipedream_automation/generic_streamable_http?format=sh"
+        ) &&
+        capture?.agent_host_fast_paths?.some(
+          (row) =>
+            row.source === "anthropic_connectors_directory" &&
+            row.target === "claude_code" &&
+            row.source_aware_endpoint ===
+              "https://mcp.packrift.com/mcp?packrift_mcp_source=anthropic_connectors_directory&packrift_mcp_target=claude_code"
         ) &&
         capture?.agent_host_fast_paths?.every(
           (row) =>
