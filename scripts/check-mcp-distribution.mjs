@@ -1626,6 +1626,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Proof boundaries") &&
       sourceActivationQueueHtmlResult.text.includes("Adoption:") &&
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
+      sourceActivationQueueHtmlResult.text.includes("Full operator queue") &&
       (sourceActivationQueueHtmlResult.text.includes("Activation runner") ||
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
         sourceActivationQueueHtmlResult.text.includes("Install in Cline") ||
@@ -1679,6 +1680,8 @@ async function liveMcpCheck() {
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
       activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21" &&
       activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      activationExperiments?.snapshot_coverage?.operator_url ===
+        "https://mcp.packrift.com/ai/mcp-activation-experiments.json?limit=20000&order_days=90&order_limit=250" &&
       activationExperiments?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
@@ -1738,6 +1741,9 @@ async function liveMcpCheck() {
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R03" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
       activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21" &&
+      activationWave?.snapshot_coverage?.operator_url ===
+        "https://mcp.packrift.com/ai/mcp-activation-wave.json?limit=20000&order_days=90&order_limit=250" &&
+      activationWave?.links?.activation_wave_operator_json === activationWave?.snapshot_coverage?.operator_url &&
       activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
       activationWave?.tool_call_gap?.material_usage_threshold === 50 &&
       activationWave?.links?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
@@ -1802,6 +1808,7 @@ async function liveMcpCheck() {
       activationWaveHtmlResult.text.includes("Packrift MCP Activation Wave") &&
       activationWaveHtmlResult.text.includes("No duplicate work") &&
       activationWaveHtmlResult.text.includes("Full-source capture runner") &&
+      activationWaveHtmlResult.text.includes("Full operator wave") &&
       activationWaveHtmlResult.text.includes("Source-aware endpoint") &&
       activationWaveHtmlResult.text.includes("Copy-ready host configs") &&
       activationWaveHtmlResult.text.includes("One-command external runner") &&
@@ -1832,6 +1839,7 @@ async function liveMcpCheck() {
       agentAdoptionProgressHtmlResult.ok &&
       agentAdoptionProgressHtmlResult.text.includes("Packrift MCP Agent Adoption Progress") &&
       agentAdoptionProgressHtmlResult.text.includes("GA4 qualified visitors") &&
+      agentAdoptionProgressHtmlResult.text.includes("Full operator snapshot") &&
       agentAdoptionProgressHtmlResult.text.includes("Source queue") &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
