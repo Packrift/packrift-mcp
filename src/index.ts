@@ -1158,6 +1158,8 @@ const PUBLIC_MCP_OPERATOR_EVENT_LIMIT = 20000;
 const PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX = 50000;
 const PUBLIC_MCP_DEFAULT_ORDER_DAYS = 30;
 const PUBLIC_MCP_DEFAULT_ORDER_LIMIT = 100;
+const PUBLIC_MCP_OPERATOR_ORDER_DAYS = 90;
+const PUBLIC_MCP_OPERATOR_ORDER_LIMIT = 250;
 const AI_SALES_ALLOWED_EVENTS = new Set([
   "add_to_cart",
   "product_click",
@@ -2920,6 +2922,49 @@ function boundedPublicMcpEventLimit(requestedLimit: number, fallbackLimit: numbe
   return Number.isFinite(requestedLimit) ? Math.max(1, Math.min(PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX, requestedLimit)) : fallbackLimit;
 }
 
+function publicMcpSnapshotUrl(pathname: string, limit: number, orderDays: number, orderLimit: number): string {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    order_days: String(orderDays),
+    order_limit: String(orderLimit),
+  });
+  return `https://mcp.packrift.com${pathname}?${params.toString()}`;
+}
+
+function publicMcpSnapshotCoverage(pathname: string, limit: number, orderDays: number, orderLimit: number) {
+  return {
+    snapshot_mode:
+      limit >= PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX
+        ? "extended_backfill_snapshot"
+        : limit >= PUBLIC_MCP_OPERATOR_EVENT_LIMIT
+          ? "full_operator_snapshot"
+          : "fast_public_snapshot",
+    current_event_read_limit: limit,
+    default_fast_event_limit: PUBLIC_MCP_FUNNEL_EVENT_LIMIT,
+    full_operator_event_limit: PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+    extended_backfill_event_limit_max: PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX,
+    current_order_days: orderDays,
+    current_order_limit: orderLimit,
+    full_operator_order_days: PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+    full_operator_order_limit: PUBLIC_MCP_OPERATOR_ORDER_LIMIT,
+    current_url: publicMcpSnapshotUrl(pathname, limit, orderDays, orderLimit),
+    operator_url: publicMcpSnapshotUrl(
+      pathname,
+      PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+      PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+      PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+    ),
+    extended_backfill_url: publicMcpSnapshotUrl(
+      pathname,
+      PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX,
+      PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+      PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+    ),
+    rule:
+      "Use the fast public default for agent-facing resources and the full operator URL when reviewing adoption history, source-priority drift, or revenue attribution.",
+  };
+}
+
 async function readAiSalesEventsRange(env: Env, endDate: string, days: number, totalLimit: number): Promise<Array<Record<string, unknown>>> {
   const dates = dateStringsEndingAt(endDate, days);
   const boundedTotalLimit = Math.max(1, totalLimit);
@@ -3850,8 +3895,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R22";
-const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23";
+const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02";
 const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
@@ -5232,7 +5277,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R20",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -5263,6 +5308,7 @@ async function mcpSourceActivationQueuePayload(
     source_snapshot: {
       funnel_release: funnel.release,
       funnel_status: funnel.status,
+      snapshot_coverage: funnel.snapshot_coverage,
       external_qualified_mcp_tool_calls: funnel.counts.external_qualified_mcp_tool_calls,
       material_tool_usage_50_plus: funnel.proof_gate.material_tool_usage_50_plus,
       qualified_first_party_mcp_cart_landings: funnel.counts.qualified_first_party_mcp_cart_landings,
@@ -5284,6 +5330,7 @@ async function mcpSourceActivationQueuePayload(
       proof_boundaries: funnel.proof_boundaries,
     },
     agent_adoption_progress: funnel.agent_adoption_progress,
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-source-activation-queue.json", limit, orderDays, orderLimit),
     proof_boundaries: funnel.proof_boundaries,
     queue_count: funnel.source_activation_priority_queue.length,
     critical_count: funnel.source_activation_priority_queue.filter((row) => row.priority === "critical").length,
@@ -5324,14 +5371,32 @@ async function mcpSourceActivationQueuePayload(
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_markdown: "https://mcp.packrift.com/ai/mcp-source-activation-queue.md",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      source_activation_queue_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-source-activation-queue.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       activation_experiments_json: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       activation_experiments_markdown: "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_wave_json: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_markdown: MCP_ACTIVATION_WAVE_MARKDOWN_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      activation_wave_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-activation-wave.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       activation_command_center: "https://mcp.packrift.com/r/activate",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      funnel_snapshot_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-funnel-snapshot.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
@@ -5374,6 +5439,8 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Unique qualified MCP identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}`,
     `- Unique qualified MCP session IDs: ${payload.source_snapshot.unique_qualified_mcp_session_ids}`,
     `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
+    `- Snapshot mode: ${payload.snapshot_coverage.snapshot_mode}`,
+    `- Full operator queue: ${payload.snapshot_coverage.operator_url}`,
     "",
     "## Agent Adoption Progress",
     "",
@@ -5409,6 +5476,8 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Activation experiments HTML: ${payload.links.activation_experiments_html}`,
     `- Activation wave: ${payload.links.activation_wave_json}`,
     `- Activation wave HTML: ${payload.links.activation_wave_html}`,
+    `- Full operator queue: ${payload.links.source_activation_queue_operator_json}`,
+    `- Full operator funnel snapshot: ${payload.links.funnel_snapshot_operator_json}`,
     `- Source-specific eval pack template: ${payload.links.eval_pack_template}`,
     `- GA4 funnel proof: ${payload.links.ga4_funnel_proof}`,
     "",
@@ -5592,6 +5661,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
         <span>Adoption: ${escapeHtml(payload.agent_adoption_progress.status)}</span>
+        <span>Snapshot: ${escapeHtml(payload.snapshot_coverage.snapshot_mode)}</span>
       </div>
       <div class="proof-boundary">
         <strong>Proof boundaries</strong>
@@ -5604,6 +5674,7 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <a href="${escapeHtml(payload.links.source_activation_queue_markdown)}">Markdown</a>
         <a href="${escapeHtml(payload.links.activation_experiments_html)}">Experiments</a>
         <a href="${escapeHtml(payload.links.activation_wave_html)}">Activation wave</a>
+        <a href="${escapeHtml(payload.links.source_activation_queue_operator_json)}">Full operator queue</a>
         <a href="${escapeHtml(payload.links.eval_pack_template.replace("{source}", rows[0]?.source ?? "generic"))}">Eval pack</a>
         <a href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel snapshot</a>
         <a href="${escapeHtml(payload.links.usage_snapshot)}">Usage snapshot</a>
@@ -5859,7 +5930,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R09",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R10",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -5870,6 +5941,7 @@ async function mcpActivationExperimentsPayload(
     source_queue_status: queuePayload.status,
     source_snapshot: queuePayload.source_snapshot,
     agent_adoption_progress: queuePayload.agent_adoption_progress,
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-activation-experiments.json", limit, orderDays, orderLimit),
     proof_boundaries: queuePayload.proof_boundaries,
     blocking_goal_gates: queuePayload.blocking_goal_gates,
     experiment_count: experiments.length,
@@ -5879,17 +5951,25 @@ async function mcpActivationExperimentsPayload(
       activation_experiments_json: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       activation_experiments_markdown: "https://mcp.packrift.com/ai/mcp-activation-experiments.md",
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
+      activation_experiments_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-activation-experiments.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       activation_wave_json: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_markdown: MCP_ACTIVATION_WAVE_MARKDOWN_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      source_activation_queue_operator_json: queuePayload.links.source_activation_queue_operator_json,
       activation_command_center: "https://mcp.packrift.com/r/activate",
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      funnel_snapshot_operator_json: queuePayload.links.funnel_snapshot_operator_json,
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
     },
     operating_rule:
@@ -6769,7 +6849,7 @@ async function mcpActivationWavePayload(
   const expectedLift = waveTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   const fullExpectedLift = fullCaptureTasks.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R02",
+    release: "PACKRIFT-MCP-ACTIVATION-WAVE-R03",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -6783,6 +6863,7 @@ async function mcpActivationWavePayload(
     source_context_normalization: queuePayload.source_context_normalization,
     source_snapshot: queuePayload.source_snapshot,
     agent_adoption_progress: queuePayload.agent_adoption_progress,
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-activation-wave.json", limit, orderDays, orderLimit),
     proof_boundaries: queuePayload.proof_boundaries,
     blocking_goal_gates: queuePayload.blocking_goal_gates,
     tool_call_gap: {
@@ -6824,16 +6905,24 @@ async function mcpActivationWavePayload(
       activation_wave_json: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_markdown: MCP_ACTIVATION_WAVE_MARKDOWN_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      activation_wave_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-activation-wave.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
       one_command_wave_runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS ${shellQuote(MCP_ACTIVATION_WAVE_RUNNER_URL)} | bash`,
       one_command_full_capture_runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS ${shellQuote(MCP_ACTIVATION_WAVE_RUNNER_URL)} | bash`,
       source_activation_queue_json: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      source_activation_queue_operator_json: queuePayload.links.source_activation_queue_operator_json,
       activation_experiments_json: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_command_center: "https://mcp.packrift.com/r/activate",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      funnel_snapshot_operator_json: queuePayload.links.funnel_snapshot_operator_json,
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
     },
@@ -6952,6 +7041,8 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
     `- Full-source capture size: ${payload.tool_call_gap.full_capture_source_count}`,
     `- Full-source expected lift: ${payload.tool_call_gap.full_capture_expected_tool_call_lift_if_all_tasks_run}`,
     `- Projected after full-source capture: ${payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_full_capture}`,
+    `- Snapshot mode: ${payload.snapshot_coverage.snapshot_mode}`,
+    `- Full operator wave: ${payload.snapshot_coverage.operator_url}`,
     `- Guarded wave runner: ${payload.links.activation_wave_runner_shell}`,
     `- One-command wave runner: \`${payload.links.one_command_wave_runner}\``,
     `- One-command full-source capture runner: \`${payload.links.one_command_full_capture_runner}\``,
@@ -6995,9 +7086,12 @@ function mcpActivationWaveMarkdown(payload: Awaited<ReturnType<typeof mcpActivat
     "## Measurement URLs",
     "",
     `- Activation wave HTML: ${payload.links.activation_wave_html}`,
+    `- Full operator wave: ${payload.links.activation_wave_operator_json}`,
     `- Source activation queue: ${payload.links.source_activation_queue_json}`,
+    `- Full operator source queue: ${payload.links.source_activation_queue_operator_json}`,
     `- Activation experiments: ${payload.links.activation_experiments_json}`,
     `- Funnel snapshot: ${payload.links.funnel_snapshot}`,
+    `- Full operator funnel snapshot: ${payload.links.funnel_snapshot_operator_json}`,
     `- GA4 proof: ${payload.links.ga4_funnel_proof}`,
     "",
   ].join("\n");
@@ -7130,6 +7224,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
         <span>Full lift: ${payload.full_capture_wave.expected_tool_call_lift_if_all_tasks_run}</span>
         <span>Projected: ${payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_wave}</span>
         <span>Adoption: ${escapeHtml(payload.agent_adoption_progress.status)}</span>
+        <span>Snapshot: ${escapeHtml(payload.snapshot_coverage.snapshot_mode)}</span>
       </div>
       <div class="proof-boundary">
         <strong>No duplicate work</strong>
@@ -7140,6 +7235,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
         <a href="${escapeHtml(payload.links.activation_wave_json)}">JSON</a>
         <a href="${escapeHtml(payload.links.activation_wave_markdown)}">Markdown</a>
         <a href="${escapeHtml(payload.links.activation_wave_runner_shell)}">Wave runner</a>
+        <a href="${escapeHtml(payload.links.activation_wave_operator_json)}">Full operator wave</a>
         <a href="${escapeHtml(payload.links.source_activation_queue_html)}">Source queue</a>
         <a href="${escapeHtml(payload.links.activation_experiments_html)}">Experiments</a>
         <a href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel snapshot</a>
@@ -7378,6 +7474,7 @@ async function mcpFunnelSnapshotPayload(
       "Aggregated counts only. Raw event bodies, buyer identifiers, order rows, and private admin tokens are not exposed.",
     scope_note:
       "This public snapshot uses a rolling two-day first-party MCP telemetry window plus aggregate Shopify order attribution so activation proof does not disappear at the UTC day boundary. When available, the thousands-of-qualified-visitors gate uses the sanitized public GA4 proof published from the local full funnel artifact; use the limit/order query params for heavier operator snapshots when latency is acceptable.",
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-funnel-snapshot.json", limit, orderDays, orderLimit),
     runtime: {
       server_version: serverCard.version,
       tools_count: TOOLS.length,
@@ -7387,7 +7484,7 @@ async function mcpFunnelSnapshotPayload(
       default_public_event_lookback_days: PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS,
       default_public_order_lookback_days: PUBLIC_MCP_DEFAULT_ORDER_DAYS,
       default_public_order_scan_limit: PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
-      full_event_limit_hint: `Use ?limit=${PUBLIC_MCP_OPERATOR_EVENT_LIMIT}&order_days=90&order_limit=250 for a heavier operator snapshot when latency is acceptable. Use ?limit=${PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX} only for deep backfill checks.`,
+      full_event_limit_hint: `Use ?limit=${PUBLIC_MCP_OPERATOR_EVENT_LIMIT}&order_days=${PUBLIC_MCP_OPERATOR_ORDER_DAYS}&order_limit=${PUBLIC_MCP_OPERATOR_ORDER_LIMIT} for a heavier operator snapshot when latency is acceptable. Use ?limit=${PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX} only for deep backfill checks.`,
     },
     runtime_source_inference: {
       release: MCP_RUNTIME_SOURCE_INFERENCE_RELEASE,
@@ -7487,6 +7584,18 @@ async function mcpFunnelSnapshotPayload(
     links: {
       funnel_snapshot_json: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
       funnel_snapshot_markdown: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.md",
+      funnel_snapshot_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-funnel-snapshot.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
+      agent_adoption_progress_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-agent-adoption-progress.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       ga4_funnel_proof_json: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       ga4_funnel_proof_markdown: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.md",
       usage_snapshot_json: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
@@ -7497,10 +7606,22 @@ async function mcpFunnelSnapshotPayload(
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
+      source_activation_queue_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-source-activation-queue.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
       activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
       activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
+      activation_wave_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-activation-wave.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
       activation_command_center: "https://mcp.packrift.com/r/activate",
       install_actions: "https://mcp.packrift.com/ai/mcp-install-actions.json",
@@ -7571,6 +7692,15 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- Qualified first-party MCP cart landings: ${payload.counts.qualified_first_party_mcp_cart_landings}`,
     `- First-party MCP orders: ${payload.counts.first_party_mcp_orders}`,
     `- First-party MCP order revenue: ${payload.counts.first_party_mcp_order_revenue} ${payload.counts.first_party_mcp_order_currency}`,
+    "",
+    "## Snapshot Coverage",
+    "",
+    `- Mode: ${payload.snapshot_coverage.snapshot_mode}`,
+    `- Current event read limit: ${payload.snapshot_coverage.current_event_read_limit}`,
+    `- Full operator event limit: ${payload.snapshot_coverage.full_operator_event_limit}`,
+    `- Current snapshot: ${payload.snapshot_coverage.current_url}`,
+    `- Full operator snapshot: ${payload.snapshot_coverage.operator_url}`,
+    `- Rule: ${payload.snapshot_coverage.rule}`,
     "",
     "## Proof Gate",
     "",
@@ -7754,6 +7884,7 @@ async function mcpAgentAdoptionProgressPayload(
     purpose:
       "Standalone public Packrift MCP adoption progress summary for the thousands-of-qualified-visitors, cart-landing, and MCP-attributed order proof gates.",
     progress,
+    snapshot_coverage: publicMcpSnapshotCoverage("/ai/mcp-agent-adoption-progress.json", limit, orderDays, orderLimit),
     proof_gate: funnel.proof_gate,
     proof_boundaries: funnel.proof_boundaries,
     counts: {
@@ -7775,13 +7906,22 @@ async function mcpAgentAdoptionProgressPayload(
       agent_adoption_progress_json: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
       agent_adoption_progress_markdown: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md",
       agent_adoption_progress_html: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html",
+      agent_adoption_progress_operator_json: publicMcpSnapshotUrl(
+        "/ai/mcp-agent-adoption-progress.json",
+        PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+        PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+        PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+      ),
       funnel_snapshot_json: funnel.links.funnel_snapshot_json,
       funnel_snapshot_markdown: funnel.links.funnel_snapshot_markdown,
+      funnel_snapshot_operator_json: funnel.links.funnel_snapshot_operator_json,
       ga4_funnel_proof_json: funnel.links.ga4_funnel_proof_json,
       source_activation_queue: funnel.links.source_activation_queue,
       source_activation_queue_html: funnel.links.source_activation_queue_html,
+      source_activation_queue_operator_json: funnel.links.source_activation_queue_operator_json,
       activation_wave: funnel.links.activation_wave,
       activation_wave_html: funnel.links.activation_wave_html,
+      activation_wave_operator_json: funnel.links.activation_wave_operator_json,
       activation_command_center: funnel.links.activation_command_center,
       cart_activation_html: "https://mcp.packrift.com/ai/mcp-cart-activation.html",
       buyer_use_cases_html: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.html",
@@ -7820,6 +7960,13 @@ function mcpAgentAdoptionProgressMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Unique qualified MCP identity signals: ${payload.counts.unique_qualified_mcp_identity_signals}`,
     `- First-party MCP orders: ${payload.counts.first_party_mcp_orders}`,
     `- First-party MCP revenue: ${payload.counts.first_party_mcp_order_revenue} ${payload.counts.first_party_mcp_order_currency}`,
+    "",
+    "## Snapshot Coverage",
+    "",
+    `- Mode: ${payload.snapshot_coverage.snapshot_mode}`,
+    `- Current event read limit: ${payload.snapshot_coverage.current_event_read_limit}`,
+    `- Full operator progress: ${payload.snapshot_coverage.operator_url}`,
+    `- Full operator funnel: ${payload.links.funnel_snapshot_operator_json}`,
     "",
     "## Progress Bars",
     "",
@@ -7889,6 +8036,7 @@ function mcpAgentAdoptionProgressHtml(payload: Awaited<ReturnType<typeof mcpAgen
     .join("");
   const links = ([
     ["Funnel snapshot", payload.links.funnel_snapshot_json],
+    ["Full operator snapshot", payload.links.agent_adoption_progress_operator_json],
     ["GA4 proof", payload.links.ga4_funnel_proof_json],
     ["Source queue", payload.links.source_activation_queue_html],
     ["Activation wave", payload.links.activation_wave_html],
@@ -7940,6 +8088,7 @@ function mcpAgentAdoptionProgressHtml(payload: Awaited<ReturnType<typeof mcpAgen
         <span>Cart landings: ${payload.counts.qualified_first_party_mcp_cart_landings}</span>
         <span>GA4 sessions: ${payload.counts.ga4_qualified_external_mcp_session_starts}/${payload.counts.ga4_qualified_external_mcp_session_threshold}</span>
         <span>Orders: ${payload.counts.first_party_mcp_orders}</span>
+        <span>Snapshot: ${escapeHtml(payload.snapshot_coverage.snapshot_mode)}</span>
       </div>
       <div class="links">${links}</div>
     </header>
