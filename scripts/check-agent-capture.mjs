@@ -224,13 +224,15 @@ async function main() {
     "n8n",
     "MCP Inspector",
     "Glama",
+    "Agent Host Fast Paths",
+    "source-aware install",
     "Machine-readable version",
   ];
 
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R21", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R22", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -247,6 +249,26 @@ async function main() {
       detail: "shell activation guard",
     }),
     check(
+      "agent host fast paths source-aware",
+      capture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
+        capture?.counts?.agent_host_fast_paths >= 12 &&
+        capture?.agent_host_fast_paths?.some(
+          (row) =>
+            row.source === "cline_mcp_marketplace" &&
+            row.target === "cline" &&
+            row.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+            row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=sh"
+        ) &&
+        capture?.agent_host_fast_paths?.some(
+          (row) =>
+            row.source === "browse_sh" &&
+            row.source_aware_endpoint ===
+              "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http"
+        ) &&
+        capture?.agent_host_fast_paths?.some((row) => row.source === "mcp_so" && /order|revenue/i.test(row.success_gate ?? "")),
+      { detail: `${capture?.counts?.agent_host_fast_paths ?? 0} fast paths` }
+    ),
+    check(
       "operating rule advertises expanded runtime inference",
       (capture?.operating_rules ?? []).some((rule) => /OpenAI\/ChatGPT/.test(rule) && /LangChain/.test(rule) && /n8n/.test(rule) && /MCP Inspector/.test(rule)),
       { detail: "runtime inference guard" }
@@ -260,6 +282,14 @@ async function main() {
     check("Browserbase Browse is live after verified catalog install", browseSurface?.status === "live", {
       detail: browseSurface?.status,
     }),
+    check(
+      "major ready clients use source-aware install text",
+      capture?.surfaces?.some((row) => row.id === "claude_desktop_and_claude_code" && row.install_or_call?.includes("packrift_mcp_source=claude_remote_mcp")) &&
+        capture?.surfaces?.some((row) => row.id === "cursor_windsurf_vscode" && row.install_or_call?.includes("packrift_mcp_source=cursor_directory")) &&
+        capture?.surfaces?.some((row) => row.id === "codex_remote_mcp" && row.install_or_call?.includes("packrift_mcp_source=codex_remote_mcp")) &&
+        browseSurface?.install_or_call?.includes("packrift_mcp_source=browse_sh"),
+      { detail: "source-aware client rows" }
+    ),
     check("markdown contains agent surface labels", mdResult.ok && hasAll(mdResult.text, mdNeedles), {
       detail: mdNeedles.filter((needle) => !mdResult.text.includes(needle)).join(", ") || "all present",
     }),

@@ -3897,7 +3897,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
 
 const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23";
 const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02";
-const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02";
+const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R03";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -4711,6 +4711,22 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
     "",
     "Please run this from a real MCP host or buyer/reviewer workflow. The page and MCP tools do not place an order by themselves; the remaining proof gate is a buyer-approved Shopify checkout that preserves MCP attribution.",
   ].join("\n");
+  const requiredShopifyCartAttributes = [
+    "packrift_mcp_source_context",
+    "packrift_mcp_install_target",
+    "packrift_mcp_handoff_id",
+    "packrift_mcp_journey",
+    "packrift_mcp_result_set",
+    "packrift_utm_source",
+    "packrift_utm_medium",
+    "packrift_utm_campaign",
+  ];
+  const checkoutGuardrails = [
+    "Confirm live price and currency from Packrift MCP get_pricing before opening checkout.",
+    "Confirm in-stock status from Packrift MCP check_inventory before opening checkout.",
+    "Open Shopify checkout only for buyer/reviewer review; do not place an order without explicit approval.",
+    "Verify the final Shopify cart keeps the required packrift_* cart attributes before treating any purchase as MCP-attributed proof.",
+  ];
   return {
     release: MCP_ORDER_CONVERSION_HANDOFF_RELEASE,
     status: "buyer_or_reviewer_checkout_needed",
@@ -4725,7 +4741,13 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
     buyer_ready_summary: buyerReadySummary,
     source_aware_endpoint: firstUsefulRun.endpoint,
     buyer_action_url: buyerActionUrl,
+    buyer_handoff_url: urls.order_handoff_html_url,
+    buyer_handoff_json_url: urls.order_handoff_json_url,
+    buyer_handoff_markdown_url: urls.order_handoff_markdown_url,
     primary_order_handoff_url: urls.order_handoff_html_url,
+    source_specific_first_run_url: urls.tracked_first_run_url,
+    source_specific_first_run_shell_url: urls.tracked_first_run_shell_url,
+    reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
     measured_cart_url: buyerActionUrl,
     no_order_created_by_this_page: true,
     buyer_confirmation_required: true,
@@ -4736,6 +4758,10 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
       "Buyer-selected quantity",
       "Shipping, tax, and final total in Shopify checkout",
     ],
+    checkout_guardrails: checkoutGuardrails,
+    required_shopify_cart_attributes: requiredShopifyCartAttributes,
+    attribution_rule:
+      "MCP order proof should prefer packrift_mcp_source_context and packrift_mcp_install_target from Shopify cart/order attributes, then fall back to source parsed from mcp_journey, result set, Packrift AI IDs, or UTM fields.",
     required_mcp_sequence: firstUsefulRun.sequence,
     buyer_prompt: buyerPrompt,
     copy_ready_messages: {
@@ -4753,6 +4779,7 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
       watch_url: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
     },
+    order_proof_watch: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
     suppression_rules: [
       "Do not treat this page view as order proof.",
       "Do not treat shell-runner proof as order proof.",
@@ -4764,6 +4791,8 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
       order_handoff_markdown: urls.order_handoff_markdown_url,
       order_handoff_html: urls.order_handoff_html_url,
       source_preserving_cart: buyerActionUrl,
+      source_specific_first_run: urls.tracked_first_run_url,
+      source_specific_first_run_shell: urls.tracked_first_run_shell_url,
       reviewer_activation: urls.reviewer_activation_runner_url,
       reviewer_activation_shell: urls.reviewer_activation_shell_url,
       first_run: urls.tracked_first_run_url,
@@ -4801,6 +4830,16 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
     "## Live Confirmation Required",
     "",
     payload.live_confirmation_required.map((item) => `- ${item}`).join("\n"),
+    "",
+    "## Checkout Guardrails",
+    "",
+    payload.checkout_guardrails.map((item) => `- ${item}`).join("\n"),
+    "",
+    "## Source Attribution Required",
+    "",
+    payload.required_shopify_cart_attributes.map((item) => `- ${item}`).join("\n"),
+    "",
+    payload.attribution_rule,
     "",
     "## Copy-Ready Buyer Request",
     "",
@@ -4895,11 +4934,20 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
       </div>
       <p>${escapeHtml(payload.product.static_price_inventory_rule)}</p>
     </section>
-    <section>
-      <h2>Required Before Checkout</h2>
-      <ul>${payload.live_confirmation_required.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      <p class="warning">Only continue through Shopify checkout when the buyer approves. This page and MCP tools do not place an order.</p>
-    </section>
+	    <section>
+	      <h2>Required Before Checkout</h2>
+	      <ul>${payload.live_confirmation_required.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+	      <p class="warning">Only continue through Shopify checkout when the buyer approves. This page and MCP tools do not place an order.</p>
+	    </section>
+	    <section>
+	      <h2>Source Attribution Required</h2>
+	      <p>${escapeHtml(payload.attribution_rule)}</p>
+	      <ul>${payload.required_shopify_cart_attributes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+	    </section>
+	    <section>
+	      <h2>Checkout Guardrails</h2>
+	      <ul>${payload.checkout_guardrails.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+	    </section>
     <section>
       <h2>Buyer Request</h2>
       <pre>${escapeHtml(payload.copy_ready_messages.buyer_request)}</pre>

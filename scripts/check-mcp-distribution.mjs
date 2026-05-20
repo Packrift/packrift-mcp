@@ -1115,8 +1115,23 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R21" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R22" &&
       agentCapture?.surfaces?.length >= 22 &&
+      agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
+      agentCapture?.counts?.agent_host_fast_paths >= 12 &&
+      agentCapture?.agent_host_fast_paths?.some(
+        (row) =>
+          row.source === "cline_mcp_marketplace" &&
+          row.target === "cline" &&
+          row.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+          row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=sh"
+      ) &&
+      agentCapture?.agent_host_fast_paths?.some(
+        (row) =>
+          row.source === "browse_sh" &&
+          row.source_aware_endpoint === "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http"
+      ) &&
+      agentCapture?.agent_host_fast_paths?.some((row) => row.source === "mcp_so" && /order|revenue/i.test(row.success_gate ?? "")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_agent_host_rollout" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json") &&
       agentCapture?.hub_urls?.agent_host_rollout === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json" &&
@@ -1148,6 +1163,10 @@ async function liveMcpCheck() {
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_source_activation_queue" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_eval_pack" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json" && surface.install_or_call?.includes("create_cart_url")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "claude_desktop_and_claude_code" && surface.install_or_call?.includes("packrift_mcp_source=claude_remote_mcp")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "cursor_windsurf_vscode" && surface.install_or_call?.includes("packrift_mcp_source=cursor_directory")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "codex_remote_mcp" && surface.install_or_call?.includes("packrift_mcp_source=codex_remote_mcp")) &&
+      agentCapture?.surfaces?.some((surface) => surface.id === "browserbase_browse_candidate" && surface.install_or_call?.includes("packrift_mcp_source=browse_sh")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "agent_capture_outreach_packet" && surface.canonical_url === "https://mcp.packrift.com/ai/agent-capture-outreach.json") &&
       adoptionKit?.release === "PACKRIFT-MCP-ADOPTION-KIT-R10" &&
       adoptionKit?.first_five_minutes?.length >= 6 &&
@@ -1631,15 +1650,23 @@ async function liveMcpCheck() {
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
         sourceActivationQueueHtmlResult.text.includes("Install in Cline") ||
         sourceActivationQueueHtmlResult.text.includes("One-command external runner")) &&
-      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02" &&
+      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R03" &&
       trackedOrderMcpSo?.source === "mcp_so" &&
+      trackedOrderMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       trackedOrderMcpSo?.primary_order_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+      trackedOrderMcpSo?.source_specific_first_run_url?.includes("/r/run/mcp_so/generic_streamable_http") &&
+      trackedOrderMcpSo?.source_specific_first_run_shell_url?.includes("format=sh") &&
       trackedOrderMcpSo?.buyer_ready_summary?.includes("Exact SKU 1066") &&
       trackedOrderMcpSo?.product?.sku === "1066" &&
       trackedOrderMcpSo?.product?.variant_id === "53472879935856" &&
       trackedOrderMcpSo?.product?.product_url === "https://packrift.com/products/10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle" &&
       trackedOrderMcpSo?.buyer_action_url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedOrderMcpSo?.buyer_action_url?.includes("mcp_source_context=mcp_so") &&
+      trackedOrderMcpSo?.buyer_action_url?.includes("mcp_install_target=generic_streamable_http") &&
+      trackedOrderMcpSo?.required_shopify_cart_attributes?.includes("packrift_mcp_source_context") &&
+      trackedOrderMcpSo?.required_shopify_cart_attributes?.includes("packrift_mcp_install_target") &&
+      trackedOrderMcpSo?.attribution_rule?.includes("packrift_mcp_source_context") &&
+      trackedOrderMcpSo?.checkout_guardrails?.some((rule) => rule.includes("do not place an order without explicit approval")) &&
       trackedOrderMcpSo?.no_order_created_by_this_page === true &&
       trackedOrderMcpSo?.buyer_confirmation_required === true &&
       trackedOrderMcpSo?.copy_ready_messages?.buyer_request?.includes("only place the order if it is actually approved") &&
@@ -1648,9 +1675,12 @@ async function liveMcpCheck() {
       trackedOrderMcpSoHtmlResult.ok &&
       trackedOrderMcpSoHtmlResult.text.includes("Packrift MCP Buyer Handoff") &&
       trackedOrderMcpSoHtmlResult.text.includes("Review cart in Shopify") &&
+      trackedOrderMcpSoHtmlResult.text.includes("Source Attribution Required") &&
+      trackedOrderMcpSoHtmlResult.text.includes("packrift_mcp_source_context") &&
       trackedOrderMcpSoHtmlResult.text.includes("Product") &&
       trackedOrderMcpSoMarkdownResult.ok &&
       trackedOrderMcpSoMarkdownResult.text.includes("Buyer/Reviewer Order Handoff") &&
+      trackedOrderMcpSoMarkdownResult.text.includes("Source Attribution Required") &&
       sourceOrderResourceMarkdownResult.value?.result?.contents?.[0]?.text?.includes("Buyer/Reviewer Order Handoff") &&
       sourceActivationQueueHtmlResult.text.includes("Shell script") &&
       sourceActivationQueueHtmlResult.text.includes("Update card") &&

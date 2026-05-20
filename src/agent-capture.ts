@@ -21,9 +21,151 @@ interface AgentCaptureSurface {
   notes?: string;
 }
 
+interface AgentHostFastPath {
+  source: string;
+  target: string;
+  host: string;
+  audience: string;
+  source_aware_endpoint: string;
+  tracked_install_url: string;
+  tracked_first_run_url: string;
+  tracked_first_run_shell_url: string;
+  first_run_shell_one_liner: string;
+  reviewer_activation_url: string;
+  reviewer_activation_shell_url: string;
+  eval_pack_url: string;
+  success_gate: string;
+}
+
 function surface(row: AgentCaptureSurface): AgentCaptureSurface {
   return row;
 }
+
+const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+
+function sourceAwareEndpoint(source: string, target: string): string {
+  return `${MCP_ENDPOINT}?packrift_mcp_source=${source}&packrift_mcp_target=${target}`;
+}
+
+function firstRunShellUrl(source: string, target: string): string {
+  return `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`;
+}
+
+function hostFastPath(input: { source: string; target: string; host: string; audience: string; success_gate?: string }): AgentHostFastPath {
+  const shellUrl = firstRunShellUrl(input.source, input.target);
+  return {
+    source: input.source,
+    target: input.target,
+    host: input.host,
+    audience: input.audience,
+    source_aware_endpoint: sourceAwareEndpoint(input.source, input.target),
+    tracked_install_url: `https://mcp.packrift.com/r/install/${input.source}/${input.target}?format=html`,
+    tracked_first_run_url: `https://mcp.packrift.com/r/run/${input.source}/${input.target}?format=html`,
+    tracked_first_run_shell_url: shellUrl,
+    first_run_shell_one_liner: `curl -sS '${shellUrl}' | bash`,
+    reviewer_activation_url: `https://mcp.packrift.com/r/activate/${input.source}?format=html`,
+    reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${input.source}?format=sh`,
+    eval_pack_url: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${input.source}`,
+    success_gate:
+      input.success_gate ??
+      "Run tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url from a real external MCP host; count the source only when the measured /r/cart URL is returned.",
+  };
+}
+
+const AGENT_HOST_FAST_PATHS: AgentHostFastPath[] = [
+  hostFastPath({
+    source: "mcp_so",
+    target: "generic_streamable_http",
+    host: "MCP.so",
+    audience: "MCP directory users and reviewers who already produced source-aware tool calls and now need buyer/order proof.",
+    success_gate:
+      "Use the measured source-aware cart handoff in a real buyer or reviewer procurement flow, then watch for an MCP-attributed order or revenue event.",
+  }),
+  hostFastPath({
+    source: "cline_mcp_marketplace",
+    target: "cline",
+    host: "Cline",
+    audience: "Cline users installing Packrift from the Cline MCP Marketplace issue/listing path.",
+  }),
+  hostFastPath({
+    source: "glama_connector",
+    target: "glama_connector",
+    host: "Glama",
+    audience: "Glama connector users and reviewers validating the hosted Packrift MCP connector.",
+  }),
+  hostFastPath({
+    source: "browse_sh",
+    target: "generic_streamable_http",
+    host: "Browserbase Browse",
+    audience: "Browse/browser-skill agents installing Packrift from the open-web skill catalog.",
+  }),
+  hostFastPath({
+    source: "docker_mcp_catalog",
+    target: "generic_streamable_http",
+    host: "Docker MCP Catalog",
+    audience: "Docker MCP Catalog reviewers or users validating Packrift as a hosted remote MCP server.",
+  }),
+  hostFastPath({
+    source: "cursor_directory",
+    target: "cursor_windsurf_vscode",
+    host: "Cursor",
+    audience: "Cursor users and plugin-directory reviewers adding Packrift as a remote MCP server.",
+  }),
+  hostFastPath({
+    source: "windsurf_direct",
+    target: "cursor_windsurf_vscode",
+    host: "Windsurf",
+    audience: "Windsurf users adding Packrift through remote MCP JSON config.",
+  }),
+  hostFastPath({
+    source: "codex_remote_mcp",
+    target: "codex",
+    host: "Codex",
+    audience: "Codex workspaces adding Packrift without a duplicate local CLI.",
+  }),
+  hostFastPath({
+    source: "claude_remote_mcp",
+    target: "claude_code",
+    host: "Claude",
+    audience: "Claude Code and Claude Desktop users adding Packrift as a remote HTTP MCP server.",
+  }),
+  hostFastPath({
+    source: "openai_chatgpt",
+    target: "generic_streamable_http",
+    host: "OpenAI / ChatGPT agents",
+    audience: "OpenAI and ChatGPT-style agents that can call a remote Streamable HTTP MCP endpoint.",
+  }),
+  hostFastPath({
+    source: "langchain_agent",
+    target: "generic_streamable_http",
+    host: "LangChain",
+    audience: "LangChain agent workflows that can mount remote MCP tools for procurement actions.",
+  }),
+  hostFastPath({
+    source: "llamaindex_agent",
+    target: "generic_streamable_http",
+    host: "LlamaIndex",
+    audience: "LlamaIndex workflows that need exact-spec product lookup plus measured cart handoff.",
+  }),
+  hostFastPath({
+    source: "n8n_automation",
+    target: "generic_streamable_http",
+    host: "n8n",
+    audience: "n8n automation builders wiring packaging procurement into agent or ops workflows.",
+  }),
+  hostFastPath({
+    source: "zapier_automation",
+    target: "generic_streamable_http",
+    host: "Zapier",
+    audience: "Zapier and automation users who need no-auth remote MCP product and cart tools.",
+  }),
+  hostFastPath({
+    source: "mcp_inspector",
+    target: "generic_streamable_http",
+    host: "MCP Inspector",
+    audience: "MCP Inspector reviewers validating tools/list, resources/list, prompts/list, and first cart flow.",
+  }),
+];
 
 export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
   const surfaces = [
@@ -35,9 +177,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       status: "live",
       priority: "core",
       packrift_owned: true,
-      canonical_url: "https://mcp.packrift.com/mcp",
+      canonical_url: MCP_ENDPOINT,
       install_or_call:
-        "Add a remote Streamable HTTP MCP server named packrift at https://mcp.packrift.com/mcp. No buyer-side API key is required for the hosted endpoint.",
+        "Add a remote Streamable HTTP MCP server named packrift at https://mcp.packrift.com/mcp. For source-aware installs, use one of the agent_host_fast_paths entries so the first run credits the right agent host.",
       proof_url: "https://mcp.packrift.com/health",
       fallback_url: "https://mcp.packrift.com/manifest",
       next_action: "Keep tools/list, resources/list, prompts/list, health, and cart handoff smoke checks green.",
@@ -355,8 +497,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       status: "ready",
       priority: "high",
       packrift_owned: false,
-      canonical_url: "https://mcp.packrift.com/mcp",
-      install_or_call: "claude mcp add --transport http packrift https://mcp.packrift.com/mcp",
+      canonical_url: sourceAwareEndpoint("claude_remote_mcp", "claude_code"),
+      install_or_call:
+        "claude mcp add --transport http packrift 'https://mcp.packrift.com/mcp?packrift_mcp_source=claude_remote_mcp&packrift_mcp_target=claude_code'",
       proof_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       fallback_url: "https://github.com/Packrift/packrift-mcp",
       next_action: "Keep Claude install snippets in llms-install.md, README, server card, and marketplace manifests consistent.",
@@ -369,9 +512,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       status: "ready",
       priority: "high",
       packrift_owned: false,
-      canonical_url: "https://mcp.packrift.com/mcp",
+      canonical_url: sourceAwareEndpoint("cursor_directory", "cursor_windsurf_vscode"),
       install_or_call:
-        "{\"mcpServers\":{\"packrift\":{\"type\":\"http\",\"url\":\"https://mcp.packrift.com/mcp\"}}}",
+        "{\"mcpServers\":{\"packrift\":{\"type\":\"http\",\"url\":\"https://mcp.packrift.com/mcp?packrift_mcp_source=cursor_directory&packrift_mcp_target=cursor_windsurf_vscode\"}}}",
       proof_url: "https://mcp.packrift.com/manifest",
       fallback_url: "https://mcp.packrift.com/resources",
       next_action: "Keep the config snippet minimal so IDE agents do not self-host unless they need local development.",
@@ -384,8 +527,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       status: "ready",
       priority: "high",
       packrift_owned: false,
-      canonical_url: "https://mcp.packrift.com/mcp",
-      install_or_call: "codex mcp add packrift --url https://mcp.packrift.com/mcp",
+      canonical_url: sourceAwareEndpoint("codex_remote_mcp", "codex"),
+      install_or_call:
+        "codex mcp add packrift --url 'https://mcp.packrift.com/mcp?packrift_mcp_source=codex_remote_mcp&packrift_mcp_target=codex'",
       proof_url: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
       fallback_url: "https://github.com/Packrift/packrift-mcp",
       next_action: "Keep this as a thin remote endpoint install path; do not fork a separate Packrift CLI surface.",
@@ -526,7 +670,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       install_or_call:
-        "Read the browser-agent bridge, crawl public Packrift resources for discovery, then route live price, inventory, shipping, and cart handoff through https://mcp.packrift.com/mcp.",
+        "Read the browser-agent bridge, crawl public Packrift resources for discovery, then route live price, inventory, shipping, and cart handoff through https://mcp.packrift.com/mcp?packrift_mcp_source=browser_agent_bridge&packrift_mcp_target=generic_streamable_http.",
       proof_url: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
       fallback_url: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       next_action: "Track browser-agent bridge fetches as discovery reads and only count them as qualified demand after MCP tool use or stamped cart progression.",
@@ -541,7 +685,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: false,
       canonical_url: "https://browse.sh/",
       install_or_call:
-        "Install with browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy. The skill is verified, recommended_method=mcp, and routes live facts through https://mcp.packrift.com/mcp.",
+        "Install with browse skills add packrift.com/exact-spec-packaging-procurement-e4ujmy. The skill is verified, recommended_method=mcp, and routes live facts through https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http.",
       proof_url: "https://mcp.packrift.com/SKILL.md",
       fallback_url: "https://mcp.packrift.com/mcp",
       next_action: "Monitor Browse install count and skill quality; keep all Browse usage routed through the hosted MCP endpoint.",
@@ -628,11 +772,13 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R21",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R22",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
-    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    canonical_endpoint: MCP_ENDPOINT,
+    agent_host_fast_paths_release: "PACKRIFT-AGENT-HOST-FAST-PATHS-R01",
+    agent_host_fast_paths: AGENT_HOST_FAST_PATHS,
     hub_urls: {
       json: "https://mcp.packrift.com/ai/all-agent-capture.json",
       markdown: "https://mcp.packrift.com/ai/all-agent-capture.md",
@@ -696,6 +842,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
     ],
     counts: {
       total_surfaces: surfaces.length,
+      agent_host_fast_paths: AGENT_HOST_FAST_PATHS.length,
       live: surfaces.filter((row) => row.status === "live").length,
       ready: surfaces.filter((row) => row.status === "ready").length,
       monitored: surfaces.filter((row) => row.status === "monitored").length,
@@ -713,6 +860,12 @@ function escapeMarkdown(value: string): string {
 
 export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
   const payload = allAgentCapturePayload(runtime);
+  const fastPathRows = payload.agent_host_fast_paths
+    .map(
+      (row) =>
+        `| ${escapeMarkdown(row.host)} | ${row.source} | ${row.target} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${escapeMarkdown(row.success_gate)} |`
+    )
+    .join("\n");
   const rows = payload.surfaces
     .map(
       (row) =>
@@ -741,6 +894,15 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     `- Tools: ${payload.runtime.tools_count}`,
     `- Resources: ${payload.runtime.resources_count}`,
     `- Prompts: ${payload.runtime.prompts_count}`,
+    `- Agent host fast paths: ${payload.counts.agent_host_fast_paths}`,
+    "",
+    "## Agent Host Fast Paths",
+    "",
+    "These are the source-aware install and first-run paths to use before falling back to the generic endpoint.",
+    "",
+    "| Host | Source | Target | Endpoint | Install | First-run shell | Success gate |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    fastPathRows,
     "",
     "## Surfaces",
     "",
