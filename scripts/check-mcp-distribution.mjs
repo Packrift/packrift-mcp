@@ -1886,15 +1886,25 @@ async function liveMcpCheck() {
       evalPack?.tracked_actions?.activation_shell?.includes("/r/activate/") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
-      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R06" &&
+      browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R07" &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.install_count_observed >= 6 &&
       browserbaseBrowseSkillPack?.canonical_endpoint === MCP_ENDPOINT &&
+      browserbaseBrowseSkillPack?.source_aware_endpoint ===
+        "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http" &&
       browserbaseBrowseSkillPack?.browse_skill_candidate?.skill_md_url === "https://mcp.packrift.com/SKILL.md" &&
+      browserbaseBrowseSkillPack?.browse_skill_candidate?.source_aware_endpoint === browserbaseBrowseSkillPack?.source_aware_endpoint &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.check_command === "browse skills find packrift" &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.tracked_start_url === "https://mcp.packrift.com/r/start/browse_sh" &&
       browserbaseBrowseSkillPack?.browse_catalog_submission?.tracked_install_codex_url === "https://mcp.packrift.com/r/install/browse_sh/codex" &&
+      browserbaseBrowseSkillPack?.browse_catalog_submission?.tracked_first_run_shell_url ===
+        "https://mcp.packrift.com/r/run/browse_sh/generic_streamable_http?format=sh" &&
       browserbaseBrowseSkillPack?.skill_md?.canonical_url === "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md" &&
       browserbaseBrowseSkillPack?.demo_sequence?.length >= 6 &&
+      browserbaseBrowseSkillPack?.demo_sequence?.some(
+        (step) =>
+          step?.url === browserbaseBrowseSkillPack?.source_aware_endpoint &&
+          step?.request?.params?.arguments?.source_context === "browse_sh_first_cart_run"
+      ) &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "prepare_purchase_handoff") &&
       browserbaseBrowseSkillPack?.demo_sequence?.some((step) => step?.request?.params?.name === "create_cart_url") &&
       directoryRefresh?.release === "PACKRIFT-MCP-DIRECTORY-REFRESH-R28" &&

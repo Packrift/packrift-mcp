@@ -28,7 +28,7 @@ export const preparePurchaseHandoffSchema = {
       },
       source_context: {
         type: "string",
-        description: "Optional analytics context, such as agent_quick_start, exact_sku_reorder, or browserbase_browse.",
+        description: "Optional analytics context, such as agent_quick_start, exact_sku_reorder, or browse_sh_first_cart_run.",
       },
       journey_id: { type: "string" },
       result_set_id: { type: "string" },
