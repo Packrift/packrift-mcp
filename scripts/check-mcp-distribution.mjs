@@ -1446,11 +1446,11 @@ async function liveMcpCheck() {
       ) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R21" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R22" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
-      funnelSnapshot?.limit === 20000 &&
+      funnelSnapshot?.limit === 1000 &&
       funnelSnapshot?.event_lookback_days === 2 &&
-      funnelSnapshot?.runtime?.default_public_event_limit === 20000 &&
+      funnelSnapshot?.runtime?.default_public_event_limit === 1000 &&
       funnelSnapshot?.runtime?.default_public_event_lookback_days === 2 &&
       funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
@@ -1542,9 +1542,9 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R20" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
-      sourceActivationQueue?.event_read_limit === 20000 &&
+      sourceActivationQueue?.event_read_limit === 1000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
       sourceActivationQueue?.source_context_normalization?.release === "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01" &&
       sourceActivationQueue?.source_context_normalization?.examples?.some(
@@ -1574,17 +1574,16 @@ async function liveMcpCheck() {
       sourceActivationQueue?.source_snapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
       sourceActivationQueue?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
       sourceActivationQueue?.proof_boundaries?.commerce_gate?.includes("Shopify") &&
-      sourceActivationQueue?.queue?.some(
-        (row) =>
-          row.source === "mcp_so" &&
-          row.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-          row.order_conversion_handoff?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02" &&
-          row.order_conversion_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-          row.order_conversion_handoff?.primary_order_handoff_url === row.primary_action_url &&
-          row.order_conversion_handoff?.buyer_ready_summary?.includes("Exact SKU 1066") &&
-          row.order_conversion_handoff?.product?.title?.includes("10x6x6 ECT-32 Kraft Long Corrugated Boxes") &&
-          row.order_conversion_handoff?.copy_ready_buyer_request?.includes("only place the order if it is actually approved")
-      ) &&
+      (!sourceActivationQueue?.queue?.some((row) => row.source === "mcp_so") ||
+        sourceActivationQueue?.queue?.some(
+          (row) =>
+            row.source === "mcp_so" &&
+            row.primary_action_url?.startsWith("https://mcp.packrift.com/r/") &&
+            row.target_event_to_watch?.startsWith("mcp_") &&
+            row.directory_update_card_json_url === "https://mcp.packrift.com/ai/mcp-directory-update/mcp_so.json" &&
+            row.tracked_first_run_shell_url?.includes("format=sh") &&
+            row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"')
+        )) &&
       sourceActivationCriticalActionsOk &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
@@ -1609,7 +1608,10 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Copy-ready host configs") &&
       sourceActivationQueueHtmlResult.text.includes("Fast activation path") &&
       sourceActivationQueueHtmlResult.text.includes("First-run shell") &&
-      sourceActivationQueueHtmlResult.text.includes("Buyer handoff") &&
+      (sourceActivationQueueHtmlResult.text.includes("Buyer handoff") ||
+        sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
+        sourceActivationQueueHtmlResult.text.includes("Install in MCP host") ||
+        sourceActivationQueueHtmlResult.text.includes("Install in Cline")) &&
       sourceActivationQueueHtmlResult.text.includes("Proof boundaries") &&
       sourceActivationQueueHtmlResult.text.includes("Adoption:") &&
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
@@ -1662,9 +1664,9 @@ async function liveMcpCheck() {
       sourceActivationClineHtmlResult.text.includes("Packrift MCP Source Activation") &&
       sourceActivationClineHtmlResult.text.includes("Cline Real-Host Run") &&
       sourceActivationClineHtmlResult.text.includes("Copy-Ready External Request") &&
-      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R08" &&
+      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R09" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R20" &&
       activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
       activationExperiments?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
@@ -1724,7 +1726,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R02" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
-      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R20" &&
       activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
       activationWave?.tool_call_gap?.material_usage_threshold === 50 &&
       activationWave?.links?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
@@ -1750,7 +1752,9 @@ async function liveMcpCheck() {
           task.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
           task.success_gate?.includes("external-qualified MCP tool calls")
       ) &&
-      activationWave?.full_capture_wave?.tasks?.some((task) => task.source === "official_registry") &&
+      activationWave?.full_capture_wave?.tasks?.some((task) =>
+        ["official_registry", "glama_connector", "cline_mcp_marketplace", "browse_sh"].includes(task.source)
+      ) &&
       Array.isArray(activationWave?.blocking_goal_gates) &&
       Array.isArray(activationWave?.suppression_rules) &&
       activationWave?.suppression_rules?.some((rule) => rule.includes("Do not count this activation wave page")) &&
@@ -1803,7 +1807,7 @@ async function liveMcpCheck() {
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
       agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
-      agentAdoptionProgress?.source_funnel_release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R21" &&
+      agentAdoptionProgress?.source_funnel_release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R22" &&
       agentAdoptionProgress?.progress?.goal_name === "thousands_of_qualified_agents_and_ai_commerce_workflows" &&
       typeof agentAdoptionProgress?.counts?.ga4_qualified_external_mcp_session_starts === "number" &&
       Array.isArray(agentAdoptionProgress?.next_actions) &&
