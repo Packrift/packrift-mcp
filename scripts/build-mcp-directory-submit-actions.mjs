@@ -10,6 +10,7 @@ const PREVIOUS_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions/l
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
+const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 
 const DIRECT_STATUS = {
   mcpservers_org: {
@@ -267,7 +268,7 @@ function publicProofLine(pack) {
   const workflowGalleryRelease = proof.mcp_workflow_gallery?.release ?? "PACKRIFT-MCP-WORKFLOW-GALLERY-R01";
   const browserbaseRelease = proof.browserbase_browse_skill_pack?.release ?? "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R06";
   const clientConfigRelease = proof.mcp_client_config?.release ?? "PACKRIFT-MCP-CLIENT-CONFIG-R02";
-  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}.`;
+  return `Current proof: live MCP returns ${tools} tools, ${resources} resources, and ${prompts} prompts. Client config is ${clientConfigRelease}; tracked config template is https://mcp.packrift.com/r/config/{source}. First-run proof is ${firstRunRelease}. Workflow gallery is ${workflowGalleryRelease}. Browserbase Browse SKILL.md is https://mcp.packrift.com/SKILL.md. Browserbase Browse skill pack is ${browserbaseRelease}. Directory refresh pack is ${directoryRelease} with ${directoryTargets} targets. Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}. Guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}.`;
 }
 
 function recrawlMessage(pack, target) {
@@ -302,6 +303,9 @@ function recrawlMessage(pack, target) {
     `- Browser first-run page: ${trackedRunHtml}`,
     `- One-click live proof: ${trackedRunExecute}`,
     `- Reviewer activation browser runner: ${reviewerActivation}`,
+    `- Guarded activation wave runner: ${ACTIVATION_WAVE_RUNNER_URL}`,
+    `- One-command external wave runner: PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS '${ACTIVATION_WAVE_RUNNER_URL}' | bash`,
+    "- Wave runner rule: use this only from a real external reviewer or host context; Packrift self-runs, generated resource fetches, and browser-only proof do not complete source activation.",
     "- Canonical start page: https://mcp.packrift.com/start",
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -366,6 +370,7 @@ function buildAction(pack, previousByName, target) {
       tracked_first_run_generic: trackedRunUrl(target.name, "generic_streamable_http"),
       tracked_first_run_generic_execute: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
       reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+      activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
     },
     recrawl_message: recrawlMessage(pack, target),

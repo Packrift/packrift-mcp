@@ -33,6 +33,7 @@ const SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-so
 const ACTIVATION_EXPERIMENTS_URL = "https://mcp.packrift.com/ai/mcp-activation-experiments.json";
 const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const GA4_FUNNEL_PROOF_URL = "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json";
@@ -328,6 +329,9 @@ function evidenceLinks() {
     mcp_source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
     mcp_source_activation_queue_markdown: SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL,
     mcp_activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+    mcp_activation_wave: ACTIVATION_WAVE_URL,
+    mcp_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
+    mcp_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
     mcp_usage_snapshot: USAGE_SNAPSHOT_URL,
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -390,7 +394,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R20",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R21",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -421,6 +425,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       source_activation_wave: ACTIVATION_WAVE_URL,
       source_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
+      source_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
     },
@@ -434,6 +439,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         activation_experiments: ACTIVATION_EXPERIMENTS_URL,
         activation_wave: ACTIVATION_WAVE_URL,
         activation_wave_html: ACTIVATION_WAVE_HTML_URL,
+        activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
         eval_pack: MCP_EVAL_PACK_URL,
         eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
         usage_snapshot: USAGE_SNAPSHOT_URL,

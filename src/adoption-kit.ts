@@ -111,6 +111,7 @@ const DEVELOPER_EXAMPLES = [
     purpose: "Confirm the hosted Packrift MCP endpoint is reachable before wiring an agent.",
     code: `curl -sS ${MCP_ENDPOINT} \\
   -H 'content-type: application/json' \\
+  -H 'accept: application/json, text/event-stream' \\
   -d '{"jsonrpc":"2.0","id":"tools","method":"tools/list"}'`,
   },
   {
@@ -120,6 +121,7 @@ const DEVELOPER_EXAMPLES = [
     purpose: "Get one AI-approved SKU candidate whose cart handoff starts with the MCP measured landing URL.",
     code: `curl -sS ${MCP_ENDPOINT} \\
   -H 'content-type: application/json' \\
+  -H 'accept: application/json, text/event-stream' \\
   -d '{"jsonrpc":"2.0","id":"candidate-1066","method":"tools/call","params":{"name":"get_cart_handoff_candidates","arguments":{"sku":"1066","limit":1}}}'`,
   },
   {
@@ -129,13 +131,35 @@ const DEVELOPER_EXAMPLES = [
     purpose: "Use fetch to call tools/list, get a cart candidate, and inspect live-check requirements.",
     code: `const endpoint = "${MCP_ENDPOINT}";
 
+async function parseMcpPayload(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {}
+  const dataLines = text
+    .split("\\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trim())
+    .filter(Boolean);
+  for (let index = dataLines.length - 1; index >= 0; index -= 1) {
+    try {
+      return JSON.parse(dataLines[index]);
+    } catch {}
+  }
+  throw new Error("Packrift MCP response was not JSON or event-stream JSON");
+}
+
 async function rpc(id, method, params) {
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "accept": "application/json, text/event-stream"
+    },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, ...(params ? { params } : {}) }),
   });
-  const payload = await response.json();
+  const payload = await parseMcpPayload(response);
   if (payload.error) throw new Error(payload.error.message);
   return payload.result;
 }
@@ -159,6 +183,24 @@ import urllib.request
 
 ENDPOINT = "${MCP_ENDPOINT}"
 
+def parse_mcp_payload(raw):
+    text = raw.decode("utf-8")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    data_lines = [
+        line[len("data:"):].strip()
+        for line in text.splitlines()
+        if line.strip().startswith("data:")
+    ]
+    for line in reversed(data_lines):
+        try:
+            return json.loads(line)
+        except json.JSONDecodeError:
+            continue
+    raise RuntimeError("Packrift MCP response was not JSON or event-stream JSON")
+
 def rpc(id, method, params=None):
     body = {"jsonrpc": "2.0", "id": id, "method": method}
     if params:
@@ -168,12 +210,13 @@ def rpc(id, method, params=None):
         data=json.dumps(body).encode("utf-8"),
         headers={
             "content-type": "application/json",
+            "accept": "application/json, text/event-stream",
             "user-agent": "Packrift-MCP-Example/1.0",
         },
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=20) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+        payload = parse_mcp_payload(response.read())
     if payload.get("error"):
         raise RuntimeError(payload["error"]["message"])
     return payload["result"]
@@ -190,7 +233,7 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
   const demo = DEMO_SKUS[0];
   const shareableSourceLinks = SHAREABLE_SOURCES.map(shareableSourceLink);
   return {
-    release: "PACKRIFT-MCP-ADOPTION-KIT-R09",
+    release: "PACKRIFT-MCP-ADOPTION-KIT-R10",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:

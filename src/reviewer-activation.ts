@@ -4,7 +4,7 @@ import { trackedRunUrl } from "./first-run-action.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
-export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R10";
+export const MCP_REVIEWER_ACTIVATION_RELEASE = "PACKRIFT-MCP-REVIEWER-ACTIVATION-R11";
 export const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 export const MCP_REVIEWER_ACTIVATION_MD_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.md";
 export const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
@@ -553,6 +553,23 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
         cart.textContent = "No measured cart URL returned yet.";
       }
     }
+    async function parseMcpResponse(response) {
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {}
+      const dataLines = text.split("\\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .filter(Boolean);
+      for (let index = dataLines.length - 1; index >= 0; index -= 1) {
+        try {
+          return JSON.parse(dataLines[index]);
+        } catch {}
+      }
+      return { parse_error: "response_not_json_or_event_stream", raw: text.slice(0, 2000) };
+    }
     async function runMcpSequence() {
       runButton.disabled = true;
       cart.textContent = "";
@@ -565,11 +582,12 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
           method: "POST",
           headers: {
             "content-type": "application/json",
+            "accept": "application/json, text/event-stream",
             "Mcp-Session-Id": sessionId
           },
           body: JSON.stringify(request)
         });
-        const body = await response.json().catch(() => ({ parse_error: "response_not_json" }));
+        const body = await parseMcpResponse(response);
         results.push({ status: response.status, request, response: body });
         appendResult(results);
         if (!response.ok || body.error) break;
