@@ -1,6 +1,6 @@
 {
   "name": "packrift-mcp-server",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "description": "MCP server for Packrift exact-spec packaging procurement, live pricing, inventory, reorder, quote, and cart handoff.",
   "private": true,
   "license": "MIT",
