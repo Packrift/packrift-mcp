@@ -462,6 +462,10 @@ async function liveMcpCheck() {
     sourceActivationClineJsonResult,
     sourceActivationClineMarkdownResult,
     sourceActivationClineHtmlResult,
+    sourceActivationCodexJsonResult,
+    sourceActivationClaudeJsonResult,
+    sourceActivationGlamaJsonResult,
+    sourceActivationAnthropicJsonResult,
     activationExperimentsResult,
     activationExperimentsMarkdownResult,
     activationExperimentsHtmlResult,
@@ -571,6 +575,10 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/codex_remote_mcp.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/claude_remote_mcp.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/glama_connector.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-activation/anthropic_connectors_directory.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-experiments.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-experiments.md"),
     fetchText("https://mcp.packrift.com/ai/mcp-activation-experiments.html"),
@@ -656,6 +664,10 @@ async function liveMcpCheck() {
   const ga4FunnelProof = ga4FunnelProofResult.ok ? JSON.parse(ga4FunnelProofResult.text) : null;
   const sourceActivationQueue = sourceActivationQueueResult.ok ? JSON.parse(sourceActivationQueueResult.text) : null;
   const sourceActivationCline = sourceActivationClineJsonResult.ok ? JSON.parse(sourceActivationClineJsonResult.text) : null;
+  const sourceActivationCodex = sourceActivationCodexJsonResult.ok ? JSON.parse(sourceActivationCodexJsonResult.text) : null;
+  const sourceActivationClaude = sourceActivationClaudeJsonResult.ok ? JSON.parse(sourceActivationClaudeJsonResult.text) : null;
+  const sourceActivationGlama = sourceActivationGlamaJsonResult.ok ? JSON.parse(sourceActivationGlamaJsonResult.text) : null;
+  const sourceActivationAnthropic = sourceActivationAnthropicJsonResult.ok ? JSON.parse(sourceActivationAnthropicJsonResult.text) : null;
   const activationExperiments = activationExperimentsResult.ok ? JSON.parse(activationExperimentsResult.text) : null;
   const activationWave = activationWaveResult.ok ? JSON.parse(activationWaveResult.text) : null;
   const agentAdoptionProgress = agentAdoptionProgressResult.ok ? JSON.parse(agentAdoptionProgressResult.text) : null;
@@ -855,6 +867,29 @@ async function liveMcpCheck() {
       row.order_conversion_handoff?.attribution_rule?.includes("packrift_mcp_source_context")
     );
   });
+  const sourceActivationHostPacketsOk =
+    sourceActivationCodex?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03" &&
+    sourceActivationCodex?.source === "codex_remote_mcp" &&
+    sourceActivationCodex?.preferred_target === "codex" &&
+    sourceActivationCodex?.source_aware_endpoint?.includes("packrift_mcp_target=codex") &&
+    sourceActivationCodex?.real_host_run?.first_run_shell_url?.includes("/r/run/codex_remote_mcp/codex") &&
+    sourceActivationCodex?.copy_ready?.codex_command?.includes("packrift_mcp_target=codex") &&
+    sourceActivationClaude?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03" &&
+    sourceActivationClaude?.source === "claude_remote_mcp" &&
+    sourceActivationClaude?.preferred_target === "claude_code" &&
+    sourceActivationClaude?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
+    sourceActivationClaude?.real_host_run?.first_run_shell_url?.includes("/r/run/claude_remote_mcp/claude_code") &&
+    sourceActivationClaude?.copy_ready?.claude_code_command?.includes("packrift_mcp_target=claude_code") &&
+    sourceActivationGlama?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03" &&
+    sourceActivationGlama?.source === "glama_connector" &&
+    sourceActivationGlama?.preferred_target === "glama_connector" &&
+    sourceActivationGlama?.source_aware_endpoint?.includes("packrift_mcp_target=glama_connector") &&
+    sourceActivationGlama?.real_host_run?.first_run_shell_url?.includes("/r/run/glama_connector/glama_connector") &&
+    sourceActivationAnthropic?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03" &&
+    sourceActivationAnthropic?.source === "anthropic_connectors_directory" &&
+    sourceActivationAnthropic?.preferred_target === "claude_code" &&
+    sourceActivationAnthropic?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
+    sourceActivationAnthropic?.real_host_run?.first_run_shell_url?.includes("/r/run/anthropic_connectors_directory/claude_code");
   return check(
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
@@ -1585,7 +1620,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/generic_streamable_http?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 1000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
@@ -1713,7 +1748,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
-      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R02" &&
+      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03" &&
       sourceActivationCline?.source === "cline_mcp_marketplace" &&
       sourceActivationCline?.preferred_target === "cline" &&
       sourceActivationCline?.status === "real_host_tool_call_needed" &&
@@ -1732,9 +1767,10 @@ async function liveMcpCheck() {
       sourceActivationClineHtmlResult.text.includes("Packrift MCP Source Activation") &&
       sourceActivationClineHtmlResult.text.includes("Cline Real-Host Run") &&
       sourceActivationClineHtmlResult.text.includes("Copy-Ready External Request") &&
-      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R10" &&
+      sourceActivationHostPacketsOk &&
+      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R11" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22" &&
       activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       activationExperiments?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-experiments.json?limit=20000&order_days=90&order_limit=250" &&
@@ -1796,7 +1832,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R03" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
-      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21" &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22" &&
       activationWave?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-wave.json?limit=20000&order_days=90&order_limit=250" &&
       activationWave?.links?.activation_wave_operator_json === activationWave?.snapshot_coverage?.operator_url &&

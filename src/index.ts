@@ -4274,6 +4274,12 @@ const SOURCE_ACTIVATION_DIRECTORY_STATUS: Record<string, string> = {
 };
 
 const SOURCE_ACTIVATION_SEED_SOURCES = Object.keys(SOURCE_ACTIVATION_DIRECTORY_STATUS);
+const SOURCE_ACTIVATION_TARGET_OVERRIDES = new Map<string, string>([
+  ...MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.map((rule) => [rule.source_slug, rule.install_target] as const),
+  ["anthropic_connectors_directory", "claude_code"],
+  ["mcpmarket_com", "mcp_marketplace"],
+  ["mcp_marketplace_io", "mcp_marketplace"],
+]);
 
 function emptySourceActivationRow(source: string): PostInstallActivationRow {
   return {
@@ -4303,7 +4309,9 @@ function sourceActivationRowsWithSeeds(rows: PostInstallActivationRow[]): PostIn
 }
 
 function sourcePreferredActivationTarget(source: string): string {
-  if (source === "cline_mcp_marketplace") return "cline";
+  const sourceSlug = normalizeMcpRuntimeSlug(source);
+  const preferredTarget = SOURCE_ACTIVATION_TARGET_OVERRIDES.get(sourceSlug);
+  if (preferredTarget && normalizeInstallTarget(preferredTarget)) return preferredTarget;
   return "generic_streamable_http";
 }
 
@@ -5358,7 +5366,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R21",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R22",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -5801,6 +5809,7 @@ interface SourceActivationExperimentQueueRow {
   eval_pack_markdown_url: string;
   source_aware_endpoint: string;
   fast_activation_path: ReturnType<typeof sourceActivationFastPath>;
+  order_conversion_handoff: ReturnType<typeof sourceActivationOrderConversionHandoff>;
   copy_ready_host_configs: ReturnType<typeof sourceActivationCopyReadyHostConfigs>;
   agent_prompt: string;
   acceptance_criteria: string[];
@@ -5973,6 +5982,7 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       primary_action_url: row.primary_action_url,
       cart_landing_action_url: row.cart_landing_action_url,
       recent_measured_cart_urls: row.recent_measured_cart_urls,
+      order_conversion_handoff: row.order_conversion_handoff,
       source_aware_endpoint: row.source_aware_endpoint,
       fast_activation_path: row.fast_activation_path,
       copy_ready_host_configs: row.copy_ready_host_configs,
@@ -6011,7 +6021,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R10",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R11",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -6141,6 +6151,11 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
       required_cart_url_prefix: row.fast_activation_path.required_cart_url_prefix,
       no_order_created_by_tool_run: row.fast_activation_path.no_order_created,
     },
+    order_conversion_handoff: row.order_conversion_handoff,
+    buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? null,
+    buyer_action_url: row.order_conversion_handoff?.buyer_action_url ?? null,
+    cart_landing_action_url: row.cart_landing_action_url,
+    recent_measured_cart_urls: row.recent_measured_cart_urls,
     cline_real_host_run: isCline
       ? {
           mcp_json: row.copy_ready_host_configs.cline_mcp_json,
@@ -9444,7 +9459,7 @@ const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
-const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R02";
+const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R03";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
