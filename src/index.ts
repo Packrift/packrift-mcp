@@ -3239,7 +3239,7 @@ function publicMcpSnapshotCoverage(pathname: string, limit: number, orderDays: n
       { refresh: true }
     ),
     rule:
-      "Use the fast public default for agent-facing resources, the full operator URL when reviewing adoption history, and the fresh URLs when verifying newly created cart, visitor, or revenue proof.",
+      "Use the fast public default for agent-facing resources, the full operator URL when reviewing adoption history, and the fresh URLs when verifying newly created cart, visitor, or revenue proof. The app also accepts refresh=1 as a fresh-cache alias for operator muscle memory.",
   };
 }
 
@@ -3491,9 +3491,30 @@ function progressPct(count: number, threshold: number) {
   return Number(Math.min(100, (count / threshold) * 100).toFixed(1));
 }
 
+const MCP_MATERIAL_TOOL_USAGE_THRESHOLD = 50;
+
+function finiteNumberOrNull(value: unknown): number | null {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function canonicalFirstPartyMcpToolCallsFromProof(proof?: PublicMcpGa4FunnelProof | null): number | null {
+  return finiteNumberOrNull(proof?.first_party_mcp?.total_tool_calls);
+}
+
+function canonicalMaterialMcpToolUsageMetFromProof(proof?: PublicMcpGa4FunnelProof | null): boolean | null {
+  const proofGateValue = proof?.proof_gate?.mcp_tool_usage_is_material;
+  if (typeof proofGateValue === "boolean") return proofGateValue;
+  const canonicalToolCalls = canonicalFirstPartyMcpToolCallsFromProof(proof);
+  if (canonicalToolCalls === null) return null;
+  return canonicalToolCalls >= MCP_MATERIAL_TOOL_USAGE_THRESHOLD;
+}
+
 function mcpAgentAdoptionProgress(input: {
   eventLookbackDays: number;
   externalQualifiedMcpToolCalls: number;
+  canonicalFirstPartyMcpToolCalls: number | null;
+  canonicalMaterialMcpToolUsageMet: boolean | null;
   qualifiedFirstPartyMcpCartLandings: number;
   uniqueQualifiedMcpIdentitySignals: number;
   uniqueQualifiedMcpSessionIds: number;
@@ -3508,7 +3529,16 @@ function mcpAgentAdoptionProgress(input: {
   firstPartyMcpOrderRevenue: number;
   firstPartyMcpOrderCurrency: string;
 }) {
-  const toolUsageThreshold = 50;
+  const toolUsageThreshold = MCP_MATERIAL_TOOL_USAGE_THRESHOLD;
+  const canonicalToolCalls =
+    typeof input.canonicalFirstPartyMcpToolCalls === "number" && Number.isFinite(input.canonicalFirstPartyMcpToolCalls)
+      ? input.canonicalFirstPartyMcpToolCalls
+      : null;
+  const materialToolUsageCount = canonicalToolCalls ?? input.externalQualifiedMcpToolCalls;
+  const materialToolUsageBasis =
+    canonicalToolCalls !== null || input.canonicalMaterialMcpToolUsageMet !== null
+      ? "published_ga4_funnel_proof_first_party_mcp_total_tool_calls"
+      : "worker_external_qualified_mcp_tool_calls";
   const monthlyVisitorThreshold =
     Number.isFinite(input.ga4QualifiedExternalMcpSessionThreshold) && input.ga4QualifiedExternalMcpSessionThreshold > 0
       ? input.ga4QualifiedExternalMcpSessionThreshold
@@ -3516,7 +3546,10 @@ function mcpAgentAdoptionProgress(input: {
   const monthlyVisitorSignals = Number.isFinite(input.ga4QualifiedExternalMcpSessionStarts)
     ? input.ga4QualifiedExternalMcpSessionStarts
     : input.monthlyQualifiedVisitorSignals;
-  const materialToolUsageMet = input.externalQualifiedMcpToolCalls >= toolUsageThreshold;
+  const materialToolUsageMet =
+    input.canonicalMaterialMcpToolUsageMet !== null
+      ? input.canonicalMaterialMcpToolUsageMet
+      : materialToolUsageCount >= toolUsageThreshold;
   const qualifiedCartLandingMet = input.qualifiedFirstPartyMcpCartLandings > 0;
   const monthlyVisitorGateMet = monthlyVisitorSignals >= monthlyVisitorThreshold;
   const orderGateMet = input.firstPartyMcpOrders > 0 || input.firstPartyMcpOrderRevenue > 0;
@@ -3539,9 +3572,9 @@ function mcpAgentAdoptionProgress(input: {
     ? monthlyVisitorGateMet
       ? "commercial_adoption_proven"
       : "orders_visible_visitor_gate_open"
-    : qualifiedCartLandingMet && input.externalQualifiedMcpToolCalls > 0
+    : qualifiedCartLandingMet && materialToolUsageMet
       ? "activation_visible_orders_missing"
-      : input.externalQualifiedMcpToolCalls > 0
+      : materialToolUsageMet
         ? "mcp_usage_visible_cart_or_order_missing"
         : "activation_not_visible";
 
@@ -3556,10 +3589,21 @@ function mcpAgentAdoptionProgress(input: {
       order_lookback_source: "public_mcp_order_summary",
     },
     proven_activation_signals: {
+      canonical_first_party_mcp_tool_calls: canonicalToolCalls,
       two_day_external_qualified_mcp_tool_calls: input.externalQualifiedMcpToolCalls,
       two_day_qualified_first_party_mcp_cart_landings: input.qualifiedFirstPartyMcpCartLandings,
       two_day_unique_qualified_identity_signals: input.uniqueQualifiedMcpIdentitySignals,
       two_day_unique_qualified_mcp_session_ids: input.uniqueQualifiedMcpSessionIds,
+    },
+    material_tool_usage_gate: {
+      status: materialToolUsageMet ? "proven" : "not_proven",
+      count: materialToolUsageCount,
+      threshold: toolUsageThreshold,
+      remaining_to_threshold: Math.max(0, toolUsageThreshold - materialToolUsageCount),
+      progress_pct: progressPct(materialToolUsageCount, toolUsageThreshold),
+      basis: materialToolUsageBasis,
+      canonical_first_party_mcp_tool_calls: canonicalToolCalls,
+      worker_external_qualified_mcp_tool_calls: input.externalQualifiedMcpToolCalls,
     },
     ga4_monthly_visitor_gate: {
       status: monthlyVisitorGateMet ? "proven" : "not_proven",
@@ -3585,10 +3629,20 @@ function mcpAgentAdoptionProgress(input: {
     },
     progress_bars: {
       material_tool_usage_50: {
+        count: materialToolUsageCount,
+        threshold: toolUsageThreshold,
+        remaining: Math.max(0, toolUsageThreshold - materialToolUsageCount),
+        progress_pct: progressPct(materialToolUsageCount, toolUsageThreshold),
+        basis: materialToolUsageBasis,
+        canonical_first_party_mcp_tool_calls: canonicalToolCalls,
+        worker_external_qualified_mcp_tool_calls: input.externalQualifiedMcpToolCalls,
+      },
+      external_source_activation_tool_calls_50: {
         count: input.externalQualifiedMcpToolCalls,
         threshold: toolUsageThreshold,
         remaining: Math.max(0, toolUsageThreshold - input.externalQualifiedMcpToolCalls),
         progress_pct: progressPct(input.externalQualifiedMcpToolCalls, toolUsageThreshold),
+        basis: "source-aware external activation queue only; this is not the global material usage gate when canonical proof is available",
       },
       monthly_ga4_qualified_visitors_1000: {
         count: monthlyVisitorSignals,
@@ -3605,7 +3659,7 @@ function mcpAgentAdoptionProgress(input: {
     },
     proof_boundaries: {
       mcp_telemetry:
-        "MCP endpoint tool calls, source-aware installs, first-run actions, and /r/cart landings prove activation breadth in the rolling first-party window.",
+        "MCP endpoint tool calls, source-aware installs, first-run actions, and /r/cart landings prove activation breadth. The material usage gate uses the sanitized published GA4 funnel proof when available; source-aware external calls remain a source activation metric.",
       ga4_visitor_gate:
         "The thousands-of-qualified-visitors gate is GA4-qualified external MCP session_start proof; MCP tool calls, proof pages, and shell-run telemetry do not close this gate.",
       commerce_gate:
@@ -4192,8 +4246,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23";
-const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R24";
+const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03";
 const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R07";
 const MCP_BUYER_CHECKOUT_REVIEW_RELEASE = "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
@@ -4696,13 +4750,28 @@ interface AgentHostRolloutQueuePayload {
   snapshot_coverage?: { snapshot_mode?: string; operator_url?: string };
   blocking_goal_gates?: string[];
   source_snapshot?: {
+    funnel_release?: string;
+    funnel_status?: string;
+    snapshot_coverage?: Record<string, unknown>;
     external_qualified_mcp_tool_calls?: number;
+    external_source_activation_tool_calls?: number;
+    canonical_first_party_mcp_tool_calls?: number | null;
+    material_tool_usage_count?: number;
+    material_tool_usage_threshold?: number;
+    material_tool_usage_basis?: string;
+    material_tool_usage_50_plus?: boolean;
+    canonical_material_tool_usage_gate?: Record<string, unknown>;
     qualified_first_party_mcp_cart_landings?: number;
     first_party_mcp_orders?: number;
     first_party_mcp_order_revenue?: number;
+    unique_qualified_mcp_session_ids?: number;
+    unique_qualified_mcp_handoff_ids?: number;
+    unique_qualified_ai_commerce_journey_ids?: number;
     monthly_qualified_visitor_signals?: number;
     monthly_qualified_visitor_threshold?: number;
     monthly_qualified_visitor_remaining?: number;
+    ga4_qualified_external_mcp_session_starts?: number;
+    ga4_qualified_external_mcp_session_threshold?: number;
     unique_qualified_mcp_identity_signals?: number;
   };
   agent_adoption_progress?: { release?: string; status?: string; agent_progress_status?: string };
@@ -4840,6 +4909,46 @@ function mcpAgentHostRolloutRows(sourceQueue?: AgentHostRolloutQueuePayload | nu
   );
 }
 
+function mcpAgentHostRolloutSourceSnapshot(sourceQueue?: AgentHostRolloutQueuePayload | null) {
+  const snapshot = sourceQueue?.source_snapshot;
+  if (!snapshot) return null;
+  return {
+    funnel_release: snapshot.funnel_release,
+    funnel_status: snapshot.funnel_status,
+    snapshot_coverage: snapshot.snapshot_coverage,
+    external_qualified_mcp_tool_calls: snapshot.external_qualified_mcp_tool_calls,
+    external_source_activation_tool_calls: snapshot.external_source_activation_tool_calls,
+    canonical_first_party_mcp_tool_calls: snapshot.canonical_first_party_mcp_tool_calls,
+    material_tool_usage_count: snapshot.material_tool_usage_count,
+    material_tool_usage_threshold: snapshot.material_tool_usage_threshold,
+    material_tool_usage_basis: snapshot.material_tool_usage_basis,
+    material_tool_usage_50_plus: snapshot.material_tool_usage_50_plus,
+    canonical_material_tool_usage_gate: snapshot.canonical_material_tool_usage_gate,
+    qualified_first_party_mcp_cart_landings: snapshot.qualified_first_party_mcp_cart_landings,
+    first_party_mcp_orders: snapshot.first_party_mcp_orders,
+    first_party_mcp_order_revenue: snapshot.first_party_mcp_order_revenue,
+    unique_qualified_mcp_identity_signals: snapshot.unique_qualified_mcp_identity_signals,
+    unique_qualified_mcp_session_ids: snapshot.unique_qualified_mcp_session_ids,
+    unique_qualified_mcp_handoff_ids: snapshot.unique_qualified_mcp_handoff_ids,
+    unique_qualified_ai_commerce_journey_ids: snapshot.unique_qualified_ai_commerce_journey_ids,
+    monthly_qualified_visitor_signals: snapshot.monthly_qualified_visitor_signals,
+    monthly_qualified_visitor_threshold: snapshot.monthly_qualified_visitor_threshold,
+    monthly_qualified_visitor_remaining: snapshot.monthly_qualified_visitor_remaining,
+    ga4_qualified_external_mcp_session_starts: snapshot.ga4_qualified_external_mcp_session_starts,
+    ga4_qualified_external_mcp_session_threshold: snapshot.ga4_qualified_external_mcp_session_threshold,
+  };
+}
+
+function mcpAgentHostRolloutAdoptionProgress(sourceQueue?: AgentHostRolloutQueuePayload | null) {
+  const progress = sourceQueue?.agent_adoption_progress;
+  if (!progress) return null;
+  return {
+    release: progress.release,
+    status: progress.status,
+    agent_progress_status: progress.agent_progress_status,
+  };
+}
+
 function mcpAgentHostRolloutPayload(sourceQueue?: AgentHostRolloutQueuePayload | null) {
   const rows = mcpAgentHostRolloutRows(sourceQueue);
   const targetCounts = rows.reduce<Record<string, number>>((acc, row) => {
@@ -4864,8 +4973,8 @@ function mcpAgentHostRolloutPayload(sourceQueue?: AgentHostRolloutQueuePayload |
       snapshot_mode: sourceQueue?.snapshot_coverage?.snapshot_mode ?? null,
       operator_url: sourceQueue?.snapshot_coverage?.operator_url ?? null,
       blocking_goal_gates: sourceQueue?.blocking_goal_gates ?? [],
-      source_snapshot: sourceQueue?.source_snapshot ?? null,
-      agent_adoption_progress: sourceQueue?.agent_adoption_progress ?? null,
+      source_snapshot: mcpAgentHostRolloutSourceSnapshot(sourceQueue),
+      agent_adoption_progress: mcpAgentHostRolloutAdoptionProgress(sourceQueue),
     },
     no_duplicate_work_rule:
       "Every row points to https://mcp.packrift.com/mcp through source-aware config, install, first-run, and activation links. Do not create a separate Packrift CLI, checkout, or buyer surface.",
@@ -6813,8 +6922,26 @@ async function mcpSourceActivationQueuePayload(
   const blockingGates = Object.entries(funnel.proof_gate)
     .filter(([, value]) => value === false)
     .map(([key]) => key);
+  const materialToolUsageCount = finiteNumberOrNull(funnel.counts.material_tool_usage_count) ?? funnel.counts.external_qualified_mcp_tool_calls;
+  const materialToolUsageThreshold =
+    finiteNumberOrNull(funnel.counts.material_tool_usage_threshold) ?? MCP_MATERIAL_TOOL_USAGE_THRESHOLD;
+  const canonicalFirstPartyMcpToolCalls = finiteNumberOrNull(funnel.counts.canonical_first_party_mcp_tool_calls);
+  const materialToolUsageBasis =
+    typeof funnel.counts.material_tool_usage_basis === "string"
+      ? funnel.counts.material_tool_usage_basis
+      : "worker_external_qualified_mcp_tool_calls";
+  const canonicalMaterialToolUsageGate = {
+    status: funnel.proof_gate.material_tool_usage_50_plus ? "proven" : "not_proven",
+    count: materialToolUsageCount,
+    threshold: materialToolUsageThreshold,
+    remaining_to_threshold: Math.max(0, materialToolUsageThreshold - materialToolUsageCount),
+    progress_pct: progressPct(materialToolUsageCount, materialToolUsageThreshold),
+    basis: materialToolUsageBasis,
+    canonical_first_party_mcp_tool_calls: canonicalFirstPartyMcpToolCalls,
+    worker_external_qualified_mcp_tool_calls: funnel.counts.external_qualified_mcp_tool_calls,
+  };
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -6847,7 +6974,13 @@ async function mcpSourceActivationQueuePayload(
       funnel_status: funnel.status,
       snapshot_coverage: funnel.snapshot_coverage,
       external_qualified_mcp_tool_calls: funnel.counts.external_qualified_mcp_tool_calls,
+      external_source_activation_tool_calls: funnel.counts.external_qualified_mcp_tool_calls,
+      canonical_first_party_mcp_tool_calls: canonicalFirstPartyMcpToolCalls,
+      material_tool_usage_count: materialToolUsageCount,
+      material_tool_usage_threshold: materialToolUsageThreshold,
+      material_tool_usage_basis: materialToolUsageBasis,
       material_tool_usage_50_plus: funnel.proof_gate.material_tool_usage_50_plus,
+      canonical_material_tool_usage_gate: canonicalMaterialToolUsageGate,
       qualified_first_party_mcp_cart_landings: funnel.counts.qualified_first_party_mcp_cart_landings,
       first_party_mcp_orders: funnel.counts.first_party_mcp_orders,
       first_party_mcp_order_revenue: funnel.counts.first_party_mcp_order_revenue,
@@ -6999,7 +7132,17 @@ function publicMcpDerivedResourceCacheMs(kind: string): number {
 function publicMcpDerivedResourceFreshRequested(url: URL): boolean {
   const cache = url.searchParams.get("cache")?.toLowerCase();
   const fresh = url.searchParams.get("fresh")?.toLowerCase();
-  return cache === "skip" || cache === "refresh" || fresh === "1" || fresh === "true" || fresh === "yes";
+  const refresh = url.searchParams.get("refresh")?.toLowerCase();
+  return (
+    cache === "skip" ||
+    cache === "refresh" ||
+    fresh === "1" ||
+    fresh === "true" ||
+    fresh === "yes" ||
+    refresh === "1" ||
+    refresh === "true" ||
+    refresh === "yes"
+  );
 }
 
 function publicMcpDerivedResourceCacheResponse(kind: string, body: string): Response {
@@ -7134,6 +7277,7 @@ function mcpSourceActivationQueueMarkdown(payload: McpSourceActivationQueuePaylo
     `- Funnel release: ${payload.source_snapshot.funnel_release}`,
     `- Funnel status: ${payload.source_snapshot.funnel_status}`,
     `- External-qualified MCP tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}`,
+    `- Canonical material MCP usage: ${payload.source_snapshot.material_tool_usage_count} / ${payload.source_snapshot.material_tool_usage_threshold} (${payload.source_snapshot.material_tool_usage_basis})`,
     `- Qualified MCP cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}`,
     `- Monthly qualified visitor signals: ${payload.source_snapshot.monthly_qualified_visitor_signals} / ${payload.source_snapshot.monthly_qualified_visitor_threshold}`,
     `- Monthly qualified visitor gap: ${payload.source_snapshot.monthly_qualified_visitor_remaining}`,
@@ -7150,7 +7294,8 @@ function mcpSourceActivationQueueMarkdown(payload: McpSourceActivationQueuePaylo
     "## Agent Adoption Progress",
     "",
     `- Status: ${payload.agent_adoption_progress.status}`,
-    `- Tool-call progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- Canonical material usage progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- External source-activation tool calls: ${payload.agent_adoption_progress.progress_bars.external_source_activation_tool_calls_50.count} / ${payload.agent_adoption_progress.progress_bars.external_source_activation_tool_calls_50.threshold}`,
     `- GA4 visitor progress: ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.qualified_external_mcp_session_starts} / ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.threshold}`,
     `- Qualified cart landings: ${payload.agent_adoption_progress.proven_activation_signals.two_day_qualified_first_party_mcp_cart_landings}`,
     `- First-party MCP orders: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_orders}`,
@@ -7379,7 +7524,8 @@ function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload):
         <span>Status: ${escapeHtml(payload.status)}</span>
         <span>Queue: ${payload.queue_count}</span>
         <span>Critical: ${payload.critical_count}</span>
-        <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
+        <span>Material usage: ${payload.source_snapshot.material_tool_usage_count}/${payload.source_snapshot.material_tool_usage_threshold}</span>
+        <span>Source tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
         <span>Cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}</span>
         <span>Qualified visitors: ${payload.source_snapshot.monthly_qualified_visitor_signals}/${payload.source_snapshot.monthly_qualified_visitor_threshold}</span>
         <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
@@ -8911,7 +9057,7 @@ function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpA
     expected_snapshot_delta: {
       source_activation_queue: `Source ${sourceSlug} should appear once install, first-run, MCP tool-call, cart-landing, or order events are visible.`,
       usage_snapshot: "Source-aware tool calls should increment MCP runtime/source counters.",
-      funnel_snapshot: "External-qualified MCP tool calls should move toward the 50+ material usage gate.",
+      funnel_snapshot: "Source-aware tool calls should increase external source-activation depth; canonical material usage comes from the published first-party MCP tool-call proof.",
       ga4_funnel_proof: "Qualified external MCP sessions and cart landings should increase only after external source-side traffic appears.",
     },
     suppression_rules: suppressionRules,
@@ -9198,6 +9344,7 @@ function mcpActivationExperimentsMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     `- Source queue release: ${payload.source_queue_release}`,
     `- External-qualified MCP tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}`,
+    `- Canonical material MCP usage: ${payload.source_snapshot.material_tool_usage_count} / ${payload.source_snapshot.material_tool_usage_threshold}`,
     `- Qualified MCP cart landings: ${payload.source_snapshot.qualified_first_party_mcp_cart_landings}`,
     `- GA4 qualified external MCP sessions: ${payload.source_snapshot.ga4_qualified_external_mcp_session_starts} / ${payload.source_snapshot.ga4_qualified_external_mcp_session_threshold}`,
     `- Monthly qualified visitor signals: ${payload.source_snapshot.monthly_qualified_visitor_signals} / ${payload.source_snapshot.monthly_qualified_visitor_threshold}`,
@@ -9210,7 +9357,7 @@ function mcpActivationExperimentsMarkdown(payload: Awaited<ReturnType<typeof mcp
     "## Agent Adoption Progress",
     "",
     `- Status: ${payload.agent_adoption_progress.status}`,
-    `- Tool-call progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- Canonical material usage progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
     `- GA4 visitor progress: ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.qualified_external_mcp_session_starts} / ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.threshold}`,
     `- Qualified cart landings: ${payload.agent_adoption_progress.proven_activation_signals.two_day_qualified_first_party_mcp_cart_landings}`,
     `- First-party MCP orders: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_orders}`,
@@ -9370,7 +9517,7 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
         <span>Critical: ${payload.critical_count}</span>
         <span>GA4 sessions: ${payload.source_snapshot.ga4_qualified_external_mcp_session_starts}/${payload.source_snapshot.ga4_qualified_external_mcp_session_threshold}</span>
         <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
-        <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
+        <span>Source tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
         <span>Adoption: ${escapeHtml(payload.agent_adoption_progress.status)}</span>
       </div>
@@ -11057,6 +11204,17 @@ async function mcpFunnelSnapshotPayload(
   const createCartUrlCalls = (summary.by_tool ?? []).find((row) => row.key === "create_cart_url")?.count ?? 0;
   const qualifiedMcpToolCalls = countQualifiedPublicMcpToolCalls(events);
   const qualifiedCreateCartUrlCalls = countQualifiedPublicMcpToolCalls(events, "create_cart_url");
+  const canonicalFirstPartyMcpToolCalls = canonicalFirstPartyMcpToolCallsFromProof(ga4CanonicalProof);
+  const canonicalMaterialMcpToolUsageMet = canonicalMaterialMcpToolUsageMetFromProof(ga4CanonicalProof);
+  const materialToolUsageCount = canonicalFirstPartyMcpToolCalls ?? qualifiedMcpToolCalls;
+  const materialToolUsageBasis =
+    canonicalFirstPartyMcpToolCalls !== null || canonicalMaterialMcpToolUsageMet !== null
+      ? "published_ga4_funnel_proof_first_party_mcp_total_tool_calls"
+      : "worker_external_qualified_mcp_tool_calls";
+  const materialToolUsageMet =
+    canonicalMaterialMcpToolUsageMet !== null
+      ? canonicalMaterialMcpToolUsageMet
+      : materialToolUsageCount >= MCP_MATERIAL_TOOL_USAGE_THRESHOLD;
   const cartClicks = (byEvent.cart_click ?? 0) + (byEvent.mcp_cart_click ?? 0);
   const cartLandings = byEvent.mcp_cart_landing ?? 0;
   const startClicks = byEvent.mcp_start_click ?? 0;
@@ -11081,7 +11239,7 @@ async function mcpFunnelSnapshotPayload(
     first_run_execution_seen: firstRunExecutions > 0,
     activation_cart_ready_seen: activationCartReady > 0,
     mcp_runtime_source_continuity_seen: mcpSourceAttributedRuntimeEvents > 0,
-    material_tool_usage_50_plus: qualifiedMcpToolCalls >= 50,
+    material_tool_usage_50_plus: materialToolUsageMet,
     create_cart_url_seen: qualifiedCreateCartUrlCalls > 0,
     qualified_first_party_cart_landing_seen: qualifiedCartLandings > 0,
     first_party_mcp_order_seen: attributedOrderCount > 0,
@@ -11093,6 +11251,8 @@ async function mcpFunnelSnapshotPayload(
   const agentAdoptionProgress = mcpAgentAdoptionProgress({
     eventLookbackDays: PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS,
     externalQualifiedMcpToolCalls: qualifiedMcpToolCalls,
+    canonicalFirstPartyMcpToolCalls,
+    canonicalMaterialMcpToolUsageMet,
     qualifiedFirstPartyMcpCartLandings: qualifiedCartLandings,
     uniqueQualifiedMcpIdentitySignals: uniqueIdentityProof.unique_identity_signals,
     uniqueQualifiedMcpSessionIds: uniqueIdentityProof.unique_mcp_session_ids,
@@ -11170,6 +11330,10 @@ async function mcpFunnelSnapshotPayload(
       qualified_mcp_events_without_identity: uniqueIdentityProof.events_without_identity,
       mcp_tool_calls: mcpToolCalls,
       create_cart_url_calls: createCartUrlCalls,
+      canonical_first_party_mcp_tool_calls: canonicalFirstPartyMcpToolCalls,
+      material_tool_usage_count: materialToolUsageCount,
+      material_tool_usage_threshold: MCP_MATERIAL_TOOL_USAGE_THRESHOLD,
+      material_tool_usage_basis: materialToolUsageBasis,
       external_qualified_mcp_tool_calls: qualifiedMcpToolCalls,
       external_qualified_create_cart_url_calls: qualifiedCreateCartUrlCalls,
       post_install_sources_waiting_on_create_cart_url: postInstallCartActivation.filter(
@@ -11330,6 +11494,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     `- MCP source-attributed runtime events: ${payload.counts.mcp_source_attributed_runtime_events}`,
     `- MCP tool calls: ${payload.counts.mcp_tool_calls}`,
     `- create_cart_url calls: ${payload.counts.create_cart_url_calls}`,
+    `- Canonical material MCP tool calls: ${payload.counts.material_tool_usage_count} / ${payload.counts.material_tool_usage_threshold}`,
     `- External-qualified MCP tool calls: ${payload.counts.external_qualified_mcp_tool_calls}`,
     `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
     `- Source activation priority sources: ${payload.counts.source_activation_priority_sources}`,
@@ -11369,7 +11534,7 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     "",
     `- Release: ${payload.agent_adoption_progress.release}`,
     `- Status: ${payload.agent_adoption_progress.status}`,
-    `- Tool-call progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- Canonical material usage progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
     `- GA4 visitor progress: ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.qualified_external_mcp_session_starts} / ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.threshold}`,
     `- Qualified cart landings: ${payload.agent_adoption_progress.proven_activation_signals.two_day_qualified_first_party_mcp_cart_landings}`,
     `- First-party MCP orders: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_orders}`,
@@ -11593,6 +11758,10 @@ async function mcpAgentAdoptionProgressPayload(
     proof_gate: funnel.proof_gate,
     proof_boundaries: funnel.proof_boundaries,
     counts: {
+      canonical_first_party_mcp_tool_calls: funnel.counts.canonical_first_party_mcp_tool_calls,
+      material_tool_usage_count: funnel.counts.material_tool_usage_count,
+      material_tool_usage_threshold: funnel.counts.material_tool_usage_threshold,
+      material_tool_usage_basis: funnel.counts.material_tool_usage_basis,
       external_qualified_mcp_tool_calls: funnel.counts.external_qualified_mcp_tool_calls,
       external_qualified_create_cart_url_calls: funnel.counts.external_qualified_create_cart_url_calls,
       qualified_first_party_mcp_cart_landings: funnel.counts.qualified_first_party_mcp_cart_landings,
@@ -11714,6 +11883,7 @@ function mcpAgentAdoptionProgressMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     "## Counts",
     "",
+    `- Canonical material MCP tool calls: ${payload.counts.material_tool_usage_count} / ${payload.counts.material_tool_usage_threshold}`,
     `- External-qualified MCP tool calls: ${payload.counts.external_qualified_mcp_tool_calls}`,
     `- External-qualified create_cart_url calls: ${payload.counts.external_qualified_create_cart_url_calls}`,
     `- Qualified MCP cart landings: ${payload.counts.qualified_first_party_mcp_cart_landings}`,
@@ -11775,7 +11945,7 @@ function mcpAgentAdoptionProgressHtml(payload: Awaited<ReturnType<typeof mcpAgen
     payload.progress.progress_bars.monthly_ga4_qualified_visitors_1000,
     payload.progress.progress_bars.first_party_mcp_orders_1,
   ];
-  const labels = ["External-qualified tool calls", "GA4 qualified visitors", "MCP-attributed orders"];
+  const labels = ["Canonical material MCP tool calls", "GA4 qualified visitors", "MCP-attributed orders"];
   const bars = progressBars
     .map(
       (bar, index) => `<article class="bar">
@@ -11847,7 +12017,8 @@ function mcpAgentAdoptionProgressHtml(payload: Awaited<ReturnType<typeof mcpAgen
       <p>${escapeHtml(payload.purpose)}</p>
       <div class="status">
         <span>Status: ${escapeHtml(payload.status)}</span>
-        <span>Tool calls: ${payload.counts.external_qualified_mcp_tool_calls}</span>
+        <span>Material usage: ${payload.counts.material_tool_usage_count}/${payload.counts.material_tool_usage_threshold}</span>
+        <span>Source tool calls: ${payload.counts.external_qualified_mcp_tool_calls}</span>
         <span>Cart landings: ${payload.counts.qualified_first_party_mcp_cart_landings}</span>
         <span>GA4 sessions: ${payload.counts.ga4_qualified_external_mcp_session_starts}/${payload.counts.ga4_qualified_external_mcp_session_threshold}</span>
         <span>Orders: ${payload.counts.first_party_mcp_orders}</span>

@@ -17,7 +17,7 @@ const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/ai-plu
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
-const FETCH_TIMEOUT_MS = 20000;
+const FETCH_TIMEOUT_MS = 90000;
 const execFileAsync = promisify(execFile);
 
 const SURFACE_GUIDANCE = {
@@ -310,6 +310,13 @@ function cacheBustedUrl(url) {
   return parsed.toString();
 }
 
+function freshDerivedUrl(url) {
+  if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
+  const parsed = new URL(url);
+  parsed.searchParams.set("refresh", "1");
+  return parsed.toString();
+}
+
 async function fetchText(url) {
   let lastResult = { ok: false, status: 0, url, text: "", error: "not attempted", attempts: 0 };
   const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) ? 3 : 1;
@@ -494,6 +501,20 @@ async function githubReleaseCheck() {
 }
 
 async function liveMcpCheck() {
+  const derivedCacheWarmupUrls = [
+    "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+    "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+    "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+    MCP_AGENT_HOST_ROLLOUT_JSON_URL,
+    "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
+    "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
+    "https://mcp.packrift.com/ai/mcp-activation-wave.json",
+    MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+    `${MCP_REVENUE_CONVERSION_QUEUE_JSON_URL}?limit=20000&order_days=90&order_limit=250`,
+    `${MCP_BUYER_ORDER_HANDOFFS_JSON_URL}?limit=20000&order_days=90&order_limit=250`,
+  ];
+  await Promise.allSettled(derivedCacheWarmupUrls.map((url) => fetchText(freshDerivedUrl(url))));
+
   const [
     healthResult,
     serverCardResult,
@@ -1516,8 +1537,8 @@ async function liveMcpCheck() {
       preferredDirectProductFeedImmutableGzipOk,
     usage_and_funnel:
       usageSnapshot?.release === "PACKRIFT-MCP-USAGE-SNAPSHOT-R26" &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23" &&
-      funnelSnapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R24" &&
+      funnelSnapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
       ga4FunnelProof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01",
     source_activation:
       sourceActivationCriticalActionsOk &&
@@ -1556,11 +1577,11 @@ async function liveMcpCheck() {
       funnelSnapshot?.runtime_source_inference?.rule_count >= 65,
     openapi_discovery: openApiDiscoveryOk,
     agent_progress:
-      agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
       agentAdoptionProgressHtmlResult.ok,
     agent_host_rollout:
       agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03" &&
-      agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
       agentHostRolloutTasksJsonlResult.ok &&
       agentHostRolloutTasksCsvResult.ok &&
@@ -2109,9 +2130,10 @@ async function liveMcpCheck() {
       agentCapture?.hub_urls?.agent_host_rollout === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json" &&
       agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03" &&
       agentHostRollout?.source_count >= 35 &&
-      agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       agentHostRollout?.activation_queue?.status === "activation_needed" &&
-      agentHostRollout?.activation_queue?.blocking_goal_gates?.includes("material_tool_usage_50_plus") &&
+      !agentHostRollout?.activation_queue?.blocking_goal_gates?.includes("material_tool_usage_50_plus") &&
+      agentHostRollout?.activation_queue?.source_snapshot?.canonical_material_tool_usage_gate?.status === "proven" &&
       typeof agentHostRollout?.activation_queue?.source_snapshot?.external_qualified_mcp_tool_calls === "number" &&
       Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
       agentHostRollout?.rows?.some((row) => row.source === "openai_chatgpt" && row.source_aware_endpoint?.includes("packrift_mcp_source=openai_chatgpt")) &&
@@ -2603,7 +2625,7 @@ async function liveMcpCheck() {
       ) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R24" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       funnelSnapshot?.limit === 1000 &&
       funnelSnapshot?.event_lookback_days === 2 &&
@@ -2661,7 +2683,7 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.measurable_mcp_revenue_seen === "boolean" &&
-      funnelSnapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      funnelSnapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
       funnelSnapshot?.agent_adoption_progress?.goal_name === "thousands_of_qualified_agents_and_ai_commerce_workflows" &&
       typeof funnelSnapshot?.agent_adoption_progress?.progress_bars?.monthly_ga4_qualified_visitors_1000?.progress_pct === "number" &&
       typeof funnelSnapshot?.agent_adoption_progress?.commerce_gate?.first_party_mcp_orders === "number" &&
@@ -2714,7 +2736,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/run/browse_sh/generic_streamable_http?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 20000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
@@ -2749,8 +2771,11 @@ async function liveMcpCheck() {
       sourceActivationQueue?.source_snapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
-      sourceActivationQueue?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
-      sourceActivationQueue?.source_snapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      sourceActivationQueue?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
+      sourceActivationQueue?.source_snapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
+      sourceActivationQueue?.source_snapshot?.canonical_material_tool_usage_gate?.status === "proven" &&
+      typeof sourceActivationQueue?.source_snapshot?.material_tool_usage_count === "number" &&
+      !sourceActivationQueue?.blocking_goal_gates?.includes("material_tool_usage_50_plus") &&
       sourceActivationQueue?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
       sourceActivationQueue?.proof_boundaries?.commerce_gate?.includes("Shopify") &&
       sourceActivationQueue?.critical_actions?.every(
@@ -2831,7 +2856,7 @@ async function liveMcpCheck() {
       revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R04" &&
       revenueConversionQueue?.canonical_endpoint === MCP_ENDPOINT &&
       revenueConversionQueue?.status === "buyer_checkout_needed" &&
-      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       revenueConversionQueue?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json?limit=20000&order_days=90&order_limit=250" &&
       revenueConversionQueue?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
@@ -2870,12 +2895,12 @@ async function liveMcpCheck() {
       trackedOrderCline?.copy_ready_messages?.buyer_request?.includes("only place the order if it is actually approved") &&
       trackedOrderCline?.copy_ready_messages?.agent_prompt?.includes("mcp_source_context=\"cline_mcp_marketplace\"") &&
       trackedOrderCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
-      trackedOrderCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      trackedOrderCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R07" &&
       trackedOrderMcpSo?.source === "mcp_so" &&
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http" &&
-      trackedOrderMcpSo?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      trackedOrderMcpSo?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       trackedOrderMcpSo?.source_activation_queue_runtime?.operator_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250" &&
       trackedOrderMcpSo?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
       Number(trackedOrderMcpSo?.source_activation_state?.current_counts?.mcp_tool_calls ?? 0) >= 1 &&
@@ -2953,7 +2978,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
       revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R04" &&
       revenueConversionQueue?.canonical_endpoint === MCP_ENDPOINT &&
-      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       revenueConversionQueue?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json?limit=20000&order_days=90&order_limit=250" &&
       revenueConversionQueue?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
@@ -3035,8 +3060,8 @@ async function liveMcpCheck() {
       sourceActivationHostPacketsOk &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R13" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
-      activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
+      activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
       activationExperiments?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-experiments.json?limit=20000&order_days=90&order_limit=250" &&
       activationExperiments?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
@@ -3101,7 +3126,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R05" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
-      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       activationWave?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-activation-wave.json?limit=20000&order_days=90&order_limit=250" &&
       activationWave?.links?.activation_wave_operator_json === activationWave?.snapshot_coverage?.operator_url &&
@@ -3223,7 +3248,7 @@ async function liveMcpCheck() {
       externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R09" &&
       externalActivationBrief?.canonical_endpoint === MCP_ENDPOINT &&
       externalActivationBrief?.activation_wave_release === activationWave?.release &&
-      externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       externalActivationBrief?.proof_urls?.external_activation_brief_json === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       externalActivationBrief?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       externalActivationBrief?.proof_urls?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
@@ -3423,8 +3448,8 @@ async function liveMcpCheck() {
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
-      agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
-      agentAdoptionProgress?.source_funnel_release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23" &&
+      agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R03" &&
+      agentAdoptionProgress?.source_funnel_release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R24" &&
       agentAdoptionProgress?.snapshot_coverage?.snapshot_mode === "full_operator_snapshot" &&
       agentAdoptionProgress?.snapshot_coverage?.operator_url ===
         "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json?limit=20000&order_days=90&order_limit=250" &&
@@ -3818,7 +3843,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_install_matrix === "https://mcp.packrift.com/ai/mcp-install-matrix.json" &&
       directorySubmitActions?.source_client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       directorySubmitActions?.source_eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
-      directorySubmitActions?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      directorySubmitActions?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       directorySubmitActions?.source_activation_queue_runtime?.status === "activation_needed" &&
       directorySubmitActions?.source_activation_queue_runtime?.operator_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json?limit=20000&order_days=90&order_limit=250" &&
       directorySubmitActions?.source_activation_queue_runtime?.row_count > 0 &&
@@ -3828,7 +3853,7 @@ async function liveMcpCheck() {
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
       directoryUpdateCline?.duplicate_work_guard?.status === "monitor_existing_submission" &&
       directoryUpdateCline?.directory?.duplicate_work_guard?.status === "monitor_existing_submission" &&
-      directoryUpdateCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      directoryUpdateCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       ["mcp_tool_call", "mcp_attributed_order"].includes(directoryUpdateCline?.source_activation_state?.target_event_to_watch) &&
       (directoryUpdateCline?.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=html" ||
         directoryUpdateCline?.source_activation_state?.primary_action_url ===
@@ -3877,7 +3902,7 @@ async function liveMcpCheck() {
       directoryUpdatePunkpeye?.source === "punkpeye_awesome_mcp" &&
       directoryUpdatePunkpeye?.source_release_readiness?.status === "blocked_by_glama_source_quality" &&
       directoryUpdateMcpSo?.source === "mcp_so" &&
-      directoryUpdateMcpSo?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
+      directoryUpdateMcpSo?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R27" &&
       directoryUpdateMcpSo?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
       directoryUpdateMcpSo?.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       directoryUpdateMcpSo?.tracked_urls?.config?.startsWith("https://mcp.packrift.com/r/config/mcp_so") &&
