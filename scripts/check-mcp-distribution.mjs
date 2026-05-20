@@ -847,6 +847,11 @@ async function liveMcpCheck() {
             row.one_command_external_runner?.includes("| bash")
         )
       : sourceActivationCriticalActions.some((row) => row.external_activation_required === true && row.operator_safety_rule?.includes("Do not ")) &&
+        sourceActivationCriticalActions.every(
+          (row) =>
+            ["real_mcp_tool_call_needed", "cart_landing_needed", "buyer_checkout_needed", "activation_needed"].includes(row.status) &&
+            row.activation_status === row.status
+        ) &&
         sourceActivationCriticalActions.some(
           (row) =>
             row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
