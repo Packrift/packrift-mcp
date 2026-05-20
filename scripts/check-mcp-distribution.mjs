@@ -764,6 +764,7 @@ async function liveMcpCheck() {
       row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
       row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") ||
       row.primary_action_url?.includes("/r/run/cline_mcp_marketplace/cline?format=html") ||
+      row.primary_action_url?.includes("/r/order/cline_mcp_marketplace?format=html") ||
       row.primary_action_url?.includes("/r/cart/1066");
     const commonOk =
       targetEventOk &&
@@ -815,9 +816,13 @@ async function liveMcpCheck() {
     return (
       row.order_conversion_handoff?.status === "order_proof_needed" &&
       row.order_conversion_handoff?.source === "cline_mcp_marketplace" &&
-      row.primary_action_url?.includes("/r/cart/1066") &&
-      row.primary_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
-      row.primary_action_url?.includes("mcp_install_target=cline") &&
+      row.primary_action_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+      row.order_conversion_handoff?.buyer_handoff_url === row.primary_action_url &&
+      row.order_conversion_handoff?.primary_order_handoff_url === row.primary_action_url &&
+      row.order_conversion_handoff?.buyer_ready_summary?.includes("Exact SKU 1066") &&
+      row.order_conversion_handoff?.product?.sku === "1066" &&
+      row.order_conversion_handoff?.product?.variant_id === "53472879935856" &&
+      row.order_conversion_handoff?.product?.product_url?.includes("/products/10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle") &&
       row.cart_landing_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
       row.order_conversion_handoff?.buyer_action_url?.includes("/r/cart/1066") &&
       row.order_conversion_handoff?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
@@ -1524,7 +1529,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 20000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
@@ -1559,8 +1564,12 @@ async function liveMcpCheck() {
       sourceActivationQueue?.queue?.some(
         (row) =>
           row.source === "mcp_so" &&
-          row.order_conversion_handoff?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R01" &&
+          row.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+          row.order_conversion_handoff?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02" &&
           row.order_conversion_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+          row.order_conversion_handoff?.primary_order_handoff_url === row.primary_action_url &&
+          row.order_conversion_handoff?.buyer_ready_summary?.includes("Exact SKU 1066") &&
+          row.order_conversion_handoff?.product?.title?.includes("10x6x6 ECT-32 Kraft Long Corrugated Boxes") &&
           row.order_conversion_handoff?.copy_ready_buyer_request?.includes("only place the order if it is actually approved")
       ) &&
       sourceActivationCriticalActionsOk &&
@@ -1595,17 +1604,24 @@ async function liveMcpCheck() {
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
         sourceActivationQueueHtmlResult.text.includes("Install in Cline") ||
         sourceActivationQueueHtmlResult.text.includes("One-command external runner")) &&
-      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R01" &&
+      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02" &&
       trackedOrderMcpSo?.source === "mcp_so" &&
+      trackedOrderMcpSo?.primary_order_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+      trackedOrderMcpSo?.buyer_ready_summary?.includes("Exact SKU 1066") &&
+      trackedOrderMcpSo?.product?.sku === "1066" &&
+      trackedOrderMcpSo?.product?.variant_id === "53472879935856" &&
+      trackedOrderMcpSo?.product?.product_url === "https://packrift.com/products/10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle" &&
       trackedOrderMcpSo?.buyer_action_url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedOrderMcpSo?.buyer_action_url?.includes("mcp_source_context=mcp_so") &&
       trackedOrderMcpSo?.no_order_created_by_this_page === true &&
       trackedOrderMcpSo?.buyer_confirmation_required === true &&
       trackedOrderMcpSo?.copy_ready_messages?.buyer_request?.includes("only place the order if it is actually approved") &&
+      trackedOrderMcpSo?.copy_ready_messages?.agent_prompt?.includes("Required tool sequence") &&
       trackedOrderMcpSo?.proof_gate?.name === "mcp_attributed_order" &&
       trackedOrderMcpSoHtmlResult.ok &&
       trackedOrderMcpSoHtmlResult.text.includes("Packrift MCP Buyer Handoff") &&
-      trackedOrderMcpSoHtmlResult.text.includes("Open source-preserving cart") &&
+      trackedOrderMcpSoHtmlResult.text.includes("Review cart in Shopify") &&
+      trackedOrderMcpSoHtmlResult.text.includes("Product") &&
       trackedOrderMcpSoMarkdownResult.ok &&
       trackedOrderMcpSoMarkdownResult.text.includes("Buyer/Reviewer Order Handoff") &&
       sourceOrderResourceMarkdownResult.value?.result?.contents?.[0]?.text?.includes("Buyer/Reviewer Order Handoff") &&
@@ -1635,7 +1651,7 @@ async function liveMcpCheck() {
       sourceActivationClineHtmlResult.text.includes("Copy-Ready External Request") &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R08" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
       activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
       activationExperiments?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
@@ -1695,7 +1711,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationWave?.release === "PACKRIFT-MCP-ACTIVATION-WAVE-R01" &&
       activationWave?.canonical_endpoint === MCP_ENDPOINT &&
-      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
+      activationWave?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19" &&
       activationWave?.no_duplicate_work_rule?.includes("Do not build a separate Packrift CLI") &&
       activationWave?.tool_call_gap?.material_usage_threshold === 50 &&
       activationWave?.links?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&

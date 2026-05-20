@@ -3848,7 +3848,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
 
 const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R21";
 const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01";
-const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R01";
+const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R02";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -4607,20 +4607,56 @@ function sourceActivationOrderCartUrl(source: string, target: string): string {
   return url.toString();
 }
 
+function sourceActivationOrderHandoffProduct() {
+  const fallback = {
+    sku: "1066",
+    productId: "15061650243952",
+    variantId: "53472879935856",
+    handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
+    title: "10x6x6 ECT-32 Kraft Long Corrugated Boxes - 25 Bundle",
+    family: "boxes",
+    riskFlags: "chatgpt_paid_priority",
+  };
+  const item = APPROVED_CATALOG_BY_SKU.get(fallback.sku) ?? fallback;
+  return {
+    sku: item.sku,
+    title: item.title,
+    variant_id: item.variantId,
+    product_id: item.productId,
+    handle: item.handle,
+    family: item.family,
+    product_url: `https://packrift.com/products/${encodeURIComponent(item.handle)}`,
+    catalog_status: "AI_APPROVE",
+    static_price_inventory_rule:
+      "Do not trust a static price or inventory value from this page. Confirm live price with get_pricing, inventory with check_inventory, and final shipping/tax/total in Shopify checkout.",
+  };
+}
+
 function sourceActivationOrderHandoffPayload(source: string, target = sourcePreferredActivationTarget(source)) {
   const sourceSlug = normalizeMcpRuntimeSlug(source) || "generic";
   const targetSlug = normalizeMcpRuntimeSlug(target) || sourcePreferredActivationTarget(sourceSlug);
   const urls = sourceActivationUrls(sourceSlug);
   const firstUsefulRun = mcpFirstUsefulRun(sourceSlug, targetSlug);
   const buyerActionUrl = sourceActivationOrderCartUrl(sourceSlug, targetSlug);
+  const product = sourceActivationOrderHandoffProduct();
+  const buyerReadySummary =
+    `Exact SKU ${product.sku} (${product.title}), quantity 1, source-preserving MCP cart handoff. Buyer must confirm live price, inventory, shipping, tax, and final total in Shopify before placing any order.`;
   const buyerPrompt =
-    `Use Packrift MCP source ${sourceSlug} to prepare a real purchase handoff for SKU 1066. Confirm exact SKU 1066, live price, inventory, quantity 1, shipping/tax at checkout, and buyer approval before placing any order. Return the measured MCP cart URL first; continue through Shopify checkout only if the buyer confirms.`;
+    `Use Packrift MCP source ${sourceSlug} to prepare a real purchase handoff for SKU ${product.sku}. Confirm exact SKU ${product.sku}, variant ${product.variant_id}, live price, inventory, quantity 1, shipping/tax at checkout, and buyer approval before placing any order. Return the measured MCP cart URL first; continue through Shopify checkout only if the buyer confirms.`;
+  const agentPrompt = [
+    firstUsefulRun.agent_prompt,
+    "",
+    "Buyer-side checkout rule:",
+    buyerReadySummary,
+    "Open the source-preserving cart only for buyer/reviewer review. Do not place an order unless the buyer explicitly approves after seeing the Shopify checkout totals.",
+  ].join("\n");
   const reviewerRequest = [
     "Packrift MCP already has source-attributed activation proof for this path.",
     `Source: ${sourceSlug}`,
     "Hosted endpoint: https://mcp.packrift.com/mcp",
     `Buyer/reviewer handoff: ${urls.order_handoff_html_url}`,
     `Source-preserving cart: ${buyerActionUrl}`,
+    `Product: ${product.title} (${product.sku})`,
     `Real MCP runner: ${urls.reviewer_activation_runner_url}`,
     `Eval pack: ${urls.eval_pack_json_url}`,
     "",
@@ -4636,13 +4672,16 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
       "This is a thin source-specific handoff around the existing hosted MCP endpoint and measured /r/cart URL. It is not a Packrift CLI, replacement storefront, or synthetic order proof.",
     sku: "1066",
     quantity: 1,
+    product,
+    buyer_ready_summary: buyerReadySummary,
     source_aware_endpoint: firstUsefulRun.endpoint,
     buyer_action_url: buyerActionUrl,
+    primary_order_handoff_url: urls.order_handoff_html_url,
     measured_cart_url: buyerActionUrl,
     no_order_created_by_this_page: true,
     buyer_confirmation_required: true,
     live_confirmation_required: [
-      "Exact SKU 1066",
+      `Exact SKU ${product.sku} and variant ${product.variant_id}`,
       "Live price and currency from get_pricing",
       "In-stock status from check_inventory",
       "Buyer-selected quantity",
@@ -4652,9 +4691,9 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
     buyer_prompt: buyerPrompt,
     copy_ready_messages: {
       buyer_request:
-        `Can you review this Packrift MCP cart handoff for SKU 1066? It came from source ${sourceSlug}. Open ${buyerActionUrl}, confirm the product/price/quantity/shipping in Shopify, and only place the order if it is actually approved.`,
+        `Can you review this Packrift MCP cart handoff for SKU ${product.sku} (${product.title})? It came from source ${sourceSlug}. Open ${buyerActionUrl}, confirm the product/price/quantity/shipping in Shopify, and only place the order if it is actually approved.`,
       reviewer_request: reviewerRequest,
-      agent_prompt: buyerPrompt,
+      agent_prompt: agentPrompt,
       directory_comment:
         `Packrift MCP source ${sourceSlug} has a buyer/reviewer handoff for the hosted endpoint: ${urls.order_handoff_html_url}. It preserves source attribution and requires buyer confirmation before Shopify checkout.`,
     },
@@ -4702,6 +4741,10 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
     "",
     `- SKU: ${payload.sku}`,
     `- Quantity: ${payload.quantity}`,
+    `- Product: ${payload.product.title}`,
+    `- Variant ID: ${payload.product.variant_id}`,
+    `- Product URL: ${payload.product.product_url}`,
+    `- Buyer-ready summary: ${payload.buyer_ready_summary}`,
     `- Source-preserving cart: ${payload.buyer_action_url}`,
     `- No order created by this page: ${payload.no_order_created_by_this_page ? "yes" : "no"}`,
     `- Buyer confirmation required: ${payload.buyer_confirmation_required ? "yes" : "no"}`,
@@ -4759,9 +4802,10 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
     h2{margin:0 0 8px;font-size:1.1rem;letter-spacing:0}
     p{margin:0;color:var(--muted);max-width:820px}
     a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
-    .status,.actions{display:flex;flex-wrap:wrap;gap:8px}
+    .status,.actions,.product-grid{display:flex;flex-wrap:wrap;gap:8px}
     .status span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
     section{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+    .product-grid span{border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--muted);background:#f9faf8}
     .button{display:inline-flex;align-items:center;min-height:42px;border:1px solid var(--ink);border-radius:6px;padding:9px 12px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
     .warning{color:var(--red);font-weight:650}
@@ -4776,6 +4820,7 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
     <header>
       <h1>Packrift MCP Buyer Handoff</h1>
       <p>${escapeHtml(payload.no_duplicate_surface_rule)}</p>
+      <p>${escapeHtml(payload.buyer_ready_summary)}</p>
       <div class="status">
         <span>Source: ${escapeHtml(payload.source)}</span>
         <span>Target: ${escapeHtml(payload.preferred_target)}</span>
@@ -4784,11 +4829,23 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
         <span>No order created here</span>
       </div>
       <div class="actions">
-        <a class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Open source-preserving cart</a>
+        <a class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Review cart in Shopify</a>
+        <a class="button" href="${escapeHtml(payload.product.product_url)}">View product</a>
         <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Run real MCP check</a>
         <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">Watch proof gate</a>
       </div>
     </header>
+    <section>
+      <h2>Product</h2>
+      <p>${escapeHtml(payload.product.title)}</p>
+      <div class="product-grid">
+        <span>SKU ${escapeHtml(payload.product.sku)}</span>
+        <span>Variant ${escapeHtml(payload.product.variant_id)}</span>
+        <span>${escapeHtml(payload.product.family)}</span>
+        <span>${escapeHtml(payload.product.catalog_status)}</span>
+      </div>
+      <p>${escapeHtml(payload.product.static_price_inventory_rule)}</p>
+    </section>
     <section>
       <h2>Required Before Checkout</h2>
       <ul>${payload.live_confirmation_required.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
@@ -4832,6 +4889,9 @@ function sourceActivationOrderConversionHandoff(
     buyer_handoff_url: buyerHandoff.links.order_handoff_html,
     buyer_handoff_json_url: buyerHandoff.links.order_handoff_json,
     buyer_handoff_markdown_url: buyerHandoff.links.order_handoff_markdown,
+    primary_order_handoff_url: buyerHandoff.primary_order_handoff_url,
+    buyer_ready_summary: buyerHandoff.buyer_ready_summary,
+    product: buyerHandoff.product,
     buyer_action_url: sourcePreservingCartUrl,
     previous_measured_cart_url: row.recent_measured_cart_urls[0] ?? null,
     source_aware_endpoint: firstUsefulRun.endpoint,
@@ -5035,7 +5095,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
 
 function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
   if (sourceActivationHasToolAndCartProof(row)) {
-    return sourceActivationOrderCartUrl(row.source, urls.preferred_target);
+    return urls.order_handoff_html_url;
   }
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) {
     return row.recent_measured_cart_urls[0] ?? urls.reviewer_activation_runner_url;
@@ -5168,7 +5228,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R19",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -5358,10 +5418,13 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
     .map((row, index) => {
       const counts = row.current_counts;
       const cartLandingActionUrl = row.cart_landing_action_url || "";
+      const buyerHandoffUrl = row.order_conversion_handoff?.buyer_handoff_url ?? "";
       const needsHostToolCall = row.target_event_to_watch.startsWith("mcp_tool_call") && counts.mcp_tool_calls === 0;
-      const primaryLabel = cartLandingActionUrl
-        ? "Share returned cart URL"
-        : needsHostToolCall && row.preferred_target === "cline"
+      const primaryLabel = buyerHandoffUrl
+        ? "Buyer handoff"
+        : cartLandingActionUrl
+          ? "Share returned cart URL"
+          : needsHostToolCall && row.preferred_target === "cline"
           ? "Install in Cline"
           : needsHostToolCall
             ? "Install in MCP host"
@@ -5370,8 +5433,8 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         cartLandingActionUrl && row.reviewer_activation_runner_url !== row.primary_action_url
           ? `<a class="button" href="${escapeHtml(row.reviewer_activation_runner_url)}">Run real MCP check</a>`
           : "";
-      const buyerHandoffLink = row.order_conversion_handoff?.buyer_handoff_url
-        ? `<a class="button primary" href="${escapeHtml(row.order_conversion_handoff.buyer_handoff_url)}">Buyer handoff</a>`
+      const buyerHandoffLink = buyerHandoffUrl && buyerHandoffUrl !== row.primary_action_url
+        ? `<a class="button primary" href="${escapeHtml(buyerHandoffUrl)}">Buyer handoff</a>`
         : "";
       const hostConfigLink =
         needsHostToolCall && row.tracked_install_json_url
