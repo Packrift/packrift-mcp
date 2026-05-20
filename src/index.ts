@@ -3314,6 +3314,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
   const directAgentResourceSources = [
     "mcp_start",
     "all_agent_capture",
+    "mcp_agent_host_rollout",
     "mcp_adoption_kit",
     "mcp_install_matrix",
     "mcp_install_actions",
@@ -3425,6 +3426,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
       direct_agent_resource_sources: directAgentResourceSources,
       mcp_start_resource_events: bySource.mcp_start ?? 0,
       adoption_kit_resource_events: bySource.mcp_adoption_kit ?? 0,
+      agent_host_rollout_resource_events: bySource.mcp_agent_host_rollout ?? 0,
       install_matrix_resource_events: bySource.mcp_install_matrix ?? 0,
       install_actions_resource_events: bySource.mcp_install_actions ?? 0,
       first_run_actions_resource_events: bySource.mcp_first_run_actions ?? 0,
@@ -3631,6 +3633,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
     `- Direct agent resource events: ${payload.counts.direct_agent_resource_events}`,
     `- MCP start resource events: ${payload.counts.mcp_start_resource_events}`,
     `- Adoption kit resource events: ${payload.counts.adoption_kit_resource_events}`,
+    `- Agent host rollout resource events: ${payload.counts.agent_host_rollout_resource_events}`,
     `- Install matrix resource events: ${payload.counts.install_matrix_resource_events}`,
     `- Install actions resource events: ${payload.counts.install_actions_resource_events}`,
     `- First-run actions resource events: ${payload.counts.first_run_actions_resource_events}`,
@@ -3900,7 +3903,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|mcp_buyer_use_cases|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_directory_refresh|mcp_activation_experiments|mcp_activation_wave|mcp_source_activation_packet|mcp_order_handoff|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_source_activation_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {

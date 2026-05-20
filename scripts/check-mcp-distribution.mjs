@@ -1295,6 +1295,7 @@ async function liveMcpCheck() {
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "langchain_agent") &&
       usageSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "n8n_automation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_start") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_agent_host_rollout") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_client_config") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_cart_activation") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_funnel_snapshot") &&
@@ -1313,6 +1314,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.mcp_first_run_execution_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_install_copy_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_activation_cart_ready_events === "number" &&
+      typeof usageSnapshot?.counts?.agent_host_rollout_resource_events === "number" &&
       typeof usageSnapshot?.counts?.reviewer_activation_resource_events === "number" &&
       typeof usageSnapshot?.counts?.order_handoff_resource_events === "number" &&
       typeof usageSnapshot?.counts?.source_activation_packet_resource_events === "number" &&
@@ -2368,6 +2370,7 @@ async function liveMcpCheck() {
       usage_snapshot_install_copy_sources: usageSnapshot?.source_attribution?.install_copy_sources ?? [],
       usage_snapshot_install_copy_targets: usageSnapshot?.source_attribution?.install_copy_targets ?? [],
       usage_snapshot_direct_agent_resource_sources: usageSnapshot?.counts?.direct_agent_resource_sources ?? [],
+      usage_snapshot_agent_host_rollout_resource_events: usageSnapshot?.counts?.agent_host_rollout_resource_events ?? null,
       usage_snapshot_activation_experiments_resource_events: usageSnapshot?.counts?.activation_experiments_resource_events ?? null,
       usage_snapshot_eval_pack_resource_events: usageSnapshot?.counts?.eval_pack_resource_events ?? null,
       funnel_snapshot_release: funnelSnapshot?.release ?? null,
