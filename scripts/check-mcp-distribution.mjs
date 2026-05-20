@@ -1079,7 +1079,7 @@ async function liveMcpCheck() {
     json_ok: buyerOrderHandoffsResult.ok,
     markdown_ok: buyerOrderHandoffsMarkdownResult.ok,
     html_ok: buyerOrderHandoffsHtmlResult.ok,
-    release: buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R02",
+    release: buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R03",
     status: buyerOrderHandoffs?.status === "buyer_reviewer_handoffs_ready",
     canonical_endpoint: buyerOrderHandoffs?.canonical_endpoint === MCP_ENDPOINT,
     json_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_json === MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
@@ -1087,6 +1087,13 @@ async function liveMcpCheck() {
     html_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
     revenue_queue_link: buyerOrderHandoffs?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
     handoff_rows_present: buyerOrderHandoffRows.length >= 1,
+    mature_source_coverage:
+      buyerOrderHandoffs?.mature_revenue_source_count === revenueConversionRows.length &&
+      buyerOrderHandoffs?.order_handoff_count === revenueConversionRows.length &&
+      buyerOrderHandoffs?.source_coverage?.release === "PACKRIFT-MCP-BUYER-HANDOFF-COVERAGE-R01" &&
+      buyerOrderHandoffs?.source_coverage?.status === "all_mature_sources_have_buyer_handoffs" &&
+      Array.isArray(buyerOrderHandoffs?.source_coverage?.missing_handoff_sources) &&
+      buyerOrderHandoffs.source_coverage.missing_handoff_sources.length === 0,
     mcp_so_handoff: buyerOrderHandoffRows.some(
       (row) =>
         row.source === "mcp_so" &&
@@ -4010,7 +4017,9 @@ async function liveMcpCheck() {
         release: buyerOrderHandoffs?.release ?? null,
         hub_status: buyerOrderHandoffs?.status ?? null,
         handoff_count: buyerOrderHandoffRows.length,
+        mature_revenue_source_count: buyerOrderHandoffs?.mature_revenue_source_count ?? null,
         sources: buyerOrderHandoffRows.map((row) => row.source),
+        source_coverage: buyerOrderHandoffs?.source_coverage ?? null,
         diagnostics: buyerOrderHandoffsDiagnostics,
       },
       agent_adoption_progress_release: agentAdoptionProgress?.release ?? null,

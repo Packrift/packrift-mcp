@@ -7595,17 +7595,36 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
     acceptance_criteria: row.acceptance_criteria,
     current_counts: row.current_counts,
   }));
+  const matureRevenueSources = revenue.rows.map((row) => row.source);
+  const handoffSources = handoffs.map((row) => row.source);
+  const handoffSourceSet = new Set(handoffSources);
+  const missingHandoffSources = matureRevenueSources.filter((source) => !handoffSourceSet.has(source));
   return {
     release: MCP_BUYER_ORDER_HANDOFFS_RELEASE,
     generated_at: new Date().toISOString(),
     canonical_endpoint: revenue.canonical_endpoint,
-    status: handoffs.length ? "buyer_reviewer_handoffs_ready" : "no_mature_sources_ready",
+    status: missingHandoffSources.length
+      ? "buyer_handoff_coverage_gap"
+      : handoffs.length
+        ? "buyer_reviewer_handoffs_ready"
+        : "no_mature_sources_ready",
     purpose:
       "Thin buyer/reviewer handoff hub for mature Packrift MCP sources. It points to existing source-specific /r/order and /r/cart handoffs, preserves MCP attribution, and never places an order.",
     source_queue_release: revenue.source_queue_release,
     revenue_conversion_queue_release: revenue.release,
     revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
+    mature_revenue_source_count: matureRevenueSources.length,
     order_handoff_count: handoffs.length,
+    source_coverage: {
+      release: "PACKRIFT-MCP-BUYER-HANDOFF-COVERAGE-R01",
+      status: missingHandoffSources.length ? "missing_handoffs" : "all_mature_sources_have_buyer_handoffs",
+      mature_revenue_sources: matureRevenueSources,
+      buyer_handoff_sources: handoffSources,
+      missing_handoff_sources: missingHandoffSources,
+      rule:
+        "Every mature revenue-conversion source must have a buyer/reviewer handoff before the MCP order proof gate can be worked cleanly.",
+    },
+    snapshot_coverage: revenue.snapshot_coverage,
     handoffs,
     proof_gate: revenue.proof_gate,
     proof_boundaries: revenue.proof_boundaries,
@@ -7650,6 +7669,9 @@ function mcpBuyerOrderHandoffsMarkdown(payload: ReturnType<typeof mcpBuyerOrderH
     `- Current first-party MCP revenue: ${payload.proof_gate.current_revenue}`,
     `- GA4 qualified external MCP sessions: ${payload.proof_gate.ga4_qualified_external_mcp_sessions} / ${payload.proof_gate.ga4_qualified_external_mcp_session_threshold}`,
     `- Required evidence: ${payload.proof_gate.order_or_revenue_required}`,
+    `- Handoff coverage: ${payload.source_coverage.status}`,
+    `- Mature revenue sources: ${payload.source_coverage.mature_revenue_sources.join(", ") || "none"}`,
+    `- Missing handoff sources: ${payload.source_coverage.missing_handoff_sources.join(", ") || "none"}`,
     "",
     "## Handoffs",
     "",
@@ -7771,7 +7793,8 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
       <p>${escapeHtml(payload.purpose)}</p>
       <div class="status">
         <span>${escapeHtml(payload.release)}</span>
-        <span>${payload.order_handoff_count} handoffs</span>
+        <span>${payload.order_handoff_count}/${payload.mature_revenue_source_count} handoffs</span>
+        <span>${escapeHtml(payload.source_coverage.status)}</span>
         <span>orders ${payload.proof_gate.current_orders}</span>
         <span>revenue ${payload.proof_gate.current_revenue}</span>
         <span>GA4 sessions ${payload.proof_gate.ga4_qualified_external_mcp_sessions}/${payload.proof_gate.ga4_qualified_external_mcp_session_threshold}</span>
@@ -12550,7 +12573,7 @@ const MCP_REVENUE_CONVERSION_QUEUE_RELEASE = "PACKRIFT-MCP-REVENUE-CONVERSION-QU
 const MCP_REVENUE_CONVERSION_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
 const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
-const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R02";
+const MCP_BUYER_ORDER_HANDOFFS_RELEASE = "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R03";
 const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
