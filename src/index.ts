@@ -9360,9 +9360,61 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
 </html>`;
 }
 
-const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R01";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R02";
+
+const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<
+  string,
+  {
+    status: string;
+    primary_surface: string;
+    support_email?: string;
+    support_url?: string;
+    public_comment_url?: string;
+    next_contact_action: string;
+  }
+> = {
+  docker_mcp_catalog: {
+    status: "public_pr_comment_updated",
+    primary_surface: "https://github.com/docker/mcp-registry/pull/3388",
+    public_comment_url: "https://github.com/docker/mcp-registry/pull/3388#issuecomment-4487822288",
+    next_contact_action:
+      "Use the edited Docker PR comment as the canonical reviewer handoff; avoid duplicate comments unless a maintainer asks for more proof.",
+  },
+  glama_connector: {
+    status: "support_draft_ready",
+    primary_surface: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+    support_email: "support@glama.ai",
+    support_url: "https://glama.ai/support",
+    next_contact_action:
+      "Ask Glama support to run the source-aware endpoint from a real Glama-hosted connector or inspector session; the public inspector rendered static documentation in the latest operator check.",
+  },
+  mcphubz: {
+    status: "login_required_contact_broken",
+    primary_surface: "https://mcphubz.com/submit",
+    next_contact_action:
+      "Use an authenticated MCPHubz session or a working owner contact route; the public contact form is not a valid submission path.",
+  },
+  findmcp_dev: {
+    status: "submit_cta_broken",
+    primary_surface: "https://findmcp.dev/submit",
+    next_contact_action:
+      "Find a real contact, repository, or fixed submit endpoint before another activation request; the public submit path currently does not expose a working form.",
+  },
+  mcplane: {
+    status: "validator_rejected_public_repo",
+    primary_surface: "https://mcplane.com/mcp_servers/new",
+    next_contact_action:
+      "Contact MCPLane or retry only after its GitHub validator accepts public organization repositories.",
+  },
+};
 
 function mcpExternalActivationBriefTask(task: McpActivationWavePayload["wave_tasks"][number]) {
+  const reviewHandoff = MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS[task.source] ?? {
+    status: "source_specific_external_run_needed",
+    primary_surface: task.primary_action_url ?? task.tracked_install_url ?? task.source_aware_endpoint,
+    next_contact_action:
+      "Use the source-specific activation card and ask the real external host or reviewer to run the measured first-useful-run sequence.",
+  };
   return {
     rank: task.wave_rank,
     source: task.source,
@@ -9378,6 +9430,7 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["wave_tas
     eval_pack_json_url: task.eval_pack_json_url,
     directory_update_card_json_url: task.directory_update_card_json_url,
     buyer_handoff_url: task.buyer_handoff_preview?.buyer_handoff_url ?? task.source_order_handoff?.buyer_handoff_url ?? null,
+    external_review_handoff: reviewHandoff,
     success_gate: task.success_gate,
     current_counts: task.current_counts,
     short_request:
@@ -9474,7 +9527,7 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
   const rows = payload.selected_external_runs
     .map(
       (row) =>
-        `| ${row.rank} | ${row.source} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.eval_pack_json_url} |`
+        `| ${row.rank} | ${row.source} | ${row.target_event_to_watch} | ${row.expected_tool_call_lift} | ${row.tracked_first_run_shell_url} | ${row.eval_pack_json_url} | ${row.external_review_handoff.primary_surface} |`
     )
     .join("\n");
   return [
@@ -9507,16 +9560,28 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
     "",
     "## Selected Runs",
     "",
-    "| Rank | Source | Target event | Expected lift | Shell runner | Eval pack |",
-    "| --- | --- | --- | --- | --- | --- |",
-    rows || "| none | none | none | 0 | none | none |",
+    "| Rank | Source | Target event | Expected lift | Shell runner | Eval pack | Reviewer surface |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    rows || "| none | none | none | 0 | none | none | none |",
     "",
     "## Copy-Ready Requests",
     "",
     payload.selected_external_runs
       .map(
         (row) =>
-          [`### ${row.rank}. ${row.source}`, "", row.short_request, "", `Success gate: ${row.success_gate}`, "", `Run: \`${row.one_command_external_runner}\``].join("\n")
+          [
+            `### ${row.rank}. ${row.source}`,
+            "",
+            row.short_request,
+            "",
+            `Reviewer handoff: ${row.external_review_handoff.primary_surface}`,
+            `Contact status: ${row.external_review_handoff.status}`,
+            `Next contact action: ${row.external_review_handoff.next_contact_action}`,
+            "",
+            `Success gate: ${row.success_gate}`,
+            "",
+            `Run: \`${row.one_command_external_runner}\``,
+          ].join("\n")
       )
       .join("\n\n") || "No selected external runs.",
     "",
@@ -9554,8 +9619,10 @@ function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPaylo
           <a href="${escapeHtml(row.tracked_install_json_url)}">Host config</a>
           <a href="${escapeHtml(row.eval_pack_json_url)}">Eval pack</a>
           <a href="${escapeHtml(row.directory_update_card_json_url)}">Update card</a>
+          <a href="${escapeHtml(row.external_review_handoff.primary_surface)}">Reviewer surface</a>
           ${row.buyer_handoff_url ? `<a href="${escapeHtml(row.buyer_handoff_url)}">Buyer handoff</a>` : ""}
         </div>
+        <p><strong>Contact path:</strong> ${escapeHtml(row.external_review_handoff.status)} - ${escapeHtml(row.external_review_handoff.next_contact_action)}</p>
         <pre>${escapeHtml(row.one_command_external_runner)}</pre>
       </article>`
     )
