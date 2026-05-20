@@ -650,6 +650,8 @@ async function liveMcpCheck() {
             row.external_activation_required === true &&
             row.operator_safety_rule?.includes("Do not ") &&
             row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+            row.fast_activation_path?.first_run_shell_one_liner?.includes("/r/run/") &&
+            row.fast_activation_path?.first_run_shell_one_liner?.includes("format=sh") &&
             row.one_command_external_runner?.includes("curl -sS") &&
             row.one_command_external_runner?.includes("| bash")
         )
@@ -658,12 +660,13 @@ async function liveMcpCheck() {
           (row) =>
             row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
             row.run_real_mcp_shell_url?.includes("format=sh") &&
+            row.fast_activation_path?.first_run_shell_one_liner?.includes("format=sh") &&
             row.one_command_external_runner?.includes("curl -sS") &&
             row.one_command_external_runner?.includes("| bash")
         ));
   const sourceActivationClineRowOk = sourceActivationQueue?.queue?.some((row) => {
     if (row.source !== "cline_mcp_marketplace" || row.preferred_target !== "cline") return false;
-    const targetEventOk = ["mcp_install_intent", "mcp_first_run_execution", "mcp_attributed_order"].includes(row.target_event_to_watch);
+    const targetEventOk = ["mcp_install_intent", "mcp_first_run_execution", "mcp_tool_call", "mcp_attributed_order"].includes(row.target_event_to_watch);
     const primaryActionOk =
       row.primary_action_url?.includes("/r/install/cline_mcp_marketplace/cline?format=html") ||
       row.primary_action_url?.includes("/r/activate/cline_mcp_marketplace?format=html") ||
@@ -682,7 +685,15 @@ async function liveMcpCheck() {
       row.copy_ready_host_configs?.codex_command?.startsWith("codex mcp add packrift --url") &&
       row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
       row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
+      row.copy_ready_host_configs?.first_run_shell_one_liner?.includes("format=sh") &&
       row.copy_ready_host_configs?.success_gate?.includes("create_cart_url") &&
+      row.tracked_first_run_shell_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
+      row.tracked_first_run_shell_url?.includes("format=sh") &&
+      row.first_run_shell_one_liner?.includes("/r/run/cline_mcp_marketplace/cline") &&
+      row.first_run_shell_one_liner?.includes("format=sh") &&
+      row.fast_activation_path?.required_final_tool === "create_cart_url" &&
+      row.fast_activation_path?.first_run_shell_one_liner?.includes("format=sh") &&
+      row.fast_activation_path?.install_page_url?.includes("/r/install/cline_mcp_marketplace/cline") &&
       row.one_command_external_runner?.includes("/r/activate/cline_mcp_marketplace?format=sh") &&
       row.external_activation_message?.includes("One-command external runner") &&
       (row.external_activation_message?.includes("does not place an order") ||
@@ -704,6 +715,7 @@ async function liveMcpCheck() {
         (row.current_stage?.includes("discovery only") ||
           row.current_stage?.includes("first-run action") ||
           row.current_stage?.includes("tool calls missing") ||
+          row.current_stage?.includes("qualified cart landing") ||
           row.current_stage?.includes("install"))
       );
     }
@@ -1261,7 +1273,9 @@ async function liveMcpCheck() {
       funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       funnelSnapshot?.limit === 20000 &&
+      funnelSnapshot?.event_lookback_days === 2 &&
       funnelSnapshot?.runtime?.default_public_event_limit === 20000 &&
+      funnelSnapshot?.runtime?.default_public_event_lookback_days === 2 &&
       funnelSnapshot?.runtime_source_inference?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R02" &&
       funnelSnapshot?.runtime_source_inference?.rule_count >= 35 &&
       funnelSnapshot?.runtime_source_inference?.rule_families?.some((rule) => rule?.source_slug === "openai_chatgpt") &&
@@ -1348,6 +1362,7 @@ async function liveMcpCheck() {
       sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 20000 &&
+      sourceActivationQueue?.event_lookback_days === 2 &&
       sourceActivationQueue?.source_context_normalization?.release === "PACKRIFT-MCP-SOURCE-CONTEXT-NORMALIZATION-R01" &&
       sourceActivationQueue?.source_context_normalization?.examples?.some(
         (example) => example.raw === "cline_mcp_marketplace_first_cart_run" && example.normalized === "cline_mcp_marketplace"
@@ -1376,6 +1391,14 @@ async function liveMcpCheck() {
       Array.isArray(sourceActivationQueue?.blocking_goal_gates) &&
       Array.isArray(sourceActivationQueue?.queue) &&
       sourceActivationQueue?.queue?.some((row) => row.primary_action_url?.startsWith("https://mcp.packrift.com/r/")) &&
+      sourceActivationQueue?.queue?.every(
+        (row) =>
+          row.tracked_first_run_shell_url?.startsWith("https://mcp.packrift.com/r/run/") &&
+          row.tracked_first_run_shell_url?.includes("format=sh") &&
+          row.first_run_shell_one_liner?.includes("format=sh") &&
+          row.fast_activation_path?.first_run_shell_one_liner?.includes("format=sh") &&
+          row.fast_activation_path?.required_final_tool === "create_cart_url"
+      ) &&
       sourceActivationClineRowOk &&
       sourceActivationQueueHtmlResult.ok &&
       sourceActivationQueueHtmlResult.text.includes("Packrift MCP Activation Command Center") &&
@@ -1384,6 +1407,8 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Source-aware endpoint") &&
       sourceActivationQueueHtmlResult.text.includes("Source-specific agent prompt") &&
       sourceActivationQueueHtmlResult.text.includes("Copy-ready host configs") &&
+      sourceActivationQueueHtmlResult.text.includes("Fast activation path") &&
+      sourceActivationQueueHtmlResult.text.includes("First-run shell") &&
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
       (sourceActivationQueueHtmlResult.text.includes("Activation runner") ||
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
@@ -1416,6 +1441,9 @@ async function liveMcpCheck() {
           experiment.suppression_rules.some((rule) => rule.includes("Do not ")) &&
           experiment.tracked_install_url?.startsWith("https://mcp.packrift.com/r/install/") &&
           experiment.tracked_first_run_url?.startsWith("https://mcp.packrift.com/r/run/") &&
+          experiment.tracked_first_run_shell_url?.startsWith("https://mcp.packrift.com/r/run/") &&
+          experiment.tracked_first_run_shell_url?.includes("format=sh") &&
+          experiment.first_run_shell_one_liner?.includes("format=sh") &&
           experiment.directory_update_card_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-directory-update/") &&
           experiment.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
           experiment.copy_ready_activation_request?.includes("mcp-directory-update/") &&
@@ -1424,6 +1452,8 @@ async function liveMcpCheck() {
           experiment.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
           experiment.copy_ready_host_configs?.agent_prompt?.includes("create_cart_url") &&
           experiment.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
+          experiment.copy_ready_host_configs?.first_run_shell_one_liner?.includes("format=sh") &&
+          experiment.fast_activation_path?.first_run_shell_one_liner?.includes("format=sh") &&
           experiment.reviewer_activation_runner_url?.startsWith("https://mcp.packrift.com/r/activate/") &&
           experiment.reviewer_activation_shell_url?.includes("format=sh") &&
           experiment.copy_ready_activation_request?.includes("Shell activation script") &&
@@ -1439,6 +1469,7 @@ async function liveMcpCheck() {
       activationExperimentsHtmlResult.text.includes("Suppression rules") &&
       activationExperimentsHtmlResult.text.includes("Copy-ready activation request") &&
       activationExperimentsHtmlResult.text.includes("Copy-ready host configs") &&
+      activationExperimentsHtmlResult.text.includes("First-run shell") &&
       activationExperimentsHtmlResult.text.includes("Shell script") &&
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&

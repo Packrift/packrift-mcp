@@ -1147,6 +1147,7 @@ const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_USAGE_EVENT_LIMIT_MAX = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 20000;
 const PUBLIC_MCP_FUNNEL_EVENT_LIMIT = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT;
+const PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS = 2;
 const PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX = 50000;
 const PUBLIC_MCP_DEFAULT_ORDER_DAYS = 30;
 const PUBLIC_MCP_DEFAULT_ORDER_LIMIT = 100;
@@ -2923,6 +2924,16 @@ async function readAiSalesEventsRange(env: Env, endDate: string, days: number, t
     .slice(0, boundedTotalLimit);
 }
 
+async function readAiSalesEventsRollingWindow(env: Env, endDate: string, days: number, limit: number): Promise<Array<Record<string, unknown>>> {
+  const boundedLimit = Math.max(1, limit);
+  const dates = dateStringsEndingAt(endDate, days);
+  const eventGroups = await Promise.all(dates.map((date) => readAiSalesEvents(env, date, boundedLimit).catch(() => [])));
+  return eventGroups
+    .flat()
+    .sort((a, b) => String(b.received_at ?? "").localeCompare(String(a.received_at ?? "")))
+    .slice(0, boundedLimit);
+}
+
 function isQualifiedMcpVisitorSignal(event: Record<string, unknown>): boolean {
   const eventName = String(event.event ?? "");
   return MCP_QUALIFIED_VISITOR_SIGNAL_EVENTS.has(eventName) && isQualifiedPublicFunnelEvent(event);
@@ -4098,6 +4109,7 @@ function sourceActivationUrls(source: string) {
   const encodedTarget = encodeURIComponent(target);
   const trackedRun = `https://mcp.packrift.com/r/run/${slug}/${encodedTarget}`;
   const trackedInstallBase = `https://mcp.packrift.com/r/install/${slug}/${encodedTarget}`;
+  const trackedFirstRunShellUrl = `${trackedRun}?format=sh`;
   return {
     preferred_target: target,
     tracked_start_url: `https://mcp.packrift.com/r/start/${slug}`,
@@ -4106,6 +4118,8 @@ function sourceActivationUrls(source: string) {
     tracked_install_json_url: `${trackedInstallBase}?format=json`,
     tracked_first_run_url: `${trackedRun}?format=html`,
     tracked_first_run_execute_url: `${trackedRun}?execute=1`,
+    tracked_first_run_shell_url: trackedFirstRunShellUrl,
+    first_run_shell_one_liner: sourceActivationShellCommand(trackedFirstRunShellUrl),
     reviewer_activation_url: `https://mcp.packrift.com/r/activate/${slug}`,
     reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${slug}?format=html`,
     reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${slug}?format=sh`,
@@ -4141,6 +4155,7 @@ function sourceActivationCopyReadyHostConfigs(input: {
   sourceAwareEndpoint: string;
   agentPrompt: string;
   curlScript: string;
+  firstRunShellOneLiner?: string;
   successGate?: string;
 }) {
   const genericConfig = {
@@ -4171,9 +4186,41 @@ function sourceActivationCopyReadyHostConfigs(input: {
     codex_command: `codex mcp add packrift --url ${shellQuote(input.sourceAwareEndpoint)}`,
     agent_prompt: input.agentPrompt,
     curl_script: input.curlScript,
+    first_run_shell_one_liner: input.firstRunShellOneLiner,
     success_gate:
       input.successGate ??
       "After install, run the agent prompt in the real MCP host and require create_cart_url to return a measured https://mcp.packrift.com/r/cart/1066 URL.",
+  };
+}
+
+function sourceActivationFastPath(input: {
+  row: PostInstallActivationRow;
+  urls: ReturnType<typeof sourceActivationUrls>;
+  firstUsefulRun: ReturnType<typeof mcpFirstUsefulRun>;
+  installAction: NonNullable<ReturnType<typeof mcpInstallActionPayload>>;
+}) {
+  return {
+    release: input.installAction.release,
+    label: input.installAction.fastest_activation_path.label,
+    source: input.row.source,
+    preferred_target: input.urls.preferred_target,
+    install_page_url: input.urls.tracked_install_url,
+    install_json_url: input.urls.tracked_install_json_url,
+    first_run_url: input.urls.tracked_first_run_url,
+    first_run_execute_url: input.urls.tracked_first_run_execute_url,
+    first_run_shell_url: input.urls.tracked_first_run_shell_url,
+    first_run_shell_one_liner: input.urls.first_run_shell_one_liner,
+    reviewer_activation_runner_url: input.urls.reviewer_activation_runner_url,
+    reviewer_activation_shell_url: input.urls.reviewer_activation_shell_url,
+    reviewer_activation_shell_one_liner: sourceActivationShellCommand(input.urls.reviewer_activation_shell_url),
+    source_aware_endpoint: input.firstUsefulRun.endpoint,
+    required_final_tool: "create_cart_url",
+    required_cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
+    no_order_created: true,
+    steps: input.installAction.fastest_activation_path.steps,
+    browser_proof_rule: input.installAction.fastest_activation_path.browser_proof_rule,
+    success_gate:
+      "Use this path to move a source from listing/install interest into a real MCP tool sequence. Completion still requires non-suppressed source-side MCP tool telemetry and the measured /r/cart handoff URL.",
   };
 }
 
@@ -4335,6 +4382,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Directory update card: ${urls.directory_update_card_json_url}`,
       `Source-preserving order cart handoff: ${orderCartUrl}`,
       cartUrl ? `Earlier measured cart proof: ${cartUrl}` : `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      `Fast first-run shell: ${urls.first_run_shell_one_liner}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       ...sourceActivationEvalPackLines(urls),
@@ -4369,6 +4417,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       `Install/config handoff: ${urls.tracked_install_url}`,
       `Machine-readable config: ${urls.tracked_install_json_url}`,
       `First-run prompt: ${urls.tracked_first_run_url}`,
+      `Fast first-run shell: ${urls.first_run_shell_one_liner}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       ...sourceActivationEvalPackLines(urls),
@@ -4384,6 +4433,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
       "Endpoint: https://mcp.packrift.com/mcp",
       `Directory update card: ${urls.directory_update_card_json_url}`,
       `Activation runner: ${urls.reviewer_activation_runner_url}`,
+      `Fast first-run shell: ${urls.first_run_shell_one_liner}`,
       `Shell activation script: ${urls.reviewer_activation_shell_url}`,
       `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
       ...sourceActivationEvalPackLines(urls),
@@ -4400,6 +4450,7 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
     `Directory update card: ${urls.directory_update_card_json_url}`,
     `Install/config handoff: ${urls.tracked_install_url}`,
     `First-run action: ${urls.tracked_first_run_url}`,
+    `Fast first-run shell: ${urls.first_run_shell_one_liner}`,
     `Shell activation script: ${urls.reviewer_activation_shell_url}`,
     `One-command external runner: ${sourceActivationShellCommand(urls.reviewer_activation_shell_url)}`,
     ...sourceActivationEvalPackLines(urls),
@@ -4449,8 +4500,10 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
       const score = sourceActivationPriorityScore(row);
       const priority = score >= 110 ? "critical" : score >= 80 ? "high" : score >= 50 ? "medium" : "watch";
       const firstUsefulRun = mcpFirstUsefulRun(row.source, urls.preferred_target);
+      const installAction = mcpInstallActionPayload({ source: row.source, target: urls.preferred_target })!;
       const targetEvent = sourceActivationTargetEvent(row);
       const orderConversionHandoff = sourceActivationOrderConversionHandoff(row, urls, firstUsefulRun);
+      const fastActivationPath = sourceActivationFastPath({ row, urls, firstUsefulRun, installAction });
       return {
         source: row.source,
         priority,
@@ -4472,6 +4525,8 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         tracked_install_json_url: urls.tracked_install_json_url,
         tracked_first_run_url: urls.tracked_first_run_url,
         tracked_first_run_execute_url: urls.tracked_first_run_execute_url,
+        tracked_first_run_shell_url: urls.tracked_first_run_shell_url,
+        first_run_shell_one_liner: urls.first_run_shell_one_liner,
         reviewer_activation_url: urls.reviewer_activation_url,
         reviewer_activation_runner_url: urls.reviewer_activation_runner_url,
         reviewer_activation_shell_url: urls.reviewer_activation_shell_url,
@@ -4484,6 +4539,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
         eval_pack_markdown_url: urls.eval_pack_markdown_url,
         source_aware_endpoint: firstUsefulRun.endpoint,
         agent_prompt: firstUsefulRun.agent_prompt,
+        fast_activation_path: fastActivationPath,
         order_conversion_handoff: orderConversionHandoff,
         copy_ready_host_configs: sourceActivationCopyReadyHostConfigs({
           source: row.source,
@@ -4491,6 +4547,7 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
           sourceAwareEndpoint: firstUsefulRun.endpoint,
           agentPrompt: firstUsefulRun.agent_prompt,
           curlScript: firstUsefulRun.curl_script,
+          firstRunShellOneLiner: urls.first_run_shell_one_liner,
           successGate: orderConversionHandoff
             ? "This source already has MCP tool and measured cart proof. The next success gate is a buyer/reviewer checkout that preserves packrift_mcp_source_context and produces first_party_mcp_orders or measurable MCP revenue."
             : undefined,
@@ -4540,6 +4597,7 @@ async function mcpSourceActivationQueuePayload(
     release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17",
     generated_at: new Date().toISOString(),
     date,
+    event_lookback_days: funnel.event_lookback_days,
     event_read_limit: limit,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     status: funnel.source_activation_priority_queue.length > 0 ? "activation_needed" : "no_priority_sources",
@@ -4604,6 +4662,7 @@ async function mcpSourceActivationQueuePayload(
         one_command_external_runner: row.one_command_external_runner,
         host_install_url: row.tracked_install_url,
         host_install_json_url: row.tracked_install_json_url,
+        fast_activation_path: row.fast_activation_path,
         tool_discovery_json_url: row.tool_discovery_json_url,
         tool_discovery_markdown_url: row.tool_discovery_markdown_url,
         directory_update_card_json_url: row.directory_update_card_json_url,
@@ -4671,15 +4730,15 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     "## Priority Queue",
     "",
-    "| Priority | Source | Current stage | Target event | Primary action | Action URL | Shell script | Update card | Host install | Recent measured cart URL |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Current stage | Target event | Primary action | Action URL | First-run shell | Activation shell | Update card | Host install | Recent measured cart URL |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.queue
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
+          `| ${row.priority} | ${row.source} | ${markdownTableCell(row.current_stage)} | ${row.target_event_to_watch} | ${markdownTableCell(row.recommended_action)} | ${row.primary_action_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.directory_update_card_json_url} | ${row.tracked_install_url} | ${row.recent_measured_cart_urls[0] ?? ""} |`
       )
-      .join("\n") || "| none | none | none | none | none | none | none | none | none | none |",
+      .join("\n") || "| none | none | none | none | none | none | none | none | none | none | none |",
     "",
     "## Acceptance Rule",
     "",
@@ -4720,6 +4779,17 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         needsHostToolCall && row.tracked_install_json_url
           ? `<a class="button" href="${escapeHtml(row.tracked_install_json_url)}">Copy host config</a>`
           : "";
+      const fastPath = row.fast_activation_path;
+      const fastPathSteps = fastPath?.steps?.map((step) => `<li>${escapeHtml(step)}</li>`).join("") ?? "";
+      const fastPathBlock = fastPath
+        ? `<details class="fast-path" open>
+          <summary>Fast activation path</summary>
+          <ol>${fastPathSteps}</ol>
+          <p class="endpoint">First-run shell one-liner:</p>
+          <pre>${escapeHtml(fastPath.first_run_shell_one_liner)}</pre>
+          <p class="endpoint">${escapeHtml(fastPath.success_gate)}</p>
+        </details>`
+        : "";
       const firstRecentCartUrl = row.recent_measured_cart_urls[0] ?? "";
       const agentPrompt = row.agent_prompt || "";
       const hostConfigs = row.copy_ready_host_configs;
@@ -4774,12 +4844,14 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
           ${secondaryCheckLink}
           ${hostConfigLink}
           <a class="button" href="${escapeHtml(row.eval_pack_json_url)}">Eval pack</a>
+          <a class="button" href="${escapeHtml(row.tracked_first_run_shell_url)}">First-run shell</a>
           <a class="button" href="${escapeHtml(row.reviewer_activation_shell_url)}">Shell script</a>
           <a class="button" href="${escapeHtml(row.directory_update_card_markdown_url)}">Update card</a>
           <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install path</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_execute_url)}">Live proof</a>
         </div>
         ${externalMessage}
+        ${fastPathBlock}
         <details>
           <summary>Acceptance criteria</summary>
           <ul>${row.acceptance_criteria.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
@@ -4889,6 +4961,8 @@ interface SourceActivationExperimentQueueRow {
   tracked_install_json_url: string;
   tracked_first_run_url: string;
   tracked_first_run_execute_url: string;
+  tracked_first_run_shell_url: string;
+  first_run_shell_one_liner: string;
   reviewer_activation_url: string;
   reviewer_activation_runner_url: string;
   reviewer_activation_shell_url: string;
@@ -4899,6 +4973,7 @@ interface SourceActivationExperimentQueueRow {
   eval_pack_json_url: string;
   eval_pack_markdown_url: string;
   source_aware_endpoint: string;
+  fast_activation_path: ReturnType<typeof sourceActivationFastPath>;
   copy_ready_host_configs: ReturnType<typeof sourceActivationCopyReadyHostConfigs>;
   agent_prompt: string;
   acceptance_criteria: string[];
@@ -5008,6 +5083,7 @@ function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRo
     row.copy_ready_host_configs.generic_mcp_json,
     "Cline MCP JSON:",
     row.copy_ready_host_configs.cline_mcp_json,
+    `First-run shell: ${row.first_run_shell_one_liner}`,
     `Success gate: ${row.copy_ready_host_configs.success_gate}`,
   ];
   if (row.external_activation_message.trim()) return [row.external_activation_message.trim(), "", ...hostConfigLines].join("\n");
@@ -5022,6 +5098,7 @@ function sourceActivationCopyReadyRequest(row: SourceActivationExperimentQueueRo
     `Claude Code: ${row.copy_ready_host_configs.claude_code_command}`,
     `Codex: ${row.copy_ready_host_configs.codex_command}`,
     `First-run action: ${row.tracked_first_run_url}`,
+    `First-run shell: ${row.first_run_shell_one_liner}`,
     `Activation runner: ${row.reviewer_activation_runner_url}`,
     `Shell activation script: ${row.reviewer_activation_shell_url}`,
     `Live tool discovery JSON: ${row.tool_discovery_json_url}`,
@@ -5055,6 +5132,8 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       tracked_install_json_url: row.tracked_install_json_url,
       tracked_first_run_url: row.tracked_first_run_url,
       tracked_first_run_execute_url: row.tracked_first_run_execute_url,
+      tracked_first_run_shell_url: row.tracked_first_run_shell_url,
+      first_run_shell_one_liner: row.first_run_shell_one_liner,
       reviewer_activation_url: row.reviewer_activation_url,
       reviewer_activation_runner_url: row.reviewer_activation_runner_url,
       reviewer_activation_shell_url: row.reviewer_activation_shell_url,
@@ -5068,6 +5147,7 @@ function sourceActivationExperimentRows(rows: SourceActivationExperimentQueueRow
       cart_landing_action_url: row.cart_landing_action_url,
       recent_measured_cart_urls: row.recent_measured_cart_urls,
       source_aware_endpoint: row.source_aware_endpoint,
+      fast_activation_path: row.fast_activation_path,
       copy_ready_host_configs: row.copy_ready_host_configs,
       agent_prompt: row.agent_prompt,
       expected_snapshot_delta: sourceActivationExpectedSnapshotDelta(row),
@@ -5164,15 +5244,15 @@ function mcpActivationExperimentsMarkdown(payload: Awaited<ReturnType<typeof mcp
     "",
     "## Experiments",
     "",
-    "| Rank | Priority | Source | Target event | Hypothesis | Success gate | Primary action | Shell script |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Rank | Priority | Source | Target event | Hypothesis | Success gate | Primary action | First-run shell | Activation shell |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.experiments
       .slice(0, 15)
       .map(
         (row) =>
-          `| ${row.priority_rank} | ${row.priority} | ${row.source} | ${row.target_event_to_watch} | ${markdownTableCell(row.hypothesis)} | ${markdownTableCell(row.success_gate)} | ${row.primary_action_url} | ${row.reviewer_activation_shell_url} |`
+          `| ${row.priority_rank} | ${row.priority} | ${row.source} | ${row.target_event_to_watch} | ${markdownTableCell(row.hypothesis)} | ${markdownTableCell(row.success_gate)} | ${row.primary_action_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} |`
       )
-      .join("\n") || "| none | none | none | none | none | none | none | none |",
+      .join("\n") || "| none | none | none | none | none | none | none | none | none |",
     "",
     "## Operating Rule",
     "",
@@ -5218,6 +5298,7 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
           <a class="button primary" href="${escapeHtml(row.primary_action_url)}">Primary action</a>
           <a class="button" href="${escapeHtml(row.tracked_install_url)}">Install</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_url)}">First run</a>
+          <a class="button" href="${escapeHtml(row.tracked_first_run_shell_url)}">First-run shell</a>
           <a class="button" href="${escapeHtml(row.reviewer_activation_runner_url)}">Activation runner</a>
           <a class="button" href="${escapeHtml(row.reviewer_activation_shell_url)}">Shell script</a>
         </div>
@@ -5445,7 +5526,7 @@ async function mcpFunnelSnapshotPayload(
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
-  const events = await readAiSalesEvents(env, date, limit);
+  const events = await readAiSalesEventsRollingWindow(env, date, PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS, limit);
   const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
   const uniqueIdentityProof = uniqueQualifiedMcpIdentityProof(events);
   const ga4CanonicalProof = await mcpGa4FunnelProofPayload(env);
@@ -5513,6 +5594,7 @@ async function mcpFunnelSnapshotPayload(
     release: MCP_FUNNEL_SNAPSHOT_RELEASE,
     generated_at: new Date().toISOString(),
     date,
+    event_lookback_days: PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS,
     limit,
     order_lookback_days: orderDays,
     order_scan_limit: orderLimit,
@@ -5523,13 +5605,14 @@ async function mcpFunnelSnapshotPayload(
     privacy:
       "Aggregated counts only. Raw event bodies, buyer identifiers, order rows, and private admin tokens are not exposed.",
     scope_note:
-      "This public snapshot uses bounded first-party MCP telemetry plus aggregate Shopify order attribution. When available, the thousands-of-qualified-visitors gate uses the sanitized public GA4 proof published from the local full funnel artifact; use the limit/order query params for heavier operator snapshots when latency is acceptable.",
+      "This public snapshot uses a rolling two-day first-party MCP telemetry window plus aggregate Shopify order attribution so activation proof does not disappear at the UTC day boundary. When available, the thousands-of-qualified-visitors gate uses the sanitized public GA4 proof published from the local full funnel artifact; use the limit/order query params for heavier operator snapshots when latency is acceptable.",
     runtime: {
       server_version: serverCard.version,
       tools_count: TOOLS.length,
       resources_count: MCP_RESOURCES.length,
       prompts_count: PROMPTS.length,
       default_public_event_limit: PUBLIC_MCP_FUNNEL_EVENT_LIMIT,
+      default_public_event_lookback_days: PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS,
       default_public_order_lookback_days: PUBLIC_MCP_DEFAULT_ORDER_DAYS,
       default_public_order_scan_limit: PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
       full_event_limit_hint: `Use ?limit=${PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT}&order_days=90&order_limit=250 for a heavier operator snapshot when latency is acceptable. Use ?limit=${PUBLIC_MCP_EXTENDED_EVENT_LIMIT_MAX} only for deep backfill checks.`,
