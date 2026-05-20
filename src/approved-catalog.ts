@@ -1,5 +1,5 @@
-// Generated from /Users/farhan/Downloads/packrift-ai-commerce-factory/outputs/2026-05-19/mcp_corpus_sales_layer_20260519T113959Z/packrift-ai-approved-products.jsonl. Do not edit by hand.
-// Generated at 2026-05-19T14:15:37Z.
+// Generated from /Users/farhan/Downloads/packrift-ai-commerce-factory/outputs/2026-05-20/mcp_corpus_sales_layer_20260520T113718Z/packrift-ai-approved-products.jsonl. Do not edit by hand.
+// Generated at 2026-05-20T11:44:06Z.
 export interface ApprovedCatalogItem {
   sku: string;
   productId: string;
@@ -993,6 +993,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "LL160",
+    "productId": "15062437560688",
+    "variantId": "53475984474480",
+    "handle": "1-5-x-0-75-white-permanent-laser-labels-7000-case",
+    "title": "1.5 x 0.75\" White Permanent Laser Labels - 7000/Case",
+    "family": "labels",
+    "riskFlags": ""
+  },
+  {
     "sku": "S1515K",
     "productId": "15061791441264",
     "variantId": "53473370800496",
@@ -1794,6 +1803,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "T9332600",
+    "productId": "15062357442928",
+    "variantId": "53475772957040",
+    "handle": "1-2-x-60-yds-crepe-masking-tape-6-1-mil-professional-grade-case-of-72",
+    "title": "1/2\" x 60 yds Crepe Masking Tape 6.1 Mil - Professional Grade, Case of 72",
+    "family": "tape",
+    "riskFlags": ""
+  },
+  {
     "sku": "T91389712PK",
     "productId": "15062254354800",
     "variantId": "53475239919984",
@@ -2163,6 +2181,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "SP1016",
+    "productId": "15061657583984",
+    "variantId": "53472915718512",
+    "handle": "10-7-8-x-16-7-8-ect-32-corrugated-layer-pads-100-bundle",
+    "title": "10 7/8 x 16 7/8\" ECT-32 Corrugated Layer Pads - 100 Bundle",
+    "family": "boxes",
+    "riskFlags": ""
+  },
+  {
     "sku": "CP10Q",
     "productId": "15061661385072",
     "variantId": "53472945963376",
@@ -2483,6 +2510,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53475965895024",
     "handle": "10-25-x-8-25-x-4-white-corrugated-literature-mailers-50-pack",
     "title": "10.25 x 8.25 x 4\" White Corrugated Literature Mailers - 50 Pack",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
+    "sku": "M10101",
+    "productId": "15062427304304",
+    "variantId": "53475954852208",
+    "handle": "10-25x10-25x1-white-corrugated-easy-fold-mailers-professional-shipping-50-pack",
+    "title": "10.25x10.25x1 White Corrugated Easy-Fold Mailers - Professional Shipping, 50-Pack",
     "family": "mailers",
     "riskFlags": ""
   },
@@ -2816,6 +2852,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53472866402672",
     "handle": "10x10x8-ect-32-kraft-corrugated-boxes-bundle-of-25",
     "title": "10x10x8 ECT-32 Kraft Corrugated Boxes - Bundle of 25",
+    "family": "boxes",
+    "riskFlags": ""
+  },
+  {
+    "sku": "HD10108DW",
+    "productId": "15061639201136",
+    "variantId": "53472865157488",
+    "handle": "10x10x8-ect-48-double-wall-kraft-boxes-heavy-duty-shipping-cartons-bundle-of-15",
+    "title": "10x10x8 ECT-48 Double Wall Kraft Boxes - Heavy Duty Shipping Cartons, Bundle of 15",
     "family": "boxes",
     "riskFlags": ""
   },
@@ -4665,6 +4710,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "PMR121615100",
+    "productId": "15062241640816",
+    "variantId": "53475209904496",
+    "handle": "12x16-1-5-mil-clear-resealable-suffocation-warning-poly-bags-100-pack",
+    "title": "12 x 16\" 1.5 Mil Clear Resealable Poly Bags - 100 Pack",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
     "sku": "PBAS2180",
     "productId": "15061088371056",
     "variantId": "53438594548080",
@@ -5328,6 +5382,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "handle": "12x12x1-polyurethane-foam-sheets-fragile-item-protection-case-of-48",
     "title": "12x12x1\" Polyurethane Foam Sheets - Fragile Item Protection, Case of 48",
     "family": "void_fill",
+    "riskFlags": ""
+  },
+  {
+    "sku": "ML12121",
+    "productId": "15062432612720",
+    "variantId": "53475967107440",
+    "handle": "12x12x1-25-white-corrugated-literature-mailers-self-seal-50-pack",
+    "title": "12x12x1.25 White Corrugated Literature Mailers - Self-Seal, 50-Pack",
+    "family": "mailers",
     "riskFlags": ""
   },
   {
@@ -7014,6 +7077,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "SH14100",
+    "productId": "15062147629424",
+    "variantId": "53474529050992",
+    "handle": "14-x-100-gauge-x-2625-clear-polyolefin-shrink-film-professional-grade-case-of-1",
+    "title": "14\" x 100 Gauge x 2625' Clear Polyolefin Shrink Film - Professional Grade, Case of 1",
+    "family": "shrink_film",
+    "riskFlags": ""
+  },
+  {
     "sku": "PT1404",
     "productId": "15062145565040",
     "variantId": "53474522628464",
@@ -8238,6 +8310,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "PMR162415100",
+    "productId": "15062242034032",
+    "variantId": "53475210690928",
+    "handle": "16x24-1-5-mil-clear-resealable-suffocation-warning-poly-bags-100-pack",
+    "title": "16 x 24\" 1.5 Mil Clear Resealable Poly Bags - 100 Pack",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
     "sku": "SH16100",
     "productId": "15062147662192",
     "variantId": "53474529083760",
@@ -8652,6 +8733,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "ML16164",
+    "productId": "15062435299696",
+    "variantId": "53475978510704",
+    "handle": "16x16x4-white-corrugated-literature-mailers-secure-closure-25-pack",
+    "title": "16x16x4 White Corrugated Literature Mailers - Secure Closure, 25-Pack",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
     "sku": "T161640INNER",
     "productId": "15061198864752",
     "variantId": "53446006505840",
@@ -9012,6 +9102,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "246C",
+    "productId": "15061774500208",
+    "variantId": "53473325285744",
+    "handle": "17x10x10-5-eps-foam-insulated-shipping-kit-perishable-protection-case-of-1",
+    "title": "17x10x10.5 EPS Foam Insulated Shipping Kit - Perishable Protection, Case of 1",
+    "family": "boxes",
+    "riskFlags": ""
+  },
+  {
     "sku": "ML17112K",
     "productId": "15061973238128",
     "variantId": "53474224734576",
@@ -9143,6 +9242,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53473154302320",
     "handle": "18-x-24-1-5-mil-clear-flat-poly-bags-1000-case",
     "title": "18 x 24\" 1.5 Mil Clear Flat Poly Bags - 1000/Case",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
+    "sku": "PMR182415100",
+    "productId": "15062242132336",
+    "variantId": "53475210887536",
+    "handle": "18x24-1-5-mil-clear-resealable-suffocation-warning-poly-bags-100-pack",
+    "title": "18 x 24\" 1.5 Mil Clear Resealable Poly Bags - 100 Pack",
     "family": "poly_bags",
     "riskFlags": ""
   },
@@ -11685,6 +11793,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "LH179",
+    "productId": "15061997388144",
+    "variantId": "53474275688816",
+    "handle": "2-x-8-magnetic-white-warehouse-labels-reusable-write-wipe-case-of-25",
+    "title": "2\" x 8\" Magnetic White Warehouse Labels - Reusable Write/Wipe, Case of 25",
+    "family": "labels",
+    "riskFlags": ""
+  },
+  {
     "sku": "G26066W",
     "productId": "15062082781552",
     "variantId": "53474416230768",
@@ -12149,6 +12266,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53473133625712",
     "handle": "20-x-80-gauge-x-1000-extended-core-cast-stretch-film-ready-to-use-case-of-4",
     "title": "20\" x 80 Gauge x 1000' Extended Core Cast Stretch Film - Ready to Use, Case of 4",
+    "family": "stretch_film",
+    "riskFlags": ""
+  },
+  {
+    "sku": "MSF2080B",
+    "productId": "15061119238512",
+    "variantId": "53441391133040",
+    "handle": "20-x-80-gauge-x-6000-blown-machine-stretch-film-superior-load-retention",
+    "title": "20\" x 80 Gauge x 6000' Blown Machine Stretch Film - Superior Load Retention",
     "family": "stretch_film",
     "riskFlags": ""
   },
@@ -13305,6 +13431,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "PB3691",
+    "productId": "15062191964528",
+    "variantId": "53474795225456",
+    "handle": "24-x-36-2-mil-reclosable-poly-bags-fda-approved-case-of-250",
+    "title": "24 x 36\" 2 Mil Clear Reclosable Poly Bags - Case of 250",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
     "sku": "PB2441",
     "productId": "15061691826544",
     "variantId": "53473148338544",
@@ -13944,6 +14079,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "M24242BF",
+    "productId": "15062428254576",
+    "variantId": "53475955966320",
+    "handle": "24x24x2-white-corrugated-easy-fold-mailers-professional-protection-20-pack",
+    "title": "24x24x2 White Corrugated Easy-Fold Mailers - Professional Protection, 20-Pack",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
     "sku": "FCSC24242",
     "productId": "15061176090992",
     "variantId": "53444762239344",
@@ -14049,6 +14193,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "handle": "24x30-white-butcher-paper-sheets-40-lb-case-of-750",
     "title": "24x30\" White Butcher Paper Sheets, 40 lb - Case of 750",
     "family": "void_fill",
+    "riskFlags": ""
+  },
+  {
+    "sku": "SP2436DW",
+    "productId": "15061676294512",
+    "variantId": "53473007731056",
+    "handle": "24x36-ect-48-double-wall-corrugated-sheets-heavy-duty-stackable-pallet-pads-5-pack",
+    "title": "24x36 ECT-48 Double Wall Corrugated Sheets - Heavy-Duty Stackable Pallet Pads, 5-Pack",
+    "family": "boxes",
     "riskFlags": ""
   },
   {
@@ -16131,6 +16284,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "P3042K",
+    "productId": "15061989491056",
+    "variantId": "53474263925104",
+    "handle": "3-x-42-kraft-mailing-tubes-with-caps-24-case-spiral-wound",
+    "title": "3\" x 42\" Kraft Mailing Tubes with Caps - 24/Case Spiral Wound",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
     "sku": "T9077500F",
     "productId": "15062377857392",
     "variantId": "53475812540784",
@@ -17895,6 +18057,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "KP36VDIS",
+    "productId": "15062404104560",
+    "variantId": "53475900850544",
+    "handle": "36-vertical-roll-paper-cutter-industrial-grade-space-saving-design",
+    "title": "36\" Vertical Roll Paper Cutter - Industrial Grade Space-Saving Design",
+    "family": "packaging_tools",
+    "riskFlags": ""
+  },
+  {
     "sku": "KPB3630",
     "productId": "15061120090480",
     "variantId": "53441457521008",
@@ -19623,6 +19794,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "P3072KHD",
+    "productId": "15061762277744",
+    "variantId": "53473298284912",
+    "handle": "3x72-heavy-duty-kraft-mailing-tubes-0-125-spiral-wound-case-of-15",
+    "title": "3x72\" Heavy-Duty Kraft Mailing Tubes - 0.125\" Spiral Wound, Case of 15",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
     "sku": "PB2206",
     "productId": "15061686911344",
     "variantId": "53473140310384",
@@ -20204,6 +20384,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53443069346160",
     "handle": "4-mil-clear-poly-sheeting-100-x-4-moisture-barrier-protection-case-of-1",
     "title": "4 Mil Clear Poly Sheeting 100' x 4' - Moisture Barrier Protection, Case of 1",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
+    "sku": "PB2215",
+    "productId": "15061687206256",
+    "variantId": "53473140932976",
+    "handle": "4-x-6-1-mil-clear-flat-poly-bags-1000-case-fda-compliant",
+    "title": "4 x 6\" 1 Mil Clear Flat Poly Bags - Case of 1000",
     "family": "poly_bags",
     "riskFlags": ""
   },
@@ -22692,6 +22881,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "DL1384W",
+    "productId": "15061116911984",
+    "variantId": "53441152844144",
+    "handle": "4x6-white-paper-block-out-labels-hide-markings-roll-of-500",
+    "title": "4x6 White Paper Block Out Labels - Hide Markings, Roll of 500",
+    "family": "labels",
+    "riskFlags": ""
+  },
+  {
     "sku": "PB3565Y",
     "productId": "15062179742064",
     "variantId": "53474731622768",
@@ -23013,6 +23211,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "handle": "4x8-2-mil-pre-opened-poly-bags-on-roll-1750-count",
     "title": "4x8\" 2 Mil Pre-Opened Poly Bags on Roll - 1750 Count",
     "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
+    "sku": "B851SSTT25PK",
+    "productId": "15061982740848",
+    "variantId": "53474250522992",
+    "handle": "4x8-kraft-self-seal-bubble-mailers-000-3-16-cushioning-25-pack",
+    "title": "4x8\" Kraft Self-Seal Bubble Mailers #000 - 3/16\" Cushioning, 25 Pack",
+    "family": "mailers",
     "riskFlags": ""
   },
   {
@@ -25329,6 +25536,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "PB1101",
+    "productId": "15061718368624",
+    "variantId": "53473196278128",
+    "handle": "6x7-4-mil-clear-flat-poly-bags-food-grade-case-of-1000",
+    "title": "6 x 7\" 4 Mil Clear Flat Poly Bags - Case of 1000",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
     "sku": "RM1W",
     "productId": "15062446571888",
     "variantId": "53476010623344",
@@ -26283,6 +26499,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "202C",
+    "productId": "15061773943152",
+    "variantId": "53473324302704",
+    "handle": "6x5x4-5-eps-foam-insulated-shipping-kit-temperature-control-case-of-8",
+    "title": "6x5x4.5\" EPS Foam Insulated Shipping Kit - Temperature Control, Case of 8",
+    "family": "boxes",
+    "riskFlags": ""
+  },
+  {
     "sku": "M655",
     "productId": "15062418358640",
     "variantId": "53475933094256",
@@ -26513,6 +26738,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53447674855792",
     "handle": "6x6x36-ect-48-double-wall-kraft-boxes-heavy-duty-shipping-cartons-bundle-of-15",
     "title": "6x6x36 ECT-48 Double Wall Kraft Boxes - Heavy Duty Shipping Cartons, Bundle of 15",
+    "family": "boxes",
+    "riskFlags": ""
+  },
+  {
+    "sku": "6638",
+    "productId": "15061226684784",
+    "variantId": "53447231701360",
+    "handle": "6x6x38-ect-32-kraft-corrugated-boxes-bundle-of-25",
+    "title": "6x6x38 ECT-32 Kraft Corrugated Boxes - Bundle of 25",
     "family": "boxes",
     "riskFlags": ""
   },
@@ -28092,6 +28326,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "LL292",
+    "productId": "15061117436272",
+    "variantId": "53441210384752",
+    "handle": "8-5-x-5-5-opaque-white-blockout-laser-labels-permanent-acrylic-case-of-200",
+    "title": "8.5\" x 5.5\" Opaque White Blockout Laser Labels - Permanent Acrylic, Case of 200",
+    "family": "labels",
+    "riskFlags": ""
+  },
+  {
     "sku": "LL255WR",
     "productId": "15062414328176",
     "variantId": "53475925819760",
@@ -29244,6 +29487,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "riskFlags": ""
   },
   {
+    "sku": "PB5241",
+    "productId": "15062276505968",
+    "variantId": "53475300409712",
+    "handle": "9x12-3-mil-slide-seal-reclosable-poly-bags-food-safe-case-of-100",
+    "title": "9 x 12\" 3 Mil Slide-Seal Reclosable Poly Bags - Case of 100",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
     "sku": "PB498",
     "productId": "15061702115696",
     "variantId": "53473160593776",
@@ -29348,6 +29600,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53476002365808",
     "handle": "9-5x12-5-white-self-seal-envelopes-28lb-paper-case-of-500",
     "title": "9.5x12.5\" White Self-Seal Envelopes, 28lb Paper - Case of 500",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
+    "sku": "RM2G",
+    "productId": "15062446506352",
+    "variantId": "53476010557808",
+    "handle": "9-5x12-5x1-white-chipboard-gusseted-mailers-self-seal-100-case",
+    "title": "9.5x12.5x1 White Chipboard Gusseted Mailers - Self-Seal, 100/Case",
     "family": "mailers",
     "riskFlags": ""
   },
@@ -30095,6 +30356,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53475964813680",
     "handle": "9x9x2-white-corrugated-literature-mailers-self-seal-50-bundle",
     "title": "9x9x2 White Corrugated Literature Mailers - Self-Seal, 50 Bundle",
+    "family": "mailers",
+    "riskFlags": ""
+  },
+  {
+    "sku": "M993K",
+    "productId": "15061971435888",
+    "variantId": "53474221162864",
+    "handle": "9x9x3-kraft-literature-mailers-self-seal-corrugated-50-bundle",
+    "title": "9x9x3 Kraft Literature Mailers - Self-Seal Corrugated, 50/Bundle",
     "family": "mailers",
     "riskFlags": ""
   },

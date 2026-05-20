@@ -90,16 +90,16 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   const suppressAnalytics = isSyntheticEval(raw);
 
   const cacheKey = `search:ai-approve:v12:${limit}:${query}`;
-  const cached = await env.CATALOG_CACHE.get(cacheKey, "json");
-  if (cached) {
-    if (!suppressAnalytics) {
+  if (!suppressAnalytics) {
+    const cached = await env.CATALOG_CACHE.get(cacheKey, "json");
+    if (cached) {
       if (Array.isArray(cached)) {
         await recordSearchDemandEvents(env, query, limit, cached, true);
       } else if (isSearchNoMatchResult(cached)) {
         await recordSearchDemandEvents(env, query, limit, [], true, 0, true);
       }
+      return cached;
     }
-    return cached;
   }
 
   const fetchLimit = Math.min(Math.max(limit * 5, limit), 50);
@@ -150,7 +150,9 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
         .slice(0, limit)
         .map(({ row }) => row);
 
-  await env.CATALOG_CACHE.put(cacheKey, JSON.stringify(out), { expirationTtl: 300 });
+  if (!suppressAnalytics) {
+    await env.CATALOG_CACHE.put(cacheKey, JSON.stringify(out), { expirationTtl: 300 });
+  }
   if (!suppressAnalytics) {
     await recordSearchDemandEvents(
       env,

@@ -1143,7 +1143,7 @@ async function liveMcpCheck() {
     json_ok: buyerOrderHandoffsResult.ok,
     markdown_ok: buyerOrderHandoffsMarkdownResult.ok,
     html_ok: buyerOrderHandoffsHtmlResult.ok,
-    release: buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R03",
+    release: buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R04",
     status: buyerOrderHandoffs?.status === "buyer_reviewer_handoffs_ready",
     canonical_endpoint: buyerOrderHandoffs?.canonical_endpoint === MCP_ENDPOINT,
     json_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_json === MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
@@ -1172,6 +1172,8 @@ async function liveMcpCheck() {
         row.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval?.includes(
           "prepare_purchase_handoff"
         ) &&
+        row.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
+        row.buyer_checkout_review_contract?.cart_open_event === "mcp_order_handoff_checkout_review_click" &&
         row.copy_ready_buyer_request?.includes("only place the order if it is actually approved") &&
         row.suppression_rule?.includes("Do not count synthetic proof")
     ),
@@ -1192,9 +1194,11 @@ async function liveMcpCheck() {
     markdown_title: buyerOrderHandoffsMarkdownResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     markdown_mcp_so: buyerOrderHandoffsMarkdownResult.text.includes("mcp_so"),
     markdown_cline: !revenueConversionClineRow || buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace"),
+    markdown_checkout_review_contract: buyerOrderHandoffsMarkdownResult.text.includes("Checkout Review Contracts"),
     html_title: buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     html_copy_ready: buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request"),
     html_prepare_purchase_shortcut: buyerOrderHandoffsHtmlResult.text.includes("Prepare purchase shortcut"),
+    html_checkout_review_contract: buyerOrderHandoffsHtmlResult.text.includes("Checkout review contract"),
     html_mcp_so: buyerOrderHandoffsHtmlResult.text.includes("mcp_so"),
     html_cline: !revenueConversionClineRow || buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace"),
     html_analytics: mcpPageAnalyticsDiagnostics.buyer_order_handoffs_html,
@@ -1230,6 +1234,8 @@ async function liveMcpCheck() {
         row?.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval?.includes(
           "prepare_purchase_handoff"
         ) &&
+        row?.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
+        row?.buyer_checkout_review_contract?.primary_action?.includes("Run the live MCP confirmation") &&
         row?.proof_gate?.includes("first_party_mcp_orders") &&
         row?.suppression_rule?.includes("self-opened cart") &&
         row?.suppression_rule?.includes("shell runner") &&
@@ -1382,7 +1388,7 @@ async function liveMcpCheck() {
       sourceActivationHostIntentRowsRequireExternalOk &&
       sourceActivationMcpSoExternalOk,
     revenue_conversion:
-      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R03" &&
+      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R04" &&
       revenueConversionQueue?.status === "buyer_checkout_needed" &&
       revenueConversionRowsOk,
     buyer_order_handoffs: buyerOrderHandoffsOk,
@@ -2536,6 +2542,7 @@ async function liveMcpCheck() {
           row.source_order_handoff?.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
           row.source_order_handoff?.order_handoff_shell_url?.includes("format=sh") &&
           row.source_order_handoff?.order_handoff_shell_one_liner?.includes("curl -sS") &&
+          row.source_order_handoff?.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
           row.buyer_handoff_preview?.buyer_action_url?.includes(`mcp_source_context=${row.source}`) &&
           row.buyer_handoff_url === row.source_order_handoff?.buyer_handoff_url
       ) &&
@@ -2604,7 +2611,7 @@ async function liveMcpCheck() {
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
         sourceActivationQueueHtmlResult.text.includes("Install in Cline") ||
         sourceActivationQueueHtmlResult.text.includes("One-command external runner")) &&
-      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R03" &&
+      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R04" &&
       revenueConversionQueue?.canonical_endpoint === MCP_ENDPOINT &&
       revenueConversionQueue?.status === "buyer_checkout_needed" &&
       revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
@@ -2629,7 +2636,7 @@ async function liveMcpCheck() {
       revenueConversionQueueHtmlResult.text.includes("Revenue proof boundary") &&
       revenueConversionQueueHtmlResult.text.includes("Buyer handoff") &&
       buyerOrderHandoffsOk &&
-      trackedOrderCline?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R06" &&
+      trackedOrderCline?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R07" &&
       trackedOrderCline?.source === "cline_mcp_marketplace" &&
       trackedOrderCline?.preferred_target === "cline" &&
       trackedOrderCline?.mcp_source_context === "cline_mcp_marketplace" &&
@@ -2647,7 +2654,7 @@ async function liveMcpCheck() {
       trackedOrderCline?.copy_ready_messages?.agent_prompt?.includes("mcp_source_context=\"cline_mcp_marketplace\"") &&
       trackedOrderCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
       trackedOrderCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
-      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R06" &&
+      trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R07" &&
       trackedOrderMcpSo?.source === "mcp_so" &&
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http" &&
@@ -2680,6 +2687,9 @@ async function liveMcpCheck() {
       trackedOrderMcpSo?.checkout_guardrails?.some((rule) => rule.includes("do not place an order without explicit approval")) &&
       trackedOrderMcpSo?.no_order_created_by_this_page === true &&
       trackedOrderMcpSo?.buyer_confirmation_required === true &&
+      trackedOrderMcpSo?.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
+      trackedOrderMcpSo?.buyer_checkout_review_contract?.cart_open_event === "mcp_order_handoff_checkout_review_click" &&
+      trackedOrderMcpSo?.checkout_review_steps?.some((step) => step.includes("final total")) &&
       trackedOrderMcpSo?.copy_ready_messages?.buyer_request?.includes("only place the order if it is actually approved") &&
       trackedOrderMcpSo?.copy_ready_messages?.agent_prompt?.includes("Required tool sequence") &&
       trackedOrderMcpSo?.browser_live_confirmation?.status === "available" &&
@@ -2691,6 +2701,8 @@ async function liveMcpCheck() {
       trackedOrderMcpSoHtmlResult.ok &&
       trackedOrderMcpSoHtmlResult.text.includes("Packrift MCP Buyer Handoff") &&
       trackedOrderMcpSoHtmlResult.text.includes("Review source-preserved cart") &&
+      trackedOrderMcpSoHtmlResult.text.includes("Checkout Review Contract") &&
+      trackedOrderMcpSoHtmlResult.text.includes("mcp_order_handoff_checkout_review_click") &&
       trackedOrderMcpSoHtmlResult.text.includes("Current source proof") &&
       trackedOrderMcpSoHtmlResult.text.includes("Run live MCP confirmation") &&
       trackedOrderMcpSoHtmlResult.text.includes("Live MCP Confirmation") &&
@@ -2706,6 +2718,7 @@ async function liveMcpCheck() {
       trackedOrderMcpSoMarkdownResult.ok &&
       trackedOrderMcpSoMarkdownResult.text.includes("Buyer/Reviewer Order Handoff") &&
       trackedOrderMcpSoMarkdownResult.text.includes("Current Source Proof") &&
+      trackedOrderMcpSoMarkdownResult.text.includes("Checkout Review Contract") &&
       trackedOrderMcpSoMarkdownResult.text.includes("Browser Live Confirmation") &&
       trackedOrderMcpSoMarkdownResult.text.includes("Source Attribution Required") &&
       trackedOrderMcpSoMarkdownResult.text.includes("Source-Preserving Prepare Purchase Shortcut") &&
@@ -2721,7 +2734,7 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
-      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R03" &&
+      revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R04" &&
       revenueConversionQueue?.canonical_endpoint === MCP_ENDPOINT &&
       revenueConversionQueue?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       revenueConversionQueue?.snapshot_coverage?.operator_url ===
@@ -2749,6 +2762,8 @@ async function liveMcpCheck() {
             row.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
             row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_source_context === row.source &&
             row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_install_target === row.mcp_install_target &&
+            row.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
+            row.checkout_review_steps?.some((step) => step.includes("Shopify checkout")) &&
             row.product?.sku === "1066" &&
             row.product?.variant_id === "53472879935856" &&
             row.order_proof_watch === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
@@ -2759,11 +2774,13 @@ async function liveMcpCheck() {
       revenueConversionQueueMarkdownResult.ok &&
       revenueConversionQueueMarkdownResult.text.includes("Packrift MCP Revenue Conversion Queue") &&
       revenueConversionQueueMarkdownResult.text.includes("Required evidence") &&
+      revenueConversionQueueMarkdownResult.text.includes("Checkout Review Contracts") &&
       revenueConversionQueueHtmlResult.ok &&
       revenueConversionQueueHtmlResult.text.includes("Packrift MCP Revenue Conversion Queue") &&
       revenueConversionQueueHtmlResult.text.includes("Revenue proof boundary") &&
       revenueConversionQueueHtmlResult.text.includes("Buyer request") &&
       revenueConversionQueueHtmlResult.text.includes("Prepare purchase shortcut") &&
+      revenueConversionQueueHtmlResult.text.includes("Checkout review contract") &&
       mcpPageAnalyticsDiagnostics.revenue_queue_html &&
       revenueConversionQueueHtmlResult.text.includes("Order attribution required") &&
       sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05" &&
@@ -2986,7 +3003,7 @@ async function liveMcpCheck() {
       activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
       activationWaveRunnerResult.text.includes("/r/run/") &&
       activationWaveRunnerResult.text.includes("format=sh") &&
-      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R08" &&
+      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R09" &&
       externalActivationBrief?.canonical_endpoint === MCP_ENDPOINT &&
       externalActivationBrief?.activation_wave_release === activationWave?.release &&
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
@@ -3010,11 +3027,16 @@ async function liveMcpCheck() {
           ) &&
           run.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
           run.order_handoff_shell_url?.includes("format=sh") &&
-          run.order_handoff_shell_one_liner?.includes("curl -sS")
+          run.order_handoff_shell_one_liner?.includes("curl -sS") &&
+          run.contact_handoff?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-CONTACT-HANDOFF-R01" &&
+          run.contact_handoff?.no_send_rule?.includes("does not send email") &&
+          run.contact_handoff?.body?.includes("Hosted endpoint: https://mcp.packrift.com/mcp")
       ) &&
       externalActivationBriefMarkdownResult.text.includes("prepare_purchase_handoff") &&
       externalActivationBriefMarkdownResult.text.includes("Guarded order shell") &&
+      externalActivationBriefMarkdownResult.text.includes("Contact handoff") &&
       externalActivationBriefHtmlResult.text.includes("prepare_purchase_handoff shortcut") &&
+      externalActivationBriefHtmlResult.text.includes("Contact handoff") &&
       externalActivationBrief?.goal_summary?.material_usage?.threshold === 50 &&
       externalActivationBrief?.goal_summary?.material_usage?.expected_tool_call_lift_if_selected_runs_complete ===
         externalActivationBrief?.selected_external_runs?.reduce((total, task) => total + Number(task.expected_tool_call_lift ?? 0), 0) &&
@@ -3039,6 +3061,8 @@ async function liveMcpCheck() {
           task.order_handoff_shell_one_liner?.includes("curl -sS") &&
           task.one_command_external_runner?.includes("/r/run/") &&
           task.review_handoff_primary_surface &&
+          task.contact_handoff_release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-CONTACT-HANDOFF-R01" &&
+          task.contact_handoff_no_send_rule?.includes("does not send email") &&
           task.copy_ready_generic_mcp_json?.includes('"mcpServers"') &&
           task.copy_ready_agent_prompt?.includes("create_cart_url") &&
           task.copy_ready_codex_command?.includes("packrift_mcp_source=") &&
@@ -3052,6 +3076,7 @@ async function liveMcpCheck() {
       externalActivationBriefTasksCsvResult.text.includes("copy_ready_codex_command") &&
       externalActivationBriefTasksCsvResult.text.includes("fast_activation_path_required_final_tool") &&
       externalActivationBriefTasksCsvResult.text.includes("review_handoff_primary_surface") &&
+      externalActivationBriefTasksCsvResult.text.includes("contact_handoff_mailto_url") &&
       externalActivationBrief?.proof_urls?.external_activation_brief_tasks_compact_jsonl ===
         MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
       externalActivationBrief?.proof_urls?.external_activation_brief_tasks_compact_csv ===
@@ -3075,12 +3100,14 @@ async function liveMcpCheck() {
           task.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
           task.directory_update_card_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-directory-update/") &&
           task.review_handoff_primary_surface &&
+          task.contact_handoff_channel &&
           task.short_request &&
           task.no_duplicate_work_rule?.includes("Do not create a duplicate CLI")
       ) &&
       externalActivationBriefCompactTasksCsvResult.ok &&
       externalActivationBriefCompactTasksCsvResult.text.includes("release,generated_at,selected_rank,wave_rank,source,preferred_target,priority,activation_status") &&
       externalActivationBriefCompactTasksCsvResult.text.includes("no_duplicate_work_rule") &&
+      externalActivationBriefCompactTasksCsvResult.text.includes("contact_handoff_mailto_url") &&
       !externalActivationBriefCompactTasksCsvResult.text.includes("copy_ready_codex_command") &&
       externalActivationBrief?.selection_rule?.includes("handoff readiness") &&
       externalActivationBrief?.selected_external_runs?.every(
@@ -3098,6 +3125,8 @@ async function liveMcpCheck() {
           task.copy_ready_host_configs?.agent_prompt?.includes("create_cart_url") &&
           task.fast_activation_path?.required_final_tool === "create_cart_url" &&
           task.external_review_handoff?.primary_surface &&
+          task.contact_handoff?.channel &&
+          task.contact_handoff?.subject?.includes(task.source) &&
           task.external_review_handoff?.next_contact_action &&
           task.success_gate?.includes("external-qualified MCP tool calls")
       ) &&
@@ -3107,6 +3136,8 @@ async function liveMcpCheck() {
           task.external_review_handoff?.status === "support_draft_updated" &&
           task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "hello@coderai.dev" &&
+          task.contact_handoff?.mailto_url?.startsWith("mailto:hello@coderai.dev?") &&
+          task.contact_handoff?.body?.includes("Source: findmcp_dev") &&
           task.external_review_handoff?.primary_surface === "https://findmcp.dev/submit"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
@@ -3115,6 +3146,8 @@ async function liveMcpCheck() {
           task.external_review_handoff?.status === "support_draft_updated" &&
           task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "support@glama.ai" &&
+          task.contact_handoff?.mailto_url?.startsWith("mailto:support@glama.ai?") &&
+          task.contact_handoff?.body?.includes("Source: glama_connector") &&
           task.external_review_handoff?.primary_surface === "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
@@ -3123,6 +3156,8 @@ async function liveMcpCheck() {
           task.external_review_handoff?.status === "support_draft_updated" &&
           task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "contact@mcplist.ai" &&
+          task.contact_handoff?.mailto_url?.startsWith("mailto:contact@mcplist.ai?") &&
+          task.contact_handoff?.body?.includes("Source: mcplist_ai") &&
           task.external_review_handoff?.primary_surface === "https://www.mcplist.ai/?search=packrift"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
@@ -3131,12 +3166,16 @@ async function liveMcpCheck() {
           task.external_review_handoff?.status === "support_draft_updated" &&
           task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "info@mcpserverfinder.com" &&
+          task.contact_handoff?.mailto_url?.startsWith("mailto:info@mcpserverfinder.com?") &&
+          task.contact_handoff?.body?.includes("Source: mcpserverfinder") &&
           task.external_review_handoff?.primary_surface === "https://www.mcpserverfinder.com/?q=packrift"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
         (task) =>
           task.source === "docker_mcp_catalog" &&
-          task.external_review_handoff?.public_comment_url === "https://github.com/docker/mcp-registry/pull/3388#issuecomment-4487822288"
+          task.external_review_handoff?.public_comment_url === "https://github.com/docker/mcp-registry/pull/3388#issuecomment-4487822288" &&
+          task.contact_handoff?.channel === "public_comment" &&
+          task.contact_handoff?.mailto_url == null
       ) &&
       externalActivationBrief?.safety_rules?.some((rule) => rule.includes("real external MCP host")) &&
       externalActivationBrief?.safety_rules?.some((rule) => rule.includes("Do not place an order")) &&
