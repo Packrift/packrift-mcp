@@ -218,6 +218,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP buyer/reviewer order handoff template: https://mcp.packrift.com/r/order/{source}?format=html
 - MCP.so buyer/reviewer order handoff: https://mcp.packrift.com/r/order/mcp_so?format=html
 - Cline buyer/reviewer order handoff: https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html
+- Order handoff pages include an inline source-aware MCP confirmation runner. The runner calls the hosted endpoint, requires `create_cart_url`, replaces the cart button with the fresh measured `/r/cart/1066` URL, and still does not place an order.
 - Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
 - Agent capture outreach packet Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
 - AI-approved product JSONL: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl

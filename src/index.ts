@@ -3947,7 +3947,7 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
 
 const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R23";
 const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02";
-const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R03";
+const MCP_ORDER_CONVERSION_HANDOFF_RELEASE = "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R04";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -4824,6 +4824,17 @@ function sourceActivationOrderHandoffPayload(source: string, target = sourcePref
     attribution_rule:
       "MCP order proof should prefer packrift_mcp_source_context and packrift_mcp_install_target from Shopify cart/order attributes, then fall back to source parsed from mcp_journey, result set, Packrift AI IDs, or UTM fields.",
     required_mcp_sequence: firstUsefulRun.sequence,
+    browser_live_confirmation: {
+      status: "available",
+      endpoint: firstUsefulRun.endpoint,
+      sequence: firstUsefulRun.sequence,
+      required_final_tool: "create_cart_url",
+      required_cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
+      telemetry_event: "mcp_activation_cart_ready",
+      event_source: "mcp_order_handoff",
+      success_rule:
+        "The buyer/reviewer page can run the same source-aware MCP sequence in-browser and replace the cart button with the fresh measured /r/cart URL returned by create_cart_url. This still does not place an order.",
+    },
     buyer_prompt: buyerPrompt,
     copy_ready_messages: {
       buyer_request:
@@ -4908,6 +4919,14 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
     "",
     payload.checkout_guardrails.map((item) => `- ${item}`).join("\n"),
     "",
+    "## Browser Live Confirmation",
+    "",
+    `- Status: ${payload.browser_live_confirmation.status}`,
+    `- Endpoint: ${payload.browser_live_confirmation.endpoint}`,
+    `- Required final tool: ${payload.browser_live_confirmation.required_final_tool}`,
+    `- Required cart URL prefix: ${payload.browser_live_confirmation.required_cart_url_prefix}`,
+    `- Success rule: ${payload.browser_live_confirmation.success_rule}`,
+    "",
     "## Source Attribution Required",
     "",
     payload.required_shopify_cart_attributes.map((item) => `- ${item}`).join("\n"),
@@ -4945,6 +4964,10 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
   ].join("\n");
 }
 
+function htmlScriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+}
+
 function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActivationOrderHandoffPayload>): string {
   return `<!doctype html>
 <html lang="en">
@@ -4967,8 +4990,11 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
     .status span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
     section{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
     .product-grid span{border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--muted);background:#f9faf8}
-    .button{display:inline-flex;align-items:center;min-height:42px;border:1px solid var(--ink);border-radius:6px;padding:9px 12px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
+    .button{display:inline-flex;align-items:center;min-height:42px;border:1px solid var(--ink);border-radius:6px;padding:9px 12px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650;cursor:pointer;font:inherit}
     .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    .button:disabled{opacity:.58;cursor:wait}
+    .ok{border-left:5px solid var(--green)}
+    .warn{border-left:5px solid var(--red)}
     .warning{color:var(--red);font-weight:650}
     code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
@@ -4990,10 +5016,13 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
         <span>No order created here</span>
       </div>
       <div class="actions">
-        <a class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Review cart in Shopify</a>
+        <a id="review-cart" class="button primary" href="${escapeHtml(payload.buyer_action_url)}">Review cart in Shopify</a>
+        <button id="run-live-confirmation" class="button" type="button">Run live MCP confirmation</button>
         <a class="button" href="${escapeHtml(payload.product.product_url)}">View product</a>
-        <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Run real MCP check</a>
+        <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Activation runner</a>
         <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">Watch proof gate</a>
+        <button id="copy-buyer-request" class="button" type="button">Copy buyer request</button>
+        <button id="copy-agent-prompt" class="button" type="button">Copy agent prompt</button>
       </div>
     </header>
     <section>
@@ -5021,6 +5050,12 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
 	      <h2>Checkout Guardrails</h2>
 	      <ul>${payload.checkout_guardrails.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
 	    </section>
+    <section id="live-confirmation">
+      <h2>Live MCP Confirmation</h2>
+      <p>Run the source-aware MCP sequence from this page before buyer checkout review. The fresh cart URL replaces the cart button when <code>create_cart_url</code> succeeds.</p>
+      <pre id="live-confirmation-output">Not run yet.</pre>
+      <p id="live-confirmation-cart"></p>
+    </section>
     <section>
       <h2>Buyer Request</h2>
       <pre>${escapeHtml(payload.copy_ready_messages.buyer_request)}</pre>
@@ -5039,6 +5074,208 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
       <ul>${payload.suppression_rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
     </section>
   </main>
+  <script>
+    const handoff = ${htmlScriptJson(payload)};
+    const runButton = document.getElementById("run-live-confirmation");
+    const reviewCart = document.getElementById("review-cart");
+    const output = document.getElementById("live-confirmation-output");
+    const cartStatus = document.getElementById("live-confirmation-cart");
+    const confirmationSection = document.getElementById("live-confirmation");
+    const copyBuyerRequest = document.getElementById("copy-buyer-request");
+    const copyAgentPrompt = document.getElementById("copy-agent-prompt");
+    let cartReadyRecorded = false;
+    let confirmationSessionId = "";
+
+    function cleanCartUrl(value) {
+      if (typeof value !== "string" || !value.startsWith(handoff.browser_live_confirmation.required_cart_url_prefix)) return null;
+      try {
+        const url = new URL(value);
+        if (url.origin !== "https://mcp.packrift.com" || !url.pathname.startsWith("/r/cart/")) return null;
+        return url.toString();
+      } catch {
+        return null;
+      }
+    }
+
+    function skuFromCartUrl(value) {
+      try {
+        const url = new URL(value);
+        const parts = url.pathname.split("/").filter(Boolean);
+        const cartIndex = parts.indexOf("cart");
+        return cartIndex >= 0 ? parts[cartIndex + 1] || "" : "";
+      } catch {
+        return "";
+      }
+    }
+
+    function extractMeasuredCartUrl(results) {
+      for (let index = results.length - 1; index >= 0; index -= 1) {
+        const result = results[index] && results[index].response && results[index].response.result;
+        const structuredUrl = cleanCartUrl(result && result.structuredContent && result.structuredContent.url);
+        if (structuredUrl) return structuredUrl;
+        const content = result && Array.isArray(result.content) ? result.content : [];
+        for (let contentIndex = content.length - 1; contentIndex >= 0; contentIndex -= 1) {
+          const text = content[contentIndex] && content[contentIndex].text;
+          if (typeof text !== "string") continue;
+          try {
+            const parsed = JSON.parse(text);
+            const parsedUrl = cleanCartUrl(parsed && parsed.url);
+            if (parsedUrl) return parsedUrl;
+          } catch {
+            const matches = Array.from(text.matchAll(/https:\\/\\/mcp\\.packrift\\.com\\/r\\/cart\\/[^"\\s<>\\\\]+/g))
+              .map((match) => cleanCartUrl(match[0]))
+              .filter(Boolean);
+            if (matches.length) return matches[matches.length - 1];
+          }
+        }
+      }
+      return null;
+    }
+
+    function recordCartReady(measuredCartUrl, results) {
+      if (cartReadyRecorded) return;
+      cartReadyRecorded = true;
+      let params = new URLSearchParams();
+      try {
+        params = new URL(measuredCartUrl).searchParams;
+      } catch {}
+      const sku = skuFromCartUrl(measuredCartUrl) || handoff.sku;
+      fetch("/events/ai-sales", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          event: handoff.browser_live_confirmation.telemetry_event,
+          source: handoff.browser_live_confirmation.event_source,
+          release: handoff.release,
+          tool_name: "create_cart_url",
+          ok: true,
+          sku,
+          result_count: Array.isArray(results) ? results.length : 0,
+          match_type: "mcp_order_handoff_live_confirmation",
+          packrift_ai_id: params.get("packrift_ai_id") || params.get("ai_commerce_id") || params.get("mcp_journey") || "",
+          ai_commerce_id: params.get("ai_commerce_id") || params.get("packrift_ai_id") || params.get("mcp_journey") || "",
+          mcp_handoff_id: params.get("mcp_handoff_id") || "",
+          mcp_session_id: confirmationSessionId,
+          mcp_key: params.get("mcp_key") || "order_handoff:" + handoff.source,
+          mcp_journey: params.get("mcp_journey") || "mcp_order_handoff:" + handoff.source + ":" + handoff.preferred_target + ":" + sku,
+          mcp_result_set: params.get("mcp_result_set") || "",
+          mcp_source_context: handoff.source,
+          mcp_install_target: handoff.preferred_target,
+          utm_source: handoff.source,
+          utm_medium: "buyer_reviewer_handoff",
+          utm_campaign: "packrift_mcp_order_handoff",
+          utm_content: "live_confirmation_cart_ready",
+          utm_term: sku,
+          cart_url: measuredCartUrl,
+          source_url: window.location.href,
+          page_url: window.location.href,
+          referrer: document.referrer,
+          user_agent: navigator.userAgent,
+          no_order_created_by_mcp: true
+        })
+      }).catch(() => {});
+    }
+
+    function showResults(results) {
+      output.textContent = JSON.stringify(results, null, 2);
+      const measuredCartUrl = extractMeasuredCartUrl(results);
+      if (measuredCartUrl) {
+        confirmationSection.className = "ok";
+        reviewCart.href = measuredCartUrl;
+        reviewCart.textContent = "Review fresh MCP cart";
+        recordCartReady(measuredCartUrl, results);
+        cartStatus.innerHTML = "";
+        const link = document.createElement("a");
+        link.className = "button primary";
+        link.href = measuredCartUrl;
+        link.textContent = "Open fresh measured cart";
+        const copy = document.createElement("button");
+        copy.className = "button";
+        copy.type = "button";
+        copy.textContent = "Copy cart URL";
+        copy.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(measuredCartUrl);
+          copy.textContent = "Copied";
+          setTimeout(() => { copy.textContent = "Copy cart URL"; }, 1400);
+        });
+        const note = document.createElement("span");
+        note.textContent = " Fresh cart URL is ready. Checkout still requires buyer approval.";
+        cartStatus.append(link, " ", copy, note);
+      } else {
+        confirmationSection.className = "warn";
+        cartStatus.textContent = "No measured cart URL returned yet.";
+      }
+    }
+
+    async function parseMcpResponse(response) {
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {}
+      const dataLines = text.split("\\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .filter(Boolean);
+      for (let index = dataLines.length - 1; index >= 0; index -= 1) {
+        try {
+          return JSON.parse(dataLines[index]);
+        } catch {}
+      }
+      return { parse_error: "response_not_json_or_event_stream", raw: text.slice(0, 2000) };
+    }
+
+    async function runLiveConfirmation() {
+      runButton.disabled = true;
+      cartStatus.textContent = "";
+      output.textContent = "Running source-aware MCP calls...";
+      const sessionId = globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : String(Date.now());
+      confirmationSessionId = sessionId;
+      const results = [];
+      for (const request of handoff.browser_live_confirmation.sequence) {
+        const response = await fetch(handoff.browser_live_confirmation.endpoint, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "accept": "application/json, text/event-stream",
+            "Mcp-Session-Id": sessionId
+          },
+          body: JSON.stringify(request)
+        });
+        const body = await parseMcpResponse(response);
+        results.push({ status: response.status, request, response: body });
+        showResults(results);
+        if (!response.ok || body.error) break;
+      }
+      runButton.disabled = false;
+    }
+
+    runButton && runButton.addEventListener("click", () => {
+      runLiveConfirmation().catch((error) => {
+        confirmationSection.className = "warn";
+        output.textContent = error && error.stack ? error.stack : String(error);
+        runButton.disabled = false;
+      });
+    });
+
+    async function copyText(button, text, fallback) {
+      try {
+        await navigator.clipboard.writeText(text);
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Select text";
+      }
+      setTimeout(() => { button.textContent = fallback; }, 1400);
+    }
+
+    copyBuyerRequest && copyBuyerRequest.addEventListener("click", () =>
+      copyText(copyBuyerRequest, handoff.copy_ready_messages.buyer_request, "Copy buyer request")
+    );
+    copyAgentPrompt && copyAgentPrompt.addEventListener("click", () =>
+      copyText(copyAgentPrompt, handoff.copy_ready_messages.agent_prompt, "Copy agent prompt")
+    );
+  </script>
 </body>
 </html>`;
 }
