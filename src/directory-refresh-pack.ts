@@ -94,6 +94,15 @@ const DIRECTORY_TARGETS = [
       "Monitor the updated MCP.so submission issue #2189 and wait for listing publication before attempting any duplicate owner-authenticated submission.",
   },
   {
+    id: "punkpeye_awesome_mcp",
+    name: "punkpeye/awesome-mcp-servers",
+    listing_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
+    refresh_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
+    priority: "high",
+    requested_action:
+      "Keep the canonical Packrift PR #5606 current until the Glama score blocker clears; do not create duplicate automated PRs.",
+  },
+  {
     id: "browse_sh",
     name: "Browserbase Browse / browse.sh",
     listing_url: "https://browse.sh/",
@@ -108,7 +117,8 @@ const DIRECTORY_TARGETS = [
     listing_url: "https://glama.ai/mcp/servers/ye4xxr7qiu",
     refresh_url: "https://glama.ai/",
     priority: "high",
-    requested_action: "Recrawl the current official registry and hosted endpoint so the old token-required zero-tool record is no longer the visible server listing.",
+    requested_action:
+      "Use Glama source-listing admin to claim the server, configure the repo Dockerfile, make a Glama release, then sync the server so quality scoring can run.",
   },
   {
     id: "mcpbench",
@@ -309,7 +319,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, live tool discovery JSON and Markdown, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R28",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R29",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",

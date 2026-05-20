@@ -62,9 +62,19 @@ const DIRECT_STATUS = {
   },
   glama_server_listing: {
     status: "manual_support_refresh_needed",
-    method: "Support/email/manual recrawl request",
-    evidence: "Hosted Glama connector is healthy, but the source server listing remains stale with the old zero-tool/token-required record.",
-    next_action: "Send or update the Glama support request and ask them to reconcile the source listing with the hosted connector.",
+    method: "Glama source-listing admin release and sync",
+    evidence:
+      "Hosted Glama connector is healthy, but the source server listing has no Glama release, no quality evaluation, and still returns zero tools in the Glama source API.",
+    next_action:
+      "Use Glama source-listing admin to claim the server, configure the repo Dockerfile, make a Glama release, then sync the server so quality scoring can run.",
+  },
+  punkpeye_awesome_mcp: {
+    status: "submitted_pending",
+    method: "GitHub pull request",
+    evidence:
+      "punkpeye/awesome-mcp-servers PR #5606 is the canonical Packrift submission; duplicate automated PR #6649 was closed, and the remaining blocker is the Glama source listing quality score.",
+    next_action:
+      "Keep PR #5606 current with hosted connector and score proof until the Glama score blocker clears; avoid duplicate automated PRs.",
   },
   pulsemcp_packrift: {
     status: "manual_support_refresh_needed",

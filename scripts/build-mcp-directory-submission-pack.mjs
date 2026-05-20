@@ -42,7 +42,8 @@ const TARGETS = [
     submission_url: "https://glama.ai/",
     category: "Business",
     priority: "high",
-    action: "Refresh the GitHub repo listing so it no longer shows the old zero-tool, token-required server record.",
+    action:
+      "Use Glama source-listing admin to claim the server, configure the repo Dockerfile, make a Glama release, then sync the server so quality scoring can run.",
   },
   {
     name: "mcp_directory",
@@ -88,6 +89,16 @@ const TARGETS = [
     category: "Business",
     priority: "high",
     action: "Submit or claim Packrift MCP with hosted endpoint, tracked start URL, and exact-spec packaging copy.",
+  },
+  {
+    name: "punkpeye_awesome_mcp",
+    label: "punkpeye/awesome-mcp-servers",
+    listing_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
+    submission_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
+    category: "Business",
+    priority: "high",
+    action:
+      "Keep the canonical Packrift PR #5606 current until the Glama score blocker clears; do not create duplicate automated PRs.",
   },
   {
     name: "browse_sh",

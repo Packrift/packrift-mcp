@@ -22,6 +22,7 @@ const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
 const AGENT_CAPTURE_OUTREACH_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
+const AGENT_CAPTURE_OUTREACH_HTML_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.html";
 const CART_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-cart-activation.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
@@ -116,12 +117,13 @@ const ACTIONS = [
     action_status: "manual_support_refresh_needed",
     directory_status: "stale",
     priority: "high",
-    method: "Support recrawl request.",
+    method: "Glama source-listing admin release and sync.",
     evidence:
-      "The hosted Glama connector is healthy, but the source server listing still shows the older zero-tool token-required record.",
-    stale_markers: ["zero tools", "SHOPIFY_PACKRIFT_TOKEN required"],
-    recrawl_subject: "Refresh Glama Packrift MCP source listing to current hosted endpoint",
-    next_action: "Ask Glama to reconcile the source listing with the hosted connector and current official registry entry.",
+      "The hosted Glama connector is healthy, but the source server listing has no Glama release, no quality evaluation, and still returns zero tools in the Glama source API.",
+    stale_markers: ["no Glama release", "quality not tested", "zero tools"],
+    recrawl_subject: "Release and sync Glama Packrift MCP source listing",
+    next_action:
+      "Use Glama source-listing admin to claim the server, configure the repo Dockerfile, make a Glama release, then sync the server so quality scoring can run.",
     listing_url: "https://glama.ai/mcp/servers/ye4xxr7qiu",
     submission_url: "https://glama.ai/",
   },
@@ -200,6 +202,22 @@ const ACTIONS = [
       "Monitor issue #2189 and MCP.so search; do not create a duplicate submission unless MCP.so asks for a fresh owner-authenticated form entry.",
     listing_url: "https://mcp.so/servers?keyword=Packrift",
     submission_url: "https://github.com/chatmcp/mcpso/issues/2189",
+  },
+  {
+    id: "punkpeye_awesome_mcp",
+    label: "punkpeye/awesome-mcp-servers",
+    action_status: "submitted_pending",
+    directory_status: "pending",
+    priority: "high",
+    method: "GitHub pull request.",
+    evidence:
+      "punkpeye/awesome-mcp-servers PR #5606 is the canonical Packrift submission; duplicate automated PR #6649 was closed, and the remaining blocker is the Glama source listing quality score.",
+    stale_markers: ["Glama source/server listing quality not tested"],
+    recrawl_subject: "Review Packrift MCP punkpeye/awesome-mcp-servers PR",
+    next_action:
+      "Keep PR #5606 current with hosted connector and score proof until the Glama score blocker clears; avoid duplicate automated PRs.",
+    listing_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
+    submission_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
   },
   {
     id: "browse_sh",
@@ -589,6 +607,90 @@ function sourceEvalPackUrl(source: string, format: "json" | "md" = "json"): stri
   return url.toString();
 }
 
+function formattedUrl(value: string, format: "html" | "md" | "json" | "sh"): string {
+  const url = new URL(value);
+  url.searchParams.set("format", format);
+  return url.toString();
+}
+
+function mailtoRecipient(action: (typeof ACTIONS)[number]): string | null {
+  if (!action.submission_url.startsWith("mailto:")) return null;
+  try {
+    return decodeURIComponent(new URL(action.submission_url).pathname);
+  } catch {
+    return action.submission_url.replace(/^mailto:/, "") || null;
+  }
+}
+
+function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]) {
+  const trackedStart = trackedStartUrl(action.id);
+  const trackedConfig = trackedConfigUrl(action.id);
+  const trackedInstall = trackedInstallUrl(action.id, "generic_streamable_http");
+  const trackedRun = trackedRunUrl(action.id, "generic_streamable_http");
+  const reviewerActivationHtml = `https://mcp.packrift.com/r/activate/${action.id}?format=html`;
+  const orderHandoffHtml = `https://mcp.packrift.com/r/order/${action.id}?format=html`;
+  const evalPack = sourceEvalPackUrl(action.id);
+  const staleLine =
+    "stale_markers" in action && action.stale_markers?.length
+      ? `Current stale/missing markers: ${action.stale_markers.join(", ")}.`
+      : "Current stale/missing markers: none.";
+  const proofUrls = {
+    endpoint: MCP_ENDPOINT,
+    health: "https://mcp.packrift.com/health",
+    start: MCP_START_URL,
+    tracked_start: trackedStart,
+    tracked_config: trackedConfig,
+    tracked_install: formattedUrl(trackedInstall, "html"),
+    first_run: formattedUrl(trackedRun, "html"),
+    activation_runner: reviewerActivationHtml,
+    order_handoff: orderHandoffHtml,
+    eval_pack: evalPack,
+    tool_discovery: MCP_TOOL_DISCOVERY_URL,
+    client_config: CLIENT_CONFIG_URL,
+    marketplace_manifest: MARKETPLACE_MANIFEST_URL,
+    outreach_board: AGENT_CAPTURE_OUTREACH_HTML_URL,
+  };
+
+  return {
+    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R01",
+    to: mailtoRecipient(action),
+    subject: action.recrawl_subject,
+    body: [
+      "Hi,",
+      "",
+      `Please review or refresh Packrift MCP for ${action.label}. The hosted MCP endpoint is live at ${MCP_ENDPOINT} and requires no buyer-side API key.`,
+      "",
+      `Current proof: ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, ${runtime.promptsCount} prompts; exact-spec packaging search, live price, live inventory, no-match handling, and measured cart handoff are all exposed through MCP.`,
+      staleLine,
+      "",
+      "Fast review links:",
+      `- Tool discovery: ${MCP_TOOL_DISCOVERY_URL}`,
+      `- Client config: ${CLIENT_CONFIG_URL}`,
+      `- Marketplace manifest: ${MARKETPLACE_MANIFEST_URL}`,
+      `- Tracked start: ${trackedStart}`,
+      `- Install page: ${proofUrls.tracked_install}`,
+      `- First-run page: ${proofUrls.first_run}`,
+      `- Reviewer activation runner: ${reviewerActivationHtml}`,
+      `- Host acceptance eval pack: ${evalPack}`,
+      `- Buyer/reviewer order handoff: ${orderHandoffHtml}`,
+      `- Outreach board: ${AGENT_CAPTURE_OUTREACH_HTML_URL}`,
+      "",
+      "Acceptance check: install the existing hosted Packrift MCP endpoint, run tools/list, then run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url. Please do not treat a browser-only proof page or duplicate public comment as activation.",
+      "",
+      "Thanks,",
+      "Packrift",
+    ].join("\n"),
+    proof_urls: proofUrls,
+    acceptance_check: [
+      "Install the existing hosted Packrift MCP endpoint only.",
+      "Run tools/list from a real MCP host.",
+      "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "Accept activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
+      "Do not count browser-only proof, Packrift self-checks, or duplicate public comments as source activation.",
+    ],
+  };
+}
+
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
   return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked order handoffs preserve the same source after tool-call and cart proof without placing an order.`;
 }
@@ -822,10 +924,11 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
       },
     },
+    concise_email: conciseDirectoryEmail(runtime, action),
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R41",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R42",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -886,7 +989,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R11",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R12",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -950,6 +1053,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
     ],
     crawler_inputs: action.activation_packet.crawler_inputs,
     proof_urls: action.proof_urls,
+    copy_ready_concise_email: action.concise_email,
     copy_ready_recrawl_message: action.recrawl_message,
   };
 }
@@ -1006,6 +1110,13 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     "",
     payload.acceptance_gate.map((rule) => `- ${rule}`).join("\n"),
     "",
+    "## Copy-Ready Concise Email",
+    "",
+    `To: ${payload.copy_ready_concise_email.to ?? ""}`,
+    `Subject: ${payload.copy_ready_concise_email.subject}`,
+    "",
+    fencedText(payload.copy_ready_concise_email.body),
+    "",
     "## Copy-Ready Recrawl Message",
     "",
     fencedText(payload.copy_ready_recrawl_message),
@@ -1030,6 +1141,12 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
   const messages = payload.actions
     .filter((action) => !["monitor_upstream_registry", "submitted_pending", "pending_merge"].includes(action.action_status))
     .map((action) => [`### ${action.label}`, "", action.recrawl_message].join("\n"))
+    .join("\n\n");
+  const conciseEmails = payload.actions
+    .filter((action) => action.action_status !== "monitor_upstream_registry")
+    .map((action) =>
+      [`### ${action.label}`, "", `To: ${action.concise_email.to ?? ""}`, `Subject: ${action.concise_email.subject}`, "", action.concise_email.body].join("\n")
+    )
     .join("\n\n");
   return [
     "# Packrift MCP Directory Submit Actions",
@@ -1058,6 +1175,10 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Live proof URL | Activation handoff | Activation runner | Order handoff | Next action |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     rows,
+    "",
+    "## Copy-Ready Concise Emails",
+    "",
+    conciseEmails,
     "",
     "## Copy-Ready Recrawl Messages",
     "",

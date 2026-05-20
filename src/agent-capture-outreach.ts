@@ -23,6 +23,14 @@ interface DirectoryRefreshRow {
   stale_markers: readonly string[];
   next_action: string;
   recrawl_subject?: string;
+  concise_email?: {
+    release: string;
+    to: string | null;
+    subject: string;
+    body: string;
+    proof_urls: Record<string, string>;
+    acceptance_check: readonly string[];
+  };
   recrawl_message?: string;
 }
 
@@ -481,6 +489,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
     stale_markers: "stale_markers" in action ? Array.from(action.stale_markers ?? []) : [],
     next_action: action.next_action,
     recrawl_subject: action.recrawl_subject,
+    concise_email: action.concise_email,
     recrawl_message: action.recrawl_message,
   }));
   const priorityQueue = directoryRefreshes.filter(
@@ -490,7 +499,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R23",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R24",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -616,12 +625,12 @@ export function agentCaptureOutreachHtml(runtime: AgentCaptureOutreachRuntime): 
     : `<article><h3>No urgent queue rows</h3><p>Use the generic start and activation links until the source queue changes.</p></article>`;
   const installSnippets = payload.agent_install_snippets;
   const sourceMessages = payload.directory_refreshes
-    .filter((action) => action.recrawl_message && action.action_status !== "monitor_upstream_registry")
+    .filter((action) => (action.concise_email?.body || action.recrawl_message) && action.action_status !== "monitor_upstream_registry")
     .slice(0, 6)
     .map(
       (action) => `<details>
         <summary>${escapeHtml(action.label)}</summary>
-        <pre>${escapeHtml(action.recrawl_message ?? "")}</pre>
+        <pre>${escapeHtml(action.concise_email?.body ?? action.recrawl_message ?? "")}</pre>
       </details>`
     )
     .join("");
@@ -742,7 +751,7 @@ export function agentCaptureOutreachMarkdown(runtime: AgentCaptureOutreachRuntim
     .join("\n");
   const messages = payload.directory_refreshes
     .filter((action) => action.action_status !== "monitor_upstream_registry")
-    .map((action) => [`### ${action.label}`, "", "```text", action.recrawl_message, "```"].join("\n"))
+    .map((action) => [`### ${action.label}`, "", `Subject: ${action.concise_email?.subject ?? action.recrawl_subject ?? ""}`, "", "```text", action.concise_email?.body ?? action.recrawl_message, "```"].join("\n"))
     .join("\n\n");
 
   return [

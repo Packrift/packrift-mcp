@@ -29,6 +29,7 @@ const TRACKED_START_RECOMMENDED_SOURCES = [
   "smithery",
   "cline_mcp_marketplace",
   "mcp_so",
+  "punkpeye_awesome_mcp",
   "mcpmarket_com",
   "cursor_directory",
   "mcpcentral",
@@ -194,7 +195,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R13",
+    release: "PACKRIFT-MCP-START-R14",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
