@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 const HOST = "mcp.packrift.com";
-const SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
+const DEFAULT_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
+const DEFAULT_SCOPE = "source-activation";
 const DEFAULT_KEY = "5050e763abb8dafdc736a5971e107171";
 const KEY_LOCATION = `https://${HOST}/${DEFAULT_KEY}.txt`;
 const ENDPOINTS = ["https://api.indexnow.org/indexnow", "https://www.bing.com/indexnow"];
-const USER_AGENT = "Packrift-MCP-Source-Activation-IndexNow/1.0";
+const USER_AGENT = "Packrift-MCP-IndexNow/1.1";
 const ENV_PATHS = [
   join(homedir(), "Downloads", "env-indexnow-packrift-root.txt"),
   join(homedir(), "Downloads", "env-indexnow-packrift.txt"),
@@ -20,6 +21,10 @@ function parseArgs(argv) {
     limit: 0,
     chunkSize: 250,
     timeoutMs: 20000,
+    sitemapUrl: DEFAULT_SITEMAP_URL,
+    scope: DEFAULT_SCOPE,
+    preflightConcurrency: 16,
+    skipPreflight: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -27,11 +32,23 @@ function parseArgs(argv) {
     else if (arg === "--limit") args.limit = Number(argv[++index] || 0);
     else if (arg === "--chunk-size") args.chunkSize = Number(argv[++index] || 250);
     else if (arg === "--timeout-ms") args.timeoutMs = Number(argv[++index] || 20000);
+    else if (arg === "--sitemap-url") args.sitemapUrl = argv[++index] || DEFAULT_SITEMAP_URL;
+    else if (arg === "--scope") args.scope = argv[++index] || DEFAULT_SCOPE;
+    else if (arg === "--preflight-concurrency") args.preflightConcurrency = Number(argv[++index] || 16);
+    else if (arg === "--skip-preflight") args.skipPreflight = true;
     else if (arg === "--help") {
-      console.log("Usage: node scripts/submit-source-activation-indexnow.mjs [--dry-run] [--limit N] [--chunk-size N] [--timeout-ms N]");
+      console.log(
+        [
+          "Usage: node scripts/submit-source-activation-indexnow.mjs [--dry-run] [--limit N] [--chunk-size N] [--timeout-ms N]",
+          "       [--sitemap-url URL] [--scope NAME] [--preflight-concurrency N] [--skip-preflight]",
+          "",
+          "Defaults to the Packrift MCP source-activation sitemap. Use --sitemap-url https://mcp.packrift.com/ai/sitemap.xml --scope ai-discovery to submit the broader MCP AI discovery sitemap.",
+        ].join("\n")
+      );
       process.exit(0);
     }
   }
+  args.scope = slugify(args.scope || DEFAULT_SCOPE);
   return args;
 }
 
@@ -41,6 +58,18 @@ function nowIso() {
 
 function timestampSlug() {
   return nowIso().replace(/\.\d{3}Z$/, "Z").replace(/[:.]/g, "-");
+}
+
+function slugify(value) {
+  return String(value || DEFAULT_SCOPE)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || DEFAULT_SCOPE;
+}
+
+function releaseScope(value) {
+  return slugify(value).replace(/-/g, "_").toUpperCase();
 }
 
 function readEnvFile(path) {
@@ -70,15 +99,15 @@ function decodeXml(value) {
     .replace(/&apos;/g, "'");
 }
 
-function sourceFromUrl(url) {
+function sourceFromUrl(url, fallbackSource) {
   const parsed = new URL(url);
   const parts = parsed.pathname.split("/").filter(Boolean);
   if (parts[0] === "ai" && ["mcp-eval-pack.json", "mcp-eval-pack.md"].includes(parts[1])) {
-    return parsed.searchParams.get("source") || "source_activation_sitemap";
+    return parsed.searchParams.get("source") || fallbackSource;
   }
   if (parts[0] === "r" && ["start", "config", "activate"].includes(parts[1])) return parts[2] || "unknown";
   if (parts[0] === "r" && ["install", "run"].includes(parts[1])) return parts[2] || "unknown";
-  return "source_activation_sitemap";
+  return fallbackSource;
 }
 
 function urlType(url) {
@@ -108,18 +137,34 @@ async function fetchText(url, timeoutMs) {
   }
 }
 
-async function collectUrls(timeoutMs, limit) {
-  const { response, text } = await fetchText(SITEMAP_URL, timeoutMs);
+async function fetchHead(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      headers: { "user-agent": USER_AGENT },
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    return { response };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function collectUrls(sitemapUrl, timeoutMs, limit, scope) {
+  const { response, text } = await fetchText(sitemapUrl, timeoutMs);
   if (!response.ok) throw new Error(`Sitemap fetch failed: ${response.status}`);
   const locs = [...text.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => decodeXml(match[1]));
   const seen = new Set();
   const rows = [];
-  for (const url of [SITEMAP_URL, ...locs]) {
+  for (const url of [sitemapUrl, ...locs]) {
     if (!url.startsWith(`https://${HOST}/`) || seen.has(url)) continue;
     seen.add(url);
     rows.push({
       url,
-      source: sourceFromUrl(url),
+      source: sourceFromUrl(url, scope.replace(/-/g, "_")),
       url_type: urlType(url),
     });
     if (limit > 0 && rows.length >= limit) break;
@@ -129,15 +174,22 @@ async function collectUrls(timeoutMs, limit) {
 
 async function probeUrl(row, timeoutMs) {
   try {
-    const { response, text } = await fetchText(row.url, timeoutMs);
+    let { response } = await fetchHead(row.url, timeoutMs);
+    let text = "";
+    if (response.status === 405 || response.status === 501) {
+      const fallback = await fetchText(row.url, timeoutMs);
+      response = fallback.response;
+      text = fallback.text;
+    }
     const finalUrl = response.url || row.url;
     const contentType = response.headers.get("content-type") || "";
+    const contentLength = Number(response.headers.get("content-length") || 0);
     return {
       ...row,
       status: response.status,
       final_url: finalUrl,
       content_type: contentType,
-      bytes: text.length,
+      bytes: text.length || contentLength,
       ok: response.ok,
       error: "",
     };
@@ -217,19 +269,18 @@ async function submitChunk(endpoint, key, urls, chunkIndex, timeoutMs) {
 
 function writeCsv(path, rows) {
   const fields = ["source", "url_type", "url", "status", "final_url", "content_type", "bytes", "ok", "error"];
-  const stream = createWriteStream(path, { encoding: "utf8" });
-  stream.write(`${fields.join(",")}\n`);
-  for (const row of rows) {
-    stream.write(
-      `${fields
+  const lines = [
+    fields.join(","),
+    ...rows.map((row) =>
+      fields
         .map((field) => {
           const value = String(row[field] ?? "");
           return `"${value.replace(/"/g, '""')}"`;
         })
-        .join(",")}\n`
-    );
-  }
-  stream.end();
+        .join(",")
+    ),
+  ];
+  writeFileSync(path, `${lines.join("\n")}\n`);
 }
 
 function chunks(values, size) {
@@ -238,17 +289,40 @@ function chunks(values, size) {
   return out;
 }
 
+async function mapLimit(values, limit, mapper) {
+  const results = new Array(values.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, values.length) }, async () => {
+    while (nextIndex < values.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(values[currentIndex], currentIndex);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const startedAt = nowIso();
-  const outDir = join(process.cwd(), "outputs", "source-activation-indexnow", timestampSlug());
+  const outDir = join(process.cwd(), "outputs", `${args.scope}-indexnow`, timestampSlug());
   mkdirSync(outDir, { recursive: true });
 
   const key = loadKey();
   const keyProbe = await probeKey(key, args.timeoutMs);
-  const candidates = await collectUrls(args.timeoutMs, args.limit);
-  const preflight = [];
-  for (const row of candidates) preflight.push(await probeUrl(row, args.timeoutMs));
+  const candidates = await collectUrls(args.sitemapUrl, args.timeoutMs, args.limit, args.scope);
+  const preflight = args.skipPreflight
+    ? candidates.map((row) => ({
+        ...row,
+        status: "skipped",
+        final_url: row.url,
+        content_type: "",
+        bytes: 0,
+        ok: true,
+        error: "",
+      }))
+    : await mapLimit(candidates, Math.max(1, args.preflightConcurrency), (row) => probeUrl(row, args.timeoutMs));
   const submitUrls = preflight.filter((row) => row.ok).map((row) => row.url);
   const endpointResults = [];
   const acceptedUrls = new Set();
@@ -272,11 +346,13 @@ async function main() {
   }
 
   const manifest = {
-    release_id: `PACKRIFT-MCP-SOURCE-ACTIVATION-INDEXNOW-${startedAt.slice(0, 10)}-R01`,
+    release_id: `PACKRIFT-MCP-${releaseScope(args.scope)}-INDEXNOW-${startedAt.slice(0, 10)}-R01`,
     generated_at: nowIso(),
     dry_run: args.dryRun,
+    scope: args.scope,
+    preflight_skipped: args.skipPreflight,
     host: HOST,
-    sitemap_url: SITEMAP_URL,
+    sitemap_url: args.sitemapUrl,
     key_location: KEY_LOCATION,
     key_location_ok: keyProbe.ok,
     candidate_url_count: candidates.length,
@@ -303,11 +379,13 @@ async function main() {
   writeFileSync(
     join(outDir, "release_summary.md"),
     [
-      `# Packrift MCP Source Activation IndexNow - ${startedAt.slice(0, 10)}`,
+      `# Packrift MCP ${args.scope} IndexNow - ${startedAt.slice(0, 10)}`,
       "",
+      `Scope: \`${args.scope}\``,
       `Host: \`${HOST}\``,
-      `Sitemap: ${SITEMAP_URL}`,
+      `Sitemap: ${args.sitemapUrl}`,
       `Dry run: \`${args.dryRun}\``,
+      `Preflight skipped: \`${args.skipPreflight}\``,
       `Key location ok: \`${keyProbe.ok}\``,
       `Candidate URLs: \`${candidates.length}\``,
       `Preflight pass: \`${submitUrls.length}\``,
@@ -317,7 +395,7 @@ async function main() {
       "",
       "## Scope",
       "",
-      "This only notifies IndexNow about existing Packrift MCP source-activation URLs. It does not create a new CLI, buyer surface, checkout path, or directory submission.",
+      `This only notifies IndexNow about existing Packrift MCP URLs from ${args.sitemapUrl}. It does not create a new CLI, buyer surface, checkout path, or directory submission.`,
       "",
       "## Endpoint Results",
       "",
@@ -331,6 +409,8 @@ async function main() {
       {
         out_dir: outDir,
         dry_run: args.dryRun,
+        scope: args.scope,
+        preflight_skipped: args.skipPreflight,
         key_location_ok: keyProbe.ok,
         candidate_url_count: candidates.length,
         preflight_pass_count: submitUrls.length,

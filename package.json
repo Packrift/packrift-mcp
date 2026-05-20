@@ -35,6 +35,7 @@
     "check:distribution": "node scripts/check-mcp-distribution.mjs",
     "check:agent-capture": "node scripts/check-agent-capture.mjs",
     "submit:source-activation-indexnow": "node scripts/submit-source-activation-indexnow.mjs",
+    "submit:ai-discovery-indexnow": "node scripts/submit-source-activation-indexnow.mjs --sitemap-url https://mcp.packrift.com/ai/sitemap.xml --scope ai-discovery --skip-preflight",
     "build:agent-capture-outreach": "node scripts/build-agent-capture-outreach.mjs",
     "build:claude-connector-submission": "npm run build --silent && node scripts/build-claude-connector-submission.mjs",
     "build:directory-submission-pack": "node scripts/build-mcp-directory-submission-pack.mjs",
