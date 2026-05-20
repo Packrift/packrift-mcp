@@ -11,6 +11,9 @@ export interface AdoptionKitRuntime {
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
@@ -438,6 +441,9 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
       agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
+      agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
+      agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
+      agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
       activation_wave: ACTIVATION_WAVE_URL,
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,

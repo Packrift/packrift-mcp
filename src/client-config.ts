@@ -17,6 +17,11 @@ const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/op
 const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const MCP_AGENT_ADOPTION_PROGRESS_URL = "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json";
+const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
+const MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md";
+const MCP_AGENT_HOST_ROLLOUT_HTML_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
 const MCP_EVAL_PACK_URL = "https://mcp.packrift.com/ai/mcp-eval-pack.json";
@@ -206,6 +211,11 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
+      agent_host_rollout_markdown: MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL,
+      agent_host_rollout_html: MCP_AGENT_HOST_ROLLOUT_HTML_URL,
+      agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
+      agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
       tracked_config_generic: trackedConfigUrl("generic"),
       tracked_config_examples: Object.fromEntries(TRACKED_CONFIG_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
@@ -248,6 +258,9 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
         "/mcp",
         "/ai/mcp-client-config.json",
         "/ai/mcp-agent-adoption-progress.json",
+        "/ai/mcp-agent-host-rollout.json",
+        "/ai/mcp-agent-host-rollout-tasks.jsonl",
+        "/ai/mcp-agent-host-rollout-tasks.csv",
         "/ai/mcp-source-activation-queue.json",
         "/ai/mcp-external-activation-brief.json",
         "/ai/mcp-eval-pack.json",
@@ -261,6 +274,9 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
     },
     activation_surfaces: {
       agent_adoption_progress: MCP_AGENT_ADOPTION_PROGRESS_URL,
+      agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
+      agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
+      agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
       source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_URL,
       reviewer_activation: MCP_REVIEWER_ACTIVATION_URL,
@@ -302,6 +318,9 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
+      agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
+      agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
       source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
       agent_adoption_progress: MCP_AGENT_ADOPTION_PROGRESS_URL,
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_URL,
