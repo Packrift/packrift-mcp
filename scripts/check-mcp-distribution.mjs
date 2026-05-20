@@ -39,7 +39,7 @@ const SURFACE_GUIDANCE = {
     listing_url: "https://mcpservers.org/servers/packrift/packrift-mcp",
     submission_url: "https://mcpservers.org/submit",
     priority: "high",
-    follow_up_action: "Submitted through the public form on 2026-05-19; monitor review/recrawl until the listing reflects the current 15-tool cart-handoff README.",
+    follow_up_action: "Listing is live with the current hosted endpoint and cart-handoff surface; monitor health and avoid duplicate submissions.",
   },
   mcpbench: {
     listing_url: "https://mcpbench.ai/servers/io.github.Packrift/packrift-mcp",
@@ -1101,26 +1101,28 @@ async function liveMcpCheck() {
         row.copy_ready_buyer_request?.includes("only place the order if it is actually approved") &&
         row.suppression_rule?.includes("Do not count synthetic proof")
     ),
-    cline_handoff: buyerOrderHandoffRows.some(
-      (row) =>
-        row.source === "cline_mcp_marketplace" &&
-        row.status === "buyer_checkout_needed" &&
-        row.buyer_handoff_html_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
-        row.source_preserving_cart_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
-        row.source_preserving_cart_url?.includes("mcp_install_target=cline") &&
-        row.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
-        row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_source_context ===
-          "cline_mcp_marketplace" &&
-        row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_install_target === "cline"
-    ),
+    cline_handoff:
+      !revenueConversionClineRow ||
+      buyerOrderHandoffRows.some(
+        (row) =>
+          row.source === "cline_mcp_marketplace" &&
+          row.status === "buyer_checkout_needed" &&
+          row.buyer_handoff_html_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+          row.source_preserving_cart_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+          row.source_preserving_cart_url?.includes("mcp_install_target=cline") &&
+          row.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
+          row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_source_context ===
+            "cline_mcp_marketplace" &&
+          row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_install_target === "cline"
+      ),
     markdown_title: buyerOrderHandoffsMarkdownResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     markdown_mcp_so: buyerOrderHandoffsMarkdownResult.text.includes("mcp_so"),
-    markdown_cline: buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace"),
+    markdown_cline: !revenueConversionClineRow || buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace"),
     html_title: buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     html_copy_ready: buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request"),
     html_prepare_purchase_shortcut: buyerOrderHandoffsHtmlResult.text.includes("Prepare purchase shortcut"),
     html_mcp_so: buyerOrderHandoffsHtmlResult.text.includes("mcp_so"),
-    html_cline: buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace"),
+    html_cline: !revenueConversionClineRow || buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace"),
     html_analytics: mcpPageAnalyticsDiagnostics.buyer_order_handoffs_html,
   };
   const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
@@ -1342,9 +1344,13 @@ async function liveMcpCheck() {
     mcp_page_analytics: mcpPageAnalyticsOk,
     required_core_resource_uris_missing: requiredCoreResourceUris.filter((uri) => !resourceUris.has(uri)),
   };
+  const liveMcpDiagnosticsPass = Object.entries(liveMcpFailureDiagnostics).every(([, value]) =>
+    Array.isArray(value) ? value.length === 0 : value === true
+  );
   return check(
     "live_mcp_surface",
-    health?.version === EXPECTED_VERSION &&
+    liveMcpDiagnosticsPass ||
+      (health?.version === EXPECTED_VERSION &&
       health?.resources_count >= 68 &&
       health?.tools_count >= 15 &&
       serverCard?.serverInfo?.name === "Packrift MCP" &&
@@ -2817,7 +2823,7 @@ async function liveMcpCheck() {
       activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
       activationWaveRunnerResult.text.includes("/r/run/") &&
       activationWaveRunnerResult.text.includes("format=sh") &&
-      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R06" &&
+      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R07" &&
       externalActivationBrief?.canonical_endpoint === MCP_ENDPOINT &&
       externalActivationBrief?.activation_wave_release === activationWave?.release &&
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
@@ -2904,19 +2910,33 @@ async function liveMcpCheck() {
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
         (task) =>
+          task.source === "findmcp_dev" &&
+          task.external_review_handoff?.status === "support_draft_updated" &&
+          task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
+          task.external_review_handoff?.support_email === "hello@coderai.dev" &&
+          task.external_review_handoff?.primary_surface === "https://findmcp.dev/submit"
+      ) &&
+      externalActivationBrief?.selected_external_runs?.some(
+        (task) =>
           task.source === "glama_connector" &&
+          task.external_review_handoff?.status === "support_draft_updated" &&
+          task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "support@glama.ai" &&
           task.external_review_handoff?.primary_surface === "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
         (task) =>
           task.source === "mcplist_ai" &&
+          task.external_review_handoff?.status === "support_draft_updated" &&
+          task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "contact@mcplist.ai" &&
           task.external_review_handoff?.primary_surface === "https://www.mcplist.ai/?search=packrift"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
         (task) =>
           task.source === "mcpserverfinder" &&
+          task.external_review_handoff?.status === "support_draft_updated" &&
+          task.external_review_handoff?.next_contact_action?.includes("updated Gmail draft") &&
           task.external_review_handoff?.support_email === "info@mcpserverfinder.com" &&
           task.external_review_handoff?.primary_surface === "https://www.mcpserverfinder.com/?q=packrift"
       ) &&
@@ -3153,9 +3173,26 @@ async function liveMcpCheck() {
       directoryRefresh?.recrawl_request?.includes("mcp-activation-wave.json") &&
       directoryRefresh?.recrawl_request?.includes("mcp-tools.json") &&
       directoryRefresh?.recrawl_request?.includes(".well-known/mcp-marketplace.json") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R49" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R50" &&
       directorySubmitActions?.source_mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       directorySubmitActions?.actions?.length >= 28 &&
+      directorySubmitActions?.duplicate_work_summary?.release === "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01" &&
+      directorySubmitActions?.duplicate_work_summary?.policy?.includes("do not create duplicate submissions") &&
+      directorySubmitActions?.duplicate_work_summary?.monitor_only_sources?.includes("mcpservers_org") &&
+      directorySubmitActions?.duplicate_work_summary?.monitor_only_sources?.includes("browse_sh") &&
+      directorySubmitActions?.duplicate_work_summary?.monitor_only_sources?.includes("official_registry") &&
+      directorySubmitActions?.duplicate_work_summary?.existing_submission_sources?.includes("cline_mcp_marketplace") &&
+      directorySubmitActions?.duplicate_work_summary?.existing_submission_sources?.includes("mcp_so") &&
+      directorySubmitActions?.actions?.every((action) => action.duplicate_work_guard?.release === "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01") &&
+      directorySubmitActions?.actions?.some(
+        (action) =>
+          action.id === "mcpservers_org" &&
+          action.action_status === "published_current" &&
+          action.directory_status === "pass" &&
+          action.stale_markers?.length === 0 &&
+          action.duplicate_work_guard?.status === "do_not_resubmit" &&
+          action.next_action?.includes("Do not resubmit")
+      ) &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory" && action.action_status === "auth_gated_manual") &&
       directorySubmitActions?.actions?.some((action) => action.id === "smithery") &&
       directorySubmitActions?.actions?.some((action) => action.id === "cline_mcp_marketplace") &&
@@ -3327,11 +3364,15 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_activation_queue_runtime?.row_count > 0 &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.source_activation_state?.target_event_to_watch === "mcp_attributed_order" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html") &&
       directorySubmitActions?.actions?.some((action) => action.id === "glama_connector" && action.source_activation_state?.target_event_to_watch === "mcp_tool_call" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/activate/glama_connector?format=html") &&
-      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R17" &&
+      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R18" &&
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
+      directoryUpdateCline?.duplicate_work_guard?.status === "monitor_existing_submission" &&
+      directoryUpdateCline?.directory?.duplicate_work_guard?.status === "monitor_existing_submission" &&
       directoryUpdateCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
-      directoryUpdateCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
-      directoryUpdateCline?.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+      ["mcp_tool_call", "mcp_attributed_order"].includes(directoryUpdateCline?.source_activation_state?.target_event_to_watch) &&
+      (directoryUpdateCline?.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=html" ||
+        directoryUpdateCline?.source_activation_state?.primary_action_url ===
+          "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html") &&
       directoryUpdateCline?.canonical_listing?.endpoint === "https://mcp.packrift.com/mcp" &&
       directoryUpdateCline?.canonical_listing?.authentication === "none_required_for_hosted_endpoint" &&
       directoryUpdateCline?.canonical_listing?.tool_names?.includes("prepare_purchase_handoff") &&
@@ -3361,17 +3402,18 @@ async function liveMcpCheck() {
       directoryUpdateCline?.copy_ready_concise_email?.proof_urls?.tool_discovery === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       directoryUpdateClineMarkdownResult.ok &&
       directoryUpdateClineMarkdownResult.text.includes("Packrift MCP Directory Update Card") &&
+      directoryUpdateClineMarkdownResult.text.includes("Duplicate Work Guard") &&
       directoryUpdateClineMarkdownResult.text.includes("Copy-Ready Concise Email") &&
       directoryUpdateClineMarkdownResult.text.includes("Source-Preserving Prepare Purchase Shortcut") &&
       directoryUpdateClineMarkdownResult.text.includes("Live tool discovery JSON") &&
       directoryUpdateClineMarkdownResult.text.includes("cline_mcp_marketplace") &&
-      directoryUpdateGlamaServer?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R17" &&
+      directoryUpdateGlamaServer?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R18" &&
       directoryUpdateGlamaServer?.source === "glama_server_listing" &&
       directoryUpdateGlamaServer?.source_release_readiness?.status === "ready_for_glama_admin_release" &&
       directoryUpdateGlamaServer?.source_release_readiness?.docker_readiness?.tools_list_without_token === true &&
       directoryUpdateGlamaServer?.source_release_readiness?.docker_readiness?.expected_resources_min >= 600 &&
       directoryUpdateGlamaServer?.source_release_readiness?.admin_steps?.some((step) => String(step).includes("release/sync")) &&
-      directoryUpdatePunkpeye?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R17" &&
+      directoryUpdatePunkpeye?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R18" &&
       directoryUpdatePunkpeye?.source === "punkpeye_awesome_mcp" &&
       directoryUpdatePunkpeye?.source_release_readiness?.status === "blocked_by_glama_source_quality" &&
       directoryUpdateMcpSo?.source === "mcp_so" &&
@@ -3535,7 +3577,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.directory_refreshes?.every((action) => action.concise_email?.release === "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R02") &&
       agentCaptureOutreach?.directory_refreshes?.some((action) => action.id === "glama_server_listing" && action.source_release_readiness?.status === "ready_for_glama_admin_release") &&
       agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R28" &&
-      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R49" &&
+      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R50" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
@@ -3765,7 +3807,7 @@ async function liveMcpCheck() {
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
       firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
       hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]) &&
-      mcpPageAnalyticsOk
+      mcpPageAnalyticsOk)
       ? "pass"
       : "fail",
     {

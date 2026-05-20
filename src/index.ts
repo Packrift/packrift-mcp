@@ -9638,7 +9638,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
 </html>`;
 }
 
-const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R06";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R07";
 
 type McpExternalActivationReviewHandoff = {
   status: string;
@@ -9658,12 +9658,12 @@ const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<string, McpExternalActivat
       "Use the edited Docker PR comment as the canonical reviewer handoff; avoid duplicate comments unless a maintainer asks for more proof.",
   },
   glama_connector: {
-    status: "support_draft_ready",
+    status: "support_draft_updated",
     primary_surface: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
     support_email: "support@glama.ai",
     support_url: "https://glama.ai/support",
     next_contact_action:
-      "Ask Glama support to run the source-aware endpoint from a real Glama-hosted connector or inspector session; the public inspector rendered static documentation in the latest operator check.",
+      "Review and send the updated Gmail draft to support@glama.ai. It includes the current source activation packet, first-run shell, guarded order handoff, and asks Glama to run a real source-aware connector or inspector session.",
   },
   mcphubz: {
     status: "login_required_contact_broken",
@@ -9672,26 +9672,26 @@ const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<string, McpExternalActivat
       "Use an authenticated MCPHubz session or a working owner contact route; the public contact form is not a valid submission path.",
   },
   findmcp_dev: {
-    status: "support_draft_ready",
+    status: "support_draft_updated",
     primary_surface: "https://findmcp.dev/submit",
     support_email: "hello@coderai.dev",
     support_url: "https://coderai.dev/",
     next_contact_action:
-      "Use the existing Gmail draft to hello@coderai.dev as the canonical FindMCP/Coder AI owner handoff; the public submit path currently renders the homepage instead of a working form.",
+      "Review and send the updated Gmail draft to hello@coderai.dev. It includes the current FindMCP source activation packet, guarded order handoff, and asks for a real external MCP review run because the public submit path renders the homepage.",
   },
   mcplist_ai: {
-    status: "support_draft_ready",
+    status: "support_draft_updated",
     primary_surface: "https://www.mcplist.ai/?search=packrift",
     support_email: "contact@mcplist.ai",
     next_contact_action:
-      "Use the existing Gmail draft to contact@mcplist.ai as the canonical MCPLIST owner handoff; ask them to run the source-aware Packrift MCP first-useful flow from a real review or directory environment.",
+      "Review and send the updated Gmail draft to contact@mcplist.ai. It includes the current MCPLIST source activation packet, guarded order handoff, and asks for a real source-aware MCP review run.",
   },
   mcpserverfinder: {
-    status: "support_draft_ready",
+    status: "support_draft_updated",
     primary_surface: "https://www.mcpserverfinder.com/?q=packrift",
     support_email: "info@mcpserverfinder.com",
     next_contact_action:
-      "Use the existing Gmail draft to info@mcpserverfinder.com as the canonical MCP Server Finder owner handoff; ask them to run the source-aware Packrift MCP first-useful flow from a real review or directory environment.",
+      "Review and send the updated Gmail draft to info@mcpserverfinder.com. It includes the current MCP Server Finder source activation packet, guarded order handoff, and asks for a real source-aware MCP review run.",
   },
   mcplane: {
     status: "validator_rejected_contact_route_identified",

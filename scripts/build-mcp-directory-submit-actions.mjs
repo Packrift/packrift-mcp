@@ -19,10 +19,10 @@ const EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-ex
 
 const DIRECT_STATUS = {
   mcpservers_org: {
-    status: "submitted_pending",
+    status: "published_current",
     method: "Already submitted to mcpservers.org server function",
-    evidence: "Previous submission returned id 2468, status pending, plan free, paymentStatus not_required.",
-    next_action: "Use the refreshed proof message only if support or review asks for updated evidence.",
+    evidence: "mcpservers.org now publishes the current Packrift MCP listing in the live distribution check.",
+    next_action: "Do not resubmit. Monitor the live listing and use source-specific proof only if mcpservers.org asks for it.",
   },
   mcp_directory: {
     status: "already_submitted",
@@ -361,43 +361,87 @@ function buildAction(pack, previousByName, target) {
     evidence: target.action,
     next_action: target.action,
   };
+  const effectiveTarget =
+    defaults.status === "published_current"
+      ? {
+          ...target,
+          current_status: "pass",
+          missing: [],
+        }
+      : target;
   const previous = previousByName[target.name] ?? null;
+  const duplicateGuard = duplicateWorkGuard(target.name, defaults.status, effectiveTarget.current_status);
   return {
-    name: target.name,
-    label: targetLabel(target),
+    name: effectiveTarget.name,
+    label: targetLabel(effectiveTarget),
     status: defaults.status,
-    current_distribution_status: target.current_status,
-    priority: target.priority,
+    current_distribution_status: effectiveTarget.current_status,
+    priority: effectiveTarget.priority,
     method: defaults.method,
     evidence: defaults.evidence,
     next_action: defaults.next_action,
-    listing_url: target.listing_url,
-    submission_url: target.submission_url,
-    tracked_start_url: trackedStartUrl(target.name),
-    tracked_config_url: trackedConfigUrl(target.name),
-    directory_update_card_url: directoryUpdateCardUrl(target.name),
-    tracked_install_url: trackedInstallUrl(target.name, "generic_streamable_http"),
-    tracked_first_run_url: trackedRunUrl(target.name, "generic_streamable_http"),
-    tracked_first_run_live_proof_url: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
-    reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+    duplicate_work_guard: duplicateGuard,
+    listing_url: effectiveTarget.listing_url,
+    submission_url: effectiveTarget.submission_url,
+    tracked_start_url: trackedStartUrl(effectiveTarget.name),
+    tracked_config_url: trackedConfigUrl(effectiveTarget.name),
+    directory_update_card_url: directoryUpdateCardUrl(effectiveTarget.name),
+    tracked_install_url: trackedInstallUrl(effectiveTarget.name, "generic_streamable_http"),
+    tracked_first_run_url: trackedRunUrl(effectiveTarget.name, "generic_streamable_http"),
+    tracked_first_run_live_proof_url: `${trackedRunUrl(effectiveTarget.name, "generic_streamable_http")}?execute=1`,
+    reviewer_activation_runner_url: `https://mcp.packrift.com/r/activate/${effectiveTarget.name}?format=html`,
     previous_status: previous?.status ?? null,
-    form_fields: target.form_fields,
+    form_fields: effectiveTarget.form_fields,
     proof_urls: {
-      ...target.proof_urls,
-      tracked_start: trackedStartUrl(target.name),
-      tracked_config: trackedConfigUrl(target.name),
-      directory_update_card: directoryUpdateCardUrl(target.name),
-      tracked_install_generic: trackedInstallUrl(target.name, "generic_streamable_http"),
-      tracked_first_run_generic: trackedRunUrl(target.name, "generic_streamable_http"),
-      tracked_first_run_generic_execute: `${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
-      reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
+      ...effectiveTarget.proof_urls,
+      tracked_start: trackedStartUrl(effectiveTarget.name),
+      tracked_config: trackedConfigUrl(effectiveTarget.name),
+      directory_update_card: directoryUpdateCardUrl(effectiveTarget.name),
+      tracked_install_generic: trackedInstallUrl(effectiveTarget.name, "generic_streamable_http"),
+      tracked_first_run_generic: trackedRunUrl(effectiveTarget.name, "generic_streamable_http"),
+      tracked_first_run_generic_execute: `${trackedRunUrl(effectiveTarget.name, "generic_streamable_http")}?execute=1`,
+      reviewer_activation_runner: `https://mcp.packrift.com/r/activate/${effectiveTarget.name}?format=html`,
       activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
       external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
       external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
       external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       claude_connector_submission: CLAUDE_CONNECTOR_SUBMISSION_URL,
     },
-    recrawl_message: recrawlMessage(pack, target),
+    recrawl_message: recrawlMessage(pack, effectiveTarget),
+  };
+}
+
+function duplicateWorkGuard(source, actionStatus, directoryStatus) {
+  const publicThreadIds = new Set(["cline_mcp_marketplace", "mcp_so", "punkpeye_awesome_mcp", "docker_mcp_catalog"]);
+  const publishedCurrent = directoryStatus === "pass" || ["published_current", "catalog_live_installable", "hosted_connector_live"].includes(actionStatus);
+  const alreadySubmitted = publicThreadIds.has(source) || ["submitted_pending", "pending_merge"].includes(actionStatus);
+  const emailDraftReady = actionStatus === "email_draft_ready";
+
+  if (publishedCurrent) {
+    return {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      status: "do_not_resubmit",
+      reason: "This surface is already live or current enough to monitor; duplicate submissions would waste reviewer attention.",
+    };
+  }
+  if (alreadySubmitted) {
+    return {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      status: "monitor_existing_submission",
+      reason: "A canonical issue, PR, or pending submission already exists; update that lane only if maintainers ask.",
+    };
+  }
+  if (emailDraftReady) {
+    return {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      status: "single_reviewed_outreach_only",
+      reason: "Use the one identified owner/contact route; do not send multiple duplicate messages.",
+    };
+  }
+  return {
+    release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+    status: "action_allowed_with_current_packet",
+    reason: "This lane can move once with the current source-specific proof packet and hosted MCP endpoint.",
   };
 }
 
@@ -409,7 +453,7 @@ function markdown(payload) {
     )
     .join("\n");
   const messages = payload.actions
-    .filter((action) => action.status !== "monitor_upstream_registry")
+    .filter((action) => action.status !== "monitor_upstream_registry" && !["do_not_resubmit", "monitor_existing_submission"].includes(action.duplicate_work_guard.status))
     .map((action) => [`### ${action.label}`, "", action.recrawl_message].join("\n"))
     .join("\n\n");
   return [
@@ -420,10 +464,20 @@ function markdown(payload) {
     `Tracked start template: ${payload.tracked_start_template}`,
     `Tracked config template: ${payload.tracked_config_template}`,
     `Directory proof: ${payload.directory_refresh_url}`,
+    `Release: ${payload.release}`,
     "",
     "## Summary",
     "",
     publicProofLine(payload.source_pack),
+    "",
+    "## Duplicate Work Guard",
+    "",
+    payload.duplicate_work_summary.policy,
+    "",
+    `Monitor-only sources: ${payload.duplicate_work_summary.monitor_only_sources.join(", ") || "none"}`,
+    `Existing-submission sources: ${payload.duplicate_work_summary.existing_submission_sources.join(", ") || "none"}`,
+    `Single-outreach sources: ${payload.duplicate_work_summary.single_outreach_sources.join(", ") || "none"}`,
+    `Still-actionable sources: ${payload.duplicate_work_summary.still_actionable_sources.join(", ") || "none"}`,
     "",
     "## Action Queue",
     "",
@@ -446,6 +500,7 @@ function main() {
     .filter((target) => !["pass"].includes(target.current_status))
     .map((target) => buildAction(pack, previousByName, target));
   const payload = {
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R50",
     generated_at: new Date().toISOString(),
     canonical_endpoint: "https://mcp.packrift.com/mcp",
     tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
@@ -458,6 +513,23 @@ function main() {
       copy: pack.copy,
     },
     actions,
+  };
+  payload.duplicate_work_summary = {
+    release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+    policy:
+      "Use one canonical action lane per directory or host. Current, pending, or public-thread-backed rows are monitor/update-only; do not create duplicate submissions.",
+    monitor_only_sources: actions
+      .filter((action) => action.duplicate_work_guard.status === "do_not_resubmit")
+      .map((action) => action.name),
+    existing_submission_sources: actions
+      .filter((action) => action.duplicate_work_guard.status === "monitor_existing_submission")
+      .map((action) => action.name),
+    single_outreach_sources: actions
+      .filter((action) => action.duplicate_work_guard.status === "single_reviewed_outreach_only")
+      .map((action) => action.name),
+    still_actionable_sources: actions
+      .filter((action) => action.duplicate_work_guard.status === "action_allowed_with_current_packet")
+      .map((action) => action.name),
   };
   const stamp = slugNow();
   const outDir = resolve(OUT_ROOT, stamp);

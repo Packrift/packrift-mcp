@@ -128,14 +128,16 @@ const ACTIONS = [
   {
     id: "mcpservers_org",
     label: "mcpservers.org",
-    action_status: "submitted_pending",
-    directory_status: "stale",
+    action_status: "published_current",
+    directory_status: "pass",
     priority: "high",
     method: "Submitted through the public listing flow.",
-    evidence: "Packrift has already been submitted and is waiting for review or recrawl.",
-    stale_markers: ["get_cart_handoff_candidates", "mcp-cart-handoff-candidates", "compare_alternatives", "pack_calculator", "inventory_status"],
-    recrawl_subject: "Refresh mcpservers.org Packrift MCP listing to current hosted endpoint",
-    next_action: "Use the refreshed proof message if support or review asks for current evidence.",
+    evidence:
+      "mcpservers.org now publishes the current Packrift MCP listing with the hosted endpoint, current cart-handoff tool surface, and no stale proof markers in the live distribution check.",
+    stale_markers: [],
+    recrawl_subject: "Monitor mcpservers.org Packrift MCP listing",
+    next_action:
+      "Do not resubmit. Monitor the live listing and use the source-specific install, first-run, eval-pack, and order-handoff links only if mcpservers.org asks for refreshed proof.",
     listing_url: "https://mcpservers.org/servers/packrift/packrift-mcp",
     submission_url: "https://mcpservers.org/submit",
   },
@@ -701,6 +703,90 @@ function sourcePreparePurchaseShortcut(source: string, target: string) {
   };
 }
 
+function duplicateWorkGuard(action: (typeof ACTIONS)[number]) {
+  const publicThreadIds = new Set(["cline_mcp_marketplace", "mcp_so", "punkpeye_awesome_mcp", "docker_mcp_catalog"]);
+  const publishedCurrent =
+    action.directory_status === "pass" ||
+    ["published_current", "hosted_connector_live", "catalog_live_installable"].includes(action.action_status);
+  const alreadySubmitted =
+    publicThreadIds.has(action.id) || ["submitted_pending", "pending_merge"].includes(action.action_status);
+  const emailDraftReady = action.action_status === "email_draft_ready";
+
+  if (publishedCurrent) {
+    return {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      status: "do_not_resubmit",
+      reason:
+        "This surface is already live or current enough to monitor. Additional submissions would create duplicate work and could dilute reviewer signal.",
+      allowed_next_actions: [
+        "Monitor the live listing and health checks.",
+        "Use source-specific install, first-run, eval-pack, and order-handoff links only if the directory asks for proof.",
+        "Keep the existing hosted endpoint https://mcp.packrift.com/mcp as the canonical integration path.",
+      ],
+      blocked_actions: [
+        "Do not submit a duplicate listing.",
+        "Do not post another unsolicited public comment.",
+        "Do not create a separate Packrift CLI, buyer surface, or checkout path.",
+      ],
+    };
+  }
+
+  if (alreadySubmitted) {
+    return {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      status: "monitor_existing_submission",
+      reason:
+        "A canonical public issue, PR, or pending submission already exists. New work should update or monitor that existing lane instead of creating a parallel submission.",
+      allowed_next_actions: [
+        "Monitor the existing issue, PR, or submitted listing.",
+        "Reply only when maintainers request more evidence.",
+        "Use the source-specific activation and order-handoff proof URLs as the single evidence bundle.",
+      ],
+      blocked_actions: [
+        "Do not open a duplicate issue or PR.",
+        "Do not post another unsolicited proof dump.",
+        "Do not create a new wrapper surface instead of using the hosted MCP endpoint.",
+      ],
+    };
+  }
+
+  if (emailDraftReady) {
+    return {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      status: "single_reviewed_outreach_only",
+      reason:
+        "A single owner/contact path is ready. Send or update that one route only after review; do not fan out duplicate messages to unrelated contacts.",
+      allowed_next_actions: [
+        "Review the existing draft or concise email payload.",
+        "Send one current proof packet to the identified owner route.",
+        "Track replies against this source-specific action row.",
+      ],
+      blocked_actions: [
+        "Do not send multiple near-duplicate emails.",
+        "Do not retry broken public submit forms unless their status changes.",
+        "Do not create a separate Packrift integration surface for the directory.",
+      ],
+    };
+  }
+
+  return {
+    release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+    status: "action_allowed_with_current_packet",
+    reason:
+      "This lane can still move forward, but only by using the existing Packrift MCP endpoint and the source-specific packet attached to this action row.",
+    allowed_next_actions: [
+      "Use the listed submission or owner route once.",
+      "Include the tracked source-specific proof URLs.",
+      "Verify the listing after submission before taking further action.",
+    ],
+    blocked_actions: [
+      "Do not create a duplicate buyer or CLI surface.",
+      "Do not submit without the current no-auth hosted MCP endpoint proof.",
+      "Do not count browser-only proof as source activation.",
+    ],
+  };
+}
+
 function formattedUrl(value: string, format: "html" | "md" | "json" | "sh"): string {
   const url = new URL(value);
   url.searchParams.set("format", format);
@@ -1023,8 +1109,10 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     const sourceActivation = sourceActivationStateFor(runtime, action.id);
     const preferredTarget = sourceActivation?.current_counts?.preferred_target ?? "generic_streamable_http";
     const preparePurchaseShortcut = sourcePreparePurchaseShortcut(action.id, preferredTarget);
+    const duplicateGuard = duplicateWorkGuard(action);
     return {
       ...action,
+      duplicate_work_guard: duplicateGuard,
       source_activation_state: sourceActivation ?? null,
       tracked_start_url: trackedStartUrl(action.id),
       tracked_config_url: trackedConfigUrl(action.id),
@@ -1172,7 +1260,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R49",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R50",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1227,6 +1315,23 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       resources_count: runtime.resourcesCount,
       prompts_count: runtime.promptsCount,
     },
+    duplicate_work_summary: {
+      release: "PACKRIFT-MCP-DUPLICATE-WORK-GUARD-R01",
+      policy:
+        "Use one canonical action lane per directory or host. Published, current, pending, or public-thread-backed rows are monitor/update-only; do not create duplicate submissions.",
+      monitor_only_sources: actions
+        .filter((action) => action.duplicate_work_guard.status === "do_not_resubmit")
+        .map((action) => action.id),
+      existing_submission_sources: actions
+        .filter((action) => action.duplicate_work_guard.status === "monitor_existing_submission")
+        .map((action) => action.id),
+      single_outreach_sources: actions
+        .filter((action) => action.duplicate_work_guard.status === "single_reviewed_outreach_only")
+        .map((action) => action.id),
+      still_actionable_sources: actions
+        .filter((action) => action.duplicate_work_guard.status === "action_allowed_with_current_packet")
+        .map((action) => action.id),
+    },
     status_counts: actions.reduce<Record<string, number>>((acc, action) => {
       acc[action.action_status] = (acc[action.action_status] ?? 0) + 1;
       return acc;
@@ -1249,7 +1354,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R17",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R18",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1264,6 +1369,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       submission_url: action.submission_url,
       stale_markers: "stale_markers" in action ? action.stale_markers ?? [] : [],
       next_action: action.next_action,
+      duplicate_work_guard: action.duplicate_work_guard,
     },
     source_activation_queue_runtime: payload.source_activation_queue_runtime,
     source_activation_state: sourceActivationState,
@@ -1323,6 +1429,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       buyer_order_handoffs: action.proof_urls.buyer_order_handoffs,
       buyer_order_handoffs_html: action.proof_urls.buyer_order_handoffs_html,
     },
+    duplicate_work_guard: action.duplicate_work_guard,
     source_preserving_prepare_purchase_handoff: action.source_preserving_prepare_purchase_handoff,
     acceptance_gate: [
       "Install the hosted no-auth Streamable HTTP endpoint.",
@@ -1393,6 +1500,19 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Listing URL: ${payload.directory.listing_url}`,
     `Submission URL: ${payload.directory.submission_url}`,
     `Stale markers: ${payload.directory.stale_markers.length ? payload.directory.stale_markers.join(", ") : "none"}`,
+    "",
+    "## Duplicate Work Guard",
+    "",
+    `Status: ${payload.duplicate_work_guard.status}`,
+    `Reason: ${payload.duplicate_work_guard.reason}`,
+    "",
+    "Allowed next actions:",
+    "",
+    payload.duplicate_work_guard.allowed_next_actions.map((rule: string) => `- ${rule}`).join("\n"),
+    "",
+    "Blocked actions:",
+    "",
+    payload.duplicate_work_guard.blocked_actions.map((rule: string) => `- ${rule}`).join("\n"),
     "",
     ...(payload.source_activation_state
       ? [
@@ -1467,11 +1587,19 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     )
     .join("\n");
   const messages = payload.actions
-    .filter((action) => !["monitor_upstream_registry", "submitted_pending", "pending_merge"].includes(action.action_status))
+    .filter(
+      (action) =>
+        !["monitor_upstream_registry", "submitted_pending", "pending_merge"].includes(action.action_status) &&
+        !["do_not_resubmit", "monitor_existing_submission"].includes(action.duplicate_work_guard.status)
+    )
     .map((action) => [`### ${action.label}`, "", action.recrawl_message].join("\n"))
     .join("\n\n");
   const conciseEmails = payload.actions
-    .filter((action) => action.action_status !== "monitor_upstream_registry")
+    .filter(
+      (action) =>
+        action.action_status !== "monitor_upstream_registry" &&
+        !["do_not_resubmit", "monitor_existing_submission"].includes(action.duplicate_work_guard.status)
+    )
     .map((action) =>
       [`### ${action.label}`, "", `To: ${action.concise_email.to ?? ""}`, `Subject: ${action.concise_email.subject}`, "", action.concise_email.body].join("\n")
     )
@@ -1508,6 +1636,15 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     `Revenue conversion queue HTML: ${payload.revenue_conversion_queue_html}`,
     `Buyer order handoffs: ${payload.buyer_order_handoffs}`,
     `Buyer order handoffs HTML: ${payload.buyer_order_handoffs_html}`,
+    "",
+    "## Duplicate Work Guard",
+    "",
+    payload.duplicate_work_summary.policy,
+    "",
+    `Monitor-only sources: ${payload.duplicate_work_summary.monitor_only_sources.join(", ") || "none"}`,
+    `Existing-submission sources: ${payload.duplicate_work_summary.existing_submission_sources.join(", ") || "none"}`,
+    `Single-outreach sources: ${payload.duplicate_work_summary.single_outreach_sources.join(", ") || "none"}`,
+    `Still-actionable sources: ${payload.duplicate_work_summary.still_actionable_sources.join(", ") || "none"}`,
     "",
     "| Target | Action status | Directory status | Priority | Tracked start URL | Tracked config URL | Tracked Codex install URL | Tracked first-run URL | Live proof URL | Activation handoff | Activation runner | Order handoff | Next action |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
