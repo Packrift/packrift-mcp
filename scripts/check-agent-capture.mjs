@@ -326,16 +326,19 @@ async function main() {
     check("resources/list advertises activation experiments", hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.html"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises buyer use cases", hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.json") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.md"), {
+    check("resources/list advertises buyer use cases", hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.json") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.md") && hasResourceUri(resourceUris, "/ai/mcp-buyer-use-cases.html"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises cart activation", hasResourceUri(resourceUris, "/ai/mcp-cart-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-cart-activation.md"), {
+    check("resources/list advertises cart activation", hasResourceUri(resourceUris, "/ai/mcp-cart-activation.json") && hasResourceUri(resourceUris, "/ai/mcp-cart-activation.md") && hasResourceUri(resourceUris, "/ai/mcp-cart-activation.html"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check("resources/list advertises agent adoption progress", hasResourceUri(resourceUris, "/ai/mcp-agent-adoption-progress.json") && hasResourceUri(resourceUris, "/ai/mcp-agent-adoption-progress.md") && hasResourceUri(resourceUris, "/ai/mcp-agent-adoption-progress.html"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises first-run proof", hasResourceUri(resourceUris, "/ai/mcp-first-run-proof.json") && hasResourceUri(resourceUris, "/ai/mcp-first-run-proof.md"), {
       detail: `resources=${resources.length}`,
     }),
-    check("resources/list advertises workflow gallery", hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.json") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.md"), {
+    check("resources/list advertises workflow gallery", hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.json") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.md") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.html"), {
       detail: `resources=${resources.length}`,
     }),
     check("resources/list advertises eval pack", hasResourceUri(resourceUris, "/ai/mcp-eval-pack.json") && hasResourceUri(resourceUris, "/ai/mcp-eval-pack.md"), {

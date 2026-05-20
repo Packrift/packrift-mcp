@@ -320,6 +320,53 @@ function escapeMarkdown(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function htmlShell(title: string, description: string, body: string): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <style>
+    :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    main{max-width:1160px;margin:0 auto;padding:32px 18px 56px}
+    header{display:grid;gap:14px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:clamp(2rem,5vw,4.2rem);line-height:.98;letter-spacing:0}
+    h2{margin:28px 0 10px;font-size:1.2rem;letter-spacing:0}
+    h3{margin:0 0 6px;font-size:1.02rem;letter-spacing:0}
+    p{margin:0;color:var(--muted);max-width:880px}
+    a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+    .status,.links,.uses{display:flex;flex-wrap:wrap;gap:8px}
+    .status span,.uses span{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 10px;font-size:.9rem;color:var(--muted)}
+    .workflow,.rules,.config{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:15px}
+    .workflows{display:grid;gap:14px;margin-top:14px}
+    ul{margin:8px 0 0;padding-left:20px;color:var(--muted)}
+    li{margin:5px 0}
+    code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    pre{white-space:pre-wrap;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#f9faf8;padding:12px;color:var(--ink);font-size:.88rem}
+    .button{display:inline-flex;align-items:center;min-height:38px;border:1px solid var(--ink);border-radius:6px;padding:8px 11px;text-decoration:none;color:var(--ink);background:var(--panel);font-weight:650}
+    .button.primary{background:var(--green);border-color:var(--green);color:#fff}
+    @media (max-width:680px){.button{width:100%;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main>${body}</main>
+</body>
+</html>`;
+}
+
 export function mcpWorkflowGalleryMarkdown(runtime: WorkflowGalleryRuntime): string {
   const payload = mcpWorkflowGalleryPayload(runtime);
   const rows = payload.workflows
@@ -381,4 +428,62 @@ export function mcpWorkflowGalleryMarkdown(runtime: WorkflowGalleryRuntime): str
     "Machine-readable version: https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
     "",
   ].join("\n");
+}
+
+export function mcpWorkflowGalleryHtml(runtime: WorkflowGalleryRuntime): string {
+  const payload = mcpWorkflowGalleryPayload(runtime);
+  const workflows = payload.workflows
+    .map(
+      (workflow) => `<article class="workflow">
+        <h3>${escapeHtml(workflow.title)}</h3>
+        <p><strong>ID:</strong> ${escapeHtml(workflow.id)}</p>
+        <p>${escapeHtml(workflow.audience)}</p>
+        <p><strong>Buyer prompt:</strong> ${escapeHtml(workflow.buyer_prompt)}</p>
+        <p><strong>Success outcome:</strong> ${escapeHtml(workflow.success_outcome)}</p>
+        <pre>${escapeHtml(JSON.stringify(workflow.sequence, null, 2))}</pre>
+        <ul>${workflow.expected_checks.map((check) => `<li>${escapeHtml(check)}</li>`).join("")}</ul>
+      </article>`
+    )
+    .join("");
+  const links = ([
+    ["Start MCP", "https://mcp.packrift.com/start"],
+    ["Endpoint", payload.canonical_endpoint],
+    ["Buyer use cases", payload.proof_urls.buyer_use_cases.replace(".json", ".html")],
+    ["Cart activation", payload.proof_urls.cart_activation.replace(".json", ".html")],
+    ["Adoption progress", "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html"],
+    ["Eval pack", "https://mcp.packrift.com/ai/mcp-eval-pack.json"],
+  ] satisfies Array<[string, string]>)
+    .map(([label, url], index) => `<a class="button${index === 0 ? " primary" : ""}" href="${escapeHtml(url)}">${escapeHtml(label)}</a>`)
+    .join("");
+  return htmlShell(
+    "Packrift MCP Workflow Gallery",
+    payload.purpose,
+    `<header>
+      <h1>Packrift MCP Workflow Gallery</h1>
+      <p>${escapeHtml(payload.purpose)}</p>
+      <div class="status">
+        <span>${escapeHtml(payload.release)}</span>
+        <span>${payload.workflow_count} workflows</span>
+        <span>${payload.runtime.tools_count} tools</span>
+        <span>${payload.runtime.resources_count} resources</span>
+      </div>
+      <div class="links">${links}</div>
+    </header>
+    <section>
+      <h2>Install Config</h2>
+      <div class="config"><pre>${escapeHtml(JSON.stringify(payload.install_config, null, 2))}</pre></div>
+    </section>
+    <section>
+      <h2>Workflows</h2>
+      <div class="workflows">${workflows}</div>
+    </section>
+    <section>
+      <h2>Agent Host Uses</h2>
+      <div class="uses">${payload.agent_host_uses.map((use) => `<span>${escapeHtml(use)}</span>`).join("")}</div>
+    </section>
+    <section>
+      <h2>Operating Rules</h2>
+      <div class="rules"><ul>${payload.operating_rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul></div>
+    </section>`
+  );
 }

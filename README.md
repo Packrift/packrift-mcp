@@ -153,14 +153,20 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP client config Markdown: https://mcp.packrift.com/ai/mcp-client-config.md
 - MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
 - MCP usage snapshot Markdown: https://mcp.packrift.com/ai/mcp-usage-snapshot.md
+- MCP agent adoption progress: https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json
+- MCP agent adoption progress Markdown: https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md
+- MCP agent adoption progress HTML: https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
+- MCP buyer use cases HTML: https://mcp.packrift.com/ai/mcp-buyer-use-cases.html
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
+- MCP cart activation HTML: https://mcp.packrift.com/ai/mcp-cart-activation.html
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP first-run proof Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
 - MCP workflow gallery Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
+- MCP workflow gallery HTML: https://mcp.packrift.com/ai/mcp-workflow-gallery.html
 - MCP eval pack: https://mcp.packrift.com/ai/mcp-eval-pack.json
 - MCP eval pack Markdown: https://mcp.packrift.com/ai/mcp-eval-pack.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
@@ -412,8 +418,10 @@ This verifies that `https://mcp.packrift.com/ai/all-agent-capture.json` and
 `.md`, `https://mcp.packrift.com/ai/mcp-adoption-kit.json` and `.md`,
 `https://mcp.packrift.com/ai/mcp-install-matrix.json` and `.md`,
 `https://mcp.packrift.com/ai/mcp-usage-snapshot.json` and `.md`, and
-`https://mcp.packrift.com/ai/mcp-buyer-use-cases.json` and `.md`, and
-`https://mcp.packrift.com/ai/mcp-cart-activation.json` and `.md`, and
+`https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json`, `.md`, and `.html`, and
+`https://mcp.packrift.com/ai/mcp-buyer-use-cases.json`, `.md`, and `.html`, and
+`https://mcp.packrift.com/ai/mcp-cart-activation.json`, `.md`, and `.html`, and
+`https://mcp.packrift.com/ai/mcp-workflow-gallery.json`, `.md`, and `.html`, and
 `https://mcp.packrift.com/ai/browser-agent-bridge.json` and `.md`, and
 `https://mcp.packrift.com/SKILL.md`, and
 `https://mcp.packrift.com/ai/mcp-directory-refresh.json` and `.md`, and
@@ -428,7 +436,7 @@ the shell activation script at `https://mcp.packrift.com/r/activate/generic?form
 `https://mcp.packrift.com/ai/agent-capture-outreach.json` and `.md` are live,
 advertised in `resources/list`, include the core agent surfaces,
 first-five-minute install/test path, copy-paste developer examples, copy-ready install matrix, public usage snapshot,
-buyer workflow map, cart activation playbook, eval pack, browser-agent bridge, directory refresh pack, directory submit-action queue,
+agent adoption progress board, buyer workflow map, cart activation playbook, workflow gallery, eval pack, browser-agent bridge, directory refresh pack, directory submit-action queue,
 source activation command center, reviewer activation handoff, agent capture outreach packet, Browserbase Browse candidate lane, and root SKILL.md, and preserve the
 rule that Packrift uses the hosted MCP endpoint instead of a duplicate CLI surface. The outreach build writes
 copy-ready stale-directory refresh messages, Browserbase Browse candidate

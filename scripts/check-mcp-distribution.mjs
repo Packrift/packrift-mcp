@@ -246,9 +246,9 @@ const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL =
-  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv";
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4837-20260520.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_URL =
-  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4836-20260520.tsv.gz";
+  "https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-4837-20260520.tsv.gz";
 
 function cacheBustedUrl(url) {
   if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
@@ -470,10 +470,16 @@ async function liveMcpCheck() {
     activationWaveHtmlResult,
     activationWaveRunnerResult,
     activationCommandCenterResult,
+    agentAdoptionProgressResult,
+    agentAdoptionProgressMarkdownResult,
+    agentAdoptionProgressHtmlResult,
     buyerUseCasesResult,
+    buyerUseCasesHtmlResult,
     cartActivationResult,
+    cartActivationHtmlResult,
     firstRunProofResult,
     workflowGalleryResult,
+    workflowGalleryHtmlResult,
     evalPackResult,
     browserAgentBridgeResult,
     browserbaseBrowseSkillPackResult,
@@ -573,10 +579,16 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-activation-wave.html"),
     fetchText(MCP_ACTIVATION_WAVE_RUNNER_URL),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md"),
+    fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html"),
     fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-buyer-use-cases.html"),
     fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-cart-activation.html"),
     fetchText("https://mcp.packrift.com/ai/mcp-first-run-proof.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-workflow-gallery.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-workflow-gallery.html"),
     fetchText("https://mcp.packrift.com/ai/mcp-eval-pack.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
@@ -646,6 +658,7 @@ async function liveMcpCheck() {
   const sourceActivationCline = sourceActivationClineJsonResult.ok ? JSON.parse(sourceActivationClineJsonResult.text) : null;
   const activationExperiments = activationExperimentsResult.ok ? JSON.parse(activationExperimentsResult.text) : null;
   const activationWave = activationWaveResult.ok ? JSON.parse(activationWaveResult.text) : null;
+  const agentAdoptionProgress = agentAdoptionProgressResult.ok ? JSON.parse(agentAdoptionProgressResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
   const firstRunProof = firstRunProofResult.ok ? JSON.parse(firstRunProofResult.text) : null;
@@ -1789,12 +1802,32 @@ async function liveMcpCheck() {
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
+      agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
+      agentAdoptionProgress?.source_funnel_release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R21" &&
+      agentAdoptionProgress?.progress?.goal_name === "thousands_of_qualified_agents_and_ai_commerce_workflows" &&
+      typeof agentAdoptionProgress?.counts?.ga4_qualified_external_mcp_session_starts === "number" &&
+      Array.isArray(agentAdoptionProgress?.next_actions) &&
+      agentAdoptionProgressMarkdownResult.ok &&
+      agentAdoptionProgressMarkdownResult.text.includes("Packrift MCP Agent Adoption Progress") &&
+      agentAdoptionProgressMarkdownResult.text.includes("Proof Boundaries") &&
+      agentAdoptionProgressHtmlResult.ok &&
+      agentAdoptionProgressHtmlResult.text.includes("Packrift MCP Agent Adoption Progress") &&
+      agentAdoptionProgressHtmlResult.text.includes("GA4 qualified visitors") &&
+      agentAdoptionProgressHtmlResult.text.includes("Source queue") &&
       buyerUseCases?.release === "PACKRIFT-MCP-BUYER-USE-CASES-R01" &&
       buyerUseCases?.use_cases?.length >= 6 &&
+      buyerUseCasesHtmlResult.ok &&
+      buyerUseCasesHtmlResult.text.includes("Packrift MCP Buyer Use Cases") &&
+      buyerUseCasesHtmlResult.text.includes("Cart activation") &&
+      buyerUseCasesHtmlResult.text.includes("Run generic check") &&
       cartActivation?.release === "PACKRIFT-MCP-CART-ACTIVATION-R02" &&
       cartActivation?.activation_paths?.length >= 4 &&
       cartActivation?.primary_rule?.includes("https://mcp.packrift.com/r/cart/") &&
       cartActivation?.proof_urls?.funnel_snapshot === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json" &&
+      cartActivationHtmlResult.ok &&
+      cartActivationHtmlResult.text.includes("Packrift MCP Cart Activation") &&
+      cartActivationHtmlResult.text.includes("create_cart_url") &&
+      cartActivationHtmlResult.text.includes("measured") &&
       firstRunProof?.release === "PACKRIFT-MCP-FIRST-RUN-PROOF-R01" &&
       firstRunProof?.canonical_endpoint === MCP_ENDPOINT &&
       firstRunProof?.live_demo?.sku === "1066" &&
@@ -1809,6 +1842,10 @@ async function liveMcpCheck() {
       workflowGallery?.workflows?.some((workflow) => workflow.id === "one_call_purchase_handoff_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "exact_sku_reorder_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
+      workflowGalleryHtmlResult.ok &&
+      workflowGalleryHtmlResult.text.includes("Packrift MCP Workflow Gallery") &&
+      workflowGalleryHtmlResult.text.includes("prepare_purchase_handoff") &&
+      workflowGalleryHtmlResult.text.includes("Adoption progress") &&
       evalPack?.release === "PACKRIFT-MCP-EVAL-PACK-R01" &&
       evalPack?.canonical_endpoint === MCP_ENDPOINT &&
       evalPack?.acceptance_gate?.real_mcp_host_required === true &&
@@ -2255,18 +2292,24 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation-queue.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
       resourceUris.has(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.html") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-cart-activation.html") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-proof.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-proof.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.html") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
@@ -2511,10 +2554,15 @@ async function liveMcpCheck() {
       activation_experiments_critical_count: activationExperiments?.critical_count ?? null,
       activation_experiments_html_status: activationExperimentsHtmlResult.status,
       activation_experiments_markdown_status: activationExperimentsMarkdownResult.status,
+      agent_adoption_progress_release: agentAdoptionProgress?.release ?? null,
+      agent_adoption_progress_status: agentAdoptionProgress?.status ?? null,
+      agent_adoption_progress_html_status: agentAdoptionProgressHtmlResult.status,
       buyer_use_cases_release: buyerUseCases?.release ?? null,
       buyer_use_cases_count: buyerUseCases?.use_cases?.length ?? 0,
+      buyer_use_cases_html_status: buyerUseCasesHtmlResult.status,
       cart_activation_release: cartActivation?.release ?? null,
       cart_activation_paths: cartActivation?.activation_paths?.length ?? 0,
+      cart_activation_html_status: cartActivationHtmlResult.status,
       first_run_proof_release: firstRunProof?.release ?? null,
       first_run_proof_mode: firstRunProof?.live_demo?.mode ?? null,
       first_run_proof_price: firstRunProof?.live_demo?.pricing?.unit_price ?? null,
@@ -2523,6 +2571,7 @@ async function liveMcpCheck() {
       first_run_proof_cart_url: firstRunProof?.live_demo?.cart?.url ?? null,
       workflow_gallery_release: workflowGallery?.release ?? null,
       workflow_gallery_count: workflowGallery?.workflow_count ?? null,
+      workflow_gallery_html_status: workflowGalleryHtmlResult.status,
       workflow_gallery_ids: (workflowGallery?.workflows ?? []).map((workflow) => workflow.id),
       eval_pack_release: evalPack?.release ?? null,
       eval_pack_cases: evalPack?.cases?.length ?? 0,

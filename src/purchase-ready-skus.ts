@@ -1,5 +1,5 @@
 // Generated from /Users/farhan/Downloads/packrift-ai-commerce-factory/outputs/2026-05-19/sku_purchase_readiness_dashboard/verified_purchase_ready_skus.csv. Do not edit by hand.
-// Generated at 2026-05-19T17:27:43+00:00.
+// Generated at 2026-05-20T02:09:36+00:00.
 export const PURCHASE_READY_SKUS = [
   "12104",
   "1066",
