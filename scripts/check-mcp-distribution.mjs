@@ -251,6 +251,9 @@ const TEXT_HEADERS = {
 };
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl";
+const MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
@@ -505,6 +508,8 @@ async function liveMcpCheck() {
     specFinderToolsResult,
     agentCaptureResult,
     agentHostRolloutResult,
+    agentHostRolloutTasksJsonlResult,
+    agentHostRolloutTasksCsvResult,
     adoptionKitResult,
     installMatrixResult,
     installActionsResult,
@@ -652,7 +657,9 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-tools.json"),
     fetchText("https://mcp.packrift.com/ai/spec-finder-tools.md"),
     fetchText("https://mcp.packrift.com/ai/all-agent-capture.json"),
-    fetchText("https://mcp.packrift.com/ai/mcp-agent-host-rollout.json"),
+    fetchText(MCP_AGENT_HOST_ROLLOUT_JSON_URL),
+    fetchText(MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL),
+    fetchText(MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL),
     fetchText("https://mcp.packrift.com/ai/mcp-adoption-kit.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-install-matrix.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-install-actions.json"),
@@ -807,6 +814,10 @@ async function liveMcpCheck() {
   const mcpToolsDiscovery = mcpToolsDiscoveryResult.ok ? JSON.parse(mcpToolsDiscoveryResult.text) : null;
   const agentCapture = agentCaptureResult.ok ? JSON.parse(agentCaptureResult.text) : null;
   const agentHostRollout = agentHostRolloutResult.ok ? JSON.parse(agentHostRolloutResult.text) : null;
+  const agentHostRolloutTaskRows = agentHostRolloutTasksJsonlResult.ok
+    ? agentHostRolloutTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
+    : [];
+  const agentHostRolloutCsvLines = agentHostRolloutTasksCsvResult.ok ? agentHostRolloutTasksCsvResult.text.trim().split(/\n+/).filter(Boolean) : [];
   const agentHostRolloutMcpSo = agentHostRollout?.rows?.find((row) => row.source === "mcp_so");
   const agentHostRolloutGlama = agentHostRollout?.rows?.find((row) => row.source === "glama_connector");
   const adoptionKit = adoptionKitResult.ok ? JSON.parse(adoptionKitResult.text) : null;
@@ -834,6 +845,9 @@ async function liveMcpCheck() {
     openapiJson?.["x-packrift-mcp"]?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
     openapiJson?.["x-packrift-mcp"]?.agent_adoption_progress === "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json" &&
     openapiJson?.["x-packrift-mcp"]?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+    openapiJson?.["x-packrift-mcp"]?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+    openapiJson?.["x-packrift-mcp"]?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+    openapiJson?.["x-packrift-mcp"]?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
     openapiJson?.["x-packrift-mcp"]?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
     openapiJson?.["x-packrift-mcp"]?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
     openapiJson?.paths?.["/mcp"]?.post?.operationId === "callPackriftMcpJsonRpc" &&
@@ -841,6 +855,9 @@ async function liveMcpCheck() {
     openapiJson?.paths?.["/ai/mcp-client-config.json"]?.get?.operationId === "getPackriftMcpClientConfig" &&
     openapiJson?.paths?.["/ai/mcp-agent-adoption-progress.json"]?.get?.operationId === "getPackriftMcpAgentAdoptionProgress" &&
     openapiJson?.paths?.["/ai/mcp-source-activation-queue.json"]?.get?.operationId === "getPackriftMcpSourceActivationQueue" &&
+    openapiJson?.paths?.["/ai/mcp-agent-host-rollout.json"]?.get?.operationId === "getPackriftMcpAgentHostRollout" &&
+    openapiJson?.paths?.["/ai/mcp-agent-host-rollout-tasks.jsonl"]?.get?.operationId === "getPackriftMcpAgentHostRolloutTasksJsonl" &&
+    openapiJson?.paths?.["/ai/mcp-agent-host-rollout-tasks.csv"]?.get?.operationId === "getPackriftMcpAgentHostRolloutTasksCsv" &&
     openapiJson?.paths?.["/ai/mcp-external-activation-brief.json"]?.get?.operationId === "getPackriftMcpExternalActivationBrief" &&
     openapiJson?.paths?.["/ai/mcp-eval-pack.json"]?.get?.operationId === "getPackriftMcpEvalPack" &&
     openapiJson?.paths?.["/r/install/{source}/{target}"]?.get?.operationId === "getPackriftSourceAwareInstallAction" &&
@@ -855,6 +872,9 @@ async function liveMcpCheck() {
     aiPluginJson?.mcp?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
     aiPluginJson?.mcp?.agent_adoption_progress === "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json" &&
     aiPluginJson?.mcp?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+    aiPluginJson?.mcp?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+    aiPluginJson?.mcp?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+    aiPluginJson?.mcp?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
     aiPluginJson?.mcp?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
     aiPluginJson?.mcp?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
     wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
@@ -1497,6 +1517,11 @@ async function liveMcpCheck() {
       agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03" &&
       agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
+      agentHostRolloutTasksJsonlResult.ok &&
+      agentHostRolloutTasksCsvResult.ok &&
+      agentHostRolloutTaskRows.length >= agentHostRollout?.source_count &&
+      agentHostRolloutCsvLines.length >= agentHostRolloutTaskRows.length + 1 &&
+      agentHostRolloutTaskRows.some((row) => row.source === "mcp_so" && row.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html") &&
       agentHostRolloutMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       agentHostRolloutMcpSo?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
       agentHostRolloutMcpSo?.order_handoff_shell_one_liner?.includes("curl -sS") &&
@@ -1724,6 +1749,9 @@ async function liveMcpCheck() {
       marketplaceManifest?.signals?.tool_count >= 15 &&
       marketplaceManifest?.signals?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       marketplaceManifest?.signals?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      marketplaceManifest?.signals?.agent_host_rollout_json === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      marketplaceManifest?.signals?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      marketplaceManifest?.signals?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       marketplaceManifest?.signals?.tool_names?.includes("prepare_purchase_handoff") &&
       marketplaceManifest?.signals?.required_current_tools?.length >= 15 &&
       mcpToolsDiscoveryResult.ok &&
@@ -1748,6 +1776,9 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      mcpToolsDiscovery?.conversion_urls?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      mcpToolsDiscovery?.conversion_urls?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       mcpToolsDiscovery?.conversion_urls?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
       mcpToolsDiscovery?.conversion_urls?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       mcpToolsDiscovery?.conversion_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
@@ -1804,6 +1835,9 @@ async function liveMcpCheck() {
       marketplaceManifest?.discovery?.mcp_first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       marketplaceManifest?.discovery?.mcp_tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      marketplaceManifest?.discovery?.mcp_agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      marketplaceManifest?.discovery?.mcp_agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      marketplaceManifest?.discovery?.mcp_agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       marketplaceManifest?.discovery?.openapi_json === MCP_OPENAPI_JSON_URL &&
       marketplaceManifest?.discovery?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       marketplaceManifest?.discovery?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
@@ -2155,6 +2189,9 @@ async function liveMcpCheck() {
       adoptionKit?.install?.cline?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       adoptionKit?.proof_urls?.reviewer_activation_runner_generic === "https://mcp.packrift.com/r/activate/generic?format=html" &&
       adoptionKit?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      adoptionKit?.proof_urls?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      adoptionKit?.proof_urls?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      adoptionKit?.proof_urls?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       adoptionKit?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
       adoptionKit?.proof_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       adoptionKit?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
@@ -2318,6 +2355,9 @@ async function liveMcpCheck() {
       clientConfig?.aliases?.tracked_run_examples?.cline?.startsWith("https://mcp.packrift.com/r/run/generic/cline") &&
       clientConfig?.aliases?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       clientConfig?.aliases?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
+      clientConfig?.aliases?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      clientConfig?.aliases?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      clientConfig?.aliases?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       clientConfig?.aliases?.openapi_json === MCP_OPENAPI_JSON_URL &&
       clientConfig?.aliases?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       clientConfig?.aliases?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
@@ -2335,8 +2375,12 @@ async function liveMcpCheck() {
       clientConfig?.legacy_ai_discovery?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
       clientConfig?.legacy_ai_discovery?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
       clientConfig?.legacy_ai_discovery?.canonical_mcp_endpoint === MCP_ENDPOINT &&
+      clientConfig?.legacy_ai_discovery?.key_paths?.includes("/ai/mcp-agent-host-rollout-tasks.jsonl") &&
       clientConfig?.legacy_ai_discovery?.key_paths?.includes("/r/activate/{source}") &&
       clientConfig?.activation_surfaces?.agent_adoption_progress === "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json" &&
+      clientConfig?.activation_surfaces?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      clientConfig?.activation_surfaces?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      clientConfig?.activation_surfaces?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       clientConfig?.activation_surfaces?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       clientConfig?.activation_surfaces?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       trackedFirstRunClineHtmlResult.ok &&
@@ -2365,6 +2409,9 @@ async function liveMcpCheck() {
       clientConfig?.proof_urls?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       clientConfig?.proof_urls?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       clientConfig?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      clientConfig?.proof_urls?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
+      clientConfig?.proof_urls?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
+      clientConfig?.proof_urls?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
       clientConfig?.proof_urls?.openapi_json === MCP_OPENAPI_JSON_URL &&
       clientConfig?.proof_urls?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       clientConfig?.proof_urls?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
