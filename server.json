@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
-  "description": "Hosted no-auth remote MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match.",
-  "version": "0.2.10",
+  "description": "Hosted no-auth MCP for exact-spec packaging search, live price, stock, cart handoff, and no-match.",
+  "version": "0.2.11",
   "websiteUrl": "https://packrift.com/pages/packrift-ai-agent-instructions",
   "repository": {
     "url": "https://github.com/Packrift/packrift-mcp",
