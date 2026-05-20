@@ -9447,8 +9447,8 @@ function mcpExternalActivationReadinessRank(task: McpActivationWavePayload["full
   const reviewHandoff = mcpExternalActivationReviewHandoff(task);
   if (reviewHandoff.public_comment_url) return 0;
   if (reviewHandoff.support_email) return 1;
-  if (reviewHandoff.support_url) return 2;
   if (reviewHandoff.status.includes("broken") || reviewHandoff.status.includes("rejected")) return 20;
+  if (reviewHandoff.support_url) return 2;
   return 10;
 }
 
@@ -9557,6 +9557,8 @@ function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
     selected_external_runs: selectedRuns,
     selected_external_run_count: selectedRuns.length,
     external_runner: {
+      selected_contact_ready: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS ${shellQuote(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL)} | bash`,
+      selected_contact_ready_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       threshold_wave: payload.links.one_command_wave_runner,
       full_source_capture: payload.links.one_command_full_capture_runner,
       guarded_runner_shell: payload.links.activation_wave_runner_shell,
@@ -9567,6 +9569,7 @@ function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
       external_activation_brief_json: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
       external_activation_brief_markdown: MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL,
       external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_brief_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       activation_wave_json: payload.links.activation_wave_json,
       activation_wave_html: payload.links.activation_wave_html,
       activation_wave_runner_shell: payload.links.activation_wave_runner_shell,
@@ -9588,7 +9591,7 @@ function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
     blocking_goal_gates: payload.blocking_goal_gates,
     next_operator_action:
       selectedRuns.length > 0
-        ? "Copy the guarded runner or one selected source run into a real external MCP host, then recheck source activation and funnel snapshots after telemetry settles."
+        ? "Copy the selected-runs runner or one selected source run into a real external MCP host, then recheck source activation and funnel snapshots after telemetry settles."
         : "No external activation runs are currently selected; inspect the source activation queue before running a new wave.",
   };
 }
@@ -9626,7 +9629,9 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
     "",
     "## External Runner",
     "",
-    `- Threshold wave: \`${payload.external_runner.threshold_wave}\``,
+    `- Selected-runs runner: \`${payload.external_runner.selected_contact_ready}\``,
+    `- Selected-runs shell: ${payload.external_runner.selected_contact_ready_runner_shell}`,
+    `- Threshold wave fallback: \`${payload.external_runner.threshold_wave}\``,
     `- Full-source capture: \`${payload.external_runner.full_source_capture}\``,
     `- Guarded runner shell: ${payload.external_runner.guarded_runner_shell}`,
     "",
@@ -9749,8 +9754,8 @@ function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPaylo
         <span>Orders ${payload.goal_summary.cart_and_order.first_party_mcp_orders}</span>
       </div>
       <div class="runner">
-        <strong>Guarded threshold runner</strong>
-        <pre>${escapeHtml(payload.external_runner.threshold_wave)}</pre>
+        <strong>Guarded selected-runs runner</strong>
+        <pre>${escapeHtml(payload.external_runner.selected_contact_ready)}</pre>
       </div>
       <div class="links">
         <a href="${escapeHtml(payload.proof_urls.external_activation_brief_json)}">JSON</a>
@@ -9765,6 +9770,65 @@ function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPaylo
   </main>
 </body>
 </html>`;
+}
+
+function mcpExternalActivationBriefRunnerShell(payload: McpExternalActivationBriefPayload): string {
+  const sourceCommands = payload.selected_external_runs
+    .map((task) => `  echo ${shellQuote(task.one_command_external_runner)}`)
+    .join("\n");
+  const selectedTaskLines = payload.selected_external_runs
+    .map((task, index) =>
+      `run_selected_task ${shellQuote(String(index + 1))} ${shellQuote(task.source)} ${shellQuote(task.tracked_first_run_shell_url)} ${shellQuote(String(task.expected_tool_call_lift))}`
+    )
+    .join("\n");
+
+  return [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    "",
+    "echo 'Packrift MCP external activation selected-runs runner'",
+    `echo 'Release: ${payload.release}'`,
+    `echo 'Selected contact-ready runs: ${payload.selected_external_run_count}'`,
+    `echo 'Expected tool-call lift: ${payload.goal_summary.material_usage.expected_tool_call_lift_if_selected_runs_complete}'`,
+    `echo 'Projected external-qualified tool calls: ${payload.goal_summary.material_usage.projected_external_qualified_mcp_tool_calls_after_selected_runs}/${payload.goal_summary.material_usage.threshold}'`,
+    "echo 'This is a thin wrapper around existing hosted Packrift MCP first-run scripts. It does not create a CLI, checkout surface, or order.'",
+    "echo 'Run it from an external reviewer, directory owner, or real MCP host environment. Packrift self-runs do not prove the adoption goal.'",
+    "",
+    "if [ \"${PACKRIFT_EXTERNAL_ACTIVATION:-}\" != \"1\" ]; then",
+    "  echo ''",
+    "  echo 'Refusing to execute until PACKRIFT_EXTERNAL_ACTIVATION=1 is set.'",
+    "  echo 'Copy one selected source command into the real external host or reviewer environment:'",
+    sourceCommands || "  echo 'No selected external activation runs are ready right now.'",
+    "  echo ''",
+    `  echo 'Or explicitly run this selected-runs bundle: PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS ${MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL} | bash'`,
+    "  exit 2",
+    "fi",
+    "",
+    "run_selected_task() {",
+    "  local rank=\"$1\"",
+    "  local source=\"$2\"",
+    "  local script_url=\"$3\"",
+    "  local expected_lift=\"$4\"",
+    "  local tmp_file",
+    "  tmp_file=\"$(mktemp)\"",
+    "  trap 'rm -f \"$tmp_file\"' RETURN",
+    "  echo ''",
+    "  echo \"[$rank] Running Packrift MCP selected external activation: $source (expected tool-call lift: $expected_lift)\"",
+    "  echo \"Fetching existing first-run script: $script_url\"",
+    "  curl -fsSL \"$script_url\" -o \"$tmp_file\"",
+    "  PACKRIFT_MCP_SESSION_ID=\"mcp-external-brief-${source}-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM\" bash \"$tmp_file\"",
+    "}",
+    "",
+    selectedTaskLines || "echo 'No selected external activation runs are ready right now.'",
+    "",
+    "echo ''",
+    "echo 'Packrift MCP external activation selected-runs runner finished.'",
+    "echo 'Review proof after telemetry settles:'",
+    `echo '${MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL}'`,
+    "echo 'https://mcp.packrift.com/ai/mcp-source-activation-queue.json'",
+    "echo 'https://mcp.packrift.com/ai/mcp-funnel-snapshot.json'",
+    "",
+  ].join("\n");
 }
 
 function publicFunnelTrafficBuckets(summary: ReturnType<typeof summarizeAiSalesEvents>) {
@@ -11986,6 +12050,7 @@ const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activati
 const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.md";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
 const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
@@ -12196,6 +12261,7 @@ const AI_DISCOVERY_URLS = [
   MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
   MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL,
   MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+  MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.html",
@@ -12365,6 +12431,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-external-activation-brief.json": "Compact machine-readable Packrift MCP external activation brief with the selected real-host runs needed to move the material tool-call gate.",
   "/ai/mcp-external-activation-brief.md": "Compact crawler-readable Packrift MCP external activation brief with copy-ready source requests, guarded runner commands, and proof boundaries.",
   "/ai/mcp-external-activation-brief.html": "Human-facing Packrift MCP external activation brief for external hosts, reviewers, and operators running the current source-aware tool-call wave.",
+  "/ai/mcp-external-activation-brief-runner.sh": "Guarded shell bundle for external reviewers to run only the contact-ready selected Packrift MCP activation brief sources through existing source-specific first-run scripts.",
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
   "/ai/mcp-buyer-use-cases.html": "Human-facing and browser-agent-readable Packrift MCP buyer use-case guide for qualified AI-commerce demand.",
@@ -12913,6 +12980,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-external-activation-brief.json") return JSON.stringify(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)), null, 2);
   if (pathname === "/ai/mcp-external-activation-brief.md") return mcpExternalActivationBriefMarkdown(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   if (pathname === "/ai/mcp-external-activation-brief.html") return mcpExternalActivationBriefHtml(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
+  if (pathname === "/ai/mcp-external-activation-brief-runner.sh") return mcpExternalActivationBriefRunnerShell(mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-buyer-use-cases.html") return mcpBuyerUseCasesHtml(buyerUseCasesRuntime());
@@ -15655,6 +15723,19 @@ app.get("/ai/mcp-external-activation-brief.html", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-external-activation-brief.html", "mcp_external_activation_brief", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-external-activation-brief-runner.sh", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpExternalActivationBriefRunnerShell(
+    mcpExternalActivationBriefPayload(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit, { refresh }))
+  );
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-external-activation-brief-runner.sh", "mcp_external_activation_brief", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/x-shellscript; charset=utf-8",
     ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });

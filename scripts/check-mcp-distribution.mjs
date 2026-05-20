@@ -256,6 +256,7 @@ const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activati
 const MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.md";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
 const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
@@ -524,6 +525,7 @@ async function liveMcpCheck() {
     externalActivationBriefResult,
     externalActivationBriefMarkdownResult,
     externalActivationBriefHtmlResult,
+    externalActivationBriefRunnerResult,
     activationCommandCenterResult,
     agentAdoptionProgressResult,
     agentAdoptionProgressMarkdownResult,
@@ -657,6 +659,7 @@ async function liveMcpCheck() {
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL),
+    fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md"),
@@ -1145,6 +1148,7 @@ async function liveMcpCheck() {
     MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
     MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL,
     MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+    MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
   ];
   const liveMcpFailureDiagnostics = {
     core_server:
@@ -2566,7 +2570,11 @@ async function liveMcpCheck() {
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       externalActivationBrief?.proof_urls?.external_activation_brief_json === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       externalActivationBrief?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      externalActivationBrief?.proof_urls?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       externalActivationBrief?.proof_urls?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
+      externalActivationBrief?.external_runner?.selected_contact_ready?.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
+      externalActivationBrief?.external_runner?.selected_contact_ready?.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
+      externalActivationBrief?.external_runner?.selected_contact_ready_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       externalActivationBrief?.external_runner?.threshold_wave?.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
       externalActivationBrief?.external_runner?.threshold_wave?.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       externalActivationBrief?.goal_summary?.material_usage?.threshold === 50 &&
@@ -2616,14 +2624,23 @@ async function liveMcpCheck() {
       externalActivationBriefMarkdownResult.ok &&
       externalActivationBriefMarkdownResult.text.includes("Packrift MCP External Activation Brief") &&
       externalActivationBriefMarkdownResult.text.includes("External Runner") &&
+      externalActivationBriefMarkdownResult.text.includes("Selected-runs runner") &&
       externalActivationBriefMarkdownResult.text.includes("Reviewer handoff") &&
       externalActivationBriefMarkdownResult.text.includes("Copy-Ready Requests") &&
       externalActivationBriefMarkdownResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL) &&
       externalActivationBriefHtmlResult.ok &&
       externalActivationBriefHtmlResult.text.includes("Packrift MCP External Activation Brief") &&
-      externalActivationBriefHtmlResult.text.includes("Guarded threshold runner") &&
+      externalActivationBriefHtmlResult.text.includes("Guarded selected-runs runner") &&
       externalActivationBriefHtmlResult.text.includes("Full activation wave") &&
       externalActivationBriefHtmlResult.text.includes("Reviewer surface") &&
+      externalActivationBriefRunnerResult.ok &&
+      externalActivationBriefRunnerResult.text.includes("#!/usr/bin/env bash") &&
+      externalActivationBriefRunnerResult.text.includes("selected-runs runner") &&
+      externalActivationBriefRunnerResult.text.includes("PACKRIFT_EXTERNAL_ACTIVATION=1") &&
+      externalActivationBriefRunnerResult.text.includes("mcplist_ai") &&
+      externalActivationBriefRunnerResult.text.includes("mcpserverfinder") &&
+      !externalActivationBriefRunnerResult.text.includes("mcphubz") &&
+      !externalActivationBriefRunnerResult.text.includes("mcplane") &&
       activationCommandCenterResult.ok &&
       activationCommandCenterResult.text.includes("Packrift MCP Activation Command Center") &&
       activationCommandCenterResult.text.includes("Funnel snapshot") &&
@@ -3275,6 +3292,7 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
       resourceUris.has(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.html") &&
