@@ -241,7 +241,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R27", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R28", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -259,20 +259,32 @@ async function main() {
     }),
     check(
       "agent host fast paths source-aware",
-      capture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
+      capture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R02" &&
         capture?.counts?.agent_host_fast_paths >= 12 &&
         capture?.agent_host_fast_paths?.some(
           (row) =>
             row.source === "cline_mcp_marketplace" &&
             row.target === "cline" &&
             row.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
-            row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=sh"
+            row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=sh" &&
+            row.order_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+            row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+            row.order_handoff_shell_one_liner?.includes("curl -sS") &&
+            row.order_handoff_shell_one_liner?.includes("/r/order/cline_mcp_marketplace?format=sh")
         ) &&
         capture?.agent_host_fast_paths?.some(
           (row) =>
             row.source === "browse_sh" &&
             row.source_aware_endpoint ===
-              "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http"
+              "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http" &&
+            row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/browse_sh?format=sh"
+        ) &&
+        capture?.agent_host_fast_paths?.every(
+          (row) =>
+            row.order_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+            row.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+            row.order_handoff_shell_url?.includes("format=sh") &&
+            row.order_handoff_shell_one_liner?.includes("curl -sS")
         ) &&
         capture?.agent_host_fast_paths?.some((row) => row.source === "mcp_so" && /order|revenue/i.test(row.success_gate ?? "")),
       { detail: `${capture?.counts?.agent_host_fast_paths ?? 0} fast paths` }

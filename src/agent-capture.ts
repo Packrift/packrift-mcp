@@ -33,6 +33,9 @@ interface AgentHostFastPath {
   first_run_shell_one_liner: string;
   reviewer_activation_url: string;
   reviewer_activation_shell_url: string;
+  order_handoff_url: string;
+  order_handoff_shell_url: string;
+  order_handoff_shell_one_liner: string;
   eval_pack_url: string;
   success_gate: string;
 }
@@ -51,8 +54,13 @@ function firstRunShellUrl(source: string, target: string): string {
   return `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`;
 }
 
+function orderHandoffShellUrl(source: string): string {
+  return `https://mcp.packrift.com/r/order/${source}?format=sh`;
+}
+
 function hostFastPath(input: { source: string; target: string; host: string; audience: string; success_gate?: string }): AgentHostFastPath {
   const shellUrl = firstRunShellUrl(input.source, input.target);
+  const orderShellUrl = orderHandoffShellUrl(input.source);
   return {
     source: input.source,
     target: input.target,
@@ -65,6 +73,9 @@ function hostFastPath(input: { source: string; target: string; host: string; aud
     first_run_shell_one_liner: `curl -sS '${shellUrl}' | bash`,
     reviewer_activation_url: `https://mcp.packrift.com/r/activate/${input.source}?format=html`,
     reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${input.source}?format=sh`,
+    order_handoff_url: `https://mcp.packrift.com/r/order/${input.source}?format=html`,
+    order_handoff_shell_url: orderShellUrl,
+    order_handoff_shell_one_liner: `curl -sS '${orderShellUrl}' | bash`,
     eval_pack_url: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${input.source}`,
     success_gate:
       input.success_gate ??
@@ -837,12 +848,12 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R27",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R28",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
     canonical_endpoint: MCP_ENDPOINT,
-    agent_host_fast_paths_release: "PACKRIFT-AGENT-HOST-FAST-PATHS-R01",
+    agent_host_fast_paths_release: "PACKRIFT-AGENT-HOST-FAST-PATHS-R02",
     agent_host_fast_paths: AGENT_HOST_FAST_PATHS,
     hub_urls: {
       json: "https://mcp.packrift.com/ai/all-agent-capture.json",
@@ -913,6 +924,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "When a direct MCP client skips tracked config, infer source attribution from recognizable request signals such as User-Agent, Referer, Origin, X-MCP-Client, and X-Client-Name. Covered families include Cline, Cursor, Windsurf, Continue, Zed, Codex, Claude, OpenAI/ChatGPT, Copilot, Gemini, Glama, Smithery, Browse, browser-use, Vercel, LangChain, LlamaIndex, CrewAI, AutoGen, n8n, Zapier, Dify, Flowise, Docker, MCP.so, MCP Inspector, Goose, Sourcegraph Cody, Aider, Msty, LM Studio, Ollama, AnythingLLM, Lovable, Manus, major MCP directories, and generic MCP clients.",
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
       "Use /r/activate/{source}?format=sh when an external reviewer or agent host prefers a shell runner that performs real JSON-RPC tools/list and tools/call requests against the hosted MCP endpoint.",
+      "Use /r/order/{source}?format=sh only after real MCP tool-call and cart proof when a reviewer or buyer wants a guarded shell handoff into prepare_purchase_handoff and measured /r/cart; it never places an order.",
       "Use /ai/mcp-external-activation-brief-tasks.jsonl when a reviewer, marketplace, or operator needs the current selected activation tasks with source-aware install commands, copy-ready prompts, shell runners, and a create_cart_url finish line.",
       "Use /ai/mcp-revenue-conversion-queue.json only after a source has real MCP tool-call and qualified /r/cart landing proof; do not count queue views, shell runners, or self-opened carts as order proof.",
       "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
@@ -942,7 +954,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
   const fastPathRows = payload.agent_host_fast_paths
     .map(
       (row) =>
-        `| ${escapeMarkdown(row.host)} | ${row.source} | ${row.target} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${escapeMarkdown(row.success_gate)} |`
+        `| ${escapeMarkdown(row.host)} | ${row.source} | ${row.target} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.order_handoff_shell_url} | ${escapeMarkdown(row.success_gate)} |`
     )
     .join("\n");
   const rows = payload.surfaces
@@ -979,8 +991,8 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "These are the source-aware install and first-run paths to use before falling back to the generic endpoint.",
     "",
-    "| Host | Source | Target | Endpoint | Install | First-run shell | Success gate |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Host | Source | Target | Endpoint | Install | First-run shell | Activation shell | Order shell | Success gate |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     fastPathRows,
     "",
     "## Surfaces",

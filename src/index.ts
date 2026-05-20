@@ -1364,7 +1364,7 @@ const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TEL
 const MCP_START_REDIRECT_TELEMETRY_RELEASE = "PACKRIFT-MCP-START-REDIRECT-TELEMETRY-R01";
 const MCP_DISCOVERY_TELEMETRY_RELEASE = "PACKRIFT-MCP-DISCOVERY-TELEMETRY-R01";
 const MCP_RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03";
-const MCP_AGENT_HOST_ROLLOUT_RELEASE = "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02";
+const MCP_AGENT_HOST_ROLLOUT_RELEASE = "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03";
 const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
 const MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md";
 const MCP_AGENT_HOST_ROLLOUT_HTML_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html";
@@ -4765,6 +4765,7 @@ function mcpAgentHostRolloutBaseRow(source: string, target: string, sourceInfere
   const runUrl = trackedRunUrl(source, target);
   const firstRunShellUrl = `${runUrl}&format=sh`;
   const activationShellUrl = `https://mcp.packrift.com/r/activate/${source}?format=sh`;
+  const orderHandoffShellUrl = `https://mcp.packrift.com/r/order/${source}?format=sh`;
   return {
     source,
     target,
@@ -4783,6 +4784,8 @@ function mcpAgentHostRolloutBaseRow(source: string, target: string, sourceInfere
     source_activation_packet: `https://mcp.packrift.com/ai/mcp-source-activation/${source}.json`,
     eval_pack: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${source}`,
     order_handoff: `https://mcp.packrift.com/r/order/${source}?format=html`,
+    order_handoff_shell_url: orderHandoffShellUrl,
+    order_handoff_shell_one_liner: sourceActivationShellCommand(orderHandoffShellUrl),
     recommended_action:
       "Use the source-aware endpoint or tracked install link in this agent host, then run the first useful SKU 1066 sequence through create_cart_url without placing an order.",
     success_gate:
@@ -4913,12 +4916,12 @@ function mcpAgentHostRolloutMarkdown(payload = mcpAgentHostRolloutPayload()): st
     "",
     "## Agent Host Sources",
     "",
-    "| Priority | Source | Target | Stage | Target event | Tool calls | Cart landings | Primary action | Buyer handoff | Endpoint | Install | First-run shell | Activation shell | Eval pack |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Source | Target | Stage | Target event | Tool calls | Cart landings | Primary action | Buyer handoff | Order shell | Endpoint | Install | First-run shell | Activation shell | Eval pack |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     payload.rows
       .map(
         (row) =>
-          `| ${row.activation_priority} | ${row.source} | ${row.target} | ${markdownTableCell(row.activation_stage)} | ${row.target_event_to_watch} | ${row.current_counts.mcp_tool_calls} | ${row.current_counts.qualified_cart_landings} | ${row.primary_action_url} | ${row.buyer_handoff_url ?? ""} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.eval_pack} |`
+          `| ${row.activation_priority} | ${row.source} | ${row.target} | ${markdownTableCell(row.activation_stage)} | ${row.target_event_to_watch} | ${row.current_counts.mcp_tool_calls} | ${row.current_counts.qualified_cart_landings} | ${row.primary_action_url} | ${row.buyer_handoff_url ?? row.order_handoff} | ${row.order_handoff_shell_url} | ${row.source_aware_endpoint} | ${row.tracked_install_url} | ${row.tracked_first_run_shell_url} | ${row.reviewer_activation_shell_url} | ${row.eval_pack} |`
       )
       .join("\n"),
     "",
@@ -4958,13 +4961,15 @@ function mcpAgentHostRolloutHtml(payload = mcpAgentHostRolloutPayload()): string
           <a class="button" href="${escapeHtml(row.tracked_first_run_url)}">First run</a>
           <a class="button" href="${escapeHtml(row.tracked_first_run_shell_url)}">Shell run</a>
           <a class="button" href="${escapeHtml(row.reviewer_activation_url)}">Activation</a>
-          ${row.buyer_handoff_url ? `<a class="button warn" href="${escapeHtml(row.buyer_handoff_url)}">Buyer handoff</a>` : ""}
+          <a class="button warn" href="${escapeHtml(row.buyer_handoff_url ?? row.order_handoff)}">Buyer handoff</a>
+          <a class="button warn" href="${escapeHtml(row.order_handoff_shell_url)}">Order shell</a>
           <a class="button" href="${escapeHtml(row.eval_pack)}">Eval pack</a>
         </div>
         <details>
           <summary>Copy commands</summary>
           <pre>${escapeHtml(row.first_run_shell_one_liner)}</pre>
           <pre>${escapeHtml(row.reviewer_activation_shell_one_liner)}</pre>
+          <pre>${escapeHtml(row.order_handoff_shell_one_liner)}</pre>
         </details>
         <details>
           <summary>Live queue details</summary>

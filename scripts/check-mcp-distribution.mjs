@@ -1292,7 +1292,7 @@ async function liveMcpCheck() {
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http",
     agent_capture:
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R27" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R28" &&
       (agentCapture?.operating_rules ?? []).some(
         (rule) =>
           /OpenAI\/ChatGPT/.test(rule) &&
@@ -1313,10 +1313,12 @@ async function liveMcpCheck() {
       agentAdoptionProgress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R02" &&
       agentAdoptionProgressHtmlResult.ok,
     agent_host_rollout:
-      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02" &&
+      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03" &&
       agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
       agentHostRolloutMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+      agentHostRolloutMcpSo?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
+      agentHostRolloutMcpSo?.order_handoff_shell_one_liner?.includes("curl -sS") &&
       ["mcp_first_run_execution", "mcp_tool_call", "mcp_cart_landing", "mcp_attributed_order"].includes(agentHostRolloutMcpSo?.target_event_to_watch) &&
       agentHostRolloutGlama?.activation_priority === "critical" &&
       ["real_mcp_tool_call_needed", "cart_landing_needed", "buyer_checkout_needed"].includes(agentHostRolloutGlama?.activation_status) &&
@@ -1693,27 +1695,39 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R27" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R28" &&
       agentCapture?.surfaces?.length >= 22 &&
-      agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
+      agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R02" &&
       agentCapture?.counts?.agent_host_fast_paths >= 12 &&
       agentCapture?.agent_host_fast_paths?.some(
         (row) =>
           row.source === "cline_mcp_marketplace" &&
           row.target === "cline" &&
           row.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
-          row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=sh"
+          row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=sh" &&
+          row.order_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+          row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+          row.order_handoff_shell_one_liner?.includes("curl -sS") &&
+          row.order_handoff_shell_one_liner?.includes("/r/order/cline_mcp_marketplace?format=sh")
       ) &&
       agentCapture?.agent_host_fast_paths?.some(
         (row) =>
           row.source === "browse_sh" &&
-          row.source_aware_endpoint === "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http"
+          row.source_aware_endpoint === "https://mcp.packrift.com/mcp?packrift_mcp_source=browse_sh&packrift_mcp_target=generic_streamable_http" &&
+          row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/browse_sh?format=sh"
+      ) &&
+      agentCapture?.agent_host_fast_paths?.every(
+        (row) =>
+          row.order_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          row.order_handoff_shell_url?.startsWith("https://mcp.packrift.com/r/order/") &&
+          row.order_handoff_shell_url?.includes("format=sh") &&
+          row.order_handoff_shell_one_liner?.includes("curl -sS")
       ) &&
       agentCapture?.agent_host_fast_paths?.some((row) => row.source === "mcp_so" && /order|revenue/i.test(row.success_gate ?? "")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_start" && surface.canonical_url === "https://mcp.packrift.com/start" && surface.install_or_call?.includes("/r/start/{source}")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_agent_host_rollout" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json") &&
       agentCapture?.hub_urls?.agent_host_rollout === "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json" &&
-      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R02" &&
+      agentHostRollout?.release === "PACKRIFT-MCP-AGENT-HOST-ROLLOUT-R03" &&
       agentHostRollout?.source_count >= 35 &&
       agentHostRollout?.activation_queue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       agentHostRollout?.activation_queue?.status === "activation_needed" &&
@@ -1721,12 +1735,19 @@ async function liveMcpCheck() {
       typeof agentHostRollout?.activation_queue?.source_snapshot?.external_qualified_mcp_tool_calls === "number" &&
       Number(agentHostRollout?.priority_source_count ?? 0) >= 10 &&
       agentHostRollout?.rows?.some((row) => row.source === "openai_chatgpt" && row.source_aware_endpoint?.includes("packrift_mcp_source=openai_chatgpt")) &&
-      agentHostRollout?.rows?.some((row) => row.source === "langchain_agent" && row.tracked_first_run_shell_url?.includes("/r/run/langchain_agent/")) &&
+      agentHostRollout?.rows?.some(
+        (row) =>
+          row.source === "langchain_agent" &&
+          row.tracked_first_run_shell_url?.includes("/r/run/langchain_agent/") &&
+          row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/langchain_agent?format=sh"
+      ) &&
       agentHostRollout?.rows?.some((row) => row.source === "n8n_automation" && row.reviewer_activation_shell_url === "https://mcp.packrift.com/r/activate/n8n_automation?format=sh") &&
       agentHostRollout?.rows?.some(
         (row) =>
           row.source === "mcp_so" &&
           row.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+          row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
+          row.order_handoff_shell_one_liner?.includes("curl -sS") &&
           ["mcp_first_run_execution", "mcp_tool_call", "mcp_cart_landing", "mcp_attributed_order"].includes(row.target_event_to_watch) &&
           typeof row.current_counts?.first_run_actions === "number"
       ) &&
