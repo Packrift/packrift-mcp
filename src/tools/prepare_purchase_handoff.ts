@@ -10,12 +10,14 @@ import { isMcpCommerceHeldSku, MCP_COMMERCE_HOLD_REASON } from "../mcp-commerce-
 
 type PreparePurchaseHandoffContext = {
   sessionId?: string | null;
+  sourceSlug?: string | null;
+  installTarget?: string | null;
 };
 
 export const preparePurchaseHandoffSchema = {
   name: "prepare_purchase_handoff",
   description:
-    "One-call exact-SKU purchase prep for agents. Confirms AI_APPROVE product, live price, and live inventory for a Packrift SKU, then returns a measured MCP cart URL only when buyer_confirmed is true.",
+    "One-call exact-SKU purchase prep for agents. Confirms AI_APPROVE product, live price, and live inventory for a Packrift SKU, then returns a measured source-preserving MCP cart URL only when buyer_confirmed is true.",
   inputSchema: {
     type: "object",
     properties: {
@@ -30,6 +32,19 @@ export const preparePurchaseHandoffSchema = {
         type: "string",
         description: "Optional analytics context, such as agent_quick_start, exact_sku_reorder, or browse_sh_first_cart_run.",
       },
+      mcp_source_context: {
+        type: "string",
+        description: "Optional source slug for source-aware MCP installs, such as cline_mcp_marketplace or mcp_so.",
+      },
+      packrift_mcp_source: { type: "string" },
+      mcp_source: { type: "string" },
+      source_slug: { type: "string" },
+      mcp_install_target: {
+        type: "string",
+        description: "Optional install target for source-aware MCP installs, such as cline, codex, or generic_streamable_http.",
+      },
+      packrift_mcp_target: { type: "string" },
+      mcp_target: { type: "string" },
       journey_id: { type: "string" },
       result_set_id: { type: "string" },
       suppress_analytics: {
@@ -51,6 +66,13 @@ const preparePurchaseHandoffZod = z.object({
   quantity: z.number().int().min(1).default(1),
   buyer_confirmed: z.boolean().default(false),
   source_context: z.string().min(1).max(80).optional(),
+  mcp_source_context: z.string().min(1).max(80).optional(),
+  packrift_mcp_source: z.string().min(1).max(80).optional(),
+  mcp_source: z.string().min(1).max(80).optional(),
+  source_slug: z.string().min(1).max(80).optional(),
+  mcp_install_target: z.string().min(1).max(80).optional(),
+  packrift_mcp_target: z.string().min(1).max(80).optional(),
+  mcp_target: z.string().min(1).max(80).optional(),
   journey_id: z.string().min(1).max(120).optional(),
   result_set_id: z.string().min(1).max(120).optional(),
   suppress_analytics: z.boolean().optional(),
@@ -81,6 +103,24 @@ function productSummary(value: unknown) {
     },
     conversion_actions: row.conversion_actions ?? null,
   };
+}
+
+function normalizedMcpSlug(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+  return slug && /^[a-z0-9_]{2,80}$/.test(slug) ? slug : null;
+}
+
+function inferredSourceSlugFromContext(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim().toLowerCase();
+  const match = /^(.+)_(?:first_cart_run|first_run|cart_run|purchase_handoff|activation)$/.exec(text);
+  return match?.[1] ? normalizedMcpSlug(match[1]) : null;
 }
 
 export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, context: PreparePurchaseHandoffContext = {}) {
@@ -141,6 +181,18 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, cont
   const journeyId = input.journey_id ?? `prepare_purchase_handoff_${item.sku}_${item.variantId}`;
   const resultSetId = input.result_set_id ?? "prepare_purchase_handoff";
   const matchType = input.source_context ?? "prepare_purchase_handoff";
+  const mcpSourceContext =
+    normalizedMcpSlug(input.mcp_source_context) ??
+    normalizedMcpSlug(input.packrift_mcp_source) ??
+    normalizedMcpSlug(input.mcp_source) ??
+    normalizedMcpSlug(input.source_slug) ??
+    normalizedMcpSlug(context.sourceSlug) ??
+    inferredSourceSlugFromContext(input.source_context);
+  const mcpInstallTarget =
+    normalizedMcpSlug(input.mcp_install_target) ??
+    normalizedMcpSlug(input.packrift_mcp_target) ??
+    normalizedMcpSlug(input.mcp_target) ??
+    normalizedMcpSlug(context.installTarget);
   const liveContext = {
     journey_id: journeyId,
     result_set_id: resultSetId,
@@ -175,6 +227,8 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, cont
     journey_id: journeyId,
     result_set_id: resultSetId,
     utm_term: item.sku,
+    ...(mcpSourceContext ? { mcp_source_context: mcpSourceContext } : {}),
+    ...(mcpInstallTarget ? { mcp_install_target: mcpInstallTarget } : {}),
   };
   const canCreateCart = input.buyer_confirmed && Boolean(priceOk && inventoryOk);
   const cart = canCreateCart
@@ -218,6 +272,13 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, cont
     cart,
     cart_handoff: cartHandoff,
     cart_arguments_if_buyer_confirms: cartArguments,
+    source_attribution: {
+      mcp_source_context: mcpSourceContext,
+      mcp_install_target: mcpInstallTarget,
+      source_preserving_cart_expected: Boolean(mcpSourceContext || mcpInstallTarget),
+      rule:
+        "When mcp_source_context and mcp_install_target are present, prepare_purchase_handoff passes them through to create_cart_url so the measured /r/cart URL and Shopify cart attributes preserve the source.",
+    },
     fallback_actions: {
       reorder,
       quote,
@@ -226,6 +287,7 @@ export async function preparePurchaseHandoffHandler(env: Env, raw: unknown, cont
       "This tool creates a cart URL only when buyer_confirmed is true.",
       "If price or inventory cannot be confirmed live, cart remains null.",
       "If the SKU is unknown or not AI_APPROVE, route to search or quote recovery instead of forcing a nearby substitute.",
+      "For directory, marketplace, or agent-host runs, pass mcp_source_context and mcp_install_target so the measured cart URL remains source-preserving.",
       "Return the MCP /r/cart URL from cart.url as the primary buyer handoff when cart_handoff_ready.",
     ],
     next_action: canCreateCart

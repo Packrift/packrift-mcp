@@ -588,6 +588,7 @@ async function liveMcpCheck() {
     sourceRunResourceMarkdownResult,
     sourceActivateResourceShellResult,
     sourceOrderResourceMarkdownResult,
+    sourceAwarePreparePurchaseResult,
     toolsResult,
     resourcesResult,
     resourceTemplatesResult,
@@ -724,6 +725,19 @@ async function liveMcpCheck() {
     fetchMcp("resources/read", { uri: "https://mcp.packrift.com/r/run/browse_sh/codex?format=md" }),
     fetchMcp("resources/read", { uri: "https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh" }),
     fetchMcp("resources/read", { uri: "https://mcp.packrift.com/r/order/mcp_so?format=md" }),
+    fetchMcp("tools/call", {
+      name: "prepare_purchase_handoff",
+      arguments: {
+        sku: "1066",
+        quantity: 1,
+        buyer_confirmed: true,
+        source_context: "distribution_check_purchase_handoff",
+        mcp_source_context: "cline_mcp_marketplace",
+        mcp_install_target: "cline",
+        suppress_analytics: true,
+        analytics_context: { synthetic: true, source: "distribution_check" },
+      },
+    }),
     fetchMcp("tools/list"),
     fetchMcp("resources/list"),
     fetchMcp("resources/templates/list"),
@@ -801,6 +815,7 @@ async function liveMcpCheck() {
   const trackedReviewerActivationCline = trackedReviewerActivationClineResult.ok ? JSON.parse(trackedReviewerActivationClineResult.text) : null;
   const trackedOrderCline = trackedOrderClineResult.ok ? JSON.parse(trackedOrderClineResult.text) : null;
   const trackedOrderMcpSo = trackedOrderMcpSoResult.ok ? JSON.parse(trackedOrderMcpSoResult.text) : null;
+  const sourceAwarePreparePurchase = sourceAwarePreparePurchaseResult.value?.result?.structuredContent ?? null;
   const claudeConnectorSubmission = claudeConnectorSubmissionResult.ok ? JSON.parse(claudeConnectorSubmissionResult.text) : null;
   const agentCaptureOutreach = agentCaptureOutreachResult.ok ? JSON.parse(agentCaptureOutreachResult.text) : null;
   const agentCaptureOutreachHtml = agentCaptureOutreachHtmlResult.ok ? agentCaptureOutreachHtmlResult.text : "";
@@ -842,6 +857,7 @@ async function liveMcpCheck() {
   const purchasePathsExcludeHeldSkus = purchasePathsHeldSkus.length === 0;
   const cartHandoffHoldPolicyOk = ["12104", "CRR40W", "FWUPS116S24P"].every((sku) => heldSkuPolicySkus.includes(sku));
   const mcpToolsDiscoveryToolNames = (mcpToolsDiscovery?.tools ?? []).map((tool) => tool.name).filter(Boolean);
+  const preparePurchaseTool = (toolsResult.value?.result?.tools ?? []).find((tool) => tool.name === "prepare_purchase_handoff");
   const toolNames = (toolsResult.value?.result?.tools ?? []).map((tool) => tool.name).filter(Boolean);
   const resources = resourcesResult.value?.result?.resources ?? [];
   const resourcesCount = resources.length;
@@ -1056,6 +1072,19 @@ async function liveMcpCheck() {
     html_analytics: mcpPageAnalyticsDiagnostics.buyer_order_handoffs_html,
   };
   const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
+  const sourceAwarePreparePurchaseOk =
+    sourceAwarePreparePurchaseResult.ok &&
+    sourceAwarePreparePurchase?.status === "cart_handoff_ready" &&
+    sourceAwarePreparePurchase?.source_attribution?.mcp_source_context === "cline_mcp_marketplace" &&
+    sourceAwarePreparePurchase?.source_attribution?.mcp_install_target === "cline" &&
+    sourceAwarePreparePurchase?.cart_arguments_if_buyer_confirms?.mcp_source_context === "cline_mcp_marketplace" &&
+    sourceAwarePreparePurchase?.cart_arguments_if_buyer_confirms?.mcp_install_target === "cline" &&
+    sourceAwarePreparePurchase?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
+    sourceAwarePreparePurchase?.cart?.url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+    sourceAwarePreparePurchase?.cart?.url?.includes("mcp_install_target=cline") &&
+    sourceAwarePreparePurchase?.cart_handoff?.primary_url === sourceAwarePreparePurchase?.cart?.url &&
+    sourceAwarePreparePurchase?.cart_handoff?.attribution_required?.mcp_source_context === "cline_mcp_marketplace" &&
+    sourceAwarePreparePurchase?.cart_handoff?.attribution_required?.mcp_install_target === "cline";
   const revenueConversionRowsOk =
     revenueConversionRows.length >= 1 &&
     [revenueConversionMcpSoRow, revenueConversionClineRow].some(
@@ -1196,6 +1225,7 @@ async function liveMcpCheck() {
       revenueConversionQueue?.status === "buyer_checkout_needed" &&
       revenueConversionRowsOk,
     buyer_order_handoffs: buyerOrderHandoffsOk,
+    source_aware_prepare_purchase_handoff: sourceAwarePreparePurchaseOk,
     tracked_orders:
       trackedOrderCline?.mcp_source_context === "cline_mcp_marketplace" &&
       trackedOrderCline?.mcp_install_target === "cline" &&
@@ -1321,6 +1351,9 @@ async function liveMcpCheck() {
       toolNames.includes("create_cart_url") &&
       toolNames.includes("get_cart_handoff_candidates") &&
       toolNames.includes("prepare_purchase_handoff") &&
+      preparePurchaseTool?.inputSchema?.properties?.mcp_source_context &&
+      preparePurchaseTool?.inputSchema?.properties?.mcp_install_target &&
+      sourceAwarePreparePurchaseOk &&
       resourcesCount >= 68 &&
       resourceUris.has("https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh") &&
       resourceUris.has("https://mcp.packrift.com/r/run/browse_sh/codex?format=md") &&
@@ -3831,6 +3864,12 @@ async function liveMcpCheck() {
       },
       first_cart_url_candidate_type: cartItems[0]?.cart_url_candidate_type ?? null,
       first_final_shopify_cart_url_present: Boolean(firstFinalCartUrl),
+      source_aware_prepare_purchase_handoff: {
+        ok: sourceAwarePreparePurchaseOk,
+        status: sourceAwarePreparePurchase?.status ?? null,
+        cart_url: sourceAwarePreparePurchase?.cart?.url ?? null,
+        source_attribution: sourceAwarePreparePurchase?.source_attribution ?? null,
+      },
       mcp_introspection: {
         endpoint: MCP_ENDPOINT,
         tools_count: toolNames.length,

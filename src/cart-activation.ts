@@ -97,19 +97,23 @@ export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
         buyer_prompt:
           "Prepare Packrift SKU 1066 for purchase. Confirm live product, price, and inventory first, then create the cart only after I confirm quantity 1.",
         expected_agent_behavior:
-          "Call prepare_purchase_handoff with buyer_confirmed=false first; after buyer confirmation, call it again with buyer_confirmed=true and return the MCP /r/cart URL.",
+          "Call prepare_purchase_handoff with buyer_confirmed=false first; after buyer confirmation, call it again with buyer_confirmed=true, preserve mcp_source_context/mcp_install_target, and return the MCP /r/cart URL.",
         json_rpc_sequence: [
           toolCall("prepare-1066-unconfirmed", "prepare_purchase_handoff", {
             sku: "1066",
             quantity: 1,
             buyer_confirmed: false,
             source_context: "mcp_cart_activation",
+            mcp_source_context: "mcp_cart_activation",
+            mcp_install_target: "generic_streamable_http",
           }),
           toolCall("prepare-1066-confirmed", "prepare_purchase_handoff", {
             sku: "1066",
             quantity: 1,
             buyer_confirmed: true,
             source_context: "mcp_cart_activation",
+            mcp_source_context: "mcp_cart_activation",
+            mcp_install_target: "generic_streamable_http",
           }),
         ],
       },

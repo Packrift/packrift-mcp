@@ -27,19 +27,23 @@ const EXACT_SKU_WORKFLOWS = [
     buyer_prompt:
       "Use Packrift SKU 1066. Confirm the exact product, live price, and inventory; create the cart only after I confirm quantity 1.",
     success_outcome:
-      "Agent uses prepare_purchase_handoff to collapse product, price, inventory, and guarded cart handoff into one safe MCP tool call.",
+      "Agent uses prepare_purchase_handoff to collapse product, price, inventory, and guarded cart handoff into one safe source-preserving MCP tool call.",
     sequence: [
       toolCall("prepare-1066-unconfirmed", "prepare_purchase_handoff", {
         sku: "1066",
         quantity: 1,
         buyer_confirmed: false,
         source_context: "workflow_gallery_one_call",
+        mcp_source_context: "workflow_gallery",
+        mcp_install_target: "generic_streamable_http",
       }),
       toolCall("prepare-1066-confirmed", "prepare_purchase_handoff", {
         sku: "1066",
         quantity: 1,
         buyer_confirmed: true,
         source_context: "workflow_gallery_one_call",
+        mcp_source_context: "workflow_gallery",
+        mcp_install_target: "generic_streamable_http",
       }),
     ],
     expected_checks: [

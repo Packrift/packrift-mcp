@@ -147,12 +147,16 @@ async function main() {
     quantity: qty,
     buyer_confirmed: false,
     source_context: "smoke_cart_handoff",
+    mcp_source_context: "smoke_cart_handoff",
+    mcp_install_target: "generic_streamable_http",
   });
   const preparedConfirmed = await callTool("prepare_purchase_handoff", {
     sku,
     quantity: qty,
     buyer_confirmed: true,
     source_context: "smoke_cart_handoff",
+    mcp_source_context: "smoke_cart_handoff",
+    mcp_install_target: "generic_streamable_http",
   });
   const cart = cartArguments
     ? await callTool("create_cart_url", {
@@ -215,12 +219,15 @@ async function main() {
         preparedUnconfirmed?.ok &&
           !preparedUnconfirmed.isToolError &&
           preparedUnconfirmed.structured?.status === "live_confirmed_awaiting_buyer_confirmation" &&
-          preparedUnconfirmed.structured?.cart === null
+          preparedUnconfirmed.structured?.cart === null &&
+          preparedUnconfirmed.structured?.cart_arguments_if_buyer_confirms?.mcp_source_context === "smoke_cart_handoff" &&
+          preparedUnconfirmed.structured?.cart_arguments_if_buyer_confirms?.mcp_install_target === "generic_streamable_http"
       ),
       {
         status: preparedUnconfirmed?.status ?? null,
         handoff_status: preparedUnconfirmed?.structured?.status ?? null,
         cart_present: Boolean(preparedUnconfirmed?.structured?.cart),
+        source_attribution: preparedUnconfirmed?.structured?.source_attribution ?? null,
       }
     ),
     check(
@@ -230,13 +237,17 @@ async function main() {
           !preparedConfirmed.isToolError &&
           preparedConfirmed.structured?.status === "cart_handoff_ready" &&
           preparedConfirmed.structured?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/") &&
-          preparedConfirmed.structured?.cart_handoff?.primary_url === preparedConfirmed.structured?.cart?.url
+          preparedConfirmed.structured?.cart_handoff?.primary_url === preparedConfirmed.structured?.cart?.url &&
+          preparedConfirmed.structured?.cart?.url?.includes("mcp_source_context=smoke_cart_handoff") &&
+          preparedConfirmed.structured?.cart?.url?.includes("mcp_install_target=generic_streamable_http") &&
+          preparedConfirmed.structured?.cart_handoff?.attribution_required?.mcp_source_context === "smoke_cart_handoff"
       ),
       {
         status: preparedConfirmed?.status ?? null,
         handoff_status: preparedConfirmed?.structured?.status ?? null,
         cart_url: preparedConfirmed?.structured?.cart?.url ?? null,
         cart_handoff_primary_url: preparedConfirmed?.structured?.cart_handoff?.primary_url ?? null,
+        source_attribution: preparedConfirmed?.structured?.source_attribution ?? null,
       }
     ),
     check("cart_url_ok", Boolean(cart?.ok && !cart.isToolError && cartUrl && finalCartUrl), {
