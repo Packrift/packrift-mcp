@@ -809,10 +809,10 @@ function mailtoRecipient(action: (typeof ACTIONS)[number]): string | null {
 function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
   if (action.id === "glama_server_listing") {
     return {
-      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02",
+      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R03",
       status: "ready_for_glama_admin_release",
       blocker:
-        "Glama's hosted connector is current, but the source server API still reports zero tools and a required SHOPIFY_PACKRIFT_TOKEN.",
+        "Glama's hosted connector is current, but the source server API still reports zero tools, no score, and no package/config source release.",
       no_duplicate_surface_rule:
         "Release and sync the existing Packrift/packrift-mcp repository and hosted Packrift MCP endpoint; do not create a separate Packrift CLI or buyer surface.",
       source_api_url: "https://glama.ai/api/mcp/v1/servers/Packrift/packrift-mcp",
@@ -831,13 +831,15 @@ function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
       admin_steps: [
         "Claim the Packrift source server in Glama admin.",
         "Use the repository Dockerfile for source-listing release checks.",
-        "Run the release/sync so Glama re-evaluates tools/list and resources/list.",
-        "Confirm the source API shows at least 15 tools and no longer treats SHOPIFY_PACKRIFT_TOKEN as required for basic MCP discovery.",
+        "Deploy or make the Glama source release, then use Sync Server if Glama offers manual resync.",
+        "Run the release/sync so Glama re-evaluates tools/list, resources/list, and prompts/list.",
+        "Confirm the source API shows at least 15 tools, a quality score, and no required Shopify token for basic MCP discovery.",
         "Keep traffic pointed at the hosted no-auth Streamable HTTP endpoint https://mcp.packrift.com/mcp.",
       ],
       acceptance_check: [
         "Hosted connector remains healthy with 15 tools.",
         "Source listing API reports at least 15 tools.",
+        "Source listing API has a non-null score after release evaluation.",
         "Source listing quality can run without a buyer-side API key.",
         "punkpeye/awesome-mcp-servers PR #5606 no longer has a Glama source quality blocker.",
       ],
@@ -859,7 +861,7 @@ function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
 
   if (action.id === "punkpeye_awesome_mcp") {
     return {
-      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02",
+      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R03",
       status: "blocked_by_glama_source_quality",
       blocker:
         "The canonical punkpeye/awesome-mcp-servers PR is open and mergeable; the remaining blocker is Glama source-listing quality for Packrift.",

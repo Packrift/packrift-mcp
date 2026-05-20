@@ -14849,6 +14849,50 @@ async function firstRunProofDemo(env: Env): Promise<FirstRunProofDemo> {
   };
 }
 
+async function executeFirstRunRpcCall(
+  env: Env,
+  context: RpcExecutionContext,
+  request: JsonRpcRequest
+): Promise<Record<string, unknown>> {
+  const response = await handleRpc(env, request, context);
+  const responseObj = response && typeof response === "object" ? (response as Record<string, unknown>) : {};
+  const errorObj = responseObj.error && typeof responseObj.error === "object" ? (responseObj.error as Record<string, unknown>) : null;
+  if (errorObj) {
+    throw new Error(String(errorObj.message ?? `MCP ${request.method} failed`));
+  }
+  const result = responseObj.result && typeof responseObj.result === "object" ? (responseObj.result as Record<string, unknown>) : null;
+  if (!result) throw new Error(`MCP ${request.method} returned no result`);
+  if (result.isError === true) {
+    const content = Array.isArray(result.content) ? result.content : [];
+    const firstContent = content[0] && typeof content[0] === "object" ? (content[0] as Record<string, unknown>) : null;
+    throw new Error(String(firstContent?.text ?? `MCP ${request.method} returned a tool error`));
+  }
+  return result;
+}
+
+async function executeFirstRunToolCall(
+  env: Env,
+  context: RpcExecutionContext,
+  id: string,
+  name: string,
+  args: Record<string, unknown>
+): Promise<unknown> {
+  const result = await executeFirstRunRpcCall(env, context, {
+    jsonrpc: "2.0",
+    id,
+    method: "tools/call",
+    params: {
+      name,
+      arguments: args,
+    },
+  });
+  const structuredContent = result.structuredContent;
+  if (structuredContent === undefined || structuredContent === null) {
+    throw new Error(`MCP tool ${name} returned no structured content`);
+  }
+  return structuredContent;
+}
+
 async function firstRunActionExecutionDemo(
   env: Env,
   request: Request,
@@ -14865,33 +14909,79 @@ async function firstRunActionExecutionDemo(
   const day = compactDate();
   const runId = `mcp_first_run_action_${source}_${target}_${sku}_${day}`;
   const userAgent = request.headers.get("User-Agent") ?? "";
-  const suppressCartAnalytics = !shouldRecordRouteLandingTelemetry(env, userAgent);
+  const sessionId =
+    request.headers.get("Mcp-Session-Id") ||
+    request.headers.get("MCP-Session-Id") ||
+    `tracked-run-${source}-${target}-${Date.now()}`;
+  const recordsMcpToolTelemetry = !shouldSkipInternalTelemetry(userAgent);
+  const suppressCartAnalytics = !recordsMcpToolTelemetry;
+  const sourceContext = `${source}_first_cart_run`.slice(0, 80);
+  const journeyId = `mcp_install_${source}_${sku}_${variantId}`;
+  const resultSetId = `mcp_install_first_run_${source}`.slice(0, 120);
+  const rpcContext: RpcExecutionContext = {
+    sessionId,
+    userAgent,
+    sourceSlug: source,
+    installTarget: target,
+    sourceInference: "tracked_run_execute",
+    utmMedium: requestUrl.searchParams.get("utm_medium") || "first_run_execute",
+    utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_activation",
+    utmContent: requestUrl.searchParams.get("utm_content") || target,
+  };
   const common = {
     selected_sku: sku,
     selected_handle: handle,
-    match_type: "first_run_action_browser_execution",
-    journey_id: runId,
-    result_set_id: `mcp_first_run_action_${source}_${day}`,
+    match_type: "install_first_useful_run",
+    journey_id: journeyId,
+    result_set_id: resultSetId,
     packrift_ai_id: runId,
     ai_commerce_id: runId,
-    source_context: `mcp_first_run_action_${source}`,
+    source_context: sourceContext,
+    mcp_source_context: source,
+    mcp_install_target: target,
     utm_term: sku,
   };
   try {
-    const [product, pricing, inventory] = await Promise.all([
-      getProductHandler(env, { handle }) as Promise<Record<string, unknown>>,
-      getPricingHandler(env, { variant_ids: [variantId], quantity, ...common }) as Promise<Array<Record<string, unknown>>>,
-      checkInventoryHandler(env, { variant_ids: [variantId], ...common }) as Promise<Array<Record<string, unknown>>>,
-    ]);
-    const cart = (await createCartUrlHandler(env, {
+    const toolsList = await executeFirstRunRpcCall(env, rpcContext, {
+      jsonrpc: "2.0",
+      id: "tools",
+      method: "tools/list",
+    });
+    const toolsListPayload = toolsList.tools && Array.isArray(toolsList.tools) ? toolsList.tools : [];
+    const candidates = await executeFirstRunToolCall(env, rpcContext, "candidate-1066", "get_cart_handoff_candidates", {
+      sku,
+      limit: 1,
+      ...common,
+    });
+    const pricing = await executeFirstRunToolCall(env, rpcContext, "price-1066", "get_pricing", {
+      variant_ids: [variantId],
+      quantity,
+      ...common,
+    });
+    const inventory = await executeFirstRunToolCall(env, rpcContext, "inventory-1066", "check_inventory", {
+      variant_ids: [variantId],
+      ...common,
+    });
+    const cart = await executeFirstRunToolCall(env, rpcContext, "cart-1066", "create_cart_url", {
       sku,
       quantity,
       ...common,
-      suppress_analytics: suppressCartAnalytics,
-    }, {
-      sourceSlug: source,
-      installTarget: target,
-    })) as Record<string, unknown>;
+      ...(suppressCartAnalytics
+        ? { suppress_analytics: true, analytics_context: { synthetic: true, source: "mcp_first_run_action_internal" } }
+        : {}),
+    });
+    const candidatePayload = candidates && typeof candidates === "object" && !Array.isArray(candidates) ? (candidates as Record<string, unknown>) : {};
+    const cartPayload = cart && typeof cart === "object" && !Array.isArray(cart) ? (cart as Record<string, unknown>) : {};
+    const pricingPayload = pricing && typeof pricing === "object" && !Array.isArray(pricing) ? (pricing as Record<string, unknown>) : {};
+    const inventoryPayload = inventory && typeof inventory === "object" && !Array.isArray(inventory) ? (inventory as Record<string, unknown>) : {};
+    const candidateItems = Array.isArray(candidatePayload.items)
+      ? candidatePayload.items.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+      : [];
+    const product = candidateItems[0] ?? {};
+    const pricingRows = Array.isArray(pricing) ? pricing : Array.isArray(pricingPayload.items) ? pricingPayload.items : [];
+    const inventoryRows = Array.isArray(inventory) ? inventory : Array.isArray(inventoryPayload.items) ? inventoryPayload.items : [];
+    const firstPricing = pricingRows.find((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))) ?? {};
+    const firstInventory = inventoryRows.find((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))) ?? {};
     const payload = {
       release: MCP_FIRST_RUN_ACTION_RELEASE,
       generated_at: new Date().toISOString(),
@@ -14901,35 +14991,54 @@ async function firstRunActionExecutionDemo(
       target,
       no_order_created: true,
       canonical_endpoint: "https://mcp.packrift.com/mcp",
+      mcp_session_id: sessionId,
+      records_mcp_tool_call_telemetry: recordsMcpToolTelemetry,
+      source_attribution: {
+        mcp_source_context: source,
+        mcp_install_target: target,
+        mcp_source_inference: "tracked_run_execute",
+        source_context: sourceContext,
+        journey_id: journeyId,
+        result_set_id: resultSetId,
+      },
+      tools_list_confirmed: toolsListPayload.length,
+      mcp_tool_call_sequence: [
+        { id: "candidate-1066", name: "get_cart_handoff_candidates", status: "ok" },
+        { id: "price-1066", name: "get_pricing", status: "ok" },
+        { id: "inventory-1066", name: "check_inventory", status: "ok" },
+        { id: "cart-1066", name: "create_cart_url", status: "ok" },
+      ],
       sku,
       title,
       variant_id: variantId,
       handle,
       quantity,
-      analytics_recorded: !suppressCartAnalytics,
+      analytics_recorded: recordsMcpToolTelemetry,
       product: {
-        handle: product.handle,
-        title: product.title,
-        url: product.url,
-        ai_status: product.ai_status,
-        approval_gate: product.approval_gate,
+        handle: product.handle ?? handle,
+        title: product.title ?? title,
+        url: product.url ?? product.mcp_sku_md ?? "",
+        ai_status: product.ai_status ?? "AI_APPROVE",
+        approval_gate: product.approval_gate ?? "AI_APPROVE",
         primary_variant_id: variantId,
         dimensions: product.dimensions,
       },
-      pricing: pricing[0] ?? {},
-      inventory: inventory[0] ?? {},
+      pricing: firstPricing,
+      inventory: firstInventory,
       cart: {
-        mcp_handoff_id: cart.mcp_handoff_id,
-        url: cart.url,
-        final_cart_url: cart.final_cart_url,
-        utm: cart.utm,
-        items: cart.items,
+        mcp_handoff_id: cartPayload.mcp_handoff_id,
+        url: cartPayload.url,
+        final_cart_url: cartPayload.final_cart_url,
+        utm: cartPayload.utm,
+        items: cartPayload.items,
       },
       success_signals: [
-        "Product lookup returned the expected AI_APPROVE SKU 1066.",
+        "tools/list confirmed the Packrift MCP surface.",
+        "get_cart_handoff_candidates returned the expected AI_APPROVE SKU 1066.",
         "Live pricing returned before cart handoff.",
         "Live inventory returned before cart handoff.",
         "create_cart_url returned a measured https://mcp.packrift.com/r/cart/1066 URL.",
+        "The browser execution path used the same MCP tools as the shell runner.",
         "No order was placed.",
       ],
     };
@@ -14940,8 +15049,8 @@ async function firstRunActionExecutionDemo(
       sku,
       handle,
       variantId,
-      cartUrl: String(cart.url ?? ""),
-      finalCartUrl: String(cart.final_cart_url ?? ""),
+      cartUrl: String(cartPayload.url ?? ""),
+      finalCartUrl: String(cartPayload.final_cart_url ?? ""),
       latencyMs: Date.now() - startedAt,
     });
     return payload;

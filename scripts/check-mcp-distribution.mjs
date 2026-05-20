@@ -1873,6 +1873,12 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.sku === "1066" &&
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
+      typeof trackedFirstRunExecute?.records_mcp_tool_call_telemetry === "boolean" &&
+      trackedFirstRunExecute?.source_attribution?.mcp_source_context === "generic" &&
+      trackedFirstRunExecute?.source_attribution?.mcp_install_target === "generic_streamable_http" &&
+      Array.isArray(trackedFirstRunExecute?.mcp_tool_call_sequence) &&
+      trackedFirstRunExecute.mcp_tool_call_sequence.map((row) => row.name).join(",") ===
+        "get_cart_handoff_candidates,get_pricing,check_inventory,create_cart_url" &&
       trackedFirstRunExecute?.no_order_created === true &&
       agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R28" &&
       agentCapture?.surfaces?.length >= 22 &&
@@ -3304,11 +3310,15 @@ async function liveMcpCheck() {
       evalPack?.copy_ready?.one_line_shell?.includes("/r/run/") &&
       evalPack?.copy_ready?.one_line_shell?.includes("format=sh") &&
       evalPack?.tracked_actions?.activation_shell?.includes("/r/activate/") &&
-      sourceListingReadiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02" &&
+      sourceListingReadiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R03" &&
+      sourceListingReadiness?.status === "ready_for_glama_admin_release_sync" &&
       sourceListingReadiness?.canonical_runtime?.endpoint === MCP_ENDPOINT &&
       sourceListingReadiness?.source_package_contract?.config_schema_required?.length === 0 &&
       sourceListingReadiness?.no_token_discovery_contract?.expected_tools_count === 15 &&
       sourceListingReadiness?.no_token_discovery_contract?.expected_resources_min >= 700 &&
+      sourceListingReadiness?.current_glama_source_api_observation?.observed_tools_count === 0 &&
+      sourceListingReadiness?.current_glama_source_api_observation?.observed_score === null &&
+      sourceListingReadiness?.copy_ready_glama_admin_steps?.some((step) => String(step).includes("Sync Server")) &&
       sourceListingReadiness?.copy_ready_recrawl_message?.includes("configSchema.required=[]") &&
       sourceListingReadiness?.copy_ready_recrawl_message?.includes("do not create a duplicate Packrift CLI") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
@@ -3461,7 +3471,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some(
         (action) =>
           action.id === "glama_server_listing" &&
-          action.source_release_readiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02" &&
+          action.source_release_readiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R03" &&
           action.source_release_readiness?.docker_readiness?.tools_list_without_token === true &&
           action.source_release_readiness?.docker_readiness?.expected_tools_count === 15
       ) &&
@@ -4206,6 +4216,8 @@ async function liveMcpCheck() {
       tracked_first_run_execute_sku: trackedFirstRunExecute?.sku ?? null,
       tracked_first_run_execute_cart_url: trackedFirstRunExecute?.cart?.url ?? null,
       tracked_first_run_execute_mcp_handoff_id_present: String(trackedFirstRunExecute?.cart?.url ?? "").includes("mcp_handoff_id="),
+      tracked_first_run_execute_records_mcp_tool_call_telemetry: trackedFirstRunExecute?.records_mcp_tool_call_telemetry ?? null,
+      tracked_first_run_execute_tool_call_sequence: trackedFirstRunExecute?.mcp_tool_call_sequence?.map((row) => row.name) ?? null,
       usage_snapshot_release: usageSnapshot?.release ?? null,
       usage_snapshot_status: usageSnapshot?.status ?? null,
       usage_snapshot_tracked_start_template: usageSnapshot?.source_attribution?.tracked_start_template ?? null,

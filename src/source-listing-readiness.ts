@@ -36,9 +36,9 @@ function fencedJson(value: unknown): string {
 
 export function mcpSourceListingReadinessPayload(runtime: SourceListingReadinessRuntime) {
   return {
-    release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02",
+    release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R03",
     generated_at: new Date().toISOString(),
-    status: "ready_for_glama_source_release_sync",
+    status: "ready_for_glama_admin_release_sync",
     purpose:
       "Give Glama, MCP directories, and source-based scanners one canonical proof that Packrift MCP discovery works from the existing repository without requiring a private Shopify token or creating a duplicate CLI.",
     canonical_runtime: {
@@ -92,21 +92,32 @@ export function mcpSourceListingReadinessPayload(runtime: SourceListingReadiness
     current_known_blocker: {
       directory: "glama_source_server_listing",
       issue:
-        "The hosted Glama connector is healthy, but the source server API has been stale with zero tools and a required SHOPIFY_PACKRIFT_TOKEN on the source listing.",
+        "The hosted Glama connector is healthy, but the source server API is still stale: it reports zero tools, no score, and no package/config release for the Packrift/packrift-mcp source listing.",
       desired_state:
-        "Glama source API reports at least 15 tools and no required Shopify token for basic MCP discovery.",
+        "Glama source API reports at least 15 tools, a quality score, and no required Shopify token for basic MCP discovery.",
       downstream_impact:
         "Clearing this source score also removes the quality blocker for directories that depend on Glama source-listing metadata, including the pending punkpeye awesome-mcp-servers review.",
+    },
+    current_glama_source_api_observation: {
+      source_api_url: GLAMA_SOURCE_API_URL,
+      observed_tools_count: 0,
+      observed_score: null,
+      observed_package: null,
+      observed_config: null,
+      observed_server_url: null,
+      interpretation:
+        "Glama has discovered the repository record but has not completed a source release/quality evaluation against the current Dockerfile and smithery.yaml discovery contract.",
     },
     copy_ready_glama_admin_steps: [
       "Claim the Packrift source server listing in Glama admin.",
       "Use the current Packrift/packrift-mcp repository and Dockerfile for the source release.",
+      "Deploy or make the Glama source release from that Dockerfile, then use Sync Server if Glama offers a manual resync action.",
       "Honor smithery.yaml configSchema.required as an empty array for discovery scans.",
       "Run release/sync so Glama re-inspects tools/list, resources/list, and prompts/list.",
       "Keep the hosted connector and all user traffic pointed at https://mcp.packrift.com/mcp.",
     ],
     copy_ready_recrawl_message:
-      "Please resync the Packrift source server listing from https://github.com/Packrift/packrift-mcp. The current repo includes glama.json, smithery.yaml with configSchema.required=[], and a Docker/Node server that exposes tools/list, resources/list, and prompts/list without SHOPIFY_PACKRIFT_TOKEN. The hosted connector remains the primary no-auth traffic target at https://mcp.packrift.com/mcp; please do not create a duplicate Packrift CLI or buyer surface.",
+      "Please claim and resync the Packrift source server listing from https://github.com/Packrift/packrift-mcp. The current Glama source API record shows tools=[], score=null, package=null, and config=null even though the repo includes glama.json, smithery.yaml with configSchema.required=[], and a Docker/Node server that exposes tools/list, resources/list, and prompts/list without SHOPIFY_PACKRIFT_TOKEN. The hosted connector remains the primary no-auth traffic target at https://mcp.packrift.com/mcp; please do not create a duplicate Packrift CLI or buyer surface.",
     proof_urls: {
       source_listing_readiness_json: SOURCE_READINESS_JSON_URL,
       source_listing_readiness_markdown: SOURCE_READINESS_MARKDOWN_URL,
@@ -150,6 +161,10 @@ export function mcpSourceListingReadinessMarkdown(runtime: SourceListingReadines
     "## Glama Admin Steps",
     "",
     ...payload.copy_ready_glama_admin_steps.map((step, index) => `${index + 1}. ${step}`),
+    "",
+    "## Current Glama Source API Observation",
+    "",
+    fencedJson(payload.current_glama_source_api_observation),
     "",
     "## Copy-Ready Recrawl Message",
     "",
