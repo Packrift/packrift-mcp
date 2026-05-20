@@ -4634,6 +4634,17 @@ function mcpAgentHostRolloutPayload(sourceQueue?: AgentHostRolloutQueuePayload |
   };
 }
 
+async function mcpAgentHostRolloutDefaultPayload(env: Env): Promise<ReturnType<typeof mcpAgentHostRolloutPayload>> {
+  const sourceQueue = await cachedMcpSourceActivationQueuePayload(
+    env,
+    todayUtc(),
+    PUBLIC_MCP_OPERATOR_EVENT_LIMIT,
+    PUBLIC_MCP_OPERATOR_ORDER_DAYS,
+    PUBLIC_MCP_OPERATOR_ORDER_LIMIT
+  );
+  return mcpAgentHostRolloutPayload(sourceQueue);
+}
+
 function mcpAgentHostRolloutMarkdown(payload = mcpAgentHostRolloutPayload()): string {
   return [
     "# Packrift MCP Agent Host Rollout",
@@ -11651,9 +11662,9 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   }
   if (pathname === "/ai/all-agent-capture.json") return JSON.stringify(allAgentCapturePayload(agentCaptureRuntime()), null, 2);
   if (pathname === "/ai/all-agent-capture.md") return allAgentCaptureMarkdown(agentCaptureRuntime());
-  if (pathname === "/ai/mcp-agent-host-rollout.json") return JSON.stringify(mcpAgentHostRolloutPayload(), null, 2);
-  if (pathname === "/ai/mcp-agent-host-rollout.md") return mcpAgentHostRolloutMarkdown();
-  if (pathname === "/ai/mcp-agent-host-rollout.html") return mcpAgentHostRolloutHtml();
+  if (pathname === "/ai/mcp-agent-host-rollout.json") return JSON.stringify(await mcpAgentHostRolloutDefaultPayload(env), null, 2);
+  if (pathname === "/ai/mcp-agent-host-rollout.md") return mcpAgentHostRolloutMarkdown(await mcpAgentHostRolloutDefaultPayload(env));
+  if (pathname === "/ai/mcp-agent-host-rollout.html") return mcpAgentHostRolloutHtml(await mcpAgentHostRolloutDefaultPayload(env));
   if (pathname === "/ai/mcp-adoption-kit.json") return JSON.stringify(mcpAdoptionKitPayload(adoptionKitRuntime()), null, 2);
   if (pathname === "/ai/mcp-adoption-kit.md") return mcpAdoptionKitMarkdown(adoptionKitRuntime());
   if (pathname === "/ai/mcp-install-matrix.json") return JSON.stringify(mcpInstallMatrixPayload(installMatrixRuntime()), null, 2);
@@ -13929,12 +13940,12 @@ app.get("/ai/all-agent-capture.md", async (c) => {
 async function mcpAgentHostRolloutPayloadForRequest(c: AppContext): Promise<ReturnType<typeof mcpAgentHostRolloutPayload>> {
   const url = new URL(c.req.url);
   const date = normalizeAiSalesDate(url.searchParams.get("date"));
-  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT), 10);
-  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_DEFAULT_ORDER_DAYS), 10);
-  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_DEFAULT_ORDER_LIMIT), 10);
-  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
-  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
-  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? String(PUBLIC_MCP_OPERATOR_EVENT_LIMIT), 10);
+  const requestedOrderDays = Number.parseInt(url.searchParams.get("order_days") ?? String(PUBLIC_MCP_OPERATOR_ORDER_DAYS), 10);
+  const requestedOrderLimit = Number.parseInt(url.searchParams.get("order_limit") ?? String(PUBLIC_MCP_OPERATOR_ORDER_LIMIT), 10);
+  const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_OPERATOR_EVENT_LIMIT);
+  const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : PUBLIC_MCP_OPERATOR_ORDER_DAYS;
+  const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : PUBLIC_MCP_OPERATOR_ORDER_LIMIT;
   const refresh = publicMcpDerivedResourceFreshRequested(url);
   const sourceQueue = await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh });
   return mcpAgentHostRolloutPayload(sourceQueue);
