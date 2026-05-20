@@ -195,6 +195,8 @@ const purgeUrls = Array.from(new Set(core
       "https://mcp.packrift.com/ai/mcp-eval-pack.md?source=punkpeye_awesome_mcp",
       "https://mcp.packrift.com/ai/mcp-eval-pack.json?source=browse_sh",
       "https://mcp.packrift.com/ai/mcp-eval-pack.md?source=browse_sh",
+      "https://mcp.packrift.com/ai/mcp-source-listing-readiness.json",
+      "https://mcp.packrift.com/ai/mcp-source-listing-readiness.md",
       "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       "https://mcp.packrift.com/ai/browser-agent-bridge.md",
       "https://mcp.packrift.com/ai/mcp-directory-refresh.json",

@@ -805,7 +805,7 @@ function mailtoRecipient(action: (typeof ACTIONS)[number]): string | null {
 function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
   if (action.id === "glama_server_listing") {
     return {
-      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R01",
+      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02",
       status: "ready_for_glama_admin_release",
       blocker:
         "Glama's hosted connector is current, but the source server API still reports zero tools and a required SHOPIFY_PACKRIFT_TOKEN.",
@@ -842,6 +842,7 @@ function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
         health: "https://mcp.packrift.com/health",
         tool_discovery: MCP_TOOL_DISCOVERY_URL,
         source_update_card: "https://mcp.packrift.com/ai/mcp-directory-update/glama_server_listing.json",
+        source_listing_readiness: "https://mcp.packrift.com/ai/mcp-source-listing-readiness.json",
         source_eval_pack: sourceEvalPackUrl("glama_server_listing"),
         directory_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
       },
@@ -850,7 +851,7 @@ function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
 
   if (action.id === "punkpeye_awesome_mcp") {
     return {
-      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R01",
+      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02",
       status: "blocked_by_glama_source_quality",
       blocker:
         "The canonical punkpeye/awesome-mcp-servers PR is open and mergeable; the remaining blocker is Glama source-listing quality for Packrift.",
@@ -858,6 +859,7 @@ function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
         "Keep PR #5606 as the canonical submission and do not open duplicate automated PRs.",
       canonical_pr_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
       unblocker_update_card: "https://mcp.packrift.com/ai/mcp-directory-update/glama_server_listing.json",
+      source_listing_readiness: "https://mcp.packrift.com/ai/mcp-source-listing-readiness.json",
       acceptance_check: [
         "Glama source listing reports the current Packrift MCP tools.",
         "PR #5606 stays open or merges cleanly.",

@@ -561,6 +561,7 @@ async function liveMcpCheck() {
     automationWorkflowsHtmlResult,
     n8nWorkflowResult,
     evalPackResult,
+    sourceListingReadinessResult,
     browserAgentBridgeResult,
     browserbaseBrowseSkillPackResult,
     directoryRefreshResult,
@@ -700,6 +701,7 @@ async function liveMcpCheck() {
     fetchText(MCP_AUTOMATION_WORKFLOWS_HTML_URL),
     fetchText(MCP_N8N_WORKFLOW_JSON_URL),
     fetchText("https://mcp.packrift.com/ai/mcp-eval-pack.json"),
+    fetchText("https://mcp.packrift.com/ai/mcp-source-listing-readiness.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-directory-refresh.json"),
@@ -814,6 +816,7 @@ async function liveMcpCheck() {
   const automationZapierSteps = automationWorkflows?.workflows?.zapier?.steps ?? [];
   const automationPipedreamCode = automationWorkflows?.workflows?.pipedream?.code ?? "";
   const evalPack = evalPackResult.ok ? JSON.parse(evalPackResult.text) : null;
+  const sourceListingReadiness = sourceListingReadinessResult.ok ? JSON.parse(sourceListingReadinessResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
   const browserbaseBrowseSkillPack = browserbaseBrowseSkillPackResult.ok ? JSON.parse(browserbaseBrowseSkillPackResult.text) : null;
   const directoryRefresh = directoryRefreshResult.ok ? JSON.parse(directoryRefreshResult.text) : null;
@@ -3072,6 +3075,13 @@ async function liveMcpCheck() {
       evalPack?.copy_ready?.one_line_shell?.includes("/r/run/") &&
       evalPack?.copy_ready?.one_line_shell?.includes("format=sh") &&
       evalPack?.tracked_actions?.activation_shell?.includes("/r/activate/") &&
+      sourceListingReadiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02" &&
+      sourceListingReadiness?.canonical_runtime?.endpoint === MCP_ENDPOINT &&
+      sourceListingReadiness?.source_package_contract?.config_schema_required?.length === 0 &&
+      sourceListingReadiness?.no_token_discovery_contract?.expected_tools_count === 15 &&
+      sourceListingReadiness?.no_token_discovery_contract?.expected_resources_min >= 700 &&
+      sourceListingReadiness?.copy_ready_recrawl_message?.includes("configSchema.required=[]") &&
+      sourceListingReadiness?.copy_ready_recrawl_message?.includes("do not create a duplicate Packrift CLI") &&
       browserAgentBridge?.release === "PACKRIFT-BROWSER-AGENT-BRIDGE-R01" &&
       browserAgentBridge?.workflows?.length >= 3 &&
       browserbaseBrowseSkillPack?.release === "PACKRIFT-BROWSERBASE-BROWSE-SKILL-PACK-R07" &&
@@ -3222,7 +3232,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.some(
         (action) =>
           action.id === "glama_server_listing" &&
-          action.source_release_readiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R01" &&
+          action.source_release_readiness?.release === "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R02" &&
           action.source_release_readiness?.docker_readiness?.tools_list_without_token === true &&
           action.source_release_readiness?.docker_readiness?.expected_tools_count === 15
       ) &&
@@ -3724,6 +3734,8 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_N8N_WORKFLOW_JSON_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.md") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-source-listing-readiness.json") &&
+      resourceUris.has("https://mcp.packrift.com/ai/mcp-source-listing-readiness.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.md") &&
       resourceUris.has("https://mcp.packrift.com/SKILL.md") &&
@@ -4024,6 +4036,9 @@ async function liveMcpCheck() {
       eval_pack_cases: evalPack?.cases?.length ?? 0,
       eval_pack_no_order_gate: evalPack?.acceptance_gate?.no_order_created ?? null,
       eval_pack_one_line_shell: evalPack?.copy_ready?.one_line_shell ?? null,
+      source_listing_readiness_release: sourceListingReadiness?.release ?? null,
+      source_listing_readiness_status: sourceListingReadiness?.status ?? null,
+      source_listing_readiness_no_token_tools: sourceListingReadiness?.no_token_discovery_contract?.expected_tools_count ?? null,
       browser_agent_bridge_release: browserAgentBridge?.release ?? null,
       browser_agent_bridge_workflows: browserAgentBridge?.workflows?.length ?? 0,
       browserbase_browse_skill_pack_release: browserbaseBrowseSkillPack?.release ?? null,

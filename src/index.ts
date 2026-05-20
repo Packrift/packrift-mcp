@@ -45,6 +45,7 @@ import {
   mcpWorkflowGalleryPayload,
 } from "./workflow-gallery.js";
 import { mcpEvalPackMarkdown, mcpEvalPackPayload } from "./eval-pack.js";
+import { mcpSourceListingReadinessMarkdown, mcpSourceListingReadinessPayload } from "./source-listing-readiness.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
 import { mcpDirectoryRefreshMarkdown, mcpDirectoryRefreshPayload } from "./directory-refresh-pack.js";
@@ -12773,6 +12774,8 @@ const AI_DISCOVERY_URLS = [
   MCP_N8N_WORKFLOW_JSON_URL,
   "https://mcp.packrift.com/ai/mcp-eval-pack.json",
   "https://mcp.packrift.com/ai/mcp-eval-pack.md",
+  "https://mcp.packrift.com/ai/mcp-source-listing-readiness.json",
+  "https://mcp.packrift.com/ai/mcp-source-listing-readiness.md",
   "https://mcp.packrift.com/ai/browser-agent-bridge.json",
   "https://mcp.packrift.com/ai/browser-agent-bridge.md",
   "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
@@ -12945,6 +12948,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-n8n-workflow.json": "Importable n8n workflow JSON that runs Packrift MCP tools/list and first-useful tools/call requests through the hosted endpoint.",
   "/ai/mcp-eval-pack.json": "Machine-readable Packrift MCP acceptance-test pack for real host installs, source-aware tool-call proof, live checks, and measured cart handoff.",
   "/ai/mcp-eval-pack.md": "Crawler-readable Packrift MCP eval pack with host configs, required JSON-RPC cases, assertions, and reporting fields.",
+  "/ai/mcp-source-listing-readiness.json": "Machine-readable Packrift MCP source-listing readiness proof for Glama and source-based directory scanners, with no-token discovery rules and no-duplicate-surface guardrails.",
+  "/ai/mcp-source-listing-readiness.md": "Crawler-readable Packrift MCP source-listing readiness proof for Glama release/sync cleanup and downstream directory quality checks.",
   "/ai/browser-agent-bridge.json": "Machine-readable bridge for Browserbase Browse, browser-use, Playwright, CUA, and browser agents that should read public Packrift resources and confirm live commerce facts through MCP.",
   "/ai/browser-agent-bridge.md": "Crawler-readable browser-agent bridge that keeps Browse-style workflows routed through the canonical Packrift MCP endpoint.",
   "/ai/browserbase-browse-skill-pack.json": "Machine-readable Browse/browser-skill starter pack that wraps public Packrift reads around the canonical MCP endpoint without creating a duplicate CLI or buyer surface.",
@@ -13497,6 +13502,8 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-n8n-workflow.json") return JSON.stringify(mcpN8nWorkflowPayload(), null, 2);
   if (pathname === "/ai/mcp-eval-pack.json") return JSON.stringify(mcpEvalPackPayload(evalPackRuntime()), null, 2);
   if (pathname === "/ai/mcp-eval-pack.md") return mcpEvalPackMarkdown(evalPackRuntime());
+  if (pathname === "/ai/mcp-source-listing-readiness.json") return JSON.stringify(mcpSourceListingReadinessPayload(evalPackRuntime()), null, 2);
+  if (pathname === "/ai/mcp-source-listing-readiness.md") return mcpSourceListingReadinessMarkdown(evalPackRuntime());
   if (pathname === "/ai/browser-agent-bridge.json") return JSON.stringify(browserAgentBridgePayload(browserAgentBridgeRuntime()), null, 2);
   if (pathname === "/ai/browser-agent-bridge.md") return browserAgentBridgeMarkdown(browserAgentBridgeRuntime());
   if (pathname === "/ai/browserbase-browse-skill-pack.json") return JSON.stringify(browserbaseBrowseSkillPackPayload(browserbaseBrowseSkillPackRuntime()), null, 2);
@@ -16406,6 +16413,21 @@ app.get("/ai/mcp-eval-pack.md", async (c) => {
   const source = new URL(c.req.url).searchParams.get("source") ?? undefined;
   const body = mcpEvalPackMarkdown(evalPackRuntime(), source);
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-eval-pack.md", "mcp_eval_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-source-listing-readiness.json", async (c) => {
+  const payload = mcpSourceListingReadinessPayload(evalPackRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-listing-readiness.json", "mcp_source_listing_readiness", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-source-listing-readiness.md", async (c) => {
+  const body = mcpSourceListingReadinessMarkdown(evalPackRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-listing-readiness.md", "mcp_source_listing_readiness", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
     ...RAW_HEADERS,

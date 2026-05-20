@@ -100,6 +100,8 @@ export const serverCard = {
     mcpFirstRunProofMarkdown: "https://mcp.packrift.com/ai/mcp-first-run-proof.md",
     mcpWorkflowGalleryJson: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
     mcpWorkflowGalleryMarkdown: "https://mcp.packrift.com/ai/mcp-workflow-gallery.md",
+    mcpSourceListingReadinessJson: "https://mcp.packrift.com/ai/mcp-source-listing-readiness.json",
+    mcpSourceListingReadinessMarkdown: "https://mcp.packrift.com/ai/mcp-source-listing-readiness.md",
     browserAgentBridgeJson: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     browserAgentBridgeMarkdown: "https://mcp.packrift.com/ai/browser-agent-bridge.md",
     rootBrowserSkillMarkdown: "https://mcp.packrift.com/SKILL.md",

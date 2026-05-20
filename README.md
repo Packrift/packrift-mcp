@@ -191,6 +191,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP workflow gallery HTML: https://mcp.packrift.com/ai/mcp-workflow-gallery.html
 - MCP eval pack: https://mcp.packrift.com/ai/mcp-eval-pack.json
 - MCP eval pack Markdown: https://mcp.packrift.com/ai/mcp-eval-pack.md
+- MCP source-listing readiness: https://mcp.packrift.com/ai/mcp-source-listing-readiness.json
+- MCP source-listing readiness Markdown: https://mcp.packrift.com/ai/mcp-source-listing-readiness.md
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Browser-agent bridge Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
 - Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
