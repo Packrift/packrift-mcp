@@ -3143,6 +3143,137 @@ async function mcpGa4FunnelProofPayload(env: Env): Promise<PublicMcpGa4FunnelPro
   }
 }
 
+function progressPct(count: number, threshold: number) {
+  if (!Number.isFinite(count) || !Number.isFinite(threshold) || threshold <= 0) return 0;
+  return Number(Math.min(100, (count / threshold) * 100).toFixed(1));
+}
+
+function mcpAgentAdoptionProgress(input: {
+  eventLookbackDays: number;
+  externalQualifiedMcpToolCalls: number;
+  qualifiedFirstPartyMcpCartLandings: number;
+  uniqueQualifiedMcpIdentitySignals: number;
+  uniqueQualifiedMcpSessionIds: number;
+  monthlyQualifiedVisitorSignals: number;
+  monthlyQualifiedVisitorThreshold: number;
+  monthlyQualifiedVisitorRemaining: number;
+  monthlyQualifiedVisitorBasis: string;
+  ga4QualifiedExternalMcpSessionStarts: number;
+  ga4QualifiedExternalMcpSessionThreshold: number;
+  ga4ProofStatus: string;
+  firstPartyMcpOrders: number;
+  firstPartyMcpOrderRevenue: number;
+  firstPartyMcpOrderCurrency: string;
+}) {
+  const toolUsageThreshold = 50;
+  const monthlyVisitorThreshold =
+    Number.isFinite(input.ga4QualifiedExternalMcpSessionThreshold) && input.ga4QualifiedExternalMcpSessionThreshold > 0
+      ? input.ga4QualifiedExternalMcpSessionThreshold
+      : input.monthlyQualifiedVisitorThreshold;
+  const monthlyVisitorSignals = Number.isFinite(input.ga4QualifiedExternalMcpSessionStarts)
+    ? input.ga4QualifiedExternalMcpSessionStarts
+    : input.monthlyQualifiedVisitorSignals;
+  const materialToolUsageMet = input.externalQualifiedMcpToolCalls >= toolUsageThreshold;
+  const qualifiedCartLandingMet = input.qualifiedFirstPartyMcpCartLandings > 0;
+  const monthlyVisitorGateMet = monthlyVisitorSignals >= monthlyVisitorThreshold;
+  const orderGateMet = input.firstPartyMcpOrders > 0 || input.firstPartyMcpOrderRevenue > 0;
+  const nextProofNeeded = [
+    !materialToolUsageMet
+      ? `Run more external source-aware MCP workflows until external-qualified MCP tool calls reach ${toolUsageThreshold}.`
+      : "",
+    !qualifiedCartLandingMet
+      ? "Drive at least one external workflow through create_cart_url and the returned /r/cart landing."
+      : "",
+    !monthlyVisitorGateMet
+      ? `Grow GA4-qualified external MCP session_start proof to ${monthlyVisitorThreshold} monthly sessions; first-party MCP telemetry is activation proof only.`
+      : "",
+    !orderGateMet
+      ? "Convert a real MCP-attributed cart handoff into Shopify purchase or measurable MCP revenue."
+      : "",
+  ].filter(Boolean);
+
+  const status = orderGateMet
+    ? monthlyVisitorGateMet
+      ? "commercial_adoption_proven"
+      : "orders_visible_visitor_gate_open"
+    : qualifiedCartLandingMet && input.externalQualifiedMcpToolCalls > 0
+      ? "activation_visible_orders_missing"
+      : input.externalQualifiedMcpToolCalls > 0
+        ? "mcp_usage_visible_cart_or_order_missing"
+        : "activation_not_visible";
+
+  return {
+    release: MCP_AGENT_ADOPTION_PROGRESS_RELEASE,
+    goal_name: "thousands_of_qualified_agents_and_ai_commerce_workflows",
+    status,
+    canonical_endpoint: "https://mcp.packrift.com/mcp",
+    measurement_windows: {
+      first_party_mcp_telemetry_days: input.eventLookbackDays,
+      monthly_visitor_goal_days: MONTHLY_QUALIFIED_VISITOR_LOOKBACK_DAYS,
+      order_lookback_source: "public_mcp_order_summary",
+    },
+    proven_activation_signals: {
+      two_day_external_qualified_mcp_tool_calls: input.externalQualifiedMcpToolCalls,
+      two_day_qualified_first_party_mcp_cart_landings: input.qualifiedFirstPartyMcpCartLandings,
+      two_day_unique_qualified_identity_signals: input.uniqueQualifiedMcpIdentitySignals,
+      two_day_unique_qualified_mcp_session_ids: input.uniqueQualifiedMcpSessionIds,
+    },
+    ga4_monthly_visitor_gate: {
+      status: monthlyVisitorGateMet ? "proven" : "not_proven",
+      basis: input.monthlyQualifiedVisitorBasis,
+      ga4_proof_status: input.ga4ProofStatus,
+      qualified_external_mcp_session_starts: monthlyVisitorSignals,
+      threshold: monthlyVisitorThreshold,
+      remaining_to_threshold: Math.max(0, monthlyVisitorThreshold - monthlyVisitorSignals),
+      progress_pct: progressPct(monthlyVisitorSignals, monthlyVisitorThreshold),
+    },
+    public_worker_monthly_signal_snapshot: {
+      basis: input.monthlyQualifiedVisitorBasis,
+      qualified_external_mcp_event_signals: input.monthlyQualifiedVisitorSignals,
+      threshold: input.monthlyQualifiedVisitorThreshold,
+      remaining_to_threshold: input.monthlyQualifiedVisitorRemaining,
+      progress_pct: progressPct(input.monthlyQualifiedVisitorSignals, input.monthlyQualifiedVisitorThreshold),
+    },
+    commerce_gate: {
+      status: orderGateMet ? "proven" : "not_proven",
+      first_party_mcp_orders: input.firstPartyMcpOrders,
+      first_party_mcp_order_revenue: Number((Number.isFinite(input.firstPartyMcpOrderRevenue) ? input.firstPartyMcpOrderRevenue : 0).toFixed(2)),
+      currency: input.firstPartyMcpOrderCurrency || "USD",
+    },
+    progress_bars: {
+      material_tool_usage_50: {
+        count: input.externalQualifiedMcpToolCalls,
+        threshold: toolUsageThreshold,
+        remaining: Math.max(0, toolUsageThreshold - input.externalQualifiedMcpToolCalls),
+        progress_pct: progressPct(input.externalQualifiedMcpToolCalls, toolUsageThreshold),
+      },
+      monthly_ga4_qualified_visitors_1000: {
+        count: monthlyVisitorSignals,
+        threshold: monthlyVisitorThreshold,
+        remaining: Math.max(0, monthlyVisitorThreshold - monthlyVisitorSignals),
+        progress_pct: progressPct(monthlyVisitorSignals, monthlyVisitorThreshold),
+      },
+      first_party_mcp_orders_1: {
+        count: input.firstPartyMcpOrders,
+        threshold: 1,
+        remaining: Math.max(0, 1 - input.firstPartyMcpOrders),
+        progress_pct: progressPct(input.firstPartyMcpOrders, 1),
+      },
+    },
+    proof_boundaries: {
+      mcp_telemetry:
+        "MCP endpoint tool calls, source-aware installs, first-run actions, and /r/cart landings prove activation breadth in the rolling first-party window.",
+      ga4_visitor_gate:
+        "The thousands-of-qualified-visitors gate is GA4-qualified external MCP session_start proof; MCP tool calls, proof pages, and shell-run telemetry do not close this gate.",
+      commerce_gate:
+        "Orders and revenue require source-preserved Shopify or GA4 purchase attribution from the MCP cart handoff; install/config/proof clicks do not close this gate.",
+      suppression_rule:
+        "Internal synthetic checks and self-opened proof pages can guide operations, but they stay separate from external goal completion proof.",
+    },
+    next_proof_needed: nextProofNeeded,
+  };
+}
+
 async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBLIC_MCP_DEFAULT_EVENT_LIMIT) {
   const events = await readAiSalesEvents(env, date, limit);
   const monthlyVisitorProof = await monthlyQualifiedVisitorProofForDate(env, date);
@@ -3693,7 +3824,8 @@ function mcpUsageSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpUsageSna
   ].join("\n");
 }
 
-const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19";
+const MCP_FUNNEL_SNAPSHOT_RELEASE = "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R20";
+const MCP_AGENT_ADOPTION_PROGRESS_RELEASE = "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01";
 const MCP_GA4_FUNNEL_PROOF_RELEASE = "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01";
 const MCP_GA4_FUNNEL_PROOF_KV_KEY = "mcp-ga4-funnel-proof:latest";
 
@@ -4594,7 +4726,7 @@ async function mcpSourceActivationQueuePayload(
     .filter(([, value]) => value === false)
     .map(([key]) => key);
   return {
-    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17",
+    release: "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18",
     generated_at: new Date().toISOString(),
     date,
     event_lookback_days: funnel.event_lookback_days,
@@ -4642,7 +4774,11 @@ async function mcpSourceActivationQueuePayload(
       ga4_canonical_visitor_proof: funnel.ga4_canonical_visitor_proof,
       traffic_quality: funnel.traffic_quality,
       monthly_qualified_visitor_proof: funnel.monthly_qualified_visitor_proof,
+      agent_adoption_progress: funnel.agent_adoption_progress,
+      proof_boundaries: funnel.proof_boundaries,
     },
+    agent_adoption_progress: funnel.agent_adoption_progress,
+    proof_boundaries: funnel.proof_boundaries,
     queue_count: funnel.source_activation_priority_queue.length,
     critical_count: funnel.source_activation_priority_queue.filter((row) => row.priority === "critical").length,
     blocking_goal_gates: blockingGates,
@@ -4727,6 +4863,16 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Unique qualified MCP identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}`,
     `- Unique qualified MCP session IDs: ${payload.source_snapshot.unique_qualified_mcp_session_ids}`,
     `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
+    "",
+    "## Agent Adoption Progress",
+    "",
+    `- Status: ${payload.agent_adoption_progress.status}`,
+    `- Tool-call progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- GA4 visitor progress: ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.qualified_external_mcp_session_starts} / ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.threshold}`,
+    `- Qualified cart landings: ${payload.agent_adoption_progress.proven_activation_signals.two_day_qualified_first_party_mcp_cart_landings}`,
+    `- First-party MCP orders: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_orders}`,
+    `- Boundary: ${payload.proof_boundaries.ga4_visitor_gate}`,
+    `- Next proof needed: ${payload.agent_adoption_progress.next_proof_needed.join(" ") || "none"}`,
     "",
     "## Priority Queue",
     "",
@@ -4906,6 +5052,8 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
     summary{cursor:pointer;font-weight:650}
     li{margin:5px 0;color:var(--muted)}
     .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
+    .proof-boundary{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:12px;display:grid;gap:6px}
+    .proof-boundary strong{font-size:.92rem}
     @media (max-width:680px){.row-head{display:grid}.target{white-space:normal}.button{width:100%;justify-content:center}}
   </style>
 </head>
@@ -4923,6 +5071,12 @@ function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSour
         <span>Qualified visitors: ${payload.source_snapshot.monthly_qualified_visitor_signals}/${payload.source_snapshot.monthly_qualified_visitor_threshold}</span>
         <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
+        <span>Adoption: ${escapeHtml(payload.agent_adoption_progress.status)}</span>
+      </div>
+      <div class="proof-boundary">
+        <strong>Proof boundaries</strong>
+        <p>${escapeHtml(payload.proof_boundaries.ga4_visitor_gate)}</p>
+        <p>${escapeHtml(payload.proof_boundaries.commerce_gate)}</p>
       </div>
       <div class="blocking">${blocking}</div>
       <div class="links">
@@ -5184,7 +5338,7 @@ async function mcpActivationExperimentsPayload(
   const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
-    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R07",
+    release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R08",
     generated_at: new Date().toISOString(),
     date,
     canonical_endpoint: "https://mcp.packrift.com/mcp",
@@ -5194,6 +5348,8 @@ async function mcpActivationExperimentsPayload(
     source_queue_release: queuePayload.release,
     source_queue_status: queuePayload.status,
     source_snapshot: queuePayload.source_snapshot,
+    agent_adoption_progress: queuePayload.agent_adoption_progress,
+    proof_boundaries: queuePayload.proof_boundaries,
     blocking_goal_gates: queuePayload.blocking_goal_gates,
     experiment_count: experiments.length,
     critical_count: experiments.filter((row) => row.priority === "critical").length,
@@ -5241,6 +5397,16 @@ function mcpActivationExperimentsMarkdown(payload: Awaited<ReturnType<typeof mcp
     `- Unique qualified MCP identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}`,
     `- Unique qualified MCP session IDs: ${payload.source_snapshot.unique_qualified_mcp_session_ids}`,
     `- Blocking gates: ${payload.blocking_goal_gates.join(", ") || "none"}`,
+    "",
+    "## Agent Adoption Progress",
+    "",
+    `- Status: ${payload.agent_adoption_progress.status}`,
+    `- Tool-call progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- GA4 visitor progress: ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.qualified_external_mcp_session_starts} / ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.threshold}`,
+    `- Qualified cart landings: ${payload.agent_adoption_progress.proven_activation_signals.two_day_qualified_first_party_mcp_cart_landings}`,
+    `- First-party MCP orders: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_orders}`,
+    `- Boundary: ${payload.proof_boundaries.ga4_visitor_gate}`,
+    `- Next proof needed: ${payload.agent_adoption_progress.next_proof_needed.join(" ") || "none"}`,
     "",
     "## Experiments",
     "",
@@ -5377,6 +5543,8 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
     details{margin-top:12px}
     summary{cursor:pointer;font-weight:650}
     li{margin:5px 0;color:var(--muted)}
+    .proof-boundary{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:12px;display:grid;gap:6px}
+    .proof-boundary strong{font-size:.92rem}
     @media (max-width:680px){.head{display:grid}.head span{white-space:normal}.button{width:100%;justify-content:center}}
   </style>
 </head>
@@ -5393,6 +5561,12 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
         <span>Unique identity signals: ${payload.source_snapshot.unique_qualified_mcp_identity_signals}</span>
         <span>Tool calls: ${payload.source_snapshot.external_qualified_mcp_tool_calls}</span>
         <span>Orders: ${payload.source_snapshot.first_party_mcp_orders}</span>
+        <span>Adoption: ${escapeHtml(payload.agent_adoption_progress.status)}</span>
+      </div>
+      <div class="proof-boundary">
+        <strong>Proof boundaries</strong>
+        <p>${escapeHtml(payload.proof_boundaries.ga4_visitor_gate)}</p>
+        <p>${escapeHtml(payload.proof_boundaries.commerce_gate)}</p>
       </div>
       <div class="blockers">${blockers}</div>
       <div class="links">
@@ -5582,6 +5756,23 @@ async function mcpFunnelSnapshotPayload(
       ? ga4QualifiedMcpSessions >= ga4QualifiedMcpSessionThreshold
       : monthlyVisitorProof.qualified_external_mcp_event_signals >= monthlyVisitorProof.threshold,
   };
+  const agentAdoptionProgress = mcpAgentAdoptionProgress({
+    eventLookbackDays: PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS,
+    externalQualifiedMcpToolCalls: qualifiedMcpToolCalls,
+    qualifiedFirstPartyMcpCartLandings: qualifiedCartLandings,
+    uniqueQualifiedMcpIdentitySignals: uniqueIdentityProof.unique_identity_signals,
+    uniqueQualifiedMcpSessionIds: uniqueIdentityProof.unique_mcp_session_ids,
+    monthlyQualifiedVisitorSignals: monthlyVisitorProof.qualified_external_mcp_event_signals,
+    monthlyQualifiedVisitorThreshold: monthlyVisitorProof.threshold,
+    monthlyQualifiedVisitorRemaining: monthlyVisitorProof.remaining_to_threshold,
+    monthlyQualifiedVisitorBasis: monthlyVisitorProof.basis,
+    ga4QualifiedExternalMcpSessionStarts: ga4QualifiedMcpSessions,
+    ga4QualifiedExternalMcpSessionThreshold: ga4QualifiedMcpSessionThreshold,
+    ga4ProofStatus: ga4CanonicalProof.status,
+    firstPartyMcpOrders: attributedOrderCount,
+    firstPartyMcpOrderRevenue: attributedRevenue,
+    firstPartyMcpOrderCurrency: orderSummary.currency,
+  });
   const status =
     proofGate.thousands_of_qualified_visitors &&
     proofGate.material_tool_usage_50_plus &&
@@ -5670,6 +5861,8 @@ async function mcpFunnelSnapshotPayload(
       first_party_mcp_order_currency: orderSummary.currency,
     },
     proof_gate: proofGate,
+    agent_adoption_progress: agentAdoptionProgress,
+    proof_boundaries: agentAdoptionProgress.proof_boundaries,
     traffic_quality: publicFunnelTrafficBuckets(summary),
     monthly_qualified_visitor_proof: monthlyVisitorProof,
     unique_qualified_identity_proof: uniqueIdentityProof,
@@ -5799,6 +5992,20 @@ function mcpFunnelSnapshotMarkdown(payload: Awaited<ReturnType<typeof mcpFunnelS
     "| Gate | Proven |",
     "| --- | --- |",
     gateRows,
+    "",
+    "## Agent Adoption Progress",
+    "",
+    `- Release: ${payload.agent_adoption_progress.release}`,
+    `- Status: ${payload.agent_adoption_progress.status}`,
+    `- Tool-call progress: ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.count} / ${payload.agent_adoption_progress.progress_bars.material_tool_usage_50.threshold}`,
+    `- GA4 visitor progress: ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.qualified_external_mcp_session_starts} / ${payload.agent_adoption_progress.ga4_monthly_visitor_gate.threshold}`,
+    `- Qualified cart landings: ${payload.agent_adoption_progress.proven_activation_signals.two_day_qualified_first_party_mcp_cart_landings}`,
+    `- First-party MCP orders: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_orders}`,
+    `- First-party MCP revenue: ${payload.agent_adoption_progress.commerce_gate.first_party_mcp_order_revenue} ${payload.agent_adoption_progress.commerce_gate.currency}`,
+    `- MCP telemetry boundary: ${payload.proof_boundaries.mcp_telemetry}`,
+    `- GA4 visitor boundary: ${payload.proof_boundaries.ga4_visitor_gate}`,
+    `- Commerce boundary: ${payload.proof_boundaries.commerce_gate}`,
+    `- Next proof needed: ${payload.agent_adoption_progress.next_proof_needed.join(" ") || "none"}`,
     "",
     "## Monthly Qualified Visitor Proof",
     "",

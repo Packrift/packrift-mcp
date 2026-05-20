@@ -1270,7 +1270,7 @@ async function liveMcpCheck() {
       ) &&
       usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.every((row) => typeof row.qualified_cart_landings === "number") &&
       !usageSnapshot?.source_attribution?.post_install_cart_activation_by_source?.some((row) => row.source === "mcp_route_redirect") &&
-      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R19" &&
+      funnelSnapshot?.release === "PACKRIFT-MCP-FUNNEL-SNAPSHOT-R20" &&
       funnelSnapshot?.canonical_endpoint === MCP_ENDPOINT &&
       funnelSnapshot?.limit === 20000 &&
       funnelSnapshot?.event_lookback_days === 2 &&
@@ -1320,6 +1320,12 @@ async function liveMcpCheck() {
       typeof funnelSnapshot?.proof_gate?.mcp_runtime_source_continuity_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.qualified_first_party_cart_landing_seen === "boolean" &&
       typeof funnelSnapshot?.proof_gate?.measurable_mcp_revenue_seen === "boolean" &&
+      funnelSnapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
+      funnelSnapshot?.agent_adoption_progress?.goal_name === "thousands_of_qualified_agents_and_ai_commerce_workflows" &&
+      typeof funnelSnapshot?.agent_adoption_progress?.progress_bars?.monthly_ga4_qualified_visitors_1000?.progress_pct === "number" &&
+      typeof funnelSnapshot?.agent_adoption_progress?.commerce_gate?.first_party_mcp_orders === "number" &&
+      Array.isArray(funnelSnapshot?.agent_adoption_progress?.next_proof_needed) &&
+      funnelSnapshot?.proof_boundaries?.commerce_gate?.includes("Orders and revenue require") &&
       funnelSnapshot?.monthly_qualified_visitor_proof?.gate_name === "thousands_of_qualified_visitors" &&
       typeof funnelSnapshot?.monthly_qualified_visitor_proof?.qualified_external_mcp_event_signals === "number" &&
       typeof funnelSnapshot?.monthly_qualified_visitor_proof?.remaining_to_threshold === "number" &&
@@ -1359,7 +1365,7 @@ async function liveMcpCheck() {
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=sh") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace") &&
       sourceActivationSitemapResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.md?source=cline_mcp_marketplace") &&
-      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17" &&
+      sourceActivationQueue?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
       sourceActivationQueue?.canonical_endpoint === MCP_ENDPOINT &&
       sourceActivationQueue?.event_read_limit === 20000 &&
       sourceActivationQueue?.event_lookback_days === 2 &&
@@ -1385,6 +1391,10 @@ async function liveMcpCheck() {
       sourceActivationQueue?.source_snapshot?.ga4_canonical_visitor_proof?.release === "PACKRIFT-MCP-GA4-FUNNEL-PROOF-R01" &&
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof sourceActivationQueue?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
+      sourceActivationQueue?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
+      sourceActivationQueue?.source_snapshot?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
+      sourceActivationQueue?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
+      sourceActivationQueue?.proof_boundaries?.commerce_gate?.includes("Shopify") &&
       sourceActivationCriticalActionsOk &&
       typeof sourceActivationQueue?.queue_count === "number" &&
       typeof sourceActivationQueue?.critical_count === "number" &&
@@ -1409,6 +1419,8 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("Copy-ready host configs") &&
       sourceActivationQueueHtmlResult.text.includes("Fast activation path") &&
       sourceActivationQueueHtmlResult.text.includes("First-run shell") &&
+      sourceActivationQueueHtmlResult.text.includes("Proof boundaries") &&
+      sourceActivationQueueHtmlResult.text.includes("Adoption:") &&
       sourceActivationQueueHtmlResult.text.includes("codex mcp add packrift --url") &&
       (sourceActivationQueueHtmlResult.text.includes("Activation runner") ||
         sourceActivationQueueHtmlResult.text.includes("Run real MCP check") ||
@@ -1419,9 +1431,11 @@ async function liveMcpCheck() {
       sourceActivationQueueHtmlResult.text.includes("mcp-directory-update/") &&
       sourceActivationQueueHtmlResult.text.includes("/r/activate/") &&
       sourceActivationQueueHtmlResult.text.includes("Experiments") &&
-      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R07" &&
+      activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R08" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&
-      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R17" &&
+      activationExperiments?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R18" &&
+      activationExperiments?.agent_adoption_progress?.release === "PACKRIFT-MCP-AGENT-ADOPTION-PROGRESS-R01" &&
+      activationExperiments?.proof_boundaries?.ga4_visitor_gate?.includes("MCP tool calls") &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_identity_signals === "number" &&
       typeof activationExperiments?.source_snapshot?.unique_qualified_mcp_session_ids === "number" &&
       typeof activationExperiments?.experiment_count === "number" &&
@@ -1462,9 +1476,13 @@ async function liveMcpCheck() {
       ) &&
       activationExperimentsMarkdownResult.ok &&
       activationExperimentsMarkdownResult.text.includes("Packrift MCP Activation Experiments") &&
+      activationExperimentsMarkdownResult.text.includes("Agent Adoption Progress") &&
+      activationExperimentsMarkdownResult.text.includes("MCP tool calls") &&
       activationExperimentsMarkdownResult.text.includes("format=sh") &&
       activationExperimentsHtmlResult.ok &&
       activationExperimentsHtmlResult.text.includes("Packrift MCP Activation Experiments") &&
+      activationExperimentsHtmlResult.text.includes("Proof boundaries") &&
+      activationExperimentsHtmlResult.text.includes("Adoption:") &&
       activationExperimentsHtmlResult.text.includes("Expected snapshot delta") &&
       activationExperimentsHtmlResult.text.includes("Suppression rules") &&
       activationExperimentsHtmlResult.text.includes("Copy-ready activation request") &&
