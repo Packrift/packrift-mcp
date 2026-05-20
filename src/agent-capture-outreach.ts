@@ -36,6 +36,10 @@ interface DirectoryRefreshRow {
 }
 
 const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
+const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
+const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
+const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
+const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const CAPTURE_JSON_URL = "https://mcp.packrift.com/ai/all-agent-capture.json";
 const CAPTURE_MARKDOWN_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
 const OUTREACH_JSON_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
@@ -166,6 +170,10 @@ function agentInstallSnippets() {
     client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
     root_mcp_json: "https://mcp.packrift.com/mcp.json",
     well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+    openapi_json: MCP_OPENAPI_JSON_URL,
+    well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+    well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_eval_pack: MCP_EVAL_PACK_URL,
     mcp_external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
@@ -232,7 +240,7 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
   const mcpSo = trackedUrls(rows, "mcp_so");
   const claude = trackedUrls(rows, "anthropic_connectors_directory");
   const browse = trackedUrls(rows, "browse_sh");
-  const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${runtime.serverVersion}, ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources.`;
+  const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${runtime.serverVersion}, ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources. Legacy discovery: ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}.`;
   const mcpSoPromptSupport = agentPromptSupport("mcp_so", "generic_streamable_http");
   const claudePromptSupport = agentPromptSupport("anthropic_connectors_directory", "claude_code");
   const browsePromptSupport = agentPromptSupport("browse_sh", "codex");
@@ -375,6 +383,10 @@ function evidenceLinks() {
     mcp_adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
     mcp_install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+    openapi_json: MCP_OPENAPI_JSON_URL,
+    well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+    well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     mcp_first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
     mcp_first_run_agent_prompt_page: "https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html",
     mcp_reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
@@ -524,7 +536,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R29",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R30",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -600,6 +612,10 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         usage_snapshot: USAGE_SNAPSHOT_URL,
         funnel_snapshot: FUNNEL_SNAPSHOT_URL,
         ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
+        openapi_json: MCP_OPENAPI_JSON_URL,
+        well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+        ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+        well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       },
       reviewer_acceptance_gate: [
         "Use the existing hosted MCP endpoint.",

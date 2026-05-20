@@ -122,12 +122,16 @@ function markdownReport(payload) {
 async function main() {
   const jsonUrl = `${BASE_URL}/ai/all-agent-capture.json`;
   const mdUrl = `${BASE_URL}/ai/all-agent-capture.md`;
-  const [jsonResult, mdResult, healthResult, resourcesResult, resourceTemplatesResult] = await Promise.all([
+  const [jsonResult, mdResult, healthResult, resourcesResult, resourceTemplatesResult, clientConfigResult, directoryRefreshResult, directorySubmitActionsResult, outreachResult] = await Promise.all([
     fetchJson(jsonUrl),
     fetchText(mdUrl),
     fetchJson(`${BASE_URL}/health`),
     fetchMcp("resources/list"),
     fetchMcp("resources/templates/list"),
+    fetchJson(`${BASE_URL}/ai/mcp-client-config.json`),
+    fetchJson(`${BASE_URL}/ai/mcp-directory-refresh.json`),
+    fetchJson(`${BASE_URL}/ai/mcp-directory-submit-actions.json`),
+    fetchJson(`${BASE_URL}/ai/agent-capture-outreach.json`),
   ]);
 
   const capture = jsonResult.value;
@@ -186,6 +190,11 @@ async function main() {
   const resourceTemplateUris = new Set(resourceTemplates.map((row) => row.uriTemplate));
   const coreSurface = capture?.surfaces?.find((row) => row.id === "hosted_mcp_endpoint");
   const browseSurface = capture?.surfaces?.find((row) => row.id === "browserbase_browse_candidate");
+  const clientConfig = clientConfigResult.value;
+  const directoryRefresh = directoryRefreshResult.value;
+  const directorySubmitActions = directorySubmitActionsResult.value;
+  const outreach = outreachResult.value;
+  const outreachText = JSON.stringify(outreach ?? {});
   const mdNeedles = [
     "Packrift All-Agent Capture Matrix",
     "start page",
@@ -380,6 +389,26 @@ async function main() {
     check("resources/list advertises legacy AI discovery", hasResourceUri(resourceUris, "/openapi.json") && hasResourceUri(resourceUris, "/.well-known/openapi.json") && hasResourceUri(resourceUris, "/ai-plugin.json") && hasResourceUri(resourceUris, "/.well-known/ai-plugin.json"), {
       detail: `resources=${resources.length}`,
     }),
+    check(
+      "public activation packets advertise legacy discovery",
+      clientConfig?.aliases?.openapi_json === "https://mcp.packrift.com/openapi.json" &&
+        clientConfig?.aliases?.ai_plugin_json === "https://mcp.packrift.com/ai-plugin.json" &&
+        clientConfig?.legacy_ai_discovery?.well_known_openapi_json === "https://mcp.packrift.com/.well-known/openapi.json" &&
+        directoryRefresh?.canonical_listing?.openapi_json === "https://mcp.packrift.com/openapi.json" &&
+        directoryRefresh?.live_proof?.ai_plugin_json === "https://mcp.packrift.com/ai-plugin.json" &&
+        /openapi\.json/.test(directoryRefresh?.recrawl_request ?? "") &&
+        directorySubmitActions?.source_openapi_json === "https://mcp.packrift.com/openapi.json" &&
+        directorySubmitActions?.source_ai_plugin_json === "https://mcp.packrift.com/ai-plugin.json" &&
+        /openapi\.json/.test(directorySubmitActions?.actions?.find((row) => row.id === "mcp_directory")?.concise_email?.body ?? "") &&
+        outreach?.evidence?.openapi_json === "https://mcp.packrift.com/openapi.json" &&
+        /ai-plugin\.json/.test(outreachText),
+      {
+        detail:
+          clientConfigResult.ok && directoryRefreshResult.ok && directorySubmitActionsResult.ok && outreachResult.ok
+            ? `client=${clientConfig?.release}, refresh=${directoryRefresh?.release}, actions=${directorySubmitActions?.release}, outreach=${outreach?.release}`
+            : "one or more public packets failed to fetch",
+      }
+    ),
     check("resources/list advertises usage snapshot", hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.json") && hasResourceUri(resourceUris, "/ai/mcp-usage-snapshot.md"), {
       detail: `resources=${resources.length}`,
     }),

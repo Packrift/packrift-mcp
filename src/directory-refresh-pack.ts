@@ -31,6 +31,10 @@ const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activa
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
 const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
 const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
+const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
+const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
+const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
+const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const MCP_MARKETPLACE_MANIFEST_URL = "https://mcp.packrift.com/.well-known/mcp-marketplace.json";
 const MCP_TOOL_DISCOVERY_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
@@ -317,9 +321,9 @@ const DIRECTORY_TARGETS = [
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, live tool discovery JSON and Markdown, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, live tool discovery JSON and Markdown, legacy OpenAPI discovery, AI plugin-style discovery manifests, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R29",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R30",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -388,6 +392,10 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       tool_discovery_markdown_url: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       root_mcp_json: ROOT_MCP_JSON_URL,
       well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       proof_summary: proofSummary,
     },
     live_proof: {
@@ -433,6 +441,10 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       client_config: MCP_CLIENT_CONFIG_URL,
       root_mcp_json: ROOT_MCP_JSON_URL,
       well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: MCP_FUNNEL_SNAPSHOT_URL,
       source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
@@ -488,6 +500,10 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         marketplace_manifest: MCP_MARKETPLACE_MANIFEST_URL,
         tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
         tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+        openapi_json: MCP_OPENAPI_JSON_URL,
+        well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+        ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+        well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
         source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
         source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
         activation_wave: MCP_ACTIVATION_WAVE_URL,
@@ -496,7 +512,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         "Paste the source-specific agent prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before treating this source as activated.",
     })),
     recrawl_request:
-      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use ${MCP_MARKETPLACE_MANIFEST_URL} as the compact marketplace manifest, use ${MCP_TOOL_DISCOVERY_URL} or ${MCP_TOOL_DISCOVERY_MARKDOWN_URL} for the current live ${runtime.toolsCount}-tool surface, use ${MCP_SOURCE_ACTIVATION_SITEMAP_URL} as the source-specific activation sitemap, use ${MCP_ACTIVATION_WAVE_URL} as the current non-duplicative activation wave for real host-side tool calls, use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup, use browser proof links like ${trackedRunUrl("generic", "generic_streamable_http")}&execute=1 when validating the first useful run, use the Copy agent prompt button at ${trackedRunUrl("generic", "generic_streamable_http")}&format=html, use ${REVIEWER_ACTIVATION_URL} plus /r/activate/{source}?format=html to convert proof clicks into real MCP client calls, and use ${MCP_SOURCE_ACTIVATION_QUEUE_URL} to pick the next source-specific activation run. Current proof: ${proofSummary}`,
+      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use ${MCP_MARKETPLACE_MANIFEST_URL} as the compact marketplace manifest, ${MCP_OPENAPI_JSON_URL} or ${MCP_WELL_KNOWN_OPENAPI_JSON_URL} for legacy OpenAPI discovery, ${MCP_AI_PLUGIN_JSON_URL} or ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL} for AI plugin-style discovery, use ${MCP_TOOL_DISCOVERY_URL} or ${MCP_TOOL_DISCOVERY_MARKDOWN_URL} for the current live ${runtime.toolsCount}-tool surface, use ${MCP_SOURCE_ACTIVATION_SITEMAP_URL} as the source-specific activation sitemap, use ${MCP_ACTIVATION_WAVE_URL} as the current non-duplicative activation wave for real host-side tool calls, use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup, use browser proof links like ${trackedRunUrl("generic", "generic_streamable_http")}&execute=1 when validating the first useful run, use the Copy agent prompt button at ${trackedRunUrl("generic", "generic_streamable_http")}&format=html, use ${REVIEWER_ACTIVATION_URL} plus /r/activate/{source}?format=html to convert proof clicks into real MCP client calls, and use ${MCP_SOURCE_ACTIVATION_QUEUE_URL} to pick the next source-specific activation run. Current proof: ${proofSummary}`,
     operating_rules: [
       "The hosted endpoint is the primary listing target; do not require users to self-host or provide a Shopify token for normal MCP use.",
       "Use the official registry name io.github.Packrift/packrift-mcp and the remote endpoint https://mcp.packrift.com/mcp.",
@@ -566,6 +582,10 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     `Marketplace manifest: ${payload.canonical_listing.marketplace_manifest_url}`,
     `Live tool discovery JSON: ${payload.canonical_listing.tool_discovery_json_url}`,
     `Live tool discovery Markdown: ${payload.canonical_listing.tool_discovery_markdown_url}`,
+    `OpenAPI discovery adapter: ${payload.canonical_listing.openapi_json}`,
+    `Well-known OpenAPI discovery adapter: ${payload.canonical_listing.well_known_openapi_json}`,
+    `AI plugin-style manifest: ${payload.canonical_listing.ai_plugin_json}`,
+    `Well-known AI plugin-style manifest: ${payload.canonical_listing.well_known_ai_plugin_json}`,
     `Source activation sitemap: ${payload.canonical_listing.source_activation_sitemap_url}`,
     `Activation wave: ${payload.canonical_listing.activation_wave_url}`,
     `Activation wave HTML: ${payload.canonical_listing.activation_wave_html_url}`,

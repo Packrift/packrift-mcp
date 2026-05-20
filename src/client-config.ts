@@ -12,6 +12,14 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
+const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
+const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
+const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
+const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
+const MCP_AGENT_ADOPTION_PROGRESS_URL = "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
+const MCP_REVIEWER_ACTIVATION_URL = "https://mcp.packrift.com/ai/mcp-reviewer-activation.json";
+const MCP_EVAL_PACK_URL = "https://mcp.packrift.com/ai/mcp-eval-pack.json";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_CONFIG_RECOMMENDED_SOURCES = [
   "official_registry",
@@ -168,7 +176,7 @@ const FIRST_TESTS = [
 export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
   const firstUsefulRun = mcpFirstUsefulRun("generic", "client_config");
   return {
-    release: "PACKRIFT-MCP-CLIENT-CONFIG-R12",
+    release: "PACKRIFT-MCP-CLIENT-CONFIG-R13",
     generated_at: new Date().toISOString(),
     purpose:
       "Smallest copy-ready Packrift MCP install bundle for agent hosts, IDEs, directory reviewers, and developers. It is a thin config surface for the existing hosted endpoint, not a separate CLI or buyer surface.",
@@ -192,6 +200,10 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
       canonical_json: "https://mcp.packrift.com/ai/mcp-client-config.json",
       markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       tracked_config_template: TRACKED_CONFIG_TEMPLATE,
@@ -224,6 +236,36 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       codex: `codex mcp add packrift --url ${MCP_ENDPOINT}`,
       endpoint_only: MCP_ENDPOINT,
     },
+    legacy_ai_discovery: {
+      purpose:
+        "Use these only when an agent host, crawler, or marketplace probes OpenAPI or plugin-style manifests before it understands MCP. They all route back to the hosted Packrift MCP endpoint.",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+      canonical_mcp_endpoint: MCP_ENDPOINT,
+      key_paths: [
+        "/mcp",
+        "/ai/mcp-client-config.json",
+        "/ai/mcp-agent-adoption-progress.json",
+        "/ai/mcp-source-activation-queue.json",
+        "/ai/mcp-external-activation-brief.json",
+        "/ai/mcp-eval-pack.json",
+        "/r/install/{source}/{target}",
+        "/r/run/{source}/{target}",
+        "/r/activate/{source}",
+        "/r/order/{source}",
+      ],
+      no_duplicate_surface_rule:
+        "OpenAPI and plugin manifests are discovery adapters only; live price, inventory, exact-spec search, and cart handoff still happen through Packrift MCP.",
+    },
+    activation_surfaces: {
+      agent_adoption_progress: MCP_AGENT_ADOPTION_PROGRESS_URL,
+      source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_URL,
+      reviewer_activation: MCP_REVIEWER_ACTIVATION_URL,
+      eval_pack: MCP_EVAL_PACK_URL,
+    },
     host_notes: [
       "For Cursor, Windsurf, VS Code, Roo-style hosts, Claude Desktop, and generic MCP clients, use the config.mcpServers.packrift object.",
       "For stdio-only MCP hosts that cannot call remote HTTP directly, use stdio_mcp_remote_config; it runs npx mcp-remote and still forwards every call to the hosted Packrift MCP endpoint.",
@@ -235,6 +277,7 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       "Use /r/config/{source} when sharing the config from a directory, partner, campaign, or agent workflow so config fetches can be attributed.",
       "Use /r/install/{source}/{target} when sharing a target-specific command or config so install-intent can be attributed before tool calls arrive.",
       "When the source is known, copy from aliases.source_aware_examples or /start?utm_source={source} so real tools/list and tools/call events are attributed to that source.",
+      "When a legacy agent asks for OpenAPI or plugin metadata, provide aliases.openapi_json or aliases.ai_plugin_json, then send actual live MCP calls to the canonical endpoint.",
     ],
     required_post_install_verification: {
       required: true,
@@ -252,10 +295,18 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       health: "https://mcp.packrift.com/health",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       start: "https://mcp.packrift.com/start",
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
+      agent_adoption_progress: MCP_AGENT_ADOPTION_PROGRESS_URL,
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_URL,
+      reviewer_activation: MCP_REVIEWER_ACTIVATION_URL,
+      eval_pack: MCP_EVAL_PACK_URL,
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
       browse_skill_md: "https://mcp.packrift.com/SKILL.md",
@@ -323,6 +374,26 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     `Template: \`${payload.aliases.tracked_run_template}\``,
     "",
     Object.entries(payload.aliases.tracked_run_examples)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+    "## Legacy AI Discovery",
+    "",
+    "Use these only for agents, crawlers, or marketplaces that probe OpenAPI or plugin manifests before MCP.",
+    "",
+    `OpenAPI: ${payload.legacy_ai_discovery.openapi_json}`,
+    "",
+    `Well-known OpenAPI: ${payload.legacy_ai_discovery.well_known_openapi_json}`,
+    "",
+    `AI plugin manifest: ${payload.legacy_ai_discovery.ai_plugin_json}`,
+    "",
+    `Well-known AI plugin manifest: ${payload.legacy_ai_discovery.well_known_ai_plugin_json}`,
+    "",
+    fencedJson(payload.legacy_ai_discovery),
+    "",
+    "## Activation Surfaces",
+    "",
+    Object.entries(payload.activation_surfaces)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",

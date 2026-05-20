@@ -52,6 +52,10 @@ const INSTALL_MATRIX_URL = "https://mcp.packrift.com/ai/mcp-install-matrix.json"
 const CLIENT_CONFIG_URL = "https://mcp.packrift.com/ai/mcp-client-config.json";
 const ROOT_MCP_JSON_URL = "https://mcp.packrift.com/mcp.json";
 const WELL_KNOWN_MCP_JSON_URL = "https://mcp.packrift.com/.well-known/mcp.json";
+const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
+const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
+const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
+const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
 const AGENT_CAPTURE_OUTREACH_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
@@ -844,6 +848,10 @@ function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
         source_update_card: "https://mcp.packrift.com/ai/mcp-directory-update/glama_server_listing.json",
         source_listing_readiness: "https://mcp.packrift.com/ai/mcp-source-listing-readiness.json",
         source_eval_pack: sourceEvalPackUrl("glama_server_listing"),
+        openapi_json: MCP_OPENAPI_JSON_URL,
+        well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+        ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+        well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
         directory_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
       },
     };
@@ -904,11 +912,15 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
     tool_discovery: MCP_TOOL_DISCOVERY_URL,
     client_config: CLIENT_CONFIG_URL,
     marketplace_manifest: MARKETPLACE_MANIFEST_URL,
+    openapi_json: MCP_OPENAPI_JSON_URL,
+    well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+    well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     outreach_board: AGENT_CAPTURE_OUTREACH_HTML_URL,
   };
 
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R02",
+    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R03",
     to: mailtoRecipient(action),
     subject: action.recrawl_subject,
     body: [
@@ -925,6 +937,10 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       `- Tool discovery: ${MCP_TOOL_DISCOVERY_URL}`,
       `- Client config: ${CLIENT_CONFIG_URL}`,
       `- Marketplace manifest: ${MARKETPLACE_MANIFEST_URL}`,
+      `- OpenAPI discovery adapter: ${MCP_OPENAPI_JSON_URL}`,
+      `- Well-known OpenAPI discovery adapter: ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}`,
+      `- AI plugin-style manifest: ${MCP_AI_PLUGIN_JSON_URL}`,
+      `- Well-known AI plugin-style manifest: ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}`,
       `- Tracked start: ${trackedStart}`,
       `- Install page: ${proofUrls.tracked_install}`,
       `- First-run page: ${proofUrls.first_run}`,
@@ -981,7 +997,7 @@ function sourceActivationRecrawlLines(runtime: DirectorySubmitActionsRuntime, so
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; external activation brief is ${EXTERNAL_ACTIVATION_BRIEF_URL}; selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; revenue conversion queue is ${REVENUE_CONVERSION_QUEUE_URL}; buyer order handoffs hub is ${BUYER_ORDER_HANDOFFS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked first-run actions preserve source into order handoffs without placing an order.`;
+  return `Current proof: live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Legacy AI discovery is available through ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, and ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; external activation brief is ${EXTERNAL_ACTIVATION_BRIEF_URL}; selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; revenue conversion queue is ${REVENUE_CONVERSION_QUEUE_URL}; buyer order handoffs hub is ${BUYER_ORDER_HANDOFFS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked first-run actions preserve source into order handoffs without placing an order.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -1064,6 +1080,10 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Tracked install template: ${TRACKED_INSTALL_TEMPLATE}`,
     `- Root MCP JSON config: ${ROOT_MCP_JSON_URL}`,
     `- Well-known MCP JSON config: ${WELL_KNOWN_MCP_JSON_URL}`,
+    `- OpenAPI discovery adapter: ${MCP_OPENAPI_JSON_URL}`,
+    `- Well-known OpenAPI discovery adapter: ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}`,
+    `- AI plugin-style discovery manifest: ${MCP_AI_PLUGIN_JSON_URL}`,
+    `- Well-known AI plugin-style discovery manifest: ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}`,
     `- Marketplace manifest with full 15-tool surface: ${MARKETPLACE_MANIFEST_URL}`,
     `- Live tool discovery JSON: ${MCP_TOOL_DISCOVERY_URL}`,
     `- Live tool discovery Markdown: ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}`,
@@ -1177,6 +1197,10 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
       source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
       source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       marketplace_manifest: MARKETPLACE_MANIFEST_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
@@ -1247,6 +1271,10 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
         external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
         external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
+        openapi_json: MCP_OPENAPI_JSON_URL,
+        well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+        ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+        well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
         buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -1262,7 +1290,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R50",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R51",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1311,6 +1339,10 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     source_client_config: CLIENT_CONFIG_URL,
     source_root_mcp_json: ROOT_MCP_JSON_URL,
     source_well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
+    source_openapi_json: MCP_OPENAPI_JSON_URL,
+    source_well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+    source_ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+    source_well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     runtime: {
       server_version: runtime.serverVersion,
       tools_count: runtime.toolsCount,
@@ -1356,7 +1388,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R18",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R19",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1391,6 +1423,10 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       marketplace_manifest: MARKETPLACE_MANIFEST_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       source_activation_sitemap: SOURCE_ACTIVATION_SITEMAP_URL,
       activation_wave: ACTIVATION_WAVE_URL,
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
@@ -1412,6 +1448,10 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       live_proof: action.tracked_run_urls.generic_streamable_http_execute,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      openapi_json: MCP_OPENAPI_JSON_URL,
+      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
+      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
+      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
       reviewer_activation: action.proof_urls.tracked_reviewer_activation,
       reviewer_activation_html: action.proof_urls.tracked_reviewer_activation_html,
       order_handoff: action.proof_urls.tracked_order_handoff,

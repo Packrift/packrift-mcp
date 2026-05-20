@@ -14026,11 +14026,17 @@ function mcpOpenApiPayload() {
       auth_required: false,
       tool_discovery: MCP_TOOL_DISCOVERY_JSON_URL,
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
+      agent_adoption_progress: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
+      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
+      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
+      tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
+      tracked_order_handoff_template: "https://mcp.packrift.com/r/order/{source}",
       measured_cart_rule:
         "Use Packrift MCP tools for live checks; create_cart_url returns a measured /r/cart URL and does not place an order.",
     },
@@ -14099,6 +14105,13 @@ function mcpOpenApiPayload() {
           responses: { "200": openApiJsonResponse("Tool names, buyer flows, guardrails, and conversion URLs") },
         },
       },
+      "/ai/mcp-client-config.json": {
+        get: {
+          operationId: "getPackriftMcpClientConfig",
+          summary: "Read copy-ready Packrift MCP client config",
+          responses: { "200": openApiJsonResponse("Install snippets, tracked config URLs, source-aware examples, and first useful run") },
+        },
+      },
       "/ai/mcp-buyer-use-cases.json": {
         get: {
           operationId: "getPackriftMcpBuyerUseCases",
@@ -14120,6 +14133,35 @@ function mcpOpenApiPayload() {
           responses: { "200": openApiJsonResponse("Qualified external sessions, cart landings, and order proof status") },
         },
       },
+      "/ai/mcp-agent-adoption-progress.json": {
+        get: {
+          operationId: "getPackriftMcpAgentAdoptionProgress",
+          summary: "Read Packrift MCP adoption progress gates",
+          responses: { "200": openApiJsonResponse("External-qualified tool calls, qualified visitor progress, cart landings, and order proof gaps") },
+        },
+      },
+      "/ai/mcp-source-activation-queue.json": {
+        get: {
+          operationId: "getPackriftMcpSourceActivationQueue",
+          summary: "Read ranked Packrift MCP source activation queue",
+          responses: { "200": openApiJsonResponse("Source-specific next actions for moving directories and reviewers into real MCP tool calls") },
+        },
+      },
+      "/ai/mcp-external-activation-brief.json": {
+        get: {
+          operationId: "getPackriftMcpExternalActivationBrief",
+          summary: "Read selected external activation run brief",
+          responses: { "200": openApiJsonResponse("Smallest current set of contact-ready external MCP runs") },
+        },
+      },
+      "/ai/mcp-eval-pack.json": {
+        get: {
+          operationId: "getPackriftMcpEvalPack",
+          summary: "Read Packrift MCP eval pack",
+          parameters: [{ name: "source", in: "query", required: false, schema: { type: "string", pattern: "^[a-z0-9_]{2,64}$" } }],
+          responses: { "200": openApiJsonResponse("Acceptance tests, assertions, and source-aware install/run URLs for real MCP hosts") },
+        },
+      },
       "/r/config/{source}": {
         get: {
           operationId: "getPackriftSourceAwareMcpConfig",
@@ -14128,12 +14170,31 @@ function mcpOpenApiPayload() {
           responses: { "200": openApiJsonResponse("Source-preserving MCP client config") },
         },
       },
+      "/r/install/{source}/{target}": {
+        get: {
+          operationId: "getPackriftSourceAwareInstallAction",
+          summary: "Read source-aware install action",
+          parameters: [sourceParam, targetParam],
+          responses: { "200": openApiJsonResponse("Target-specific install command or config that preserves source attribution") },
+        },
+      },
       "/r/run/{source}/{target}": {
         get: {
           operationId: "getPackriftSourceAwareFirstRun",
           summary: "Read source-aware first useful run",
           parameters: [sourceParam, targetParam],
           responses: { "200": openApiJsonResponse("Source-aware first-run action payload") },
+        },
+      },
+      "/r/activate/{source}": {
+        get: {
+          operationId: "getPackriftSourceAwareReviewerActivation",
+          summary: "Read source-aware reviewer activation handoff",
+          parameters: [
+            sourceParam,
+            { name: "format", in: "query", required: false, schema: { type: "string", enum: ["json", "html", "md", "sh"] } },
+          ],
+          responses: { "200": openApiJsonResponse("Reviewer activation payload, browser runner, markdown, or shell runner for real MCP client proof") },
         },
       },
       "/r/order/{source}": {
@@ -14171,9 +14232,14 @@ function mcpAiPluginDiscoveryPayload() {
       transport: "streamable-http",
       auth_required: false,
       tool_discovery: MCP_TOOL_DISCOVERY_JSON_URL,
+      client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
+      agent_adoption_progress: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
+      eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
     },
   };
 }

@@ -208,7 +208,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R16",
+    release: "PACKRIFT-MCP-START-R17",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -304,9 +304,14 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+      openapi_json: "https://mcp.packrift.com/openapi.json",
+      well_known_openapi_json: "https://mcp.packrift.com/.well-known/openapi.json",
+      ai_plugin_json: "https://mcp.packrift.com/ai-plugin.json",
+      well_known_ai_plugin_json: "https://mcp.packrift.com/.well-known/ai-plugin.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      agent_adoption_progress: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
       buyer_order_handoffs: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
       buyer_order_handoffs_html: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
       tracked_order_handoff_generic: trackedOrderHandoffUrl("generic", "html"),
