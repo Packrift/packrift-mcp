@@ -362,6 +362,8 @@ function evidenceLinks() {
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+    mcp_automation_workflows: "https://mcp.packrift.com/ai/mcp-automation-workflows.json",
+    mcp_n8n_workflow_import: "https://mcp.packrift.com/ai/mcp-n8n-workflow.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     browserbase_browse_skill_pack: "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json",
     directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",

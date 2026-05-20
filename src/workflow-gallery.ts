@@ -262,9 +262,363 @@ const DISCOVERY_WORKFLOWS = [
 
 const WORKFLOWS = [...EXACT_SKU_WORKFLOWS, ...DISCOVERY_WORKFLOWS] as const;
 
+const AUTOMATION_ENDPOINTS = {
+  n8n: `${MCP_ENDPOINT}?packrift_mcp_source=n8n_automation&packrift_mcp_target=generic_streamable_http`,
+  zapier: `${MCP_ENDPOINT}?packrift_mcp_source=zapier_automation&packrift_mcp_target=generic_streamable_http`,
+  pipedream: `${MCP_ENDPOINT}?packrift_mcp_source=pipedream_automation&packrift_mcp_target=generic_streamable_http`,
+} as const;
+
+function firstUsefulRunRequests(source: string, matchType: string) {
+  const sourceContext = `${source}_first_cart_run`;
+  const journeyId = `mcp_install_${source}_1066_53472879935856`;
+  const resultSetId = `mcp_install_first_run_${source}`;
+  return [
+    { jsonrpc: "2.0", id: "tools", method: "tools/list" },
+    toolCall("candidate-1066", "get_cart_handoff_candidates", {
+      sku: "1066",
+      limit: 1,
+      source_context: sourceContext,
+      journey_id: journeyId,
+      result_set_id: resultSetId,
+    }),
+    toolCall("price-1066", "get_pricing", {
+      variant_ids: ["53472879935856"],
+      quantity: 1,
+      selected_sku: "1066",
+      selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
+      match_type: matchType,
+      source_context: sourceContext,
+      journey_id: journeyId,
+      result_set_id: resultSetId,
+    }),
+    toolCall("inventory-1066", "check_inventory", {
+      variant_ids: ["53472879935856"],
+      selected_sku: "1066",
+      selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
+      match_type: matchType,
+      source_context: sourceContext,
+      journey_id: journeyId,
+      result_set_id: resultSetId,
+    }),
+    toolCall("cart-1066", "create_cart_url", {
+      sku: "1066",
+      quantity: 1,
+      selected_sku: "1066",
+      selected_handle: "10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle",
+      match_type: matchType,
+      source_context: sourceContext,
+      journey_id: journeyId,
+      result_set_id: resultSetId,
+      utm_term: "1066",
+    }),
+  ];
+}
+
+function n8nHttpNode(id: string, name: string, position: [number, number], endpoint: string, body: unknown) {
+  return {
+    parameters: {
+      method: "POST",
+      url: endpoint,
+      sendHeaders: true,
+      headerParameters: {
+        parameters: [
+          { name: "content-type", value: "application/json" },
+          { name: "accept", value: "application/json, text/event-stream" },
+          { name: "Mcp-Session-Id", value: "={{'n8n-packrift-' + $execution.id}}" },
+          { name: "user-agent", value: "n8n Packrift MCP Workflow (+https://mcp.packrift.com/mcp)" },
+        ],
+      },
+      sendBody: true,
+      contentType: "raw",
+      rawContentType: "application/json",
+      body: JSON.stringify(body),
+    },
+    id,
+    name,
+    type: "n8n-nodes-base.httpRequest",
+    typeVersion: 4.2,
+    position,
+  };
+}
+
+function n8nWorkflow() {
+  const endpoint = AUTOMATION_ENDPOINTS.n8n;
+  const requests = firstUsefulRunRequests("n8n_automation", "n8n_first_useful_run");
+  const nodes = [
+    {
+      parameters: {},
+      id: "manual-trigger",
+      name: "Manual Trigger",
+      type: "n8n-nodes-base.manualTrigger",
+      typeVersion: 1,
+      position: [0, 0],
+    },
+    n8nHttpNode("tools-list", "List Packrift MCP tools", [240, 0], endpoint, requests[0]),
+    n8nHttpNode("cart-candidates", "Get cart handoff candidates", [480, 0], endpoint, requests[1]),
+    n8nHttpNode("pricing", "Get live price", [720, 0], endpoint, requests[2]),
+    n8nHttpNode("inventory", "Check live inventory", [960, 0], endpoint, requests[3]),
+    n8nHttpNode("create-cart", "Create measured MCP cart URL", [1200, 0], endpoint, requests[4]),
+    {
+      parameters: {
+        jsCode: [
+          "const raw = typeof $json === 'string' ? $json : JSON.stringify($json);",
+          "const match = raw.match(/https:\\/\\/mcp\\.packrift\\.com\\/r\\/cart\\/[^\"\\s<>\\\\]+/);",
+          "if (!match) throw new Error('No measured Packrift MCP /r/cart URL found in create_cart_url response.');",
+          "return [{ json: { cart_url: match[0], source_context: 'n8n_automation_first_cart_run' } }];",
+        ].join("\n"),
+      },
+      id: "extract-cart-url",
+      name: "Extract measured cart URL",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [1440, 0],
+    },
+    {
+      parameters: {
+        method: "GET",
+        url: "={{$json.cart_url}}",
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [{ name: "user-agent", value: "n8n Packrift MCP Workflow (+https://mcp.packrift.com/mcp)" }],
+        },
+      },
+      id: "touch-cart-landing",
+      name: "Record measured cart landing",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4.2,
+      position: [1680, 0],
+    },
+  ];
+  const chain = [
+    "Manual Trigger",
+    "List Packrift MCP tools",
+    "Get cart handoff candidates",
+    "Get live price",
+    "Check live inventory",
+    "Create measured MCP cart URL",
+    "Extract measured cart URL",
+    "Record measured cart landing",
+  ];
+  const connections = Object.fromEntries(
+    chain.slice(0, -1).map((name, index) => [name, { main: [[{ node: chain[index + 1], type: "main", index: 0 }]] }])
+  );
+  return {
+    name: "Packrift MCP first useful run",
+    nodes,
+    connections,
+    active: false,
+    settings: {
+      executionOrder: "v1",
+    },
+    tags: ["packrift", "mcp", "ai-commerce"],
+    pinData: {},
+    versionId: "packrift-mcp-first-useful-run-r01",
+  };
+}
+
+function zapierWebhookSteps() {
+  const endpoint = AUTOMATION_ENDPOINTS.zapier;
+  return firstUsefulRunRequests("zapier_automation", "zapier_first_useful_run").map((request, index) => ({
+    step: index + 1,
+    app: "Webhooks by Zapier",
+    event: "Custom Request",
+    method: "POST",
+    url: endpoint,
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+      "Mcp-Session-Id": "zapier-packrift-{{zap_meta_human_now}}",
+      "user-agent": "Zapier Packrift MCP Workflow (+https://mcp.packrift.com/mcp)",
+    },
+    data: request,
+  }));
+}
+
+function pipedreamNodeSnippet() {
+  const endpoint = AUTOMATION_ENDPOINTS.pipedream;
+  const requests = firstUsefulRunRequests("pipedream_automation", "pipedream_first_useful_run");
+  return [
+    "export default defineComponent({",
+    "  async run({ steps, $ }) {",
+    "    const endpoint = " + JSON.stringify(endpoint) + ";",
+    "    const sessionId = `pipedream-packrift-${Date.now()}`;",
+    "    const requests = " + JSON.stringify(requests, null, 4).replace(/\n/g, "\n    ") + ";",
+    "    let lastText = '';",
+    "    for (const body of requests) {",
+    "      const res = await fetch(endpoint, {",
+    "        method: 'POST',",
+    "        headers: {",
+    "          'content-type': 'application/json',",
+    "          'accept': 'application/json, text/event-stream',",
+    "          'Mcp-Session-Id': sessionId,",
+    "          'user-agent': 'Pipedream Packrift MCP Workflow (+https://mcp.packrift.com/mcp)'",
+    "        },",
+    "        body: JSON.stringify(body)",
+    "      });",
+    "      lastText = await res.text();",
+    "      if (!res.ok) throw new Error(`Packrift MCP request failed ${res.status}: ${lastText}`);",
+    "    }",
+    "    const match = lastText.match(/https:\\/\\/mcp\\.packrift\\.com\\/r\\/cart\\/[^\"\\s<>\\\\]+/);",
+    "    if (!match) throw new Error('No measured Packrift MCP /r/cart URL found.');",
+    "    await fetch(match[0], { headers: { 'user-agent': 'Pipedream Packrift MCP Workflow (+https://mcp.packrift.com/mcp)' } });",
+    "    return { cart_url: match[0], no_order_created: true };",
+    "  }",
+    "});",
+  ].join("\n");
+}
+
+export function mcpAutomationWorkflowsPayload(runtime: WorkflowGalleryRuntime) {
+  const n8n = n8nWorkflow();
+  return {
+    release: "PACKRIFT-MCP-AUTOMATION-WORKFLOWS-R01",
+    generated_at: new Date().toISOString(),
+    canonical_endpoint: MCP_ENDPOINT,
+    purpose:
+      "Give automation hosts copy-ready Packrift MCP workflows that execute real tools/list and tools/call requests through the hosted endpoint without creating a duplicate CLI, marketplace, or buyer surface.",
+    no_duplicate_work_rule:
+      "Use https://mcp.packrift.com/mcp plus source-aware query parameters. Do not create a separate Packrift CLI, scraper, checkout page, or buyer surface.",
+    runtime: {
+      server_version: runtime.serverVersion,
+      tools_count: runtime.toolsCount,
+      resources_count: runtime.resourcesCount,
+      prompts_count: runtime.promptsCount,
+    },
+    workflows: {
+      n8n: {
+        source: "n8n_automation",
+        import_url: "https://mcp.packrift.com/ai/mcp-n8n-workflow.json",
+        endpoint: AUTOMATION_ENDPOINTS.n8n,
+        workflow: n8n,
+      },
+      zapier: {
+        source: "zapier_automation",
+        endpoint: AUTOMATION_ENDPOINTS.zapier,
+        steps: zapierWebhookSteps(),
+      },
+      pipedream: {
+        source: "pipedream_automation",
+        endpoint: AUTOMATION_ENDPOINTS.pipedream,
+        code: pipedreamNodeSnippet(),
+      },
+    },
+    success_gate:
+      "A real external automation host must record non-suppressed Packrift MCP tool calls and a measured https://mcp.packrift.com/r/cart URL; importing this pack alone is not adoption proof.",
+    proof_urls: {
+      activation_wave_tasks_jsonl: "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.jsonl",
+      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      funnel_snapshot: "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json",
+      usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
+      workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+    },
+  };
+}
+
+export function mcpN8nWorkflowPayload() {
+  return n8nWorkflow();
+}
+
+export function mcpAutomationWorkflowsMarkdown(runtime: WorkflowGalleryRuntime): string {
+  const payload = mcpAutomationWorkflowsPayload(runtime);
+  return [
+    "# Packrift MCP Automation Workflows",
+    "",
+    `Release: ${payload.release}`,
+    `Generated: ${payload.generated_at}`,
+    `Canonical endpoint: ${payload.canonical_endpoint}`,
+    "",
+    payload.purpose,
+    "",
+    "## No Duplicate Work Rule",
+    "",
+    payload.no_duplicate_work_rule,
+    "",
+    "## n8n",
+    "",
+    `Source: ${payload.workflows.n8n.source}`,
+    `Endpoint: ${payload.workflows.n8n.endpoint}`,
+    `n8n import JSON: ${payload.workflows.n8n.import_url}`,
+    "",
+    fencedJson(payload.workflows.n8n.workflow),
+    "",
+    "## Zapier",
+    "",
+    `Source: ${payload.workflows.zapier.source}`,
+    `Endpoint: ${payload.workflows.zapier.endpoint}`,
+    "",
+    fencedJson(payload.workflows.zapier.steps),
+    "",
+    "## Pipedream",
+    "",
+    `Source: ${payload.workflows.pipedream.source}`,
+    `Endpoint: ${payload.workflows.pipedream.endpoint}`,
+    "",
+    "```ts",
+    payload.workflows.pipedream.code,
+    "```",
+    "",
+    "## Success Gate",
+    "",
+    payload.success_gate,
+    "",
+    "## Proof URLs",
+    "",
+    Object.entries(payload.proof_urls)
+      .map(([key, value]) => `- ${key}: ${value}`)
+      .join("\n"),
+    "",
+  ].join("\n");
+}
+
+export function mcpAutomationWorkflowsHtml(runtime: WorkflowGalleryRuntime): string {
+  const payload = mcpAutomationWorkflowsPayload(runtime);
+  return htmlShell(
+    "Packrift MCP Automation Workflows",
+    payload.purpose,
+    `<header>
+      <h1>Packrift MCP Automation Workflows</h1>
+      <p>${escapeHtml(payload.purpose)}</p>
+      <div class="status">
+        <span>${escapeHtml(payload.release)}</span>
+        <span>${payload.runtime.tools_count} tools</span>
+        <span>${payload.runtime.resources_count} resources</span>
+        <span>no duplicate CLI</span>
+      </div>
+      <div class="links">
+        <a class="button primary" href="${escapeHtml(payload.workflows.n8n.import_url)}">n8n import JSON</a>
+        <a class="button" href="https://mcp.packrift.com/ai/mcp-automation-workflows.json">JSON pack</a>
+        <a class="button" href="https://mcp.packrift.com/ai/mcp-workflow-gallery.html">Workflow gallery</a>
+        <a class="button" href="${escapeHtml(payload.proof_urls.source_activation_queue)}">Source queue</a>
+      </div>
+    </header>
+    <section>
+      <h2>No Duplicate Work Rule</h2>
+      <div class="rules"><p>${escapeHtml(payload.no_duplicate_work_rule)}</p></div>
+    </section>
+    <section>
+      <h2>n8n Import</h2>
+      <div class="workflow">
+        <p>Import this JSON into n8n, then run the manual trigger from a real external n8n environment.</p>
+        <pre>${escapeHtml(JSON.stringify(payload.workflows.n8n.workflow, null, 2))}</pre>
+      </div>
+    </section>
+    <section>
+      <h2>Zapier Webhooks Steps</h2>
+      <div class="workflow"><pre>${escapeHtml(JSON.stringify(payload.workflows.zapier.steps, null, 2))}</pre></div>
+    </section>
+    <section>
+      <h2>Pipedream Code</h2>
+      <div class="workflow"><pre>${escapeHtml(payload.workflows.pipedream.code)}</pre></div>
+    </section>
+    <section>
+      <h2>Success Gate</h2>
+      <div class="rules"><p>${escapeHtml(payload.success_gate)}</p></div>
+    </section>`
+  );
+}
+
 export function mcpWorkflowGalleryPayload(runtime: WorkflowGalleryRuntime) {
   return {
-    release: "PACKRIFT-MCP-WORKFLOW-GALLERY-R01",
+    release: "PACKRIFT-MCP-WORKFLOW-GALLERY-R02",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -293,6 +647,8 @@ export function mcpWorkflowGalleryPayload(runtime: WorkflowGalleryRuntime) {
       "record create_cart_url output as MCP-attributed conversion handoff",
     ],
     proof_urls: {
+      automation_workflows: "https://mcp.packrift.com/ai/mcp-automation-workflows.json",
+      n8n_workflow_import: "https://mcp.packrift.com/ai/mcp-n8n-workflow.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       adoption_kit: "https://mcp.packrift.com/ai/mcp-adoption-kit.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
@@ -309,6 +665,7 @@ export function mcpWorkflowGalleryPayload(runtime: WorkflowGalleryRuntime) {
       "Use the MCP /r/cart URL returned by create_cart_url as the primary measured handoff.",
       "If any required spec differs, explain no exact match and use quote recovery instead of forcing a substitute.",
     ],
+    automation_templates: mcpAutomationWorkflowsPayload(runtime).workflows,
   };
 }
 
@@ -419,6 +776,12 @@ export function mcpWorkflowGalleryMarkdown(runtime: WorkflowGalleryRuntime): str
     "",
     payload.operating_rules.map((rule) => `- ${rule}`).join("\n"),
     "",
+    "## Automation Templates",
+    "",
+    `- n8n import JSON: ${payload.proof_urls.n8n_workflow_import}`,
+    `- automation workflow pack: ${payload.proof_urls.automation_workflows}`,
+    "- Zapier Webhooks-by-Zapier steps and Pipedream code are included in the machine-readable workflow gallery.",
+    "",
     "## Proof URLs",
     "",
     Object.entries(payload.proof_urls)
@@ -450,6 +813,7 @@ export function mcpWorkflowGalleryHtml(runtime: WorkflowGalleryRuntime): string 
     ["Endpoint", payload.canonical_endpoint],
     ["Buyer use cases", payload.proof_urls.buyer_use_cases.replace(".json", ".html")],
     ["Cart activation", payload.proof_urls.cart_activation.replace(".json", ".html")],
+    ["Automation workflows", payload.proof_urls.automation_workflows.replace(".json", ".html")],
     ["Adoption progress", "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html"],
     ["Eval pack", "https://mcp.packrift.com/ai/mcp-eval-pack.json"],
   ] satisfies Array<[string, string]>)
@@ -480,6 +844,16 @@ export function mcpWorkflowGalleryHtml(runtime: WorkflowGalleryRuntime): string 
     <section>
       <h2>Agent Host Uses</h2>
       <div class="uses">${payload.agent_host_uses.map((use) => `<span>${escapeHtml(use)}</span>`).join("")}</div>
+    </section>
+    <section>
+      <h2>Automation Templates</h2>
+      <div class="rules">
+        <p>Import the n8n workflow directly, or use the JSON workflow pack for Zapier and Pipedream-style hosts.</p>
+        <div class="links">
+          <a class="button primary" href="${escapeHtml(payload.proof_urls.n8n_workflow_import)}">n8n import JSON</a>
+          <a class="button" href="${escapeHtml(payload.proof_urls.automation_workflows)}">Automation workflow pack</a>
+        </div>
+      </div>
     </section>
     <section>
       <h2>Operating Rules</h2>

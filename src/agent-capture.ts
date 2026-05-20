@@ -444,6 +444,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the copy-ready workflow layer for agent platforms after the install matrix and first-run proof.",
     }),
     surface({
+      id: "mcp_automation_workflows",
+      name: "Packrift MCP automation workflows",
+      agent_type: "automation_host_activation",
+      audience: "n8n, Zapier, Pipedream, and similar automation builders who need importable real-MCP flows rather than another Packrift CLI.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/ai/mcp-automation-workflows.json",
+      install_or_call:
+        "Import the n8n workflow JSON or copy the Zapier/Pipedream steps; each flow calls the hosted Packrift MCP endpoint, runs tools/list plus live price, inventory, cart-candidate, and create_cart_url requests, then records the measured /r/cart handoff without placing an order.",
+      proof_url: "https://mcp.packrift.com/ai/mcp-automation-workflows.html",
+      fallback_url: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      next_action:
+        "Use this pack to move automation-host rows like n8n, Zapier, and Pipedream from proof-page reads into real external MCP tool calls and measured cart URLs.",
+    }),
+    surface({
       id: "mcp_eval_pack",
       name: "Packrift MCP eval pack",
       agent_type: "host_acceptance_test",
@@ -772,7 +788,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R22",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R23",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -809,6 +825,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+      automation_workflows: "https://mcp.packrift.com/ai/mcp-automation-workflows.json",
+      n8n_workflow_import: "https://mcp.packrift.com/ai/mcp-n8n-workflow.json",
       eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
       browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -838,6 +856,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "Use /r/activate/{source}?format=html when a directory reviewer or agent host has clicked proof but still needs to run the real MCP client sequence from a browser.",
       "Use /r/activate/{source}?format=sh when an external reviewer or agent host prefers a shell runner that performs real JSON-RPC tools/list and tools/call requests against the hosted MCP endpoint.",
       "Use /ai/mcp-activation-experiments.json when source activation needs a testable hypothesis, target event, expected snapshot delta, and suppression rule.",
+      "Use /ai/mcp-automation-workflows.json for n8n, Zapier, Pipedream, and similar automation hosts that need importable real-MCP flows instead of a separate Packrift CLI.",
       "Use /ai/mcp-eval-pack.json when an MCP host, marketplace, or reviewer needs copy-ready acceptance cases and report fields for real external host validation.",
     ],
     counts: {
@@ -882,7 +901,7 @@ export function allAgentCaptureMarkdown(runtime: AgentCaptureRuntime): string {
     "",
     "## What This Is",
     "",
-    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, the agent host rollout sheet, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
+    "One current Packrift map for every agent surface we care about: MCP clients, the start page, tracked config links, tracked install and first-run actions, reviewer activation browser and shell runners, the agent host rollout sheet, direct client config, usage/funnel/GA4 proof, ChatGPT/OpenAI commerce, Shopify UCP, Claude, Cursor, Windsurf, Codex, Glama, registries, directory submit actions, Claude connector submission, crawlable corpora, search crawlers, cart activation, first-run proof, workflow gallery, automation workflow imports, eval pack, a live browser-agent bridge, and Browserbase Browse as a live verified MCP-first catalog skill. Browse skill pack and SKILL.md remain fallback browser-agent wrappers around the hosted MCP endpoint.",
     "",
     "## Operating Rules",
     "",

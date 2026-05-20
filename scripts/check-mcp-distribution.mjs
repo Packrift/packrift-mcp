@@ -241,6 +241,10 @@ const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation
 const MCP_ACTIVATION_WAVE_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.jsonl";
 const MCP_ACTIVATION_WAVE_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.csv";
 const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
+const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
+const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
+const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
+const MCP_N8N_WORKFLOW_JSON_URL = "https://mcp.packrift.com/ai/mcp-n8n-workflow.json";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
@@ -488,6 +492,10 @@ async function liveMcpCheck() {
     firstRunProofResult,
     workflowGalleryResult,
     workflowGalleryHtmlResult,
+    automationWorkflowsResult,
+    automationWorkflowsMarkdownResult,
+    automationWorkflowsHtmlResult,
+    n8nWorkflowResult,
     evalPackResult,
     browserAgentBridgeResult,
     browserbaseBrowseSkillPackResult,
@@ -603,6 +611,10 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-first-run-proof.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-workflow-gallery.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-workflow-gallery.html"),
+    fetchText(MCP_AUTOMATION_WORKFLOWS_JSON_URL),
+    fetchText(MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL),
+    fetchText(MCP_AUTOMATION_WORKFLOWS_HTML_URL),
+    fetchText(MCP_N8N_WORKFLOW_JSON_URL),
     fetchText("https://mcp.packrift.com/ai/mcp-eval-pack.json"),
     fetchText("https://mcp.packrift.com/ai/browser-agent-bridge.json"),
     fetchText("https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json"),
@@ -684,6 +696,12 @@ async function liveMcpCheck() {
   const cartActivation = cartActivationResult.ok ? JSON.parse(cartActivationResult.text) : null;
   const firstRunProof = firstRunProofResult.ok ? JSON.parse(firstRunProofResult.text) : null;
   const workflowGallery = workflowGalleryResult.ok ? JSON.parse(workflowGalleryResult.text) : null;
+  const automationWorkflows = automationWorkflowsResult.ok ? JSON.parse(automationWorkflowsResult.text) : null;
+  const n8nWorkflow = n8nWorkflowResult.ok ? JSON.parse(n8nWorkflowResult.text) : null;
+  const automationN8nNodeNames = (automationWorkflows?.workflows?.n8n?.workflow?.nodes ?? []).map((node) => node?.name).filter(Boolean);
+  const n8nWorkflowNodeNames = (n8nWorkflow?.nodes ?? []).map((node) => node?.name).filter(Boolean);
+  const automationZapierSteps = automationWorkflows?.workflows?.zapier?.steps ?? [];
+  const automationPipedreamCode = automationWorkflows?.workflows?.pipedream?.code ?? "";
   const evalPack = evalPackResult.ok ? JSON.parse(evalPackResult.text) : null;
   const browserAgentBridge = browserAgentBridgeResult.ok ? JSON.parse(browserAgentBridgeResult.text) : null;
   const browserbaseBrowseSkillPack = browserbaseBrowseSkillPackResult.ok ? JSON.parse(browserbaseBrowseSkillPackResult.text) : null;
@@ -803,7 +821,9 @@ async function liveMcpCheck() {
     const commonOk =
       targetEventOk &&
       row.external_activation_required === true &&
-      row.operator_safety_rule?.includes("real MCP") &&
+      (row.operator_safety_rule?.includes("real MCP") ||
+        row.operator_safety_rule?.includes("real buyer") ||
+        row.operator_safety_rule?.includes("MCP-attributed order")) &&
       row.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
       row.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
       row.eval_pack_json_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source=cline_mcp_marketplace" &&
@@ -814,7 +834,9 @@ async function liveMcpCheck() {
       row.copy_ready_host_configs?.cline_mcp_json?.includes('"streamableHttp"') &&
       row.copy_ready_host_configs?.curl_script?.includes("create_cart_url") &&
       row.copy_ready_host_configs?.first_run_shell_one_liner?.includes("format=sh") &&
-      row.copy_ready_host_configs?.success_gate?.includes("create_cart_url") &&
+      (row.copy_ready_host_configs?.success_gate?.includes("create_cart_url") ||
+        row.copy_ready_host_configs?.success_gate?.includes("buyer/reviewer checkout") ||
+        row.copy_ready_host_configs?.success_gate?.includes("first_party_mcp_orders")) &&
       row.tracked_first_run_shell_url?.includes("/r/run/cline_mcp_marketplace/cline") &&
       row.tracked_first_run_shell_url?.includes("format=sh") &&
       row.first_run_shell_one_liner?.includes("/r/run/cline_mcp_marketplace/cline") &&
@@ -940,6 +962,9 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.activation_wave_tasks_jsonl === MCP_ACTIVATION_WAVE_TASKS_JSONL_URL &&
       serverCard?.registry_distribution?.activation_wave_tasks_csv === MCP_ACTIVATION_WAVE_TASKS_CSV_URL &&
       serverCard?.registry_distribution?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
+      serverCard?.registry_distribution?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
+      serverCard?.registry_distribution?.automation_workflows_html === MCP_AUTOMATION_WORKFLOWS_HTML_URL &&
+      serverCard?.registry_distribution?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
       serverCard?.registry_distribution?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_template === "https://mcp.packrift.com/r/activate/{source}" &&
       serverCard?.registry_distribution?.tracked_reviewer_activation_html_template === "https://mcp.packrift.com/r/activate/{source}?format=html" &&
@@ -999,6 +1024,10 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.html") &&
+      resourceUris.has(MCP_AUTOMATION_WORKFLOWS_JSON_URL) &&
+      resourceUris.has(MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL) &&
+      resourceUris.has(MCP_AUTOMATION_WORKFLOWS_HTML_URL) &&
+      resourceUris.has(MCP_N8N_WORKFLOW_JSON_URL) &&
       resourceUris.has(OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL) &&
       resourceUris.has(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
       resourceUris.has(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_TSV_URL) &&
@@ -1042,6 +1071,9 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       mcpToolsDiscovery?.conversion_urls?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
       mcpToolsDiscovery?.conversion_urls?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
+      mcpToolsDiscovery?.conversion_urls?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.automation_workflows_html === MCP_AUTOMATION_WORKFLOWS_HTML_URL &&
+      mcpToolsDiscovery?.conversion_urls?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       mcpToolsDiscovery?.conversion_urls?.eval_pack_template === "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}" &&
       mcpToolsDiscovery?.conversion_urls?.directory_update_card_template === "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json" &&
@@ -1187,7 +1219,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R22" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R23" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
       agentCapture?.counts?.agent_host_fast_paths >= 12 &&
@@ -1229,11 +1261,20 @@ async function liveMcpCheck() {
       agentCapture?.hub_urls?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
       agentCapture?.hub_urls?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       agentCapture?.hub_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
+      agentCapture?.hub_urls?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
+      agentCapture?.hub_urls?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_client_config" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-client-config.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_funnel_snapshot" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_ga4_funnel_proof" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_source_activation_queue" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
+      agentCapture?.surfaces?.some(
+        (surface) =>
+          surface.id === "mcp_automation_workflows" &&
+          surface.canonical_url === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
+          surface.install_or_call?.includes("n8n workflow JSON") &&
+          surface.install_or_call?.includes("create_cart_url")
+      ) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_eval_pack" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-eval-pack.json" && surface.install_or_call?.includes("create_cart_url")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "claude_desktop_and_claude_code" && surface.install_or_call?.includes("packrift_mcp_source=claude_remote_mcp")) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "cursor_windsurf_vscode" && surface.install_or_call?.includes("packrift_mcp_source=cursor_directory")) &&
@@ -1451,6 +1492,7 @@ async function liveMcpCheck() {
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_order_handoff") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_first_run_proof") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_workflow_gallery") &&
+      usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_automation_workflows") &&
       usageSnapshot?.counts?.direct_agent_resource_sources?.includes("mcp_eval_pack") &&
       typeof usageSnapshot?.counts?.mcp_cart_landings === "number" &&
       typeof usageSnapshot?.counts?.mcp_tracked_config_fetches === "number" &&
@@ -1465,6 +1507,7 @@ async function liveMcpCheck() {
       typeof usageSnapshot?.counts?.source_activation_packet_resource_events === "number" &&
       typeof usageSnapshot?.counts?.activation_experiments_resource_events === "number" &&
       typeof usageSnapshot?.counts?.activation_wave_runner_resource_events === "number" &&
+      typeof usageSnapshot?.counts?.automation_workflows_resource_events === "number" &&
       typeof usageSnapshot?.counts?.eval_pack_resource_events === "number" &&
       typeof usageSnapshot?.counts?.mcp_source_attributed_runtime_events === "number" &&
       typeof usageSnapshot?.counts?.unique_mcp_handoff_ids === "number" &&
@@ -1790,9 +1833,11 @@ async function liveMcpCheck() {
       sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
       sourceActivationCline?.source === "cline_mcp_marketplace" &&
       sourceActivationCline?.preferred_target === "cline" &&
-      sourceActivationCline?.status === "real_host_tool_call_needed" &&
+      ["real_host_tool_call_needed", "buyer_checkout_needed"].includes(sourceActivationCline?.status) &&
       (sourceActivationCline?.target_event_to_watch?.startsWith("mcp_tool_call") ||
-        ["mcp_first_run_execution", "mcp_install_intent"].includes(sourceActivationCline?.target_event_to_watch)) &&
+        ["mcp_first_run_execution", "mcp_install_intent", "mcp_attributed_order"].includes(
+          sourceActivationCline?.target_event_to_watch
+        )) &&
       sourceActivationCline?.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
       sourceActivationCline?.source_aware_endpoint?.includes("packrift_mcp_target=cline") &&
       sourceActivationCline?.cline_real_host_run?.mcp_json?.includes('"type": "streamableHttp"') &&
@@ -2037,16 +2082,54 @@ async function liveMcpCheck() {
       firstRunProof?.live_demo?.inventory?.in_stock === true &&
       firstRunProof?.live_demo?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/") &&
       hasAll(firstRunProof?.live_demo?.cart?.url ?? "", ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "mcp_handoff_id="]) &&
-      workflowGallery?.release === "PACKRIFT-MCP-WORKFLOW-GALLERY-R01" &&
+      workflowGallery?.release === "PACKRIFT-MCP-WORKFLOW-GALLERY-R02" &&
       workflowGallery?.canonical_endpoint === MCP_ENDPOINT &&
       workflowGallery?.workflow_count >= 5 &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "one_call_purchase_handoff_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "exact_sku_reorder_1066") &&
       workflowGallery?.workflows?.some((workflow) => workflow.id === "no_exact_match_quote_recovery") &&
+      workflowGallery?.proof_urls?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
+      workflowGallery?.proof_urls?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
+      automationN8nNodeNames.includes("Create measured MCP cart URL") &&
       workflowGalleryHtmlResult.ok &&
       workflowGalleryHtmlResult.text.includes("Packrift MCP Workflow Gallery") &&
       workflowGalleryHtmlResult.text.includes("prepare_purchase_handoff") &&
+      workflowGalleryHtmlResult.text.includes("Automation Templates") &&
       workflowGalleryHtmlResult.text.includes("Adoption progress") &&
+      automationWorkflows?.release === "PACKRIFT-MCP-AUTOMATION-WORKFLOWS-R01" &&
+      automationWorkflows?.canonical_endpoint === MCP_ENDPOINT &&
+      automationWorkflows?.no_duplicate_work_rule?.includes("Do not create a separate Packrift CLI") &&
+      automationWorkflows?.workflows?.n8n?.source === "n8n_automation" &&
+      automationWorkflows?.workflows?.n8n?.import_url === MCP_N8N_WORKFLOW_JSON_URL &&
+      automationWorkflows?.workflows?.n8n?.endpoint?.includes("packrift_mcp_source=n8n_automation") &&
+      automationWorkflows?.workflows?.zapier?.endpoint?.includes("packrift_mcp_source=zapier_automation") &&
+      automationWorkflows?.workflows?.pipedream?.endpoint?.includes("packrift_mcp_source=pipedream_automation") &&
+      automationN8nNodeNames.includes("List Packrift MCP tools") &&
+      automationN8nNodeNames.includes("Get live price") &&
+      automationN8nNodeNames.includes("Check live inventory") &&
+      automationN8nNodeNames.includes("Record measured cart landing") &&
+      automationWorkflowsResult.text.includes("create_cart_url") &&
+      automationWorkflowsResult.text.includes("get_pricing") &&
+      automationWorkflowsResult.text.includes("check_inventory") &&
+      automationWorkflowsResult.text.includes("Mcp-Session-Id") &&
+      automationZapierSteps.length >= 5 &&
+      JSON.stringify(automationZapierSteps).includes("create_cart_url") &&
+      automationPipedreamCode.includes("fetch(endpoint") &&
+      automationPipedreamCode.includes("create_cart_url") &&
+      automationWorkflowsMarkdownResult.ok &&
+      automationWorkflowsMarkdownResult.text.includes("Packrift MCP Automation Workflows") &&
+      automationWorkflowsMarkdownResult.text.includes("n8n import JSON") &&
+      automationWorkflowsHtmlResult.ok &&
+      automationWorkflowsHtmlResult.text.includes("Packrift MCP Automation Workflows") &&
+      automationWorkflowsHtmlResult.text.includes("n8n import JSON") &&
+      n8nWorkflow?.name === "Packrift MCP first useful run" &&
+      n8nWorkflowNodeNames.includes("Create measured MCP cart URL") &&
+      n8nWorkflowNodeNames.includes("Record measured cart landing") &&
+      n8nWorkflowResult.text.includes("create_cart_url") &&
+      n8nWorkflowResult.text.includes("get_pricing") &&
+      n8nWorkflowResult.text.includes("check_inventory") &&
+      n8nWorkflowResult.text.includes("Mcp-Session-Id") &&
+      n8nWorkflowResult.text.includes("packrift_mcp_source=n8n_automation") &&
       evalPack?.release === "PACKRIFT-MCP-EVAL-PACK-R01" &&
       evalPack?.canonical_endpoint === MCP_ENDPOINT &&
       evalPack?.acceptance_gate?.real_mcp_host_required === true &&
@@ -2521,6 +2604,10 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-workflow-gallery.html") &&
+      resourceUris.has(MCP_AUTOMATION_WORKFLOWS_JSON_URL) &&
+      resourceUris.has(MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL) &&
+      resourceUris.has(MCP_AUTOMATION_WORKFLOWS_HTML_URL) &&
+      resourceUris.has(MCP_N8N_WORKFLOW_JSON_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-eval-pack.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/browser-agent-bridge.json") &&

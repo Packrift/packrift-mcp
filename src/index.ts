@@ -35,7 +35,15 @@ import { mcpClientConfigMarkdown, mcpClientConfigPayload } from "./client-config
 import { mcpBuyerUseCasesHtml, mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { mcpCartActivationHtml, mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-activation.js";
 import { mcpFirstRunProofMarkdown, mcpFirstRunProofPayload, type FirstRunProofDemo } from "./first-run-proof.js";
-import { mcpWorkflowGalleryHtml, mcpWorkflowGalleryMarkdown, mcpWorkflowGalleryPayload } from "./workflow-gallery.js";
+import {
+  mcpAutomationWorkflowsHtml,
+  mcpAutomationWorkflowsMarkdown,
+  mcpAutomationWorkflowsPayload,
+  mcpN8nWorkflowPayload,
+  mcpWorkflowGalleryHtml,
+  mcpWorkflowGalleryMarkdown,
+  mcpWorkflowGalleryPayload,
+} from "./workflow-gallery.js";
 import { mcpEvalPackMarkdown, mcpEvalPackPayload } from "./eval-pack.js";
 import { browserAgentBridgeMarkdown, browserAgentBridgePayload } from "./browser-agent-bridge.js";
 import { browserbaseBrowseSkillMd, browserbaseBrowseSkillPackMarkdown, browserbaseBrowseSkillPackPayload } from "./browserbase-browse-skill-pack.js";
@@ -3376,6 +3384,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
     "mcp_cart_activation",
     "mcp_first_run_proof",
     "mcp_workflow_gallery",
+    "mcp_automation_workflows",
     "mcp_eval_pack",
     "browser_agent_bridge",
     "browserbase_browse_skill_pack",
@@ -3497,6 +3506,7 @@ async function mcpUsageSnapshotPayload(env: Env, date = todayUtc(), limit = PUBL
       cart_activation_resource_events: bySource.mcp_cart_activation ?? 0,
       first_run_proof_resource_events: bySource.mcp_first_run_proof ?? 0,
       workflow_gallery_resource_events: bySource.mcp_workflow_gallery ?? 0,
+      automation_workflows_resource_events: bySource.mcp_automation_workflows ?? 0,
       eval_pack_resource_events: bySource.mcp_eval_pack ?? 0,
       usage_snapshot_resource_events: bySource.mcp_usage_snapshot ?? 0,
       funnel_snapshot_resource_events: bySource.mcp_funnel_snapshot ?? 0,
@@ -3956,7 +3966,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -6159,9 +6169,39 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
   if (!sourceSlug) return null;
   const row = payload.experiments.find((experiment) => experiment.source === sourceSlug);
   if (!row) return mcpAgentHostRolloutSourcePacket(payload, sourceSlug);
-  const preferredTarget = row.current_counts.preferred_target;
+  const packetUrls = sourceActivationUrls(sourceSlug);
+  const preferredTarget = packetUrls.preferred_target;
+  const packetFirstUsefulRun = mcpFirstUsefulRun(sourceSlug, preferredTarget);
+  const packetCopyReadyHostConfigs = sourceActivationCopyReadyHostConfigs({
+    source: sourceSlug,
+    preferredTarget,
+    sourceAwareEndpoint: packetFirstUsefulRun.endpoint,
+    agentPrompt: packetFirstUsefulRun.agent_prompt,
+    curlScript: packetFirstUsefulRun.curl_script,
+    firstRunShellOneLiner: packetUrls.first_run_shell_one_liner,
+    successGate: row.copy_ready_host_configs.success_gate,
+  });
+  const packetSourceOrderHandoff = {
+    ...row.source_order_handoff,
+    preferred_target: preferredTarget,
+    buyer_action_url: sourceActivationOrderHandoffPayload(sourceSlug, preferredTarget).buyer_action_url,
+    source_aware_endpoint: packetFirstUsefulRun.endpoint,
+    source_specific_first_run_url: packetUrls.tracked_first_run_url,
+    reviewer_activation_shell_url: packetUrls.reviewer_activation_shell_url,
+  };
   const isCline = preferredTarget === "cline" || sourceSlug.includes("cline");
   const targetIsOrder = row.target_event_to_watch === "mcp_attributed_order";
+  const packetPrimaryAction = targetIsOrder
+    ? (row.order_conversion_handoff?.primary_order_handoff_url ?? packetUrls.order_handoff_html_url)
+    : row.target_event_to_watch === "mcp_install_intent"
+      ? packetUrls.tracked_install_url
+      : row.target_event_to_watch === "mcp_cart_landing"
+        ? (row.cart_landing_action_url ?? packetUrls.reviewer_activation_runner_url)
+        : row.target_event_to_watch === "mcp_first_run_execution"
+          ? packetUrls.reviewer_activation_runner_url
+          : row.target_event_to_watch === "mcp_first_run_intent" || row.target_event_to_watch.startsWith("mcp_tool_call")
+            ? packetUrls.tracked_first_run_url
+            : row.primary_action_url;
   const exactNextAction = targetIsOrder
     ? "Use the source-preserving buyer/reviewer handoff in a real approved checkout flow; do not create more synthetic first-run proof."
     : isCline
@@ -6182,25 +6222,25 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
     exact_next_action: exactNextAction,
     why_this_packet_exists:
       "This focused packet is for an external reviewer, directory operator, or MCP host user. It avoids another broad proof page and moves this source toward the next non-suppressed event in the public funnel.",
-    source_aware_endpoint: row.source_aware_endpoint,
+    source_aware_endpoint: packetFirstUsefulRun.endpoint,
     real_host_run: {
-      install_url: row.tracked_install_url,
-      install_json_url: row.tracked_install_json_url,
-      first_run_url: row.tracked_first_run_url,
-      first_run_execute_url: row.tracked_first_run_execute_url,
-      first_run_shell_url: row.tracked_first_run_shell_url,
-      first_run_shell_one_liner: row.first_run_shell_one_liner,
-      activation_runner_url: row.reviewer_activation_runner_url,
-      activation_shell_url: row.reviewer_activation_shell_url,
-      activation_shell_one_liner: row.fast_activation_path.reviewer_activation_shell_one_liner,
-      eval_pack_json_url: row.eval_pack_json_url,
-      eval_pack_markdown_url: row.eval_pack_markdown_url,
+      install_url: packetUrls.tracked_install_url,
+      install_json_url: packetUrls.tracked_install_json_url,
+      first_run_url: packetUrls.tracked_first_run_url,
+      first_run_execute_url: packetUrls.tracked_first_run_execute_url,
+      first_run_shell_url: packetUrls.tracked_first_run_shell_url,
+      first_run_shell_one_liner: packetUrls.first_run_shell_one_liner,
+      activation_runner_url: packetUrls.reviewer_activation_runner_url,
+      activation_shell_url: packetUrls.reviewer_activation_shell_url,
+      activation_shell_one_liner: sourceActivationShellCommand(packetUrls.reviewer_activation_shell_url),
+      eval_pack_json_url: packetUrls.eval_pack_json_url,
+      eval_pack_markdown_url: packetUrls.eval_pack_markdown_url,
       required_final_tool: row.fast_activation_path.required_final_tool,
       required_cart_url_prefix: row.fast_activation_path.required_cart_url_prefix,
       no_order_created_by_tool_run: row.fast_activation_path.no_order_created,
     },
-    source_order_handoff: row.source_order_handoff,
-    buyer_handoff_preview: row.buyer_handoff_preview,
+    source_order_handoff: packetSourceOrderHandoff,
+    buyer_handoff_preview: packetSourceOrderHandoff,
     order_conversion_handoff: row.order_conversion_handoff,
     buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? null,
     buyer_action_url: row.order_conversion_handoff?.buyer_action_url ?? null,
@@ -6222,13 +6262,13 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
       : null,
     copy_ready: {
       external_activation_request: row.copy_ready_activation_request,
-      agent_prompt: row.agent_prompt,
-      generic_mcp_json: row.copy_ready_host_configs.generic_mcp_json,
-      cline_mcp_json: row.copy_ready_host_configs.cline_mcp_json,
-      claude_code_command: row.copy_ready_host_configs.claude_code_command,
-      codex_command: row.copy_ready_host_configs.codex_command,
-      curl_script: row.copy_ready_host_configs.curl_script,
-      success_gate: row.copy_ready_host_configs.success_gate,
+      agent_prompt: packetFirstUsefulRun.agent_prompt,
+      generic_mcp_json: packetCopyReadyHostConfigs.generic_mcp_json,
+      cline_mcp_json: packetCopyReadyHostConfigs.cline_mcp_json,
+      claude_code_command: packetCopyReadyHostConfigs.claude_code_command,
+      codex_command: packetCopyReadyHostConfigs.codex_command,
+      curl_script: packetCopyReadyHostConfigs.curl_script,
+      success_gate: packetCopyReadyHostConfigs.success_gate,
     },
     expected_snapshot_delta: row.expected_snapshot_delta,
     suppression_rules: row.suppression_rules,
@@ -6255,17 +6295,17 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
       source_packet_json: `https://mcp.packrift.com/ai/mcp-source-activation/${sourceSlug}.json`,
       source_packet_markdown: `https://mcp.packrift.com/ai/mcp-source-activation/${sourceSlug}.md`,
       source_packet_html: `https://mcp.packrift.com/ai/mcp-source-activation/${sourceSlug}.html`,
-      primary_action: row.primary_action_url,
-      tracked_start: row.tracked_start_url,
-      tracked_config: row.tracked_config_url,
-      tracked_install: row.tracked_install_url,
-      tracked_install_json: row.tracked_install_json_url,
-      first_run: row.tracked_first_run_url,
-      first_run_shell: row.tracked_first_run_shell_url,
-      activation_runner: row.reviewer_activation_runner_url,
-      activation_shell: row.reviewer_activation_shell_url,
-      directory_update_card: row.directory_update_card_json_url,
-      eval_pack: row.eval_pack_json_url,
+      primary_action: packetPrimaryAction,
+      tracked_start: packetUrls.tracked_start_url,
+      tracked_config: packetUrls.tracked_config_url,
+      tracked_install: packetUrls.tracked_install_url,
+      tracked_install_json: packetUrls.tracked_install_json_url,
+      first_run: packetUrls.tracked_first_run_url,
+      first_run_shell: packetUrls.tracked_first_run_shell_url,
+      activation_runner: packetUrls.reviewer_activation_runner_url,
+      activation_shell: packetUrls.reviewer_activation_shell_url,
+      directory_update_card: packetUrls.directory_update_card_json_url,
+      eval_pack: packetUrls.eval_pack_json_url,
       tool_discovery_json: row.tool_discovery_json_url,
       tool_discovery_markdown: row.tool_discovery_markdown_url,
       activation_experiments: payload.links.activation_experiments_json,
@@ -6278,30 +6318,28 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
 
 function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpActivationExperimentsPayload>>, sourceSlug: string) {
   const matchedRolloutRow = mcpAgentHostRolloutRows().find((row) => row.source === sourceSlug);
-  const genericTarget = "generic_streamable_http";
-  const genericRunUrl = trackedRunUrl(sourceSlug, genericTarget);
-  const genericFirstRunShellUrl = `${genericRunUrl}&format=sh`;
-  const genericActivationShellUrl = `https://mcp.packrift.com/r/activate/${sourceSlug}?format=sh`;
+  const fallbackUrls = sourceActivationUrls(sourceSlug);
+  const fallbackTarget = fallbackUrls.preferred_target;
   const rolloutRow =
     matchedRolloutRow ??
     {
       source: sourceSlug,
-      target: genericTarget,
+      target: fallbackTarget,
       source_inference: "generic source-specific activation packet",
       user_agent_substrings: [],
       user_agent_regex: [],
-      source_aware_endpoint: sourceAwareMcpEndpoint(sourceSlug, genericTarget),
-      tracked_config_url: `https://mcp.packrift.com/r/config/${sourceSlug}`,
-      tracked_install_url: trackedInstallUrl(sourceSlug, genericTarget),
-      tracked_first_run_url: genericRunUrl,
-      tracked_first_run_shell_url: genericFirstRunShellUrl,
-      first_run_shell_one_liner: sourceActivationShellCommand(genericFirstRunShellUrl),
-      reviewer_activation_url: `https://mcp.packrift.com/r/activate/${sourceSlug}?format=html`,
-      reviewer_activation_shell_url: genericActivationShellUrl,
-      reviewer_activation_shell_one_liner: sourceActivationShellCommand(genericActivationShellUrl),
+      source_aware_endpoint: sourceAwareMcpEndpoint(sourceSlug, fallbackTarget),
+      tracked_config_url: fallbackUrls.tracked_config_url,
+      tracked_install_url: fallbackUrls.tracked_install_url,
+      tracked_first_run_url: fallbackUrls.tracked_first_run_url,
+      tracked_first_run_shell_url: fallbackUrls.tracked_first_run_shell_url,
+      first_run_shell_one_liner: fallbackUrls.first_run_shell_one_liner,
+      reviewer_activation_url: fallbackUrls.reviewer_activation_runner_url,
+      reviewer_activation_shell_url: fallbackUrls.reviewer_activation_shell_url,
+      reviewer_activation_shell_one_liner: sourceActivationShellCommand(fallbackUrls.reviewer_activation_shell_url),
       source_activation_packet: `https://mcp.packrift.com/ai/mcp-source-activation/${sourceSlug}.json`,
-      eval_pack: `https://mcp.packrift.com/ai/mcp-eval-pack.json?source=${sourceSlug}`,
-      order_handoff: `https://mcp.packrift.com/r/order/${sourceSlug}?format=html`,
+      eval_pack: fallbackUrls.eval_pack_json_url,
+      order_handoff: fallbackUrls.order_handoff_html_url,
       recommended_action:
         "Use the generic source-aware Packrift MCP endpoint in a real MCP host, then run the first useful SKU 1066 sequence through create_cart_url without placing an order.",
       success_gate:
@@ -9623,6 +9661,10 @@ const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation
 const MCP_ACTIVATION_WAVE_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.jsonl";
 const MCP_ACTIVATION_WAVE_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-tasks.csv";
 const MCP_ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
+const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
+const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
+const MCP_AUTOMATION_WORKFLOWS_HTML_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.html";
+const MCP_N8N_WORKFLOW_JSON_URL = "https://mcp.packrift.com/ai/mcp-n8n-workflow.json";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
   { source: "mcpservers_org", target: "generic_streamable_http" },
@@ -9822,6 +9864,10 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
   "https://mcp.packrift.com/ai/mcp-workflow-gallery.md",
   "https://mcp.packrift.com/ai/mcp-workflow-gallery.html",
+  MCP_AUTOMATION_WORKFLOWS_JSON_URL,
+  MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL,
+  MCP_AUTOMATION_WORKFLOWS_HTML_URL,
+  MCP_N8N_WORKFLOW_JSON_URL,
   "https://mcp.packrift.com/ai/mcp-eval-pack.json",
   "https://mcp.packrift.com/ai/mcp-eval-pack.md",
   "https://mcp.packrift.com/ai/browser-agent-bridge.json",
@@ -9977,6 +10023,10 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-workflow-gallery.json": "Machine-readable Packrift MCP workflow gallery with copy-ready buyer prompts and JSON-RPC sequences for agent hosts, evals, demos, and cart handoff examples.",
   "/ai/mcp-workflow-gallery.md": "Crawler-readable Packrift MCP workflow gallery for developers and AI-commerce agents building exact SKU, fit-by-dimensions, and no-exact-match flows.",
   "/ai/mcp-workflow-gallery.html": "Human-facing and browser-agent-readable Packrift MCP workflow gallery for evals, demos, and exact-spec cart handoffs.",
+  "/ai/mcp-automation-workflows.json": "Machine-readable Packrift MCP automation workflow pack with n8n import JSON, Zapier Webhooks steps, and Pipedream code.",
+  "/ai/mcp-automation-workflows.md": "Crawler-readable Packrift MCP automation workflow pack for n8n, Zapier, Pipedream, and similar workflow hosts.",
+  "/ai/mcp-automation-workflows.html": "Human-facing Packrift MCP automation workflow pack with importable n8n JSON and copy-ready workflow steps.",
+  "/ai/mcp-n8n-workflow.json": "Importable n8n workflow JSON that runs Packrift MCP tools/list and first-useful tools/call requests through the hosted endpoint.",
   "/ai/mcp-eval-pack.json": "Machine-readable Packrift MCP acceptance-test pack for real host installs, source-aware tool-call proof, live checks, and measured cart handoff.",
   "/ai/mcp-eval-pack.md": "Crawler-readable Packrift MCP eval pack with host configs, required JSON-RPC cases, assertions, and reporting fields.",
   "/ai/browser-agent-bridge.json": "Machine-readable bridge for Browserbase Browse, browser-use, Playwright, CUA, and browser agents that should read public Packrift resources and confirm live commerce facts through MCP.",
@@ -10449,6 +10499,10 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-workflow-gallery.json") return JSON.stringify(mcpWorkflowGalleryPayload(workflowGalleryRuntime()), null, 2);
   if (pathname === "/ai/mcp-workflow-gallery.md") return mcpWorkflowGalleryMarkdown(workflowGalleryRuntime());
   if (pathname === "/ai/mcp-workflow-gallery.html") return mcpWorkflowGalleryHtml(workflowGalleryRuntime());
+  if (pathname === "/ai/mcp-automation-workflows.json") return JSON.stringify(mcpAutomationWorkflowsPayload(workflowGalleryRuntime()), null, 2);
+  if (pathname === "/ai/mcp-automation-workflows.md") return mcpAutomationWorkflowsMarkdown(workflowGalleryRuntime());
+  if (pathname === "/ai/mcp-automation-workflows.html") return mcpAutomationWorkflowsHtml(workflowGalleryRuntime());
+  if (pathname === "/ai/mcp-n8n-workflow.json") return JSON.stringify(mcpN8nWorkflowPayload(), null, 2);
   if (pathname === "/ai/mcp-eval-pack.json") return JSON.stringify(mcpEvalPackPayload(evalPackRuntime()), null, 2);
   if (pathname === "/ai/mcp-eval-pack.md") return mcpEvalPackMarkdown(evalPackRuntime());
   if (pathname === "/ai/browser-agent-bridge.json") return JSON.stringify(browserAgentBridgePayload(browserAgentBridgeRuntime()), null, 2);
@@ -10658,6 +10712,9 @@ function mcpToolDiscoveryPayload() {
       activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
       activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
       activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
+      automation_workflows: MCP_AUTOMATION_WORKFLOWS_JSON_URL,
+      automation_workflows_html: MCP_AUTOMATION_WORKFLOWS_HTML_URL,
+      n8n_workflow_import: MCP_N8N_WORKFLOW_JSON_URL,
       eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
       eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
       directory_update_card_template: "https://mcp.packrift.com/ai/mcp-directory-update/{source}.json",
@@ -10814,6 +10871,9 @@ function mcpManifestPayload() {
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
+    mcp_automation_workflows: MCP_AUTOMATION_WORKFLOWS_JSON_URL,
+    mcp_automation_workflows_html: MCP_AUTOMATION_WORKFLOWS_HTML_URL,
+    mcp_n8n_workflow_import: MCP_N8N_WORKFLOW_JSON_URL,
     mcp_eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
     browser_agent_bridge: "https://mcp.packrift.com/ai/browser-agent-bridge.json",
     mcp_directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
@@ -10874,6 +10934,9 @@ function mcpServerCardPayload() {
       activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
       activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
       activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
+      automation_workflows: MCP_AUTOMATION_WORKFLOWS_JSON_URL,
+      automation_workflows_html: MCP_AUTOMATION_WORKFLOWS_HTML_URL,
+      n8n_workflow_import: MCP_N8N_WORKFLOW_JSON_URL,
       activation_command_center: "https://mcp.packrift.com/r/activate",
       tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
       tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
@@ -13169,6 +13232,36 @@ app.get("/ai/mcp-workflow-gallery.html", async (c) => {
     "Content-Type": "text/html; charset=utf-8",
     ...RAW_HEADERS,
   });
+});
+
+app.get("/ai/mcp-automation-workflows.json", async (c) => {
+  const payload = mcpAutomationWorkflowsPayload(workflowGalleryRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-automation-workflows.json", "mcp_automation_workflows", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-automation-workflows.md", async (c) => {
+  const body = mcpAutomationWorkflowsMarkdown(workflowGalleryRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-automation-workflows.md", "mcp_automation_workflows", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-automation-workflows.html", async (c) => {
+  const body = mcpAutomationWorkflowsHtml(workflowGalleryRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-automation-workflows.html", "mcp_automation_workflows", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-n8n-workflow.json", async (c) => {
+  const payload = mcpN8nWorkflowPayload();
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-n8n-workflow.json", "mcp_automation_workflows", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
 });
 
 app.get("/ai/mcp-eval-pack.json", async (c) => {

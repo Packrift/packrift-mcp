@@ -153,6 +153,7 @@ async function main() {
     "mcp_cart_activation",
     "mcp_first_run_proof",
     "mcp_workflow_gallery",
+    "mcp_automation_workflows",
     "mcp_eval_pack",
     "browser_agent_bridge",
     "chatgpt_openai_product_cards",
@@ -206,6 +207,9 @@ async function main() {
     "cart activation",
     "first-run proof",
     "workflow gallery",
+    "automation workflows",
+    "n8n",
+    "Pipedream",
     "eval pack",
     "browser-agent bridge",
     "Browse skill pack",
@@ -232,7 +236,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R22", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R23", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -381,6 +385,14 @@ async function main() {
     check("resources/list advertises workflow gallery", hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.json") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.md") && hasResourceUri(resourceUris, "/ai/mcp-workflow-gallery.html"), {
       detail: `resources=${resources.length}`,
     }),
+    check(
+      "resources/list advertises automation workflows",
+      hasResourceUri(resourceUris, "/ai/mcp-automation-workflows.json") &&
+        hasResourceUri(resourceUris, "/ai/mcp-automation-workflows.md") &&
+        hasResourceUri(resourceUris, "/ai/mcp-automation-workflows.html") &&
+        hasResourceUri(resourceUris, "/ai/mcp-n8n-workflow.json"),
+      { detail: `resources=${resources.length}` }
+    ),
     check("resources/list advertises eval pack", hasResourceUri(resourceUris, "/ai/mcp-eval-pack.json") && hasResourceUri(resourceUris, "/ai/mcp-eval-pack.md"), {
       detail: `resources=${resources.length}`,
     }),
