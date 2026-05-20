@@ -220,6 +220,8 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - MCP external activation brief HTML: https://mcp.packrift.com/ai/mcp-external-activation-brief.html
 - MCP external activation selected-task JSONL: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl
 - MCP external activation selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv
+- MCP external activation compact selected-task JSONL: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl?compact=1
+- MCP external activation compact selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv?compact=1
 - MCP activation wave runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS 'https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh' | bash`
 - MCP full-source capture runner: `PACKRIFT_EXTERNAL_ACTIVATION=1 PACKRIFT_ACTIVATION_WAVE_SCOPE=full curl -sS 'https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh' | bash`
 - MCP reviewer activation runner: https://mcp.packrift.com/r/activate/generic?format=html
@@ -461,6 +463,8 @@ the activation command center at `https://mcp.packrift.com/r/activate`,
 the source activation queue HTML at `https://mcp.packrift.com/ai/mcp-source-activation-queue.html`,
 the activation wave and guarded full-source capture runner at `https://mcp.packrift.com/ai/mcp-activation-wave.json`,
 the selected external activation task queue at `https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl`,
+the compact selected-task exports at `https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl?compact=1`
+and `https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv?compact=1`,
 the browser runner at `https://mcp.packrift.com/r/activate/generic?format=html`, and
 the shell activation script at `https://mcp.packrift.com/r/activate/generic?format=sh`, and
 `https://mcp.packrift.com/ai/mcp-eval-pack.json` and `.md`, and

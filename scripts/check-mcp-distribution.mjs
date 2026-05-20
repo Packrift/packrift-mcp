@@ -258,6 +258,8 @@ const MCP_EXTERNAL_ACTIVATION_BRIEF_MARKDOWN_URL = "https://mcp.packrift.com/ai/
 const MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
 const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL = `${MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL}?compact=1`;
+const MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL = `${MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}?compact=1`;
 const MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const MCP_AUTOMATION_WORKFLOWS_JSON_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.json";
 const MCP_AUTOMATION_WORKFLOWS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-automation-workflows.md";
@@ -544,6 +546,8 @@ async function liveMcpCheck() {
     externalActivationBriefHtmlResult,
     externalActivationBriefTasksJsonlResult,
     externalActivationBriefTasksCsvResult,
+    externalActivationBriefCompactTasksJsonlResult,
+    externalActivationBriefCompactTasksCsvResult,
     externalActivationBriefRunnerResult,
     activationCommandCenterResult,
     agentAdoptionProgressResult,
@@ -684,6 +688,8 @@ async function liveMcpCheck() {
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL),
+    fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL),
+    fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL),
     fetchText(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL),
     fetchText("https://mcp.packrift.com/r/activate?utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json"),
@@ -803,6 +809,9 @@ async function liveMcpCheck() {
     : [];
   const externalActivationBriefTaskRows = externalActivationBriefTasksJsonlResult.ok
     ? externalActivationBriefTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
+    : [];
+  const externalActivationBriefCompactTaskRows = externalActivationBriefCompactTasksJsonlResult.ok
+    ? externalActivationBriefCompactTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
     : [];
   const agentAdoptionProgress = agentAdoptionProgressResult.ok ? JSON.parse(agentAdoptionProgressResult.text) : null;
   const buyerUseCases = buyerUseCasesResult.ok ? JSON.parse(buyerUseCasesResult.text) : null;
@@ -1392,6 +1401,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       serverCard?.registry_distribution?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       serverCard?.registry_distribution?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      serverCard?.registry_distribution?.external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      serverCard?.registry_distribution?.external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       serverCard?.registry_distribution?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       serverCard?.registry_distribution?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
       serverCard?.registry_distribution?.automation_workflows_html === MCP_AUTOMATION_WORKFLOWS_HTML_URL &&
@@ -1482,6 +1493,8 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_HTML_URL) &&
@@ -1554,6 +1567,8 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       mcpToolsDiscovery?.conversion_urls?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      mcpToolsDiscovery?.conversion_urls?.external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      mcpToolsDiscovery?.conversion_urls?.external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       mcpToolsDiscovery?.conversion_urls?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.automation_workflows_html === MCP_AUTOMATION_WORKFLOWS_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.n8n_workflow_import === MCP_N8N_WORKFLOW_JSON_URL &&
@@ -1607,6 +1622,8 @@ async function liveMcpCheck() {
       marketplaceManifest?.discovery?.tracked_run_codex_generic === "https://mcp.packrift.com/r/run/generic/codex" &&
       marketplaceManifest?.discovery?.mcp_external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       marketplaceManifest?.discovery?.mcp_external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      marketplaceManifest?.discovery?.mcp_external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      marketplaceManifest?.discovery?.mcp_external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_template === "https://mcp.packrift.com/r/activate/{source}?format=sh" &&
       marketplaceManifest?.discovery?.tracked_reviewer_activation_shell_generic === "https://mcp.packrift.com/r/activate/generic?format=sh" &&
       llmsTxtResult.ok &&
@@ -2833,7 +2850,7 @@ async function liveMcpCheck() {
       activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
       activationWaveRunnerResult.text.includes("/r/run/") &&
       activationWaveRunnerResult.text.includes("format=sh") &&
-      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R07" &&
+      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R08" &&
       externalActivationBrief?.canonical_endpoint === MCP_ENDPOINT &&
       externalActivationBrief?.activation_wave_release === activationWave?.release &&
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
@@ -2899,6 +2916,36 @@ async function liveMcpCheck() {
       externalActivationBriefTasksCsvResult.text.includes("copy_ready_codex_command") &&
       externalActivationBriefTasksCsvResult.text.includes("fast_activation_path_required_final_tool") &&
       externalActivationBriefTasksCsvResult.text.includes("review_handoff_primary_surface") &&
+      externalActivationBrief?.proof_urls?.external_activation_brief_tasks_compact_jsonl ===
+        MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      externalActivationBrief?.proof_urls?.external_activation_brief_tasks_compact_csv ===
+        MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
+      externalActivationBriefMarkdownResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL) &&
+      externalActivationBriefMarkdownResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL) &&
+      externalActivationBriefHtmlResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL) &&
+      externalActivationBriefHtmlResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL) &&
+      externalActivationBriefCompactTaskRows.length === externalActivationBrief?.selected_external_run_count &&
+      externalActivationBriefCompactTasksJsonlResult.ok &&
+      externalActivationBriefCompactTasksJsonlResult.text.includes("no_duplicate_work_rule") &&
+      !externalActivationBriefCompactTasksJsonlResult.text.includes("copy_ready_generic_mcp_json") &&
+      !externalActivationBriefCompactTasksJsonlResult.text.includes("copy_ready_curl_script") &&
+      externalActivationBriefCompactTaskRows.every(
+        (task) =>
+          task.release === externalActivationBrief?.release &&
+          task.source &&
+          task.primary_action_url?.startsWith("https://mcp.packrift.com/") &&
+          task.tracked_first_run_shell_url?.includes("format=sh") &&
+          task.one_command_external_runner?.includes("/r/run/") &&
+          task.eval_pack_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-eval-pack.json?source=") &&
+          task.directory_update_card_json_url?.startsWith("https://mcp.packrift.com/ai/mcp-directory-update/") &&
+          task.review_handoff_primary_surface &&
+          task.short_request &&
+          task.no_duplicate_work_rule?.includes("Do not create a duplicate CLI")
+      ) &&
+      externalActivationBriefCompactTasksCsvResult.ok &&
+      externalActivationBriefCompactTasksCsvResult.text.includes("release,generated_at,selected_rank,wave_rank,source,preferred_target,priority,activation_status") &&
+      externalActivationBriefCompactTasksCsvResult.text.includes("no_duplicate_work_rule") &&
+      !externalActivationBriefCompactTasksCsvResult.text.includes("copy_ready_codex_command") &&
       externalActivationBrief?.selection_rule?.includes("handoff readiness") &&
       externalActivationBrief?.selected_external_runs?.every(
         (task) =>
@@ -3578,7 +3625,7 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.activation_readiness?.suppressions?.some((rule) => String(rule).includes("Do not count Packrift self-checks")) &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Activation proof loop") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R28" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R29" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreachHtml.includes("Packrift Agent Capture Outreach") &&
       agentCaptureOutreachHtml.includes("Use This, Not A Duplicate Surface") &&
@@ -3587,13 +3634,15 @@ async function liveMcpCheck() {
       agentCaptureOutreachHtml.includes("External brief") &&
       agentCaptureOutreachHtml.includes("Task JSONL") &&
       agentCaptureOutreachHtml.includes("Task CSV") &&
+      agentCaptureOutreachHtml.includes("Compact JSONL") &&
+      agentCaptureOutreachHtml.includes("Compact CSV") &&
       agentCaptureOutreachHtml.includes("Selected runner") &&
       agentCaptureOutreachHtml.includes("Acceptance check") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
       agentCaptureOutreach?.directory_refreshes?.every((action) => action.concise_email?.release === "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R02") &&
       agentCaptureOutreach?.directory_refreshes?.some((action) => action.id === "glama_server_listing" && action.source_release_readiness?.status === "ready_for_glama_admin_release") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R28" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R29" &&
       agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R50" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
@@ -3604,6 +3653,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
@@ -3626,6 +3677,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.agent_install_snippets?.mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       agentCaptureOutreach?.agent_install_snippets?.mcp_external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       agentCaptureOutreach?.agent_install_snippets?.mcp_external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      agentCaptureOutreach?.agent_install_snippets?.mcp_external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      agentCaptureOutreach?.agent_install_snippets?.mcp_external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       agentCaptureOutreach?.agent_install_snippets?.mcp_external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.evidence?.mcp_source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       agentCaptureOutreach?.evidence?.mcp_revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
@@ -3638,6 +3691,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.evidence?.mcp_external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       agentCaptureOutreach?.evidence?.mcp_external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       agentCaptureOutreach?.evidence?.mcp_external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      agentCaptureOutreach?.evidence?.mcp_external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      agentCaptureOutreach?.evidence?.mcp_external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       agentCaptureOutreach?.evidence?.mcp_external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.evidence?.mcp_order_handoff_mcp_so === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       agentCaptureOutreach?.evidence?.mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
@@ -3650,6 +3705,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.directory_submit_actions?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       agentCaptureOutreach?.directory_submit_actions?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       agentCaptureOutreach?.directory_submit_actions?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      agentCaptureOutreach?.directory_submit_actions?.external_activation_brief_tasks_compact_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL &&
+      agentCaptureOutreach?.directory_submit_actions?.external_activation_brief_tasks_compact_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_order_handoff_template === "https://mcp.packrift.com/r/order/{source}" &&
       agentCaptureOutreach?.browser_assisted_submissions?.mcp_so?.submission_url === "https://github.com/chatmcp/mcpso/issues/2189" &&
       agentCaptureOutreach?.browser_assisted_submissions?.mcp_so?.buyer_order_handoff === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
@@ -3723,6 +3780,8 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL) &&
+      resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL) &&
       resourceUris.has(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-buyer-use-cases.md") &&

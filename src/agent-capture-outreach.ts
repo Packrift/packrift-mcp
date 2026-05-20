@@ -57,6 +57,8 @@ const EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-
 const EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
 const EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl";
 const EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv";
+const EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL = `${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL}?compact=1`;
+const EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL = `${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}?compact=1`;
 const EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
@@ -168,6 +170,8 @@ function agentInstallSnippets() {
     mcp_eval_pack: MCP_EVAL_PACK_URL,
     mcp_external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
     mcp_external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+    mcp_external_activation_brief_tasks_compact_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
+    mcp_external_activation_brief_tasks_compact_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
     mcp_external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
     docker_optional_only: "docker pull ghcr.io/packrift/packrift-mcp:latest",
   };
@@ -392,6 +396,8 @@ function evidenceLinks() {
     mcp_external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
     mcp_external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
     mcp_external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+    mcp_external_activation_brief_tasks_compact_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
+    mcp_external_activation_brief_tasks_compact_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
     mcp_external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
     mcp_usage_snapshot: USAGE_SNAPSHOT_URL,
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
@@ -518,7 +524,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R28",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R29",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -557,6 +563,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
       external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+      external_activation_brief_tasks_compact_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
+      external_activation_brief_tasks_compact_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
     },
@@ -575,6 +583,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
         external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
         external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
+        external_activation_brief_tasks_compact_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
+        external_activation_brief_tasks_compact_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
         external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
@@ -617,7 +627,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       "Use tracked /r/order/{source}?format=html buyer/reviewer handoffs after real MCP tool-call and cart proof when the next missing event is a source-attributed order.",
       "Use the eval pack when a host, marketplace, or reviewer needs copy-ready acceptance cases for a real external MCP install.",
       "Use the source activation queue to pick the next source-specific run that moves starts, installs, tool calls, cart landings, and orders forward.",
-      "Use the external activation brief and selected-task JSONL/CSV feeds when a reviewer, agent host, or automation platform needs the smallest current set of real external MCP runs to move the material tool-call gate.",
+      "Use the external activation brief and selected-task JSONL/CSV feeds when a reviewer, agent host, or automation platform needs the smallest current set of real external MCP runs to move the material tool-call gate; use compact=1 when the handoff needs a short action queue instead of full copy-ready scripts.",
       "Use the revenue conversion queue only for mature sources that already have real MCP tool-call and qualified cart-landing proof.",
       "Use the buyer order handoffs hub when the next missing proof is a real buyer or reviewer opening a source-preserving checkout handoff.",
       "Use the start page for first install, the install matrix for host-specific setup, and the workflow gallery for demo/eval flows.",
@@ -675,6 +685,8 @@ export function agentCaptureOutreachHtml(runtime: AgentCaptureOutreachRuntime): 
     ["External brief", payload.evidence.mcp_external_activation_brief_html, ""],
     ["Task JSONL", payload.evidence.mcp_external_activation_brief_tasks_jsonl, ""],
     ["Task CSV", payload.evidence.mcp_external_activation_brief_tasks_csv, ""],
+    ["Compact JSONL", payload.evidence.mcp_external_activation_brief_tasks_compact_jsonl, ""],
+    ["Compact CSV", payload.evidence.mcp_external_activation_brief_tasks_compact_csv, ""],
     ["Selected runner", payload.evidence.mcp_external_activation_brief_runner_shell, "primary"],
     ["Revenue queue", payload.evidence.mcp_revenue_conversion_queue_html, "warn"],
     ["Buyer handoffs", payload.evidence.mcp_buyer_order_handoffs_html, "warn"],
