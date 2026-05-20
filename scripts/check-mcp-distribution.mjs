@@ -986,6 +986,12 @@ async function liveMcpCheck() {
     install_html: hasMcpPageAnalytics(trackedInstallCodexHtmlResult.text, "mcp_install"),
     first_run_html: hasMcpPageAnalytics(trackedFirstRunHtmlResult.text, "mcp_first_run"),
     activation_html: hasMcpPageAnalytics(trackedReviewerActivationHtmlResult.text, "mcp_activation"),
+    source_activation_queue_html: hasMcpPageAnalytics(sourceActivationQueueHtmlResult.text, "mcp_source_activation_queue"),
+    source_activation_packet_html: hasMcpPageAnalytics(sourceActivationClineHtmlResult.text, "mcp_source_activation_packet"),
+    activation_experiments_html: hasMcpPageAnalytics(activationExperimentsHtmlResult.text, "mcp_activation_experiments"),
+    activation_wave_html: hasMcpPageAnalytics(activationWaveHtmlResult.text, "mcp_activation_wave"),
+    external_activation_brief_html: hasMcpPageAnalytics(externalActivationBriefHtmlResult.text, "mcp_external_activation_brief"),
+    agent_adoption_progress_html: hasMcpPageAnalytics(agentAdoptionProgressHtmlResult.text, "mcp_agent_adoption_progress"),
     order_handoff_html: hasMcpPageAnalytics(trackedOrderMcpSoHtmlResult.text, "mcp_order_handoff", [
       "utm_source=chatgpt-mcp",
       "utm_medium=mcp_tool",

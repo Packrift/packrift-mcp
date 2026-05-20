@@ -6897,6 +6897,7 @@ function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload):
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Activation Command Center</title>
   <meta name="description" content="Source-ranked Packrift MCP activation queue with one-click real MCP runner links for moving installs and proofs into measured cart handoff.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_source_activation_queue", source: "operator", target: "source_activation", utmCampaign: "packrift_mcp_source_activation_queue" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--amber:#96610f;--red:#9f2d20}
     *{box-sizing:border-box}
@@ -8396,6 +8397,7 @@ function mcpSourceActivationPacketHtml(payload: NonNullable<ReturnType<typeof mc
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Source Activation</title>
   <meta name="description" content="Focused Packrift MCP source activation packet for real MCP host runs, tool-call proof, and measured cart handoff.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_source_activation_packet", source: payload.source, target: payload.preferred_target, utmCampaign: "packrift_mcp_source_activation_packet" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--red:#9f2d20}
     *{box-sizing:border-box}
@@ -8621,6 +8623,7 @@ function mcpActivationExperimentsHtml(payload: Awaited<ReturnType<typeof mcpActi
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Activation Experiments</title>
   <meta name="description" content="Source-specific Packrift MCP activation experiments tied to external proof gates, snapshot deltas, and suppression rules.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_activation_experiments", source: "operator", target: "source_activation", utmCampaign: "packrift_mcp_activation_experiments" })}
   <style>
     :root{color-scheme:light;--ink:#18211e;--muted:#5b6964;--line:#d8ded9;--paper:#f6f7f4;--panel:#fff;--green:#0d684c;--blue:#245f9b;--red:#9f2d20;--amber:#8c6218}
     *{box-sizing:border-box}
@@ -9276,6 +9279,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Activation Wave</title>
   <meta name="description" content="Source-aware Packrift MCP activation wave for pushing real external MCP tool calls toward the 50+ material usage gate.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_activation_wave", source: "operator", target: "source_activation", utmCampaign: "packrift_mcp_activation_wave" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--red:#9f2d20;--amber:#8c6218}
     *{box-sizing:border-box}
@@ -9639,6 +9643,7 @@ function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPaylo
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP External Activation Brief</title>
   <meta name="description" content="Compact Packrift MCP external activation brief for real host-side MCP tool-call runs.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_external_activation_brief", source: "operator", target: "external_activation", utmCampaign: "packrift_mcp_external_activation_brief" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#5b6861;--line:#d9dfda;--paper:#f7f8f5;--panel:#fff;--green:#0e684d;--blue:#225c96;--red:#98291d}
     *{box-sizing:border-box}
@@ -10596,6 +10601,7 @@ function mcpAgentAdoptionProgressHtml(payload: Awaited<ReturnType<typeof mcpAgen
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Agent Adoption Progress</title>
   <meta name="description" content="${escapeHtml(payload.purpose)}">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_agent_adoption_progress", source: "operator", target: "adoption_progress", utmCampaign: "packrift_mcp_agent_adoption_progress" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--red:#9f2d20;--amber:#96610f}
     *{box-sizing:border-box}
