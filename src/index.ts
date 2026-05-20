@@ -5565,14 +5565,49 @@ function publicMcpDerivedResourceKvKey(kind: string, key: string): string {
   return `${PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX}${kind}:${key}`;
 }
 
+function publicMcpDerivedResourceEdgeCacheRequest(kind: string, key: string): Request | null {
+  if (typeof caches === "undefined") return null;
+  const url = new URL(`https://mcp.packrift.com/__packrift-cache/public-mcp-derived-resource/${kind}`);
+  url.searchParams.set("key", key);
+  return new Request(url.toString(), { method: "GET" });
+}
+
+function publicMcpDerivedResourceCacheResponse(body: string): Response {
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": `public, max-age=${PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS}`,
+    },
+  });
+}
+
+function parsedPublicMcpDerivedResourceCacheRecord<T>(value: unknown): PublicMcpDerivedResourceCacheRecord<T> | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as PublicMcpDerivedResourceCacheRecord<T>;
+  if (record.release !== PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE) return null;
+  return record;
+}
+
 async function readPublicMcpDerivedResourceCache<T>(env: Env, kind: string, key: string): Promise<T | null> {
+  const edgeRequest = publicMcpDerivedResourceEdgeCacheRequest(kind, key);
+  const edgeCache = edgeRequest && typeof caches !== "undefined" ? caches.default : null;
+  try {
+    const edgeResponse = edgeCache && edgeRequest ? await edgeCache.match(edgeRequest) : null;
+    const edgeRecord = edgeResponse ? parsedPublicMcpDerivedResourceCacheRecord<T>(await edgeResponse.json()) : null;
+    if (edgeRecord) return edgeRecord.payload ?? null;
+  } catch {
+    // Edge cache misses should fall through to KV.
+  }
   try {
     const cached = await env.CATALOG_CACHE.get<PublicMcpDerivedResourceCacheRecord<T>>(
       publicMcpDerivedResourceKvKey(kind, key),
       "json"
     );
-    if (cached?.release !== PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE) return null;
-    return cached.payload ?? null;
+    const record = parsedPublicMcpDerivedResourceCacheRecord<T>(cached);
+    if (!record) return null;
+    if (edgeCache && edgeRequest) await edgeCache.put(edgeRequest, publicMcpDerivedResourceCacheResponse(JSON.stringify(record)));
+    return record.payload ?? null;
   } catch {
     return null;
   }
@@ -5584,8 +5619,16 @@ async function writePublicMcpDerivedResourceCache<T>(env: Env, kind: string, key
     cached_at: new Date().toISOString(),
     payload,
   };
+  const body = JSON.stringify(record);
+  const edgeRequest = publicMcpDerivedResourceEdgeCacheRequest(kind, key);
+  const edgeCache = edgeRequest && typeof caches !== "undefined" ? caches.default : null;
   try {
-    await env.CATALOG_CACHE.put(publicMcpDerivedResourceKvKey(kind, key), JSON.stringify(record), {
+    if (edgeCache && edgeRequest) await edgeCache.put(edgeRequest, publicMcpDerivedResourceCacheResponse(body));
+  } catch {
+    // KV remains the cross-isolate fallback if edge cache storage fails.
+  }
+  try {
+    await env.CATALOG_CACHE.put(publicMcpDerivedResourceKvKey(kind, key), body, {
       expirationTtl: PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS,
     });
   } catch {
