@@ -1159,7 +1159,10 @@ const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_USAGE_EVENT_LIMIT_MAX = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_PACKET_EVENT_LIMIT = 1000;
-const MCP_ACTIVATION_EXPERIMENTS_CACHE_MS = 5 * 60 * 1000;
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE = "PACKRIFT-PUBLIC-MCP-DERIVED-RESOURCE-CACHE-R01";
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS = 5 * 60;
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS = PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS * 1000;
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX = "cache:public-mcp-derived-resource:r01:";
 const PUBLIC_MCP_FUNNEL_EVENT_LIMIT = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT;
 const PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS = 2;
 const PUBLIC_MCP_OPERATOR_EVENT_LIMIT = 20000;
@@ -5550,7 +5553,45 @@ async function mcpSourceActivationQueuePayload(
   };
 }
 
-function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcpSourceActivationQueuePayload>>): string {
+type McpSourceActivationQueuePayload = Awaited<ReturnType<typeof mcpSourceActivationQueuePayload>>;
+
+let mcpSourceActivationQueuePayloadCache:
+  | {
+      key: string;
+      expiresAtMs: number;
+      promise: Promise<McpSourceActivationQueuePayload>;
+    }
+  | null = null;
+
+function mcpSourceActivationQueueCacheKey(date: string, limit: number, orderDays: number, orderLimit: number): string {
+  return `${date}:${limit}:${orderDays}:${orderLimit}`;
+}
+
+function cachedMcpSourceActivationQueuePayload(
+  env: Env,
+  date: string,
+  limit: number,
+  orderDays: number,
+  orderLimit: number
+): Promise<McpSourceActivationQueuePayload> {
+  const key = mcpSourceActivationQueueCacheKey(date, limit, orderDays, orderLimit);
+  const now = Date.now();
+  if (mcpSourceActivationQueuePayloadCache?.key === key && mcpSourceActivationQueuePayloadCache.expiresAtMs > now) {
+    return mcpSourceActivationQueuePayloadCache.promise;
+  }
+  const promise = mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+    if (mcpSourceActivationQueuePayloadCache?.promise === promise) mcpSourceActivationQueuePayloadCache = null;
+    throw error;
+  });
+  mcpSourceActivationQueuePayloadCache = {
+    key,
+    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    promise,
+  };
+  return promise;
+}
+
+function mcpSourceActivationQueueMarkdown(payload: McpSourceActivationQueuePayload): string {
   return [
     "# Packrift MCP Source Activation Queue",
     "",
@@ -5624,7 +5665,7 @@ function mcpSourceActivationQueueMarkdown(payload: Awaited<ReturnType<typeof mcp
   ].join("\n");
 }
 
-function mcpSourceActivationQueueHtml(payload: Awaited<ReturnType<typeof mcpSourceActivationQueuePayload>>): string {
+function mcpSourceActivationQueueHtml(payload: McpSourceActivationQueuePayload): string {
   const criticalRows = payload.queue.filter((row) => row.priority === "critical");
   const rows = (criticalRows.length ? criticalRows : payload.queue).slice(0, 12);
   const queueCards = rows
@@ -5916,7 +5957,7 @@ async function mcpRevenueConversionQueuePayload(
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
-  const sourceQueue = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+  const sourceQueue = await cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const rows = revenueConversionQueueRows(sourceQueue.queue);
   return {
     release: MCP_REVENUE_CONVERSION_QUEUE_RELEASE,
@@ -6012,7 +6053,7 @@ function cachedMcpRevenueConversionQueuePayload(
   });
   mcpRevenueConversionQueuePayloadCache = {
     key,
-    expiresAtMs: now + MCP_ACTIVATION_EXPERIMENTS_CACHE_MS,
+    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
     promise,
   };
   return promise;
@@ -6453,7 +6494,7 @@ async function mcpActivationExperimentsPayload(
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
-  const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+  const queuePayload = await cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const experiments = sourceActivationExperimentRows(queuePayload.queue);
   return {
     release: "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R13",
@@ -6535,7 +6576,7 @@ function cachedMcpActivationExperimentsPayload(
   });
   mcpActivationExperimentsPayloadCache = {
     key,
-    expiresAtMs: now + MCP_ACTIVATION_EXPERIMENTS_CACHE_MS,
+    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
     promise,
   };
   return promise;
@@ -7412,7 +7453,7 @@ async function mcpActivationWavePayload(
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
   orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
 ) {
-  const queuePayload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+  const queuePayload = await cachedMcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
   const candidateRows = activationWaveCandidateRows(queuePayload.queue as SourceActivationExperimentQueueRow[]);
   const externalQualifiedToolCalls = Number(queuePayload.source_snapshot.external_qualified_mcp_tool_calls ?? 0);
   const materialToolUsageThreshold = 50;
@@ -7509,7 +7550,45 @@ async function mcpActivationWavePayload(
   };
 }
 
-function mcpActivationWaveRunnerShell(payload: Awaited<ReturnType<typeof mcpActivationWavePayload>>): string {
+type McpActivationWavePayload = Awaited<ReturnType<typeof mcpActivationWavePayload>>;
+
+let mcpActivationWavePayloadCache:
+  | {
+      key: string;
+      expiresAtMs: number;
+      promise: Promise<McpActivationWavePayload>;
+    }
+  | null = null;
+
+function mcpActivationWaveCacheKey(date: string, limit: number, orderDays: number, orderLimit: number): string {
+  return `${date}:${limit}:${orderDays}:${orderLimit}`;
+}
+
+function cachedMcpActivationWavePayload(
+  env: Env,
+  date: string,
+  limit: number,
+  orderDays: number,
+  orderLimit: number
+): Promise<McpActivationWavePayload> {
+  const key = mcpActivationWaveCacheKey(date, limit, orderDays, orderLimit);
+  const now = Date.now();
+  if (mcpActivationWavePayloadCache?.key === key && mcpActivationWavePayloadCache.expiresAtMs > now) {
+    return mcpActivationWavePayloadCache.promise;
+  }
+  const promise = mcpActivationWavePayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+    if (mcpActivationWavePayloadCache?.promise === promise) mcpActivationWavePayloadCache = null;
+    throw error;
+  });
+  mcpActivationWavePayloadCache = {
+    key,
+    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    promise,
+  };
+  return promise;
+}
+
+function mcpActivationWaveRunnerShell(payload: McpActivationWavePayload): string {
   const shellTaskLines = (tasks: typeof payload.wave_tasks) =>
     tasks
       .map((task) =>
@@ -10853,9 +10932,9 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-agent-adoption-progress.json") return JSON.stringify(await mcpAgentAdoptionProgressPayload(env), null, 2);
   if (pathname === "/ai/mcp-agent-adoption-progress.md") return mcpAgentAdoptionProgressMarkdown(await mcpAgentAdoptionProgressPayload(env));
   if (pathname === "/ai/mcp-agent-adoption-progress.html") return mcpAgentAdoptionProgressHtml(await mcpAgentAdoptionProgressPayload(env));
-  if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await mcpSourceActivationQueuePayload(env), null, 2);
-  if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(env));
-  if (pathname === "/ai/mcp-source-activation-queue.html") return mcpSourceActivationQueueHtml(await mcpSourceActivationQueuePayload(env));
+  if (pathname === "/ai/mcp-source-activation-queue.json") return JSON.stringify(await cachedMcpSourceActivationQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT), null, 2);
+  if (pathname === "/ai/mcp-source-activation-queue.md") return mcpSourceActivationQueueMarkdown(await cachedMcpSourceActivationQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-source-activation-queue.html") return mcpSourceActivationQueueHtml(await cachedMcpSourceActivationQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
   if (pathname === "/ai/mcp-revenue-conversion-queue.json") return JSON.stringify(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT), null, 2);
   if (pathname === "/ai/mcp-revenue-conversion-queue.md") return mcpRevenueConversionQueueMarkdown(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
   if (pathname === "/ai/mcp-revenue-conversion-queue.html") return mcpRevenueConversionQueueHtml(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
@@ -10863,22 +10942,22 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (sourceActivationPacketMatch) {
     const source = sourceActivationPacketMatch[1] ?? "";
     const format = sourceActivationPacketMatch[2] ?? "json";
-    const packet = mcpSourceActivationPacketPayload(await mcpActivationExperimentsPayload(env), source);
+    const packet = mcpSourceActivationPacketPayload(await cachedMcpActivationExperimentsPayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT), source);
     if (!packet) throw new Error(`No source activation packet found for source: ${source}`);
     if (format === "html") return mcpSourceActivationPacketHtml(packet);
     if (format === "md") return mcpSourceActivationPacketMarkdown(packet);
     return JSON.stringify(packet, null, 2);
   }
   if (pathname === "/ai/mcp-source-activation-sitemap.xml") return sourceActivationSitemapXml();
-  if (pathname === "/ai/mcp-activation-experiments.json") return JSON.stringify(await mcpActivationExperimentsPayload(env), null, 2);
-  if (pathname === "/ai/mcp-activation-experiments.md") return mcpActivationExperimentsMarkdown(await mcpActivationExperimentsPayload(env));
-  if (pathname === "/ai/mcp-activation-experiments.html") return mcpActivationExperimentsHtml(await mcpActivationExperimentsPayload(env));
-  if (pathname === "/ai/mcp-activation-wave.json") return JSON.stringify(await mcpActivationWavePayload(env), null, 2);
-  if (pathname === "/ai/mcp-activation-wave.md") return mcpActivationWaveMarkdown(await mcpActivationWavePayload(env));
-  if (pathname === "/ai/mcp-activation-wave.html") return mcpActivationWaveHtml(await mcpActivationWavePayload(env));
-  if (pathname === "/ai/mcp-activation-wave-tasks.jsonl") return mcpActivationWaveTasksJsonl(await mcpActivationWavePayload(env));
-  if (pathname === "/ai/mcp-activation-wave-tasks.csv") return mcpActivationWaveTasksCsv(await mcpActivationWavePayload(env));
-  if (pathname === "/ai/mcp-activation-wave-runner.sh") return mcpActivationWaveRunnerShell(await mcpActivationWavePayload(env));
+  if (pathname === "/ai/mcp-activation-experiments.json") return JSON.stringify(await cachedMcpActivationExperimentsPayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT), null, 2);
+  if (pathname === "/ai/mcp-activation-experiments.md") return mcpActivationExperimentsMarkdown(await cachedMcpActivationExperimentsPayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-activation-experiments.html") return mcpActivationExperimentsHtml(await cachedMcpActivationExperimentsPayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-activation-wave.json") return JSON.stringify(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT), null, 2);
+  if (pathname === "/ai/mcp-activation-wave.md") return mcpActivationWaveMarkdown(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-activation-wave.html") return mcpActivationWaveHtml(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-activation-wave-tasks.jsonl") return mcpActivationWaveTasksJsonl(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-activation-wave-tasks.csv") return mcpActivationWaveTasksCsv(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
+  if (pathname === "/ai/mcp-activation-wave-runner.sh") return mcpActivationWaveRunnerShell(await cachedMcpActivationWavePayload(env, todayUtc(), PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT, PUBLIC_MCP_DEFAULT_ORDER_DAYS, PUBLIC_MCP_DEFAULT_ORDER_LIMIT));
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-buyer-use-cases.html") return mcpBuyerUseCasesHtml(buyerUseCasesRuntime());
@@ -13276,7 +13355,7 @@ app.get("/ai/mcp-source-activation-queue.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit);
+  const payload = await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit);
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.json", "mcp_source_activation_queue", jsonByteSize(payload));
   return c.json(payload, 200, RAW_HEADERS);
 });
@@ -13290,7 +13369,7 @@ app.get("/ai/mcp-source-activation-queue.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpSourceActivationQueueMarkdown(await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpSourceActivationQueueMarkdown(await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.md", "mcp_source_activation_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
@@ -13307,7 +13386,7 @@ app.get("/ai/mcp-source-activation-queue.html", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpSourceActivationQueueHtml(await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpSourceActivationQueueHtml(await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-source-activation-queue.html", "mcp_source_activation_queue", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
@@ -13453,7 +13532,7 @@ app.get("/ai/mcp-activation-experiments.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await mcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit);
+  const payload = await cachedMcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit);
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-experiments.json", "mcp_activation_experiments", jsonByteSize(payload));
   return c.json(payload, 200, RAW_HEADERS);
 });
@@ -13467,7 +13546,7 @@ app.get("/ai/mcp-activation-experiments.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationExperimentsMarkdown(await mcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationExperimentsMarkdown(await cachedMcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-experiments.md", "mcp_activation_experiments", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
@@ -13484,7 +13563,7 @@ app.get("/ai/mcp-activation-experiments.html", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationExperimentsHtml(await mcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationExperimentsHtml(await cachedMcpActivationExperimentsPayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-experiments.html", "mcp_activation_experiments", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
@@ -13501,7 +13580,7 @@ app.get("/ai/mcp-activation-wave.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit);
+  const payload = await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit);
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave.json", "mcp_activation_wave", jsonByteSize(payload));
   return c.json(payload, 200, RAW_HEADERS);
 });
@@ -13515,7 +13594,7 @@ app.get("/ai/mcp-activation-wave.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationWaveMarkdown(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationWaveMarkdown(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave.md", "mcp_activation_wave", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
@@ -13532,7 +13611,7 @@ app.get("/ai/mcp-activation-wave.html", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationWaveHtml(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationWaveHtml(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave.html", "mcp_activation_wave", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
@@ -13549,7 +13628,7 @@ app.get("/ai/mcp-activation-wave-tasks.jsonl", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationWaveTasksJsonl(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationWaveTasksJsonl(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave-tasks.jsonl", "mcp_activation_wave_tasks", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "application/x-ndjson; charset=utf-8",
@@ -13566,7 +13645,7 @@ app.get("/ai/mcp-activation-wave-tasks.csv", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationWaveTasksCsv(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationWaveTasksCsv(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave-tasks.csv", "mcp_activation_wave_tasks", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/csv; charset=utf-8",
@@ -13583,7 +13662,7 @@ app.get("/ai/mcp-activation-wave-runner.sh", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const body = mcpActivationWaveRunnerShell(await mcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
+  const body = mcpActivationWaveRunnerShell(await cachedMcpActivationWavePayload(c.env, date, limit, orderDays, orderLimit));
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-activation-wave-runner.sh", "mcp_activation_wave_runner", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/x-shellscript; charset=utf-8",
@@ -14415,7 +14494,7 @@ app.get("/r/activate", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await mcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit);
+  const payload = await cachedMcpSourceActivationQueuePayload(c.env, date, limit, orderDays, orderLimit);
   const format = (requestUrl.searchParams.get("format") ?? "").toLowerCase();
   const accept = c.req.header("Accept") ?? "";
   const wantsHtml = format === "html" || (!format && accept.toLowerCase().includes("text/html") && !wantsJson(accept));

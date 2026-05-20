@@ -460,6 +460,7 @@ async function liveMcpCheck() {
     trackedInstallClineHtmlResult,
     trackedFirstRunGenericResult,
     trackedFirstRunHtmlResult,
+    trackedFirstRunClineJsonResult,
     trackedFirstRunClineHtmlResult,
     trackedFirstRunExecuteResult,
     usageSnapshotResult,
@@ -582,6 +583,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=sh&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/cline_mcp_marketplace/cline?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/run/generic/generic_streamable_http?execute=1&format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/ai/mcp-usage-snapshot.json"),
@@ -1246,6 +1248,8 @@ async function liveMcpCheck() {
       trackedFirstRunGenericResult.ok &&
       trackedFirstRunGenericResult.text.includes("create_cart_url") &&
       trackedFirstRunGenericResult.text.includes("packrift_mcp_source=generic") &&
+      trackedFirstRunGenericResult.text.includes("mcp_source_context") &&
+      trackedFirstRunGenericResult.text.includes("mcp_install_target") &&
       trackedFirstRunGenericResult.text.includes("MCP-First-Run/1.1") &&
       trackedFirstRunHtmlResult.ok &&
       trackedFirstRunHtmlResult.text.includes("Packrift MCP First Run") &&
@@ -1490,8 +1494,14 @@ async function liveMcpCheck() {
       clientConfig?.aliases?.source_aware_examples?.cline_mcp_marketplace?.cline_mcp_json?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=cline") &&
       clientConfig?.host_notes?.some((note) => String(note).includes("aliases.source_aware_examples")) &&
       trackedFirstRunClineHtmlResult.ok &&
+      trackedFirstRunClineJsonResult.ok &&
+      trackedFirstRunClineJsonResult.text.includes('"mcp_source_context":"cline_mcp_marketplace"') &&
+      trackedFirstRunClineJsonResult.text.includes('"mcp_install_target":"cline"') &&
+      trackedFirstRunClineJsonResult.text.includes("mcp_source_context") &&
       trackedFirstRunClineHtmlResult.text.includes("Packrift MCP First Run") &&
       trackedFirstRunClineHtmlResult.text.includes("packrift_mcp_target=cline") &&
+      trackedFirstRunClineHtmlResult.text.includes("mcp_source_context") &&
+      trackedFirstRunClineHtmlResult.text.includes("mcp_install_target") &&
       clientConfig?.config?.mcpServers?.packrift?.url === MCP_ENDPOINT &&
       clientConfig?.first_useful_run?.sequence?.some((step) => step?.params?.name === "create_cart_url") &&
       clientConfig?.first_useful_run?.curl_script?.includes("create_cart_url") &&

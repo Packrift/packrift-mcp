@@ -277,7 +277,7 @@ function firstUsefulRunAgentPrompt(input: {
     `2. Call get_cart_handoff_candidates with sku="${FIRST_USEFUL_RUN_SKU.sku}", limit=1, source_context="${input.sourceContext}", journey_id="${input.journeyId}", and result_set_id="${input.resultSetId}".`,
     `3. Call get_pricing with variant_ids=["${FIRST_USEFUL_RUN_SKU.variantId}"], quantity=1, selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", match_type="agent_prompt_first_run", source_context="${input.sourceContext}", journey_id="${input.journeyId}", and result_set_id="${input.resultSetId}".`,
     `4. Call check_inventory with variant_ids=["${FIRST_USEFUL_RUN_SKU.variantId}"], selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", match_type="agent_prompt_first_run", source_context="${input.sourceContext}", journey_id="${input.journeyId}", and result_set_id="${input.resultSetId}".`,
-    `5. If the live checks pass, call create_cart_url with sku="${FIRST_USEFUL_RUN_SKU.sku}", quantity=1, selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", match_type="agent_prompt_first_run", source_context="${input.sourceContext}", journey_id="${input.journeyId}", result_set_id="${input.resultSetId}", and utm_term="${FIRST_USEFUL_RUN_SKU.sku}".`,
+    `5. If the live checks pass, call create_cart_url with sku="${FIRST_USEFUL_RUN_SKU.sku}", quantity=1, selected_sku="${FIRST_USEFUL_RUN_SKU.sku}", selected_handle="${FIRST_USEFUL_RUN_SKU.handle}", match_type="agent_prompt_first_run", source_context="${input.sourceContext}", mcp_source_context="${input.sourceSlug}", mcp_install_target="${input.targetSlug}", journey_id="${input.journeyId}", result_set_id="${input.resultSetId}", and utm_term="${FIRST_USEFUL_RUN_SKU.sku}".`,
     "",
     "Return the product title, live unit price and currency, inventory status, and the measured cart URL.",
     `Success requires a cart URL starting with https://mcp.packrift.com/r/cart/${FIRST_USEFUL_RUN_SKU.sku}.`,
@@ -298,6 +298,11 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
     source_context: sourceContext,
     journey_id: journeyId,
     result_set_id: resultSetId,
+  };
+  const cartAttributionArgs = {
+    ...attributionArgs,
+    mcp_source_context: sourceSlug,
+    mcp_install_target: targetSlug,
   };
   const sequence = [
     { jsonrpc: "2.0", id: "tools", method: "tools/list" },
@@ -323,7 +328,7 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
       selected_sku: FIRST_USEFUL_RUN_SKU.sku,
       selected_handle: FIRST_USEFUL_RUN_SKU.handle,
       match_type: "install_first_useful_run",
-      ...attributionArgs,
+      ...cartAttributionArgs,
       utm_term: FIRST_USEFUL_RUN_SKU.sku,
     }),
   ];
@@ -354,7 +359,7 @@ export function mcpFirstUsefulRun(source = "generic", target = "generic_streamab
       "check_inventory returns in_stock before cart handoff",
       "create_cart_url returns a URL starting with https://mcp.packrift.com/r/cart/1066",
       "curl shell runners open the returned /r/cart URL once to record mcp_cart_landing without following Shopify checkout",
-      "Every tool call carries source_context, journey_id, and result_set_id so source attribution survives MCP hosts that strip endpoint query parameters",
+      "Every tool call carries source_context, journey_id, and result_set_id; create_cart_url also carries mcp_source_context and mcp_install_target so cart attribution survives MCP hosts that strip endpoint query parameters",
       "usage snapshot records a source-attributed create_cart_url tool call when the workflow is run from a tracked install",
     ],
     agent_prompt_success_criteria: [
