@@ -11684,6 +11684,13 @@ async function cachedStaticTextResponse(
   contentType: string
 ): Promise<Response> {
   const url = new URL(c.req.url);
+  const requestCacheControl = c.req.header("Cache-Control") ?? "";
+  const requestPragma = c.req.header("Pragma") ?? "";
+  const bypassEdgeCache =
+    url.searchParams.has("fresh") ||
+    url.searchParams.has("cachebust") ||
+    /\b(no-cache|no-store|max-age=0)\b/i.test(requestCacheControl) ||
+    /\bno-cache\b/i.test(requestPragma);
   if (url.pathname === "/ai/purchase-paths.jsonl") {
     return new Response(purchasePathsJsonl(), {
       status: 200,
@@ -11696,7 +11703,7 @@ async function cachedStaticTextResponse(
   url.search = "";
   const cacheRequest = new Request(url.toString(), { method: "GET" });
   const edgeCache = typeof caches !== "undefined" ? caches.default : null;
-  const cached = edgeCache ? await edgeCache.match(cacheRequest) : null;
+  const cached = edgeCache && !bypassEdgeCache ? await edgeCache.match(cacheRequest) : null;
   if (cached) return cached;
 
   const mirrorKey = `${STATIC_CACHE_MIRROR_PREFIX}${cacheName}`;
@@ -11724,7 +11731,7 @@ async function cachedStaticTextResponse(
       ...RAW_HEADERS,
     },
   });
-  if (edgeCache) await edgeCache.put(cacheRequest, response.clone());
+  if (edgeCache && !bypassEdgeCache) await edgeCache.put(cacheRequest, response.clone());
   return response;
 }
 

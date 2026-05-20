@@ -7,6 +7,8 @@ const REPO_ROOT = process.cwd();
 const OUT_ROOT = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions");
 const PACK_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submission-pack/latest.json");
 const PREVIOUS_PATH = resolve(REPO_ROOT, "outputs/mcp-directory-submit-actions/latest.json");
+const PACKAGE_JSON = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8"));
+const PACKAGE_VERSION = PACKAGE_JSON.version;
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 const TRACKED_RUN_TEMPLATE = "https://mcp.packrift.com/r/run/{source}/{target}";
@@ -122,7 +124,7 @@ const DIRECT_STATUS = {
   mcpbench: {
     status: "monitor_upstream_registry",
     method: "No direct submit endpoint found",
-    evidence: "MCPBench appears registry-derived; the official registry is current at 0.2.10.",
+    evidence: `MCPBench appears registry-derived; the official registry is current at ${PACKAGE_VERSION}.`,
     next_action: "Monitor for registry ingestion; cite the directory refresh pack if requesting a recrawl.",
   },
   chiark: {
