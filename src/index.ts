@@ -9368,7 +9368,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
 </html>`;
 }
 
-const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R02";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R03";
 
 const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<
   string,
@@ -9403,16 +9403,19 @@ const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<
       "Use an authenticated MCPHubz session or a working owner contact route; the public contact form is not a valid submission path.",
   },
   findmcp_dev: {
-    status: "submit_cta_broken",
+    status: "support_draft_ready",
     primary_surface: "https://findmcp.dev/submit",
+    support_email: "hello@coderai.dev",
+    support_url: "https://coderai.dev/",
     next_contact_action:
-      "Find a real contact, repository, or fixed submit endpoint before another activation request; the public submit path currently does not expose a working form.",
+      "Use the existing Gmail draft to hello@coderai.dev as the canonical FindMCP/Coder AI owner handoff; the public submit path currently renders the homepage instead of a working form.",
   },
   mcplane: {
-    status: "validator_rejected_public_repo",
+    status: "validator_rejected_contact_route_identified",
     primary_surface: "https://mcplane.com/mcp_servers/new",
+    support_url: "https://github.com/MCPlane",
     next_contact_action:
-      "Contact MCPLane or retry only after its GitHub validator accepts public organization repositories.",
+      "Use the MCPlane GitHub organization or LinkedIn company page as the public owner route, or retry only after its GitHub validator accepts public organization repositories.",
   },
 };
 
