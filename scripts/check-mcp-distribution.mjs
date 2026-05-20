@@ -955,7 +955,7 @@ async function liveMcpCheck() {
     sourceActivationAnthropic?.preferred_target === "claude_code" &&
     sourceActivationAnthropic?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
     sourceActivationAnthropic?.real_host_run?.first_run_shell_url?.includes("/r/run/anthropic_connectors_directory/claude_code");
-  const sourceActivationHostIntentRowsRequireExternalOk = ["claude_remote_mcp", "codex_remote_mcp", "glama_connector", "mcp_so"].every((source) =>
+  const sourceActivationHostIntentRowsRequireExternalOk = ["claude_remote_mcp", "codex_remote_mcp", "glama_connector"].every((source) =>
     sourceActivationQueue?.queue?.some(
       (row) =>
         row.source === source &&
@@ -965,6 +965,18 @@ async function liveMcpCheck() {
         row.recommended_action?.includes("first-run")
     )
   );
+  const sourceActivationMcpSoExternalOk = sourceActivationQueue?.queue?.some((row) => {
+    if (row.source !== "mcp_so" || row.external_activation_required !== true) return false;
+    if (row.current_counts?.first_run_actions > 0 && row.current_counts?.mcp_tool_calls === 0) {
+      return row.recommended_action?.includes("first-run");
+    }
+    return (
+      row.target_event_to_watch === "mcp_attributed_order" &&
+      row.current_counts?.mcp_tool_calls > 0 &&
+      row.order_conversion_handoff?.status === "order_proof_needed" &&
+      row.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html"
+    );
+  });
   return check(
     "live_mcp_surface",
     health?.version === EXPECTED_VERSION &&
@@ -1819,6 +1831,7 @@ async function liveMcpCheck() {
       Array.isArray(sourceActivationQueue?.queue) &&
       sourceActivationQueue?.queue?.some((row) => row.primary_action_url?.startsWith("https://mcp.packrift.com/r/")) &&
       sourceActivationHostIntentRowsRequireExternalOk &&
+      sourceActivationMcpSoExternalOk &&
       sourceActivationQueue?.queue?.every(
         (row) =>
           row.tracked_first_run_shell_url?.startsWith("https://mcp.packrift.com/r/run/") &&

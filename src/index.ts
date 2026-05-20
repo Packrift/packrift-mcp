@@ -5555,6 +5555,44 @@ async function mcpSourceActivationQueuePayload(
 
 type McpSourceActivationQueuePayload = Awaited<ReturnType<typeof mcpSourceActivationQueuePayload>>;
 
+interface PublicMcpDerivedResourceCacheRecord<T> {
+  release: string;
+  cached_at: string;
+  payload: T;
+}
+
+function publicMcpDerivedResourceKvKey(kind: string, key: string): string {
+  return `${PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX}${kind}:${key}`;
+}
+
+async function readPublicMcpDerivedResourceCache<T>(env: Env, kind: string, key: string): Promise<T | null> {
+  try {
+    const cached = await env.CATALOG_CACHE.get<PublicMcpDerivedResourceCacheRecord<T>>(
+      publicMcpDerivedResourceKvKey(kind, key),
+      "json"
+    );
+    if (cached?.release !== PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE) return null;
+    return cached.payload ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function writePublicMcpDerivedResourceCache<T>(env: Env, kind: string, key: string, payload: T): Promise<void> {
+  const record: PublicMcpDerivedResourceCacheRecord<T> = {
+    release: PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE,
+    cached_at: new Date().toISOString(),
+    payload,
+  };
+  try {
+    await env.CATALOG_CACHE.put(publicMcpDerivedResourceKvKey(kind, key), JSON.stringify(record), {
+      expirationTtl: PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS,
+    });
+  } catch {
+    // KV cache misses should never block public MCP resources.
+  }
+}
+
 let mcpSourceActivationQueuePayloadCache:
   | {
       key: string;
@@ -5579,7 +5617,17 @@ function cachedMcpSourceActivationQueuePayload(
   if (mcpSourceActivationQueuePayloadCache?.key === key && mcpSourceActivationQueuePayloadCache.expiresAtMs > now) {
     return mcpSourceActivationQueuePayloadCache.promise;
   }
-  const promise = mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+  const promise = (async () => {
+    const cached = await readPublicMcpDerivedResourceCache<McpSourceActivationQueuePayload>(
+      env,
+      "source_activation_queue",
+      key
+    );
+    if (cached) return cached;
+    const payload = await mcpSourceActivationQueuePayload(env, date, limit, orderDays, orderLimit);
+    await writePublicMcpDerivedResourceCache(env, "source_activation_queue", key, payload);
+    return payload;
+  })().catch((error) => {
     if (mcpSourceActivationQueuePayloadCache?.promise === promise) mcpSourceActivationQueuePayloadCache = null;
     throw error;
   });
@@ -6047,7 +6095,17 @@ function cachedMcpRevenueConversionQueuePayload(
   if (mcpRevenueConversionQueuePayloadCache?.key === key && mcpRevenueConversionQueuePayloadCache.expiresAtMs > now) {
     return mcpRevenueConversionQueuePayloadCache.promise;
   }
-  const promise = mcpRevenueConversionQueuePayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+  const promise = (async () => {
+    const cached = await readPublicMcpDerivedResourceCache<McpRevenueConversionQueuePayload>(
+      env,
+      "revenue_conversion_queue",
+      key
+    );
+    if (cached) return cached;
+    const payload = await mcpRevenueConversionQueuePayload(env, date, limit, orderDays, orderLimit);
+    await writePublicMcpDerivedResourceCache(env, "revenue_conversion_queue", key, payload);
+    return payload;
+  })().catch((error) => {
     if (mcpRevenueConversionQueuePayloadCache?.promise === promise) mcpRevenueConversionQueuePayloadCache = null;
     throw error;
   });
@@ -6570,7 +6628,17 @@ function cachedMcpActivationExperimentsPayload(
   if (mcpActivationExperimentsPayloadCache?.key === key && mcpActivationExperimentsPayloadCache.expiresAtMs > now) {
     return mcpActivationExperimentsPayloadCache.promise;
   }
-  const promise = mcpActivationExperimentsPayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+  const promise = (async () => {
+    const cached = await readPublicMcpDerivedResourceCache<McpActivationExperimentsPayload>(
+      env,
+      "activation_experiments",
+      key
+    );
+    if (cached) return cached;
+    const payload = await mcpActivationExperimentsPayload(env, date, limit, orderDays, orderLimit);
+    await writePublicMcpDerivedResourceCache(env, "activation_experiments", key, payload);
+    return payload;
+  })().catch((error) => {
     if (mcpActivationExperimentsPayloadCache?.promise === promise) mcpActivationExperimentsPayloadCache = null;
     throw error;
   });
@@ -7576,7 +7644,13 @@ function cachedMcpActivationWavePayload(
   if (mcpActivationWavePayloadCache?.key === key && mcpActivationWavePayloadCache.expiresAtMs > now) {
     return mcpActivationWavePayloadCache.promise;
   }
-  const promise = mcpActivationWavePayload(env, date, limit, orderDays, orderLimit).catch((error) => {
+  const promise = (async () => {
+    const cached = await readPublicMcpDerivedResourceCache<McpActivationWavePayload>(env, "activation_wave", key);
+    if (cached) return cached;
+    const payload = await mcpActivationWavePayload(env, date, limit, orderDays, orderLimit);
+    await writePublicMcpDerivedResourceCache(env, "activation_wave", key, payload);
+    return payload;
+  })().catch((error) => {
     if (mcpActivationWavePayloadCache?.promise === promise) mcpActivationWavePayloadCache = null;
     throw error;
   });
