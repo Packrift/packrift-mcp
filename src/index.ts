@@ -4623,6 +4623,7 @@ function sourceActivationUrls(source: string) {
     order_handoff_html_url: `https://mcp.packrift.com/r/order/${slug}?format=html`,
     order_handoff_markdown_url: `https://mcp.packrift.com/r/order/${slug}?format=md`,
     order_handoff_json_url: `https://mcp.packrift.com/r/order/${slug}?format=json`,
+    order_handoff_shell_url: `https://mcp.packrift.com/r/order/${slug}?format=sh`,
     directory_update_card_json_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.json`,
     directory_update_card_markdown_url: `https://mcp.packrift.com/ai/mcp-directory-update/${slug}.md`,
     tool_discovery_json_url: MCP_TOOL_DISCOVERY_JSON_URL,
@@ -5329,6 +5330,7 @@ interface SourceActivationOrderHandoffPayload {
     order_handoff_json: string;
     order_handoff_markdown: string;
     order_handoff_html: string;
+    order_handoff_shell: string;
     source_preserving_cart: string;
     source_specific_first_run: string;
     source_specific_first_run_shell: string;
@@ -5521,6 +5523,7 @@ function sourceActivationOrderHandoffPayload(
       order_handoff_json: urls.order_handoff_json_url,
       order_handoff_markdown: urls.order_handoff_markdown_url,
       order_handoff_html: urls.order_handoff_html_url,
+      order_handoff_shell: urls.order_handoff_shell_url,
       source_preserving_cart: buyerActionUrl,
       source_specific_first_run: urls.tracked_first_run_url,
       source_specific_first_run_shell: urls.tracked_first_run_shell_url,
@@ -5699,6 +5702,77 @@ function sourceActivationOrderHandoffMarkdown(payload: ReturnType<typeof sourceA
   ].join("\n");
 }
 
+function sourceActivationOrderHandoffShell(payload: ReturnType<typeof sourceActivationOrderHandoffPayload>): string {
+  const handoff = payload.source_preserving_prepare_purchase_handoff;
+  const unconfirmedRpc = JSON.stringify(handoff.unconfirmed_json_rpc);
+  const confirmedRpc = JSON.stringify(handoff.confirmed_json_rpc_after_buyer_approval);
+  return [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    "",
+    `PACKRIFT_MCP_ENDPOINT=${shellQuote(handoff.endpoint)}`,
+    `PACKRIFT_MCP_USER_AGENT=${shellQuote(`MCP-Order-Handoff/1.0 (+${payload.links.order_handoff_html})`)}`,
+    `PACKRIFT_MCP_SESSION_ID="\${PACKRIFT_MCP_SESSION_ID:-mcp-order-${payload.source}-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM}"`,
+    'PACKRIFT_BUYER_CONFIRMED="${PACKRIFT_BUYER_CONFIRMED:-0}"',
+    `PACKRIFT_UNCONFIRMED_JSON_RPC=${shellQuote(unconfirmedRpc)}`,
+    `PACKRIFT_CONFIRMED_JSON_RPC=${shellQuote(confirmedRpc)}`,
+    "PACKRIFT_MCP_LAST_RESPONSE=''",
+    "",
+    "rpc() {",
+    '  PACKRIFT_MCP_LAST_RESPONSE="$(curl -sS "$PACKRIFT_MCP_ENDPOINT" \\',
+    "    -H 'content-type: application/json' \\",
+    "    -H 'accept: application/json, text/event-stream' \\",
+    '    -H "Mcp-Session-Id: $PACKRIFT_MCP_SESSION_ID" \\',
+    '    -H "user-agent: $PACKRIFT_MCP_USER_AGENT" \\',
+    '    -d "$1")"',
+    "  normalize_mcp_response",
+    "}",
+    "",
+    "normalize_mcp_response() {",
+    '  if printf "%s\\n" "$PACKRIFT_MCP_LAST_RESPONSE" | grep -q "^data:"; then',
+    '    printf "%s\\n" "$PACKRIFT_MCP_LAST_RESPONSE" | sed -n "s/^data:[[:space:]]*//p" | tail -n 1',
+    "    return",
+    "  fi",
+    '  printf "%s\\n" "$PACKRIFT_MCP_LAST_RESPONSE"',
+    "}",
+    "",
+    "extract_measured_cart_url() {",
+    `  printf "%s\\n" "$PACKRIFT_MCP_LAST_RESPONSE" | grep -Eo ${shellQuote('https://mcp\\.packrift\\.com/r/cart/[^"[:space:]<>\\\\]+')} | tail -n 1 || true`,
+    "}",
+    "",
+    "touch_measured_cart_landing() {",
+    '  local cart_url="${PACKRIFT_MCP_CART_URL:-$(extract_measured_cart_url)}"',
+    '  if [ -z "$cart_url" ]; then',
+    '    printf "No measured Packrift MCP /r/cart URL found in the confirmed response.\\n" >&2',
+    "    return 1",
+    "  fi",
+    '  printf "Opening measured Packrift MCP cart landing: %s\\n" "$cart_url"',
+    '  curl -sS -o /dev/null "$cart_url" -H "user-agent: $PACKRIFT_MCP_USER_AGENT"',
+    '  printf "Recorded mcp_cart_landing. No order was placed. Shopify checkout still requires buyer action.\\n"',
+    "}",
+    "",
+    "echo 'Packrift MCP source-preserving order handoff'",
+    `echo ${shellQuote(`Source: ${payload.source}; target: ${payload.preferred_target}; SKU: ${payload.sku}; quantity: ${payload.quantity}`)}`,
+    "echo 'Running buyer_confirmed=false live check first. This cannot create a cart URL or order.'",
+    'rpc "$PACKRIFT_UNCONFIRMED_JSON_RPC"',
+    "",
+    'if [ "$PACKRIFT_BUYER_CONFIRMED" != "1" ]; then',
+    "  echo ''",
+    "  echo 'Buyer confirmation is still required before generating the measured MCP cart handoff.'",
+    `  echo ${shellQuote("After buyer/reviewer approval, run:")}`,
+    `  echo ${shellQuote(`PACKRIFT_BUYER_CONFIRMED=1 curl -sS ${shellQuote(payload.links.order_handoff_shell)} | bash`)}`,
+    "  echo 'The confirmed call returns a measured /r/cart URL only; it still does not place an order.'",
+    "  exit 0",
+    "fi",
+    "",
+    "echo ''",
+    "echo 'Buyer confirmation flag detected. Generating measured MCP cart handoff only; no order is placed.'",
+    'rpc "$PACKRIFT_CONFIRMED_JSON_RPC"',
+    "touch_measured_cart_landing",
+    "",
+  ].join("\n");
+}
+
 function htmlScriptJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
 }
@@ -5790,6 +5864,7 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
           <button id="run-live-confirmation" class="button" type="button">Run live MCP confirmation</button>
           <a class="button" href="${escapeHtml(payload.product.product_url)}">View product</a>
           <a class="button" href="${escapeHtml(payload.links.reviewer_activation)}">Activation runner</a>
+          <a class="button" href="${escapeHtml(payload.links.order_handoff_shell)}">Shell handoff</a>
           <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">Watch proof gate</a>
           <button id="copy-buyer-request" class="button" type="button">Copy buyer request</button>
           <button id="copy-agent-prompt" class="button" type="button">Copy agent prompt</button>
@@ -9478,7 +9553,7 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
 </html>`;
 }
 
-const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R05";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R06";
 
 type McpExternalActivationReviewHandoff = {
   status: string;
@@ -9600,6 +9675,10 @@ function mcpExternalActivationTaskStatus(targetEvent: string): string {
 
 function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_capture_wave"]["tasks"][number], selectedIndex: number) {
   const reviewHandoff = mcpExternalActivationReviewHandoff(task);
+  const preparePurchaseShortcut =
+    task.source_order_handoff?.source_preserving_prepare_purchase_handoff ??
+    task.buyer_handoff_preview?.source_preserving_prepare_purchase_handoff ??
+    null;
   return {
     rank: task.wave_rank,
     selected_rank: selectedIndex + 1,
@@ -9628,6 +9707,7 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_cap
     directory_update_card_json_url: task.directory_update_card_json_url,
     directory_update_card_markdown_url: task.directory_update_card_markdown_url,
     buyer_handoff_url: task.buyer_handoff_preview?.buyer_handoff_url ?? task.source_order_handoff?.buyer_handoff_url ?? null,
+    source_preserving_prepare_purchase_handoff: preparePurchaseShortcut,
     external_review_handoff: reviewHandoff,
     copy_ready_host_configs: task.copy_ready_host_configs,
     fast_activation_path: task.fast_activation_path,
@@ -9635,7 +9715,7 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_cap
     success_gate: task.success_gate,
     current_counts: task.current_counts,
     short_request:
-      `Run Packrift MCP source=${task.source} from a real external ${task.preferred_target} host, complete tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066, then stop at the returned mcp.packrift.com/r/cart URL.`,
+      `Run Packrift MCP source=${task.source} from a real external ${task.preferred_target} host, complete tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url for SKU 1066. If the reviewer already has exact SKU approval, use prepare_purchase_handoff with buyer_confirmed=false first and buyer_confirmed=true only after approval, then stop at the returned mcp.packrift.com/r/cart URL.`,
   };
 }
 
@@ -9771,6 +9851,11 @@ function mcpExternalActivationBriefTaskExportRows(payload: McpExternalActivation
     directory_update_card_json_url: task.directory_update_card_json_url,
     directory_update_card_markdown_url: task.directory_update_card_markdown_url,
     buyer_handoff_url: task.buyer_handoff_url ?? "",
+    prepare_purchase_tool: task.source_preserving_prepare_purchase_handoff?.tool_name ?? "",
+    prepare_purchase_endpoint: task.source_preserving_prepare_purchase_handoff?.endpoint ?? "",
+    prepare_purchase_unconfirmed_json_rpc: task.source_preserving_prepare_purchase_handoff?.copy_ready_unconfirmed_json_rpc ?? "",
+    prepare_purchase_confirmed_json_rpc_after_buyer_approval:
+      task.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval ?? "",
     review_handoff_status: task.external_review_handoff.status,
     review_handoff_primary_surface: task.external_review_handoff.primary_surface,
     review_handoff_support_email: task.external_review_handoff.support_email ?? "",
@@ -9829,6 +9914,10 @@ function mcpExternalActivationBriefTasksCsv(payload: McpExternalActivationBriefP
     "tool_discovery_json_url",
     "directory_update_card_json_url",
     "buyer_handoff_url",
+    "prepare_purchase_tool",
+    "prepare_purchase_endpoint",
+    "prepare_purchase_unconfirmed_json_rpc",
+    "prepare_purchase_confirmed_json_rpc_after_buyer_approval",
     "review_handoff_status",
     "review_handoff_primary_surface",
     "review_handoff_support_email",
@@ -9921,6 +10010,22 @@ function mcpExternalActivationBriefMarkdown(payload: McpExternalActivationBriefP
             `Codex: \`${row.copy_ready_host_configs.codex_command}\``,
             `Claude Code: \`${row.copy_ready_host_configs.claude_code_command}\``,
             "",
+            ...(row.source_preserving_prepare_purchase_handoff
+              ? [
+                  "Source-preserving prepare_purchase_handoff shortcut:",
+                  "",
+                  "```json",
+                  row.source_preserving_prepare_purchase_handoff.copy_ready_unconfirmed_json_rpc,
+                  "```",
+                  "",
+                  "Confirmed call after buyer/reviewer approval:",
+                  "",
+                  "```json",
+                  row.source_preserving_prepare_purchase_handoff.copy_ready_confirmed_json_rpc_after_buyer_approval,
+                  "```",
+                  "",
+                ]
+              : []),
             `Success gate: ${row.success_gate}`,
             "",
             `Run: \`${row.one_command_external_runner}\``,
@@ -9971,6 +10076,11 @@ function mcpExternalActivationBriefHtml(payload: McpExternalActivationBriefPaylo
         </div>
         <p><strong>Contact path:</strong> ${escapeHtml(row.external_review_handoff.status)} - ${escapeHtml(row.external_review_handoff.next_contact_action)}</p>
         <p><strong>Install:</strong> ${escapeHtml(row.copy_ready_host_configs.codex_command)}</p>
+        ${
+          row.source_preserving_prepare_purchase_handoff
+            ? `<details><summary>prepare_purchase_handoff shortcut</summary><p>${escapeHtml(row.source_preserving_prepare_purchase_handoff.buyer_confirmation_rule)}</p><pre>${escapeHtml(row.source_preserving_prepare_purchase_handoff.copy_ready_unconfirmed_json_rpc)}</pre></details>`
+            : ""
+        }
         <pre>${escapeHtml(row.one_command_external_runner)}</pre>
       </article>`
     )
@@ -12385,6 +12495,7 @@ const MCP_SEEDED_SOURCE_ACTIVATION_RESOURCE_URLS = MCP_SOURCE_ACTIVATION_SITEMAP
   `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`,
   `https://mcp.packrift.com/r/run/${source}/${target}?format=md`,
   `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+  `https://mcp.packrift.com/r/order/${source}?format=sh`,
   `https://mcp.packrift.com/r/order/${source}?format=md`,
 ]);
 const MCP_AGENT_HOST_FAST_PATH_RESOURCE_URLS = AGENT_HOST_FAST_PATHS.flatMap(({ source, target }) => [
@@ -12400,6 +12511,7 @@ const MCP_AGENT_HOST_FAST_PATH_RESOURCE_URLS = AGENT_HOST_FAST_PATHS.flatMap(({ 
   `https://mcp.packrift.com/r/activate/${source}?format=html`,
   `https://mcp.packrift.com/r/activate/${source}?format=sh`,
   `https://mcp.packrift.com/r/order/${source}?format=html`,
+  `https://mcp.packrift.com/r/order/${source}?format=sh`,
   `https://mcp.packrift.com/r/order/${source}?format=md`,
   `https://mcp.packrift.com/r/order/${source}?format=json`,
 ]);
@@ -13109,6 +13221,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
     if (dynamicResource.kind === "order") {
       const payload = await sourceActivationOrderHandoffPayloadForRequest(env, parsed, dynamicResource.source);
       if (dynamicResource.format === "html") return sourceActivationOrderHandoffHtml(payload);
+      if (dynamicResource.format === "sh") return `${sourceActivationOrderHandoffShell(payload)}\n`;
       if (dynamicResource.format === "md") return sourceActivationOrderHandoffMarkdown(payload);
       return JSON.stringify(payload, null, 2);
     }
@@ -17056,6 +17169,21 @@ app.get("/r/order/:source", async (c) => {
     return c.body(body, 200, {
       "Content-Type": "text/markdown; charset=utf-8",
       ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+    });
+  }
+  if (format === "sh" || format === "shell") {
+    const body = `${sourceActivationOrderHandoffShell(payload)}\n`;
+    await recordGeneratedAiResourceFetch(c, `/r/order/${source}`, "mcp_order_handoff", jsonByteSize(body), {
+      sourceSlug: source,
+      utmMedium: requestUrl.searchParams.get("utm_medium") || "buyer_reviewer_handoff",
+      utmCampaign: requestUrl.searchParams.get("utm_campaign") || "packrift_mcp_order_handoff",
+      utmContent: requestUrl.searchParams.get("utm_content") || "order_handoff_shell",
+      mcpKeyPrefix: "order",
+    });
+    return c.body(body, 200, {
+      "Content-Type": "text/x-shellscript; charset=utf-8",
+      ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+      Link: `<${payload.links.order_handoff_html}>; rel="canonical"`,
     });
   }
   if (wantsHtml) {

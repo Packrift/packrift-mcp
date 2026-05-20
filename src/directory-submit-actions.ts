@@ -651,6 +651,56 @@ function sourceEvalPackUrl(source: string, format: "json" | "md" = "json"): stri
   return url.toString();
 }
 
+function jsonRpcToolCall(id: string, name: string, args: Record<string, unknown>) {
+  return { jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } };
+}
+
+function sourcePreparePurchaseShortcut(source: string, target: string) {
+  const sourceSlug = normalizeDirectoryUpdateSource(source) || "generic";
+  const targetSlug = normalizeDirectoryUpdateSource(target) || "generic_streamable_http";
+  const sourceContext = `${sourceSlug}_directory_prepare_purchase`.slice(0, 80);
+  const baseArgs = {
+    sku: "1066",
+    quantity: 1,
+    source_context: sourceContext,
+    mcp_source_context: sourceSlug,
+    mcp_install_target: targetSlug,
+    journey_id: `mcp_directory_review_${sourceSlug}_1066`,
+    result_set_id: "mcp_directory_update_prepare_purchase",
+    utm_term: "1066",
+  };
+  const unconfirmedArgs = { ...baseArgs, buyer_confirmed: false };
+  const confirmedArgs = { ...baseArgs, buyer_confirmed: true };
+  return {
+    release: "PACKRIFT-MCP-SOURCE-PREPARE-PURCHASE-SHORTCUT-R01",
+    tool_name: "prepare_purchase_handoff",
+    endpoint: mcpFirstUsefulRun(sourceSlug, targetSlug).endpoint,
+    sku: "1066",
+    quantity: 1,
+    order_handoff_url: `https://mcp.packrift.com/r/order/${sourceSlug}?format=html`,
+    buyer_confirmation_rule:
+      "Run buyer_confirmed=false first to confirm live product, price, and inventory. Run buyer_confirmed=true only after a buyer or reviewer approves SKU 1066, quantity 1, and checkout review.",
+    no_duplicate_surface_rule:
+      "This is a copy-ready call against the existing hosted Packrift MCP endpoint, not a new CLI, server, buyer surface, or checkout path.",
+    unconfirmed_arguments: unconfirmedArgs,
+    confirmed_arguments_after_buyer_approval: confirmedArgs,
+    unconfirmed_json_rpc: jsonRpcToolCall("prepare-1066-unconfirmed", "prepare_purchase_handoff", unconfirmedArgs),
+    confirmed_json_rpc_after_buyer_approval: jsonRpcToolCall("prepare-1066-confirmed", "prepare_purchase_handoff", confirmedArgs),
+    copy_ready_unconfirmed_json_rpc: JSON.stringify(
+      jsonRpcToolCall("prepare-1066-unconfirmed", "prepare_purchase_handoff", unconfirmedArgs),
+      null,
+      2
+    ),
+    copy_ready_confirmed_json_rpc_after_buyer_approval: JSON.stringify(
+      jsonRpcToolCall("prepare-1066-confirmed", "prepare_purchase_handoff", confirmedArgs),
+      null,
+      2
+    ),
+    success_gate:
+      `The confirmed call should return a measured https://mcp.packrift.com/r/cart/1066 URL containing mcp_source_context=${sourceSlug} and mcp_install_target=${targetSlug}; it still does not place an order.`,
+  };
+}
+
 function formattedUrl(value: string, format: "html" | "md" | "json" | "sh"): string {
   const url = new URL(value);
   url.searchParams.set("format", format);
@@ -741,6 +791,8 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
   const reviewerActivationHtml = `https://mcp.packrift.com/r/activate/${action.id}?format=html`;
   const orderHandoffHtml = `https://mcp.packrift.com/r/order/${action.id}?format=html`;
   const evalPack = sourceEvalPackUrl(action.id);
+  const preferredTarget = sourceActivationStateFor(runtime, action.id)?.current_counts?.preferred_target ?? "generic_streamable_http";
+  const preparePurchaseShortcut = sourcePreparePurchaseShortcut(action.id, preferredTarget);
   const staleLine =
     "stale_markers" in action && action.stale_markers?.length
       ? `Current stale/missing markers: ${action.stale_markers.join(", ")}.`
@@ -768,7 +820,7 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
   };
 
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R01",
+    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R02",
     to: mailtoRecipient(action),
     subject: action.recrawl_subject,
     body: [
@@ -791,9 +843,10 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       `- Reviewer activation runner: ${reviewerActivationHtml}`,
       `- Host acceptance eval pack: ${evalPack}`,
       `- Buyer/reviewer order handoff: ${orderHandoffHtml}`,
+      `- Source-preserving prepare_purchase_handoff shortcut: ${preparePurchaseShortcut.order_handoff_url}`,
       `- Outreach board: ${AGENT_CAPTURE_OUTREACH_HTML_URL}`,
       "",
-      "Acceptance check: install the existing hosted Packrift MCP endpoint, run tools/list, then run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url. Please do not treat a browser-only proof page or duplicate public comment as activation.",
+      "Acceptance check: install the existing hosted Packrift MCP endpoint, run tools/list, then run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url. For exact SKU review, prepare_purchase_handoff can collapse live product, price, inventory, and source-preserving cart handoff; run buyer_confirmed=false first and buyer_confirmed=true only after buyer/reviewer approval. Please do not treat a browser-only proof page or duplicate public comment as activation.",
       "",
       "Thanks,",
       "Packrift",
@@ -804,6 +857,7 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       "Install the existing hosted Packrift MCP endpoint only.",
       "Run tools/list from a real MCP host.",
       "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "For exact SKU review, run prepare_purchase_handoff with buyer_confirmed=false first, then buyer_confirmed=true only after buyer/reviewer approval.",
       "Accept activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
       "Do not count browser-only proof, Packrift self-checks, or duplicate public comments as source activation.",
     ],
@@ -862,6 +916,8 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
   const trackedOrderHandoff = `https://mcp.packrift.com/r/order/${action.id}`;
   const trackedOrderHandoffHtml = `${trackedOrderHandoff}?format=html`;
   const trackedOrderHandoffJson = `${trackedOrderHandoff}?format=json`;
+  const preferredTarget = sourceActivationStateFor(runtime, action.id)?.current_counts?.preferred_target ?? "generic_streamable_http";
+  const preparePurchaseShortcut = sourcePreparePurchaseShortcut(action.id, preferredTarget);
   const evalPack = sourceEvalPackUrl(action.id);
   const evalPackMarkdown = sourceEvalPackUrl(action.id, "md");
   return [
@@ -896,6 +952,9 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Reviewer activation browser runner: ${reviewerActivationHtml}`,
     `- Buyer/reviewer order handoff: ${trackedOrderHandoffHtml}`,
     `- Buyer/reviewer order handoff JSON: ${trackedOrderHandoffJson}`,
+    `- Source-preserving prepare_purchase_handoff shortcut: ${preparePurchaseShortcut.order_handoff_url}`,
+    `- Copy-ready unconfirmed prepare_purchase_handoff JSON-RPC: ${preparePurchaseShortcut.copy_ready_unconfirmed_json_rpc.replace(/\n/g, " ")}`,
+    `- Copy-ready confirmed prepare_purchase_handoff JSON-RPC after buyer approval: ${preparePurchaseShortcut.copy_ready_confirmed_json_rpc_after_buyer_approval.replace(/\n/g, " ")}`,
     `- Host acceptance eval pack: ${evalPack}`,
     `- Host acceptance eval pack Markdown: ${evalPackMarkdown}`,
     `- Copy-ready agent prompt: use the Copy agent prompt button at ${trackedRunGenericHtml} or ${reviewerActivationHtml}; it is also exposed as first_useful_run.agent_prompt in this action payload.`,
@@ -903,7 +962,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- First useful run: open ${trackedRunGenericHtml}, click Run live proof, then use ${reviewerActivationHtml} to run the same sequence through a real MCP client. It reaches get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.`,
     `- Agent prompt acceptance rule: paste the prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before accepting the listing as activated.`,
     "- Activation proof rule: browser proof is review evidence only; source activation requires a real MCP host or external reviewer to call the hosted endpoint and reach create_cart_url.",
-    "- Order handoff rule: use the source-specific /r/order/{source} page only after a real buyer or reviewer has source-level MCP tool-call and cart proof; it carries the source into checkout review and does not place an order.",
+    "- Order handoff rule: use the source-specific /r/order/{source} page or prepare_purchase_handoff shortcut only after a real buyer or reviewer has source-level MCP tool-call and cart proof; it carries the source into checkout review and does not place an order.",
     `- Canonical start page: ${MCP_START_URL}`,
     "- Repository: https://github.com/Packrift/packrift-mcp",
     "- Website: https://packrift.com/pages/packrift-ai-agent-instructions",
@@ -962,6 +1021,8 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
   const firstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const actions = ACTIONS.map((action) => {
     const sourceActivation = sourceActivationStateFor(runtime, action.id);
+    const preferredTarget = sourceActivation?.current_counts?.preferred_target ?? "generic_streamable_http";
+    const preparePurchaseShortcut = sourcePreparePurchaseShortcut(action.id, preferredTarget);
     return {
       ...action,
       source_activation_state: sourceActivation ?? null,
@@ -988,6 +1049,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         mcp_marketplace: trackedRunUrl(action.id, "mcp_marketplace"),
       },
       first_useful_run: mcpFirstUsefulRun(action.id, "generic_streamable_http"),
+      source_preserving_prepare_purchase_handoff: preparePurchaseShortcut,
       proof_urls: {
       hosted_endpoint: MCP_ENDPOINT,
       start_page: MCP_START_URL,
@@ -1054,6 +1116,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       endpoint: MCP_ENDPOINT,
       reviewer_runner: `https://mcp.packrift.com/r/activate/${action.id}?format=html`,
       order_handoff: `https://mcp.packrift.com/r/order/${action.id}?format=html`,
+      source_preserving_prepare_purchase_handoff: preparePurchaseShortcut,
       quickest_install_by_host: {
         generic_streamable_http: trackedInstallUrl(action.id, "generic_streamable_http"),
         claude_code: trackedInstallUrl(action.id, "claude_code"),
@@ -1075,6 +1138,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         "Run the source-aware endpoint from a real MCP host, not just a browser proof page.",
         "Use the source-specific eval pack when host reviewers need copy-ready acceptance cases.",
         "Require tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+        "For exact SKU review, run prepare_purchase_handoff with buyer_confirmed=false first, then buyer_confirmed=true only after buyer/reviewer approval.",
         "Accept activation only after create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
         "Use the source-specific /r/order/{source} page only for buyer or reviewer checkout follow-through after MCP tool and cart proof; it does not place an order.",
       ],
@@ -1108,7 +1172,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R48",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R49",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1185,7 +1249,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R16",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R17",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1259,11 +1323,13 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       buyer_order_handoffs: action.proof_urls.buyer_order_handoffs,
       buyer_order_handoffs_html: action.proof_urls.buyer_order_handoffs_html,
     },
+    source_preserving_prepare_purchase_handoff: action.source_preserving_prepare_purchase_handoff,
     acceptance_gate: [
       "Install the hosted no-auth Streamable HTTP endpoint.",
       "Run tools/list against the source-aware endpoint.",
       "Run the source-specific eval pack acceptance cases when a marketplace, MCP host, or reviewer needs host-side proof.",
       "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
+      "For exact SKU review, run prepare_purchase_handoff with buyer_confirmed=false first, then buyer_confirmed=true only after buyer/reviewer approval.",
       "Treat the listing as activated only when create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL.",
       "Use the source-specific order handoff only when a real buyer or reviewer is ready to evaluate checkout after MCP proof; it does not create an order.",
     ],
@@ -1345,6 +1411,25 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     "## Tracked URLs",
     "",
     fencedJson(payload.tracked_urls),
+    "",
+    "## Source-Preserving Prepare Purchase Shortcut",
+    "",
+    `Tool: ${payload.source_preserving_prepare_purchase_handoff.tool_name}`,
+    `Endpoint: ${payload.source_preserving_prepare_purchase_handoff.endpoint}`,
+    `Buyer confirmation rule: ${payload.source_preserving_prepare_purchase_handoff.buyer_confirmation_rule}`,
+    `Success gate: ${payload.source_preserving_prepare_purchase_handoff.success_gate}`,
+    "",
+    "Unconfirmed live-check call:",
+    "",
+    "```json",
+    payload.source_preserving_prepare_purchase_handoff.copy_ready_unconfirmed_json_rpc,
+    "```",
+    "",
+    "Confirmed call after buyer/reviewer approval:",
+    "",
+    "```json",
+    payload.source_preserving_prepare_purchase_handoff.copy_ready_confirmed_json_rpc_after_buyer_approval,
+    "```",
     "",
     "## Acceptance Gate",
     "",
