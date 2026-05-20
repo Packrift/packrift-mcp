@@ -1110,12 +1110,17 @@ app.get("/install", async (c) => {
 // llms.txt: llmstxt.org-format Markdown index for AI agents and answer engines.
 // server-card.json: MCP discovery manifest in raw JSON.
 // Both have permissive CORS so agents can fetch from any origin.
-const RAW_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
-  "CDN-Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
-  "Cloudflare-CDN-Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
-};
+function rawCacheHeaders(maxAgeSeconds: number): Record<string, string> {
+  const cacheControl = `public, max-age=${maxAgeSeconds}, stale-while-revalidate=86400`;
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": cacheControl,
+    "CDN-Cache-Control": cacheControl,
+    "Cloudflare-CDN-Cache-Control": cacheControl,
+  };
+}
+
+const RAW_HEADERS = rawCacheHeaders(300);
 const PURCHASE_PATHS_NOSTORE_RELEASE = "PACKRIFT-PURCHASE-PATHS-NOSTORE-2026-05-19-R02";
 const PURCHASE_PATHS_HEADERS = {
   ...RAW_HEADERS,
@@ -1159,10 +1164,17 @@ const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_USAGE_EVENT_LIMIT_MAX = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT = 1000;
 const PUBLIC_MCP_SOURCE_ACTIVATION_PACKET_EVENT_LIMIT = 1000;
-const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE = "PACKRIFT-PUBLIC-MCP-DERIVED-RESOURCE-CACHE-R02";
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_RELEASE = "PACKRIFT-PUBLIC-MCP-DERIVED-RESOURCE-CACHE-R04";
 const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS = 5 * 60;
-const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS = PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS * 1000;
-const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX = "cache:public-mcp-derived-resource:r02:";
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_HEAVY_TTL_SECONDS = 30 * 60;
+const PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX = "cache:public-mcp-derived-resource:r04:";
+const PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS = rawCacheHeaders(PUBLIC_MCP_DERIVED_RESOURCE_CACHE_HEAVY_TTL_SECONDS);
+const PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS = {
+  ...RAW_HEADERS,
+  "Cache-Control": "no-store, max-age=0",
+  "CDN-Cache-Control": "no-store",
+  "Cloudflare-CDN-Cache-Control": "no-store",
+};
 const PUBLIC_MCP_FUNNEL_EVENT_LIMIT = PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT;
 const PUBLIC_MCP_FUNNEL_EVENT_LOOKBACK_DAYS = 2;
 const PUBLIC_MCP_OPERATOR_EVENT_LIMIT = 20000;
@@ -5567,6 +5579,10 @@ interface PublicMcpDerivedResourceCacheRecord<T> {
   payload: T;
 }
 
+interface PublicMcpDerivedResourceCacheOptions {
+  refresh?: boolean;
+}
+
 function publicMcpDerivedResourceKvKey(kind: string, key: string): string {
   return `${PUBLIC_MCP_DERIVED_RESOURCE_CACHE_PREFIX}${kind}:${key}`;
 }
@@ -5578,12 +5594,28 @@ function publicMcpDerivedResourceEdgeCacheRequest(kind: string, key: string): Re
   return new Request(url.toString(), { method: "GET" });
 }
 
-function publicMcpDerivedResourceCacheResponse(body: string): Response {
+function publicMcpDerivedResourceCacheTtlSeconds(kind: string): number {
+  return kind === "funnel_snapshot" || kind === "agent_adoption_progress"
+    ? PUBLIC_MCP_DERIVED_RESOURCE_CACHE_HEAVY_TTL_SECONDS
+    : PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS;
+}
+
+function publicMcpDerivedResourceCacheMs(kind: string): number {
+  return publicMcpDerivedResourceCacheTtlSeconds(kind) * 1000;
+}
+
+function publicMcpDerivedResourceFreshRequested(url: URL): boolean {
+  const cache = url.searchParams.get("cache")?.toLowerCase();
+  const fresh = url.searchParams.get("fresh")?.toLowerCase();
+  return cache === "skip" || cache === "refresh" || fresh === "1" || fresh === "true" || fresh === "yes";
+}
+
+function publicMcpDerivedResourceCacheResponse(kind: string, body: string): Response {
   return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": `public, max-age=${PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS}`,
+      "Cache-Control": `public, max-age=${publicMcpDerivedResourceCacheTtlSeconds(kind)}`,
     },
   });
 }
@@ -5612,7 +5644,9 @@ async function readPublicMcpDerivedResourceCache<T>(env: Env, kind: string, key:
     );
     const record = parsedPublicMcpDerivedResourceCacheRecord<T>(cached);
     if (!record) return null;
-    if (edgeCache && edgeRequest) await edgeCache.put(edgeRequest, publicMcpDerivedResourceCacheResponse(JSON.stringify(record)));
+    if (edgeCache && edgeRequest) {
+      await edgeCache.put(edgeRequest, publicMcpDerivedResourceCacheResponse(kind, JSON.stringify(record)));
+    }
     return record.payload ?? null;
   } catch {
     return null;
@@ -5629,13 +5663,13 @@ async function writePublicMcpDerivedResourceCache<T>(env: Env, kind: string, key
   const edgeRequest = publicMcpDerivedResourceEdgeCacheRequest(kind, key);
   const edgeCache = edgeRequest && typeof caches !== "undefined" ? caches.default : null;
   try {
-    if (edgeCache && edgeRequest) await edgeCache.put(edgeRequest, publicMcpDerivedResourceCacheResponse(body));
+    if (edgeCache && edgeRequest) await edgeCache.put(edgeRequest, publicMcpDerivedResourceCacheResponse(kind, body));
   } catch {
     // KV remains the cross-isolate fallback if edge cache storage fails.
   }
   try {
     await env.CATALOG_CACHE.put(publicMcpDerivedResourceKvKey(kind, key), body, {
-      expirationTtl: PUBLIC_MCP_DERIVED_RESOURCE_CACHE_TTL_SECONDS,
+      expirationTtl: publicMcpDerivedResourceCacheTtlSeconds(kind),
     });
   } catch {
     // KV cache misses should never block public MCP resources.
@@ -5682,7 +5716,7 @@ function cachedMcpSourceActivationQueuePayload(
   });
   mcpSourceActivationQueuePayloadCache = {
     key,
-    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("source_activation_queue"),
     promise,
   };
   return promise;
@@ -6162,7 +6196,7 @@ function cachedMcpRevenueConversionQueuePayload(
   });
   mcpRevenueConversionQueuePayloadCache = {
     key,
-    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("revenue_conversion_queue"),
     promise,
   };
   return promise;
@@ -6695,7 +6729,7 @@ function cachedMcpActivationExperimentsPayload(
   });
   mcpActivationExperimentsPayloadCache = {
     key,
-    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("activation_experiments"),
     promise,
   };
   return promise;
@@ -7707,7 +7741,7 @@ function cachedMcpActivationWavePayload(
   });
   mcpActivationWavePayloadCache = {
     key,
-    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("activation_wave"),
     promise,
   };
   return promise;
@@ -8751,15 +8785,18 @@ function cachedMcpFunnelSnapshotPayload(
   date: string,
   limit: number,
   orderDays: number,
-  orderLimit: number
+  orderLimit: number,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ): Promise<McpFunnelSnapshotPayload> {
   const key = mcpFunnelSnapshotCacheKey(date, limit, orderDays, orderLimit);
   const now = Date.now();
-  if (mcpFunnelSnapshotPayloadCache?.key === key && mcpFunnelSnapshotPayloadCache.expiresAtMs > now) {
+  if (!options.refresh && mcpFunnelSnapshotPayloadCache?.key === key && mcpFunnelSnapshotPayloadCache.expiresAtMs > now) {
     return mcpFunnelSnapshotPayloadCache.promise;
   }
   const promise = (async () => {
-    const cached = await readPublicMcpDerivedResourceCache<McpFunnelSnapshotPayload>(env, "funnel_snapshot", key);
+    const cached = options.refresh
+      ? null
+      : await readPublicMcpDerivedResourceCache<McpFunnelSnapshotPayload>(env, "funnel_snapshot", key);
     if (cached) return cached;
     const payload = await mcpFunnelSnapshotPayload(env, date, limit, orderDays, orderLimit);
     await writePublicMcpDerivedResourceCache(env, "funnel_snapshot", key, payload);
@@ -8770,7 +8807,7 @@ function cachedMcpFunnelSnapshotPayload(
   });
   mcpFunnelSnapshotPayloadCache = {
     key,
-    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("funnel_snapshot"),
     promise,
   };
   return promise;
@@ -8781,9 +8818,10 @@ async function mcpAgentAdoptionProgressPayload(
   date = todayUtc(),
   limit = PUBLIC_MCP_SOURCE_ACTIVATION_PACKET_EVENT_LIMIT,
   orderDays = PUBLIC_MCP_DEFAULT_ORDER_DAYS,
-  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT
+  orderLimit = PUBLIC_MCP_DEFAULT_ORDER_LIMIT,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ) {
-  const funnel = await cachedMcpFunnelSnapshotPayload(env, date, limit, orderDays, orderLimit);
+  const funnel = await cachedMcpFunnelSnapshotPayload(env, date, limit, orderDays, orderLimit, options);
   const progress = funnel.agent_adoption_progress;
   return {
     release: progress.release,
@@ -8870,24 +8908,28 @@ function cachedMcpAgentAdoptionProgressPayload(
   date: string,
   limit: number,
   orderDays: number,
-  orderLimit: number
+  orderLimit: number,
+  options: PublicMcpDerivedResourceCacheOptions = {}
 ): Promise<McpAgentAdoptionProgressPayload> {
   const key = mcpAgentAdoptionProgressCacheKey(date, limit, orderDays, orderLimit);
   const now = Date.now();
   if (
+    !options.refresh &&
     mcpAgentAdoptionProgressPayloadCache?.key === key &&
     mcpAgentAdoptionProgressPayloadCache.expiresAtMs > now
   ) {
     return mcpAgentAdoptionProgressPayloadCache.promise;
   }
   const promise = (async () => {
-    const cached = await readPublicMcpDerivedResourceCache<McpAgentAdoptionProgressPayload>(
-      env,
-      "agent_adoption_progress",
-      key
-    );
+    const cached = options.refresh
+      ? null
+      : await readPublicMcpDerivedResourceCache<McpAgentAdoptionProgressPayload>(
+          env,
+          "agent_adoption_progress",
+          key
+        );
     if (cached) return cached;
-    const payload = await mcpAgentAdoptionProgressPayload(env, date, limit, orderDays, orderLimit);
+    const payload = await mcpAgentAdoptionProgressPayload(env, date, limit, orderDays, orderLimit, options);
     await writePublicMcpDerivedResourceCache(env, "agent_adoption_progress", key, payload);
     return payload;
   })().catch((error) => {
@@ -8898,7 +8940,7 @@ function cachedMcpAgentAdoptionProgressPayload(
   });
   mcpAgentAdoptionProgressPayloadCache = {
     key,
-    expiresAtMs: now + PUBLIC_MCP_DERIVED_RESOURCE_CACHE_MS,
+    expiresAtMs: now + publicMcpDerivedResourceCacheMs("agent_adoption_progress"),
     promise,
   };
   return promise;
@@ -13537,9 +13579,10 @@ app.get("/ai/mcp-funnel-snapshot.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_FUNNEL_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await cachedMcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const payload = await cachedMcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit, { refresh });
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-funnel-snapshot.json", "mcp_funnel_snapshot", jsonByteSize(payload));
-  return c.json(payload, 200, RAW_HEADERS);
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS);
 });
 
 app.get("/ai/mcp-funnel-snapshot.md", async (c) => {
@@ -13551,13 +13594,14 @@ app.get("/ai/mcp-funnel-snapshot.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_FUNNEL_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
   const body = mcpFunnelSnapshotMarkdown(
-    await cachedMcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit)
+    await cachedMcpFunnelSnapshotPayload(c.env, date, limit, orderDays, orderLimit, { refresh })
   );
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-funnel-snapshot.md", "mcp_funnel_snapshot", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS),
   });
 });
 
@@ -13570,9 +13614,10 @@ app.get("/ai/mcp-agent-adoption-progress.json", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
-  const payload = await cachedMcpAgentAdoptionProgressPayload(c.env, date, limit, orderDays, orderLimit);
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
+  const payload = await cachedMcpAgentAdoptionProgressPayload(c.env, date, limit, orderDays, orderLimit, { refresh });
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-adoption-progress.json", "mcp_agent_adoption_progress", jsonByteSize(payload));
-  return c.json(payload, 200, RAW_HEADERS);
+  return c.json(payload, 200, refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS);
 });
 
 app.get("/ai/mcp-agent-adoption-progress.md", async (c) => {
@@ -13584,13 +13629,14 @@ app.get("/ai/mcp-agent-adoption-progress.md", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
   const body = mcpAgentAdoptionProgressMarkdown(
-    await cachedMcpAgentAdoptionProgressPayload(c.env, date, limit, orderDays, orderLimit)
+    await cachedMcpAgentAdoptionProgressPayload(c.env, date, limit, orderDays, orderLimit, { refresh })
   );
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-adoption-progress.md", "mcp_agent_adoption_progress", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS),
   });
 });
 
@@ -13603,13 +13649,14 @@ app.get("/ai/mcp-agent-adoption-progress.html", async (c) => {
   const limit = boundedPublicMcpEventLimit(requestedLimit, PUBLIC_MCP_SOURCE_ACTIVATION_EVENT_LIMIT);
   const orderDays = Number.isFinite(requestedOrderDays) ? Math.max(1, Math.min(365, requestedOrderDays)) : 90;
   const orderLimit = Number.isFinite(requestedOrderLimit) ? Math.max(1, Math.min(500, requestedOrderLimit)) : 250;
+  const refresh = publicMcpDerivedResourceFreshRequested(url);
   const body = mcpAgentAdoptionProgressHtml(
-    await cachedMcpAgentAdoptionProgressPayload(c.env, date, limit, orderDays, orderLimit)
+    await cachedMcpAgentAdoptionProgressPayload(c.env, date, limit, orderDays, orderLimit, { refresh })
   );
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-agent-adoption-progress.html", "mcp_agent_adoption_progress", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "text/html; charset=utf-8",
-    ...RAW_HEADERS,
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : PUBLIC_MCP_DERIVED_RESOURCE_HEAVY_HEADERS),
   });
 });
 
