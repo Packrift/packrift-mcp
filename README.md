@@ -91,6 +91,25 @@ Use the hosted endpoint above when possible. It requires no buyer-side API key a
 - Source repository: https://github.com/Packrift/packrift-mcp
 - Direct Streamable HTTP endpoint: https://mcp.packrift.com/mcp
 
+### Glama source listing release notes
+
+The hosted Glama connector should remain the primary Glama traffic target. The
+separate Glama source server listing can use this repository for release and
+quality checks, but it should still point users at the hosted no-auth MCP
+endpoint above.
+
+- `Dockerfile` starts the Packrift MCP server on `PORT=8787`.
+- `glama.json` is the source-listing maintainer claim file.
+- Running the container without `SHOPIFY_PACKRIFT_TOKEN` still exposes MCP
+  discovery: `tools/list` returns the current 15-tool surface and
+  `resources/list` returns the public AI/MCP resources.
+- `SHOPIFY_PACKRIFT_TOKEN` is not required for MCP discovery, directory
+  scanning, or hosted connector use. It is required only for self-hosted live
+  Shopify-backed catalog, pricing, inventory, shipping, and cart tool calls.
+- The source listing should not create a separate Packrift CLI or buyer
+  surface; it should release/sync the existing repository and keep the canonical
+  runtime at `https://mcp.packrift.com/mcp`.
+
 ## Container Image
 
 The public hosted endpoint above is the primary integration path and the

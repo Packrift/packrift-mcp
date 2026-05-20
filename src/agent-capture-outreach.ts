@@ -31,6 +31,7 @@ interface DirectoryRefreshRow {
     proof_urls: Record<string, string>;
     acceptance_check: readonly string[];
   };
+  source_release_readiness?: unknown;
   recrawl_message?: string;
 }
 
@@ -490,6 +491,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
     next_action: action.next_action,
     recrawl_subject: action.recrawl_subject,
     concise_email: action.concise_email,
+    source_release_readiness: action.source_release_readiness,
     recrawl_message: action.recrawl_message,
   }));
   const priorityQueue = directoryRefreshes.filter(
@@ -499,7 +501,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R24",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R25",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",

@@ -622,6 +622,73 @@ function mailtoRecipient(action: (typeof ACTIONS)[number]): string | null {
   }
 }
 
+function sourceReleaseReadiness(action: (typeof ACTIONS)[number]) {
+  if (action.id === "glama_server_listing") {
+    return {
+      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R01",
+      status: "ready_for_glama_admin_release",
+      blocker:
+        "Glama's hosted connector is current, but the source server API still reports zero tools and a required SHOPIFY_PACKRIFT_TOKEN.",
+      no_duplicate_surface_rule:
+        "Release and sync the existing Packrift/packrift-mcp repository and hosted Packrift MCP endpoint; do not create a separate Packrift CLI or buyer surface.",
+      source_api_url: "https://glama.ai/api/mcp/v1/servers/Packrift/packrift-mcp",
+      hosted_connector_url: "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp",
+      repository_url: "https://github.com/Packrift/packrift-mcp",
+      docker_readiness: {
+        dockerfile: "Dockerfile",
+        image: "ghcr.io/packrift/packrift-mcp:latest",
+        local_run_without_token: "docker run --rm -p 8787:8787 ghcr.io/packrift/packrift-mcp:latest",
+        tools_list_without_token: true,
+        expected_tools_count: 15,
+        expected_resources_min: 600,
+        token_policy:
+          "SHOPIFY_PACKRIFT_TOKEN is not required for MCP tools/list, resources/list, discovery, or directory scanning. It is required only when self-hosting live Shopify-backed catalog, pricing, inventory, shipping, and cart tool calls.",
+      },
+      admin_steps: [
+        "Claim the Packrift source server in Glama admin.",
+        "Use the repository Dockerfile for source-listing release checks.",
+        "Run the release/sync so Glama re-evaluates tools/list and resources/list.",
+        "Confirm the source API shows at least 15 tools and no longer treats SHOPIFY_PACKRIFT_TOKEN as required for basic MCP discovery.",
+        "Keep traffic pointed at the hosted no-auth Streamable HTTP endpoint https://mcp.packrift.com/mcp.",
+      ],
+      acceptance_check: [
+        "Hosted connector remains healthy with 15 tools.",
+        "Source listing API reports at least 15 tools.",
+        "Source listing quality can run without a buyer-side API key.",
+        "punkpeye/awesome-mcp-servers PR #5606 no longer has a Glama source quality blocker.",
+      ],
+      proof_urls: {
+        hosted_endpoint: MCP_ENDPOINT,
+        health: "https://mcp.packrift.com/health",
+        tool_discovery: MCP_TOOL_DISCOVERY_URL,
+        source_update_card: "https://mcp.packrift.com/ai/mcp-directory-update/glama_server_listing.json",
+        source_eval_pack: sourceEvalPackUrl("glama_server_listing"),
+        directory_actions: DIRECTORY_SUBMIT_ACTIONS_URL,
+      },
+    };
+  }
+
+  if (action.id === "punkpeye_awesome_mcp") {
+    return {
+      release: "PACKRIFT-MCP-SOURCE-LISTING-READINESS-R01",
+      status: "blocked_by_glama_source_quality",
+      blocker:
+        "The canonical punkpeye/awesome-mcp-servers PR is open and mergeable; the remaining blocker is Glama source-listing quality for Packrift.",
+      no_duplicate_surface_rule:
+        "Keep PR #5606 as the canonical submission and do not open duplicate automated PRs.",
+      canonical_pr_url: "https://github.com/punkpeye/awesome-mcp-servers/pull/5606",
+      unblocker_update_card: "https://mcp.packrift.com/ai/mcp-directory-update/glama_server_listing.json",
+      acceptance_check: [
+        "Glama source listing reports the current Packrift MCP tools.",
+        "PR #5606 stays open or merges cleanly.",
+        "After merge, run a real external MCP host activation, not a browser-only proof.",
+      ],
+    };
+  }
+
+  return null;
+}
+
 function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]) {
   const trackedStart = trackedStartUrl(action.id);
   const trackedConfig = trackedConfigUrl(action.id);
@@ -925,10 +992,11 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       },
     },
     concise_email: conciseDirectoryEmail(runtime, action),
+    source_release_readiness: sourceReleaseReadiness(action),
     recrawl_message: recrawlMessage(runtime, action),
   }));
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R42",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R43",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -989,7 +1057,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   if (!sourceSlug || !action) return null;
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R12",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1053,6 +1121,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
     ],
     crawler_inputs: action.activation_packet.crawler_inputs,
     proof_urls: action.proof_urls,
+    source_release_readiness: action.source_release_readiness,
     copy_ready_concise_email: action.concise_email,
     copy_ready_recrawl_message: action.recrawl_message,
   };
@@ -1110,6 +1179,9 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     "",
     payload.acceptance_gate.map((rule) => `- ${rule}`).join("\n"),
     "",
+    ...(payload.source_release_readiness
+      ? ["## Source Release Readiness", "", fencedJson(payload.source_release_readiness), ""]
+      : []),
     "## Copy-Ready Concise Email",
     "",
     `To: ${payload.copy_ready_concise_email.to ?? ""}`,
