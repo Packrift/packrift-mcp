@@ -150,6 +150,7 @@ async function main() {
     "mcp_source_activation_queue",
     "mcp_revenue_conversion_queue",
     "mcp_activation_experiments",
+    "mcp_external_activation_brief",
     "buyer_mcp_use_cases",
     "mcp_cart_activation",
     "mcp_first_run_proof",
@@ -203,6 +204,8 @@ async function main() {
     "source activation queue",
     "revenue conversion queue",
     "activation experiments",
+    "selected external activation brief",
+    "mcp-external-activation-brief-tasks.jsonl",
     "agent host rollout",
     "command center",
     "buyer use cases",
@@ -238,7 +241,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R26", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R27", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -383,6 +386,21 @@ async function main() {
     check("resources/list advertises activation experiments", hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-experiments.html"), {
       detail: `resources=${resources.length}`,
     }),
+    check(
+      "all-agent capture advertises selected external activation brief",
+      capture?.surfaces?.some(
+        (row) =>
+          row.id === "mcp_external_activation_brief" &&
+          row.canonical_url === "https://mcp.packrift.com/ai/mcp-external-activation-brief.json" &&
+          row.install_or_call?.includes("create_cart_url") &&
+          row.install_or_call?.includes("https://mcp.packrift.com/mcp") &&
+          row.proof_url === "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl"
+      ) &&
+        capture?.hub_urls?.external_activation_brief_tasks_jsonl === "https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl" &&
+        capture?.hub_urls?.external_activation_brief_runner_shell === "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh" &&
+        (capture?.operating_rules ?? []).some((rule) => /mcp-external-activation-brief-tasks\.jsonl/.test(rule) && /create_cart_url/.test(rule)),
+      { detail: "selected task queue linked" }
+    ),
     check("resources/list advertises activation wave exports", hasResourceUri(resourceUris, "/ai/mcp-activation-wave.json") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave.md") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave.html") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave-tasks.jsonl") && hasResourceUri(resourceUris, "/ai/mcp-activation-wave-tasks.csv") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief.json") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief.md") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief.html") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief-tasks.jsonl") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief-tasks.csv") && hasResourceUri(resourceUris, "/ai/mcp-external-activation-brief-runner.sh"), {
       detail: `resources=${resources.length}`,
     }),

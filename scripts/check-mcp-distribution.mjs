@@ -1202,7 +1202,7 @@ async function liveMcpCheck() {
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http",
     agent_capture:
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R26" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R27" &&
       (agentCapture?.operating_rules ?? []).some(
         (rule) =>
           /OpenAI\/ChatGPT/.test(rule) &&
@@ -1599,7 +1599,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R26" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R27" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
       agentCapture?.counts?.agent_host_fast_paths >= 12 &&
@@ -1666,6 +1666,11 @@ async function liveMcpCheck() {
       agentCapture?.hub_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       agentCapture?.hub_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCapture?.hub_urls?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
+      agentCapture?.hub_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+      agentCapture?.hub_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      agentCapture?.hub_urls?.external_activation_brief_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+      agentCapture?.hub_urls?.external_activation_brief_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
+      agentCapture?.hub_urls?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCapture?.hub_urls?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
       agentCapture?.hub_urls?.activation_command_center === "https://mcp.packrift.com/r/activate" &&
       agentCapture?.hub_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
@@ -1684,6 +1689,14 @@ async function liveMcpCheck() {
           surface.install_or_call?.includes("never places an order")
       ) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
+      agentCapture?.surfaces?.some(
+        (surface) =>
+          surface.id === "mcp_external_activation_brief" &&
+          surface.canonical_url === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
+          surface.proof_url === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
+          surface.install_or_call?.includes("create_cart_url") &&
+          surface.install_or_call?.includes("https://mcp.packrift.com/mcp")
+      ) &&
       agentCapture?.surfaces?.some(
         (surface) =>
           surface.id === "mcp_automation_workflows" &&
