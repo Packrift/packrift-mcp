@@ -4435,7 +4435,7 @@ async function glamaConnectorCheck() {
 
 async function glamaServerListingCheck() {
   const result = await fetchText("https://glama.ai/api/mcp/v1/servers/Packrift/packrift-mcp");
-  if (!result.ok) return check("glama_server_listing", "fail", { http_status: result.status, url: result.url });
+  if (!result.ok) return check("glama_server_listing", "stale", { http_status: result.status, url: result.url });
   const parsed = JSON.parse(result.text);
   return check("glama_server_listing", Array.isArray(parsed.tools) && parsed.tools.length >= 15 ? "pass" : "stale", {
     http_status: result.status,

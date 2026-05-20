@@ -7,7 +7,7 @@ export const llmsTxt = `# Packrift
 
 > Exact-spec packaging procurement data for corrugated boxes, literature mailers, labels, tape, poly bags, stretch film, strapping, tags, void fill, and fulfillment accessories. Packrift is built for buyers and agents matching packaging by SKU, dimensions, material, grade, printer type, adhesive, closure, pack count, case quantity, live product URL, reorder path, quote path, price, and inventory.
 
-Source: PACKRIFT-MCP-LLMS-EXACT-SPEC-2026-05-16-R01
+Source: PACKRIFT-MCP-LLMS-EXACT-SPEC-2026-05-20-R02
 Canonical site: https://packrift.com
 Primary MCP and machine-readable corpus: https://mcp.packrift.com
 
@@ -87,7 +87,7 @@ Use these as examples of exact product families that converted, not as universal
 - [Top 1,000 AI-sales SKU CSV](https://mcp.packrift.com/ai/top-1000-ai-sales-skus.csv): spreadsheet-friendly version of the focused AI-sales index
 - [Top 1,000 SKU page sitemap](https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml): crawl map for per-SKU markdown and JSON pages such as https://mcp.packrift.com/ai/sku/1066.md
 - [All AI-approved SKU page sitemap](https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml): crawl map for every AI_APPROVE SKU markdown and JSON page
-- [OpenAI strict public product feed TSV](https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv): conservative 3,392-row OpenAI-shaped product-feed QA surface
+- [OpenAI strict public product feed TSV](https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv): current 3,405-row tracked OpenAI-shaped product-feed QA surface
 - [OpenAI preferred direct product feed TSV](https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv): current 4,847-row validated direct handoff with 0 simulated rejects or warnings
 - [OpenAI preferred direct product feed GZIP](https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz): compressed 4,847-row direct handoff for approved file-upload, SFTP, or API ingestion
 - [Exact-spec catalog overview](https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md): crawlable corpus map and family coverage

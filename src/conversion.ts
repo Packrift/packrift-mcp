@@ -154,6 +154,8 @@ export function addCartPermalinkAttribution(
   tracking: ReturnType<typeof buildTrackingContext>
 ): void {
   const attributes: Record<string, string | null | undefined> = {
+    packrift_ai_id: tracking.packrift_ai_id,
+    ai_commerce_id: tracking.ai_commerce_id,
     packrift_packrift_ai_id: tracking.packrift_ai_id,
     packrift_ai_commerce_id: tracking.ai_commerce_id,
     packrift_mcp_handoff_id: tracking.mcp_handoff_id,

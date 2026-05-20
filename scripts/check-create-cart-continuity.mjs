@@ -35,6 +35,22 @@ function assertCheck(condition, message, details = {}) {
   }
 }
 
+function cartAttributePresent(url, key, expectedValue = null) {
+  if (!url) return false;
+  const encodedKey = encodeURIComponent(`attributes[${key}]`);
+  const rawKey = `attributes[${key}]`;
+  if (expectedValue == null) {
+    return url.includes(`${encodedKey}=`) || url.includes(`${rawKey}=`);
+  }
+  const encodedValue = encodeURIComponent(expectedValue);
+  return (
+    url.includes(`${encodedKey}=${encodedValue}`) ||
+    url.includes(`${rawKey}=${encodedValue}`) ||
+    url.includes(`${encodedKey}=${expectedValue}`) ||
+    url.includes(`${rawKey}=${expectedValue}`)
+  );
+}
+
 async function expectPass(name, args, validate, context = {}) {
   const result = await createCartUrlHandler(env, synthetic(args), context);
   validate(result);
@@ -104,6 +120,14 @@ checks.push(
       assertCheck(result.final_cart_url?.includes("mcp_session_id=session-continuity-check-123"), "Final Shopify cart URL did not include the MCP session ID", {
         final_cart_url: result.final_cart_url,
       });
+      assertCheck(
+        cartAttributePresent(result.final_cart_url, "packrift_ai_id") &&
+          cartAttributePresent(result.final_cart_url, "ai_commerce_id") &&
+          cartAttributePresent(result.final_cart_url, "packrift_packrift_ai_id") &&
+          cartAttributePresent(result.final_cart_url, "packrift_ai_commerce_id"),
+        "Final Shopify cart URL did not include both plain and prefixed AI-commerce cart attributes",
+        { final_cart_url: result.final_cart_url }
+      );
       assertCheck(
         result.cart_handoff?.attribution_required?.mcp_session_id === "session-continuity-check-123",
         "Cart handoff attribution did not include the MCP session ID",

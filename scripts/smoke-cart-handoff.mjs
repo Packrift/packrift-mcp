@@ -87,6 +87,13 @@ function check(name, pass, details = {}) {
   return { name, pass, ...details };
 }
 
+function cartAttributePresent(url, key) {
+  if (!url) return false;
+  const encodedKey = encodeURIComponent(`attributes[${key}]`);
+  const rawKey = `attributes[${key}]`;
+  return url.includes(`${encodedKey}=`) || url.includes(`${rawKey}=`);
+}
+
 function candidateItems(payload) {
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.candidates)) return payload.candidates;
@@ -255,6 +262,16 @@ async function main() {
       url: cartUrl,
       final_cart_url: finalCartUrl,
     }),
+    check(
+      "final_cart_ai_commerce_attributes_ok",
+      Boolean(
+        cartAttributePresent(finalCartUrl, "packrift_ai_id") &&
+          cartAttributePresent(finalCartUrl, "ai_commerce_id") &&
+          cartAttributePresent(finalCartUrl, "packrift_packrift_ai_id") &&
+          cartAttributePresent(finalCartUrl, "packrift_ai_commerce_id")
+      ),
+      { final_cart_url: finalCartUrl }
+    ),
     check(
       "cart_handoff_primary_url_ok",
       Boolean(

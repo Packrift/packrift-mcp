@@ -9,7 +9,7 @@ export const llmsFullTxt = `# Packrift — full agent reference (exact-spec)
 
 > Comprehensive machine-readable reference for Packrift exact-spec packaging procurement. Source of truth for AI agents, answer engines, shopping assistants, and procurement workflows that need accurate facts about what Packrift sells, where it ships from, how product matching works, and how to integrate the catalog programmatically.
 
-Last updated: 2026-05-18. Canonical short index at https://mcp.packrift.com/llms.txt. Live data via the MCP server at https://mcp.packrift.com/mcp.
+Last updated: 2026-05-20. Canonical short index at https://mcp.packrift.com/llms.txt. Live data via the MCP server at https://mcp.packrift.com/mcp.
 
 ---
 
@@ -442,7 +442,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Top 1,000 SKU page sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
 - All AI-approved SKU page sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
 - Example SKU page: https://mcp.packrift.com/ai/sku/1066.md
-- OpenAI strict public product feed TSV, conservative 3,392-row OpenAI-shaped QA surface: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
+- OpenAI strict public product feed TSV, current 3,405-row tracked OpenAI-shaped QA surface: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
 - OpenAI preferred direct product feed TSV, current 4,847-row validated direct handoff with 0 simulated rejects or warnings: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv
 - OpenAI preferred direct product feed GZIP, compressed 4,847-row direct handoff for approved file-upload, SFTP, or API ingestion: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz
 - Exact-spec catalog overview: https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md
