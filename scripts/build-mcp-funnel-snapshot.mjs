@@ -16,6 +16,7 @@ const DEFAULT_PROPERTY_ID = "531219331";
 const DEFAULT_REPORTS = "ai_mcp_events,mcp_cart_url_landings";
 const DEFAULT_GA4_START_DATE = "90daysAgo";
 const DEFAULT_GA4_END_DATE = "today";
+const PACKRIFT_BUSINESS_TIME_ZONE = "America/Toronto";
 const ROOT_SHOPIFY_CART_ACTIVATION_CHECKS = [
   {
     name: "root_llms_txt",
@@ -156,7 +157,7 @@ try {
 }
 
 async function buildFirstPartyMcpSummary() {
-  const date = args.date || utcDate(new Date());
+  const date = args.date || packriftBusinessDate(new Date());
   const token = process.env.MCP_STATS_TOKEN || "";
   if (!token) {
     return { ok: false, date, error: "MCP_STATS_TOKEN is not available in the local environment." };
@@ -1149,6 +1150,22 @@ function topRowsSummary(rows, limit = 5) {
 
 function utcDate(date) {
   return date.toISOString().slice(0, 10);
+}
+
+function packriftBusinessDate(date) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: PACKRIFT_BUSINESS_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    if (lookup.year && lookup.month && lookup.day) return `${lookup.year}-${lookup.month}-${lookup.day}`;
+  } catch {
+    // Fall back to UTC if the runtime cannot format the Packrift business timezone.
+  }
+  return utcDate(date);
 }
 
 function daysSinceDate(value) {
