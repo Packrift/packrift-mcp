@@ -709,7 +709,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       packrift_owned: true,
       canonical_url: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
       install_or_call:
-        "Use this thin buyer/reviewer handoff hub when a source already has MCP tool-call and cart-landing proof. It points to existing /r/order/{source} and /r/cart handoffs, preserves MCP attribution, and never places an order.",
+        "Use this thin buyer/reviewer handoff hub when a source already has MCP tool-call and cart-landing proof. It points to existing /r/order/{source} and /r/cart handoffs, preserves MCP attribution, exposes JSONL/CSV checkout task exports, and never places an order.",
       proof_url: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
       fallback_url: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json",
       next_action:
@@ -1176,6 +1176,8 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       revenue_conversion_queue_html: "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html",
       buyer_order_handoffs: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
       buyer_order_handoffs_html: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
+      buyer_order_handoffs_tasks_jsonl: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl",
+      buyer_order_handoffs_tasks_csv: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv",
       agent_host_rollout: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json",
       agent_host_rollout_html: "https://mcp.packrift.com/ai/mcp-agent-host-rollout.html",
       agent_host_rollout_tasks_jsonl: "https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl",

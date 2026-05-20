@@ -7937,6 +7937,7 @@ function mcpBuyerOrderHandoffsPayload(revenue: McpRevenueConversionQueuePayload)
       buyer_order_handoffs_markdown: MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
       buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
       buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+      buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
       revenue_conversion_queue_json: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
       revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       source_activation_queue_json: revenue.links.source_activation_queue_json,
@@ -8010,6 +8011,7 @@ function mcpBuyerOrderHandoffsMarkdown(payload: ReturnType<typeof mcpBuyerOrderH
     "",
     `- HTML board: ${payload.links.buyer_order_handoffs_html}`,
     `- JSONL task queue: ${payload.links.buyer_order_handoffs_tasks_jsonl}`,
+    `- CSV task queue: ${payload.links.buyer_order_handoffs_tasks_csv}`,
     `- Revenue conversion queue: ${payload.links.revenue_conversion_queue_json}`,
     `- Source activation queue: ${payload.links.source_activation_queue_json}`,
     `- GA4 funnel proof: ${payload.links.ga4_funnel_proof}`,
@@ -8019,6 +8021,79 @@ function mcpBuyerOrderHandoffsMarkdown(payload: ReturnType<typeof mcpBuyerOrderH
 
 function mcpBuyerOrderHandoffsTasksJsonl(payload: ReturnType<typeof mcpBuyerOrderHandoffsPayload>): string {
   return `${payload.buyer_checkout_tasks.map((task) => JSON.stringify(task)).join("\n")}\n`;
+}
+
+function mcpBuyerOrderHandoffsTasksCsv(payload: ReturnType<typeof mcpBuyerOrderHandoffsPayload>): string {
+  const taskCsvField = (value: unknown) => {
+    const text = String(value ?? "").replace(/\s*\r?\n\s*/g, " ").trim();
+    return csvField(text);
+  };
+  const rows = payload.buyer_checkout_tasks.map((task) => ({
+    task_id: task.task_id,
+    rank: task.rank,
+    source: task.source,
+    status: task.status,
+    target_event_to_watch: task.target_event_to_watch,
+    buyer_handoff_url: task.buyer_handoff_url,
+    buyer_handoff_html_url: task.buyer_handoff_html_url,
+    buyer_handoff_json_url: task.buyer_handoff_json_url,
+    buyer_handoff_shell_url: task.buyer_handoff_shell_url,
+    order_handoff_shell_url: task.order_handoff_shell_url,
+    order_handoff_shell_one_liner: task.order_handoff_shell_one_liner,
+    source_preserving_cart_url: task.source_preserving_cart_url,
+    prepare_purchase_tool: task.source_preserving_prepare_purchase_handoff?.tool_name,
+    prepare_purchase_endpoint: task.source_preserving_prepare_purchase_handoff?.endpoint,
+    prepare_purchase_confirmed_json_rpc_after_buyer_approval:
+      task.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval,
+    sku: task.product?.sku,
+    title: task.product?.title,
+    variant_id: task.product?.variant_id,
+    family: task.product?.family,
+    current_mcp_tool_calls: task.current_counts?.mcp_tool_calls,
+    current_create_cart_url_calls: task.current_counts?.create_cart_url_calls,
+    current_qualified_cart_landings: task.current_counts?.qualified_cart_landings,
+    copy_ready_buyer_request: task.copy_ready_buyer_request,
+    proof_gate: task.proof_gate,
+    order_proof_watch: task.order_proof_watch,
+    buyer_confirmation_required: task.buyer_confirmation_required,
+    no_order_created_by_this_task: task.no_order_created_by_this_task,
+    safety_rule: task.safety_rule,
+  }));
+  const headers = [
+    "task_id",
+    "rank",
+    "source",
+    "status",
+    "target_event_to_watch",
+    "buyer_handoff_url",
+    "buyer_handoff_html_url",
+    "buyer_handoff_json_url",
+    "buyer_handoff_shell_url",
+    "order_handoff_shell_url",
+    "order_handoff_shell_one_liner",
+    "source_preserving_cart_url",
+    "prepare_purchase_tool",
+    "prepare_purchase_endpoint",
+    "prepare_purchase_confirmed_json_rpc_after_buyer_approval",
+    "sku",
+    "title",
+    "variant_id",
+    "family",
+    "current_mcp_tool_calls",
+    "current_create_cart_url_calls",
+    "current_qualified_cart_landings",
+    "copy_ready_buyer_request",
+    "proof_gate",
+    "order_proof_watch",
+    "buyer_confirmation_required",
+    "no_order_created_by_this_task",
+    "safety_rule",
+  ];
+  return [
+    headers.join(","),
+    ...rows.map((row) => headers.map((header) => taskCsvField(row[header as keyof typeof row])).join(",")),
+    "",
+  ].join("\n");
 }
 
 function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHandoffsPayload>): string {
@@ -8132,6 +8207,7 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
         <a class="button primary" href="${escapeHtml(payload.links.buyer_order_handoffs_json)}">JSON</a>
         <a class="button" href="${escapeHtml(payload.links.buyer_order_handoffs_markdown)}">Markdown</a>
         <a class="button" href="${escapeHtml(payload.links.buyer_order_handoffs_tasks_jsonl)}">JSONL tasks</a>
+        <a class="button" href="${escapeHtml(payload.links.buyer_order_handoffs_tasks_csv)}">CSV tasks</a>
         <a class="button" href="${escapeHtml(payload.links.revenue_conversion_queue_html)}">Revenue queue</a>
         <a class="button" href="${escapeHtml(payload.links.ga4_funnel_proof)}">GA4 proof</a>
       </div>
@@ -13086,6 +13162,7 @@ const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
 const MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl";
+const MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv";
 const MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES = [
   { source: "official_registry", target: "generic_streamable_http" },
   { source: "mcpservers_org", target: "generic_streamable_http" },
@@ -13313,6 +13390,7 @@ const AI_DISCOVERY_URLS = [
   MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
   MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
   MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+  MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
   MCP_SOURCE_ACTIVATION_SITEMAP_URL,
   ...MCP_DIRECT_SOURCE_ACTIVATION_RESOURCE_URLS,
   "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
@@ -13484,6 +13562,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-buyer-order-handoffs.md": "Crawler-readable Packrift MCP buyer/reviewer order handoff hub with copy-ready buyer requests and proof boundaries.",
   "/ai/mcp-buyer-order-handoffs.html": "Human-facing Packrift MCP buyer order handoff board for reviewing mature source-preserving carts before buyer-approved checkout.",
   "/ai/mcp-buyer-order-handoffs-tasks.jsonl": "Flat JSONL buyer/reviewer checkout task queue for mature Packrift MCP sources that already have tool and cart proof but still need buyer-approved order or revenue proof.",
+  "/ai/mcp-buyer-order-handoffs-tasks.csv": "Flat CSV buyer/reviewer checkout task queue for mature Packrift MCP sources that already have tool and cart proof but still need buyer-approved order or revenue proof.",
   "/ai/mcp-source-activation-sitemap.xml": "Finite crawl map for source-specific Packrift MCP start, install, first-run, and reviewer activation URLs.",
   "/ai/mcp-activation-experiments.json": "Machine-readable Packrift MCP source activation experiments with hypotheses, target events, expected snapshot deltas, and suppression rules.",
   "/ai/mcp-activation-experiments.md": "Crawler-readable Packrift MCP activation experiment plan for turning source activity into measurable tool calls, cart landings, and orders.",
@@ -14037,6 +14116,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-buyer-order-handoffs.md") return mcpBuyerOrderHandoffsMarkdown(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   if (pathname === "/ai/mcp-buyer-order-handoffs.html") return mcpBuyerOrderHandoffsHtml(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   if (pathname === "/ai/mcp-buyer-order-handoffs-tasks.jsonl") return mcpBuyerOrderHandoffsTasksJsonl(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
+  if (pathname === "/ai/mcp-buyer-order-handoffs-tasks.csv") return mcpBuyerOrderHandoffsTasksCsv(mcpBuyerOrderHandoffsPayload(await cachedMcpRevenueConversionQueuePayload(env, todayUtc(), PUBLIC_MCP_OPERATOR_EVENT_LIMIT, PUBLIC_MCP_OPERATOR_ORDER_DAYS, PUBLIC_MCP_OPERATOR_ORDER_LIMIT)));
   const sourceActivationPacketMatch = pathname.match(/^\/ai\/mcp-source-activation\/([a-z0-9_]{2,64})\.(json|md|html)$/);
   if (sourceActivationPacketMatch) {
     const source = sourceActivationPacketMatch[1] ?? "";
@@ -14305,6 +14385,8 @@ function mcpToolDiscoveryPayload() {
       revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
       buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+      buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+      buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       agent_host_rollout_html: MCP_AGENT_HOST_ROLLOUT_HTML_URL,
       agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
@@ -14394,6 +14476,8 @@ function mcpToolDiscoveryMarkdown(): string {
     `- Source activation queue: ${payload.conversion_urls.source_activation_queue}`,
     `- Revenue conversion queue: ${payload.conversion_urls.revenue_conversion_queue}`,
     `- Buyer order handoffs: ${payload.conversion_urls.buyer_order_handoffs}`,
+    `- Buyer order handoff task JSONL: ${payload.conversion_urls.buyer_order_handoffs_tasks_jsonl}`,
+    `- Buyer order handoff task CSV: ${payload.conversion_urls.buyer_order_handoffs_tasks_csv}`,
     `- Agent host rollout: ${payload.conversion_urls.agent_host_rollout}`,
     `- Agent host rollout task JSONL: ${payload.conversion_urls.agent_host_rollout_tasks_jsonl}`,
     `- Agent host rollout task CSV: ${payload.conversion_urls.agent_host_rollout_tasks_csv}`,
@@ -14487,6 +14571,9 @@ function mcpOpenApiPayload() {
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
       agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
+      buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
+      buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+      buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
       eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
       tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
@@ -14624,6 +14711,13 @@ function mcpOpenApiPayload() {
           responses: { "200": openApiJsonResponse("CSV source-aware rollout tasks for importing into agent, CRM, or directory queues") },
         },
       },
+      "/ai/mcp-buyer-order-handoffs-tasks.csv": {
+        get: {
+          operationId: "getPackriftMcpBuyerOrderHandoffTasksCsv",
+          summary: "Read flat Packrift MCP buyer order handoff task CSV",
+          responses: { "200": openApiJsonResponse("CSV buyer/reviewer checkout tasks for mature source-preserving MCP handoffs") },
+        },
+      },
       "/ai/mcp-external-activation-brief.json": {
         get: {
           operationId: "getPackriftMcpExternalActivationBrief",
@@ -14718,6 +14812,9 @@ function mcpAiPluginDiscoveryPayload() {
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
       agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
+      buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
+      buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+      buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
       eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
     },
@@ -14789,6 +14886,8 @@ function mcpManifestPayload() {
     mcp_revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
     mcp_buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
     mcp_buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+    mcp_buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+    mcp_buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
     mcp_source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
     mcp_source_activation_packet_template: "https://mcp.packrift.com/ai/mcp-source-activation/{source}.json",
     mcp_source_activation_packet_cline: "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json",
@@ -14872,6 +14971,8 @@ function mcpServerCardPayload() {
       revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
       buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+      buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+      buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
       agent_host_rollout_markdown: MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL,
       agent_host_rollout_html: MCP_AGENT_HOST_ROLLOUT_HTML_URL,
@@ -17172,6 +17273,21 @@ app.get("/ai/mcp-buyer-order-handoffs-tasks.jsonl", async (c) => {
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-buyer-order-handoffs-tasks.jsonl", "mcp_buyer_order_handoff_tasks", jsonByteSize(body));
   return c.body(body, 200, {
     "Content-Type": "application/x-ndjson; charset=utf-8",
+    ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
+  });
+});
+
+app.get("/ai/mcp-buyer-order-handoffs-tasks.csv", async (c) => {
+  const url = new URL(c.req.url);
+  const { date, limit, orderDays, orderLimit, refresh } = publicMcpOperatorSnapshotRequest(url);
+  const body = mcpBuyerOrderHandoffsTasksCsv(
+    mcpBuyerOrderHandoffsPayload(
+      await cachedMcpRevenueConversionQueuePayload(c.env, date, limit, orderDays, orderLimit, { refresh })
+    )
+  );
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-buyer-order-handoffs-tasks.csv", "mcp_buyer_order_handoff_tasks", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/csv; charset=utf-8",
     ...(refresh ? PUBLIC_MCP_DERIVED_RESOURCE_FRESH_HEADERS : RAW_HEADERS),
   });
 });

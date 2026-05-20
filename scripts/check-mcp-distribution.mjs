@@ -279,6 +279,7 @@ const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer
 const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
 const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
 const MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl";
+const MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
 const OPENAI_PRODUCT_FEED_MANIFEST_URL =
@@ -552,6 +553,7 @@ async function liveMcpCheck() {
     buyerOrderHandoffsMarkdownResult,
     buyerOrderHandoffsHtmlResult,
     buyerOrderHandoffsTasksJsonlResult,
+    buyerOrderHandoffsTasksCsvResult,
     sourceActivationSitemapResult,
     sourceActivationClineJsonResult,
     sourceActivationClineMarkdownResult,
@@ -703,6 +705,7 @@ async function liveMcpCheck() {
     fetchText(`${MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText(`${MCP_BUYER_ORDER_HANDOFFS_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL}?limit=20000&order_days=90&order_limit=250`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md"),
@@ -850,6 +853,9 @@ async function liveMcpCheck() {
     openapiJson?.["x-packrift-mcp"]?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
     openapiJson?.["x-packrift-mcp"]?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
     openapiJson?.["x-packrift-mcp"]?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
+    openapiJson?.["x-packrift-mcp"]?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+    openapiJson?.["x-packrift-mcp"]?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL &&
+    openapiJson?.["x-packrift-mcp"]?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL &&
     openapiJson?.["x-packrift-mcp"]?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
     openapiJson?.["x-packrift-mcp"]?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
     openapiJson?.paths?.["/mcp"]?.post?.operationId === "callPackriftMcpJsonRpc" &&
@@ -860,6 +866,7 @@ async function liveMcpCheck() {
     openapiJson?.paths?.["/ai/mcp-agent-host-rollout.json"]?.get?.operationId === "getPackriftMcpAgentHostRollout" &&
     openapiJson?.paths?.["/ai/mcp-agent-host-rollout-tasks.jsonl"]?.get?.operationId === "getPackriftMcpAgentHostRolloutTasksJsonl" &&
     openapiJson?.paths?.["/ai/mcp-agent-host-rollout-tasks.csv"]?.get?.operationId === "getPackriftMcpAgentHostRolloutTasksCsv" &&
+    openapiJson?.paths?.["/ai/mcp-buyer-order-handoffs-tasks.csv"]?.get?.operationId === "getPackriftMcpBuyerOrderHandoffTasksCsv" &&
     openapiJson?.paths?.["/ai/mcp-external-activation-brief.json"]?.get?.operationId === "getPackriftMcpExternalActivationBrief" &&
     openapiJson?.paths?.["/ai/mcp-eval-pack.json"]?.get?.operationId === "getPackriftMcpEvalPack" &&
     openapiJson?.paths?.["/r/install/{source}/{target}"]?.get?.operationId === "getPackriftSourceAwareInstallAction" &&
@@ -877,6 +884,9 @@ async function liveMcpCheck() {
     aiPluginJson?.mcp?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
     aiPluginJson?.mcp?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
     aiPluginJson?.mcp?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
+    aiPluginJson?.mcp?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+    aiPluginJson?.mcp?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL &&
+    aiPluginJson?.mcp?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL &&
     aiPluginJson?.mcp?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
     aiPluginJson?.mcp?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
     wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
@@ -917,6 +927,9 @@ async function liveMcpCheck() {
   const buyerOrderHandoffs = buyerOrderHandoffsResult.ok ? JSON.parse(buyerOrderHandoffsResult.text) : null;
   const buyerOrderHandoffTaskRows = buyerOrderHandoffsTasksJsonlResult.ok
     ? buyerOrderHandoffsTasksJsonlResult.text.trim().split(/\n+/).filter(Boolean).map((line) => JSON.parse(line))
+    : [];
+  const buyerOrderHandoffTaskCsvLines = buyerOrderHandoffsTasksCsvResult.ok
+    ? buyerOrderHandoffsTasksCsvResult.text.trim().split(/\n+/).filter(Boolean)
     : [];
   const sourceActivationCline = sourceActivationClineJsonResult.ok ? JSON.parse(sourceActivationClineJsonResult.text) : null;
   const sourceActivationCodex = sourceActivationCodexJsonResult.ok ? JSON.parse(sourceActivationCodexJsonResult.text) : null;
@@ -1234,6 +1247,8 @@ async function liveMcpCheck() {
     json_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_json === MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
     markdown_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_markdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
     html_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
+    tasks_jsonl_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
+    tasks_csv_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
     revenue_queue_link: buyerOrderHandoffs?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
     handoff_rows_present: buyerOrderHandoffRows.length >= 1,
     mature_source_coverage:
@@ -1289,6 +1304,7 @@ async function liveMcpCheck() {
     html_title: buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     html_task_count: buyerOrderHandoffsHtmlResult.text.includes("checkout tasks"),
     html_tasks_link: buyerOrderHandoffsHtmlResult.text.includes("mcp-buyer-order-handoffs-tasks.jsonl"),
+    html_csv_tasks_link: buyerOrderHandoffsHtmlResult.text.includes("mcp-buyer-order-handoffs-tasks.csv"),
     html_copy_ready: buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request"),
     html_prepare_purchase_shortcut: buyerOrderHandoffsHtmlResult.text.includes("Prepare purchase shortcut"),
     html_checkout_review_contract: buyerOrderHandoffsHtmlResult.text.includes("Checkout review contract"),
@@ -1315,6 +1331,14 @@ async function liveMcpCheck() {
         task.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
         task.no_order_created_by_this_task === true
     ),
+    buyer_checkout_task_csv_export:
+      buyerOrderHandoffsTasksCsvResult.ok &&
+      buyerOrderHandoffTaskCsvLines.length === buyerOrderHandoffTaskRows.length + 1 &&
+      buyerOrderHandoffTaskCsvLines[0]?.startsWith("task_id,rank,source,status,target_event_to_watch") &&
+      buyerOrderHandoffTaskCsvLines.some((line) => line.includes("mcp_buyer_checkout_mcp_so")) &&
+      buyerOrderHandoffTaskCsvLines.some((line) => line.includes("https://mcp.packrift.com/r/order/mcp_so?format=sh")) &&
+      buyerOrderHandoffTaskCsvLines.some((line) => line.includes("https://mcp.packrift.com/r/cart/1066")) &&
+      buyerOrderHandoffTaskCsvLines.some((line) => line.includes("prepare_purchase_handoff")),
   };
   const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
   const sourceAwarePreparePurchaseOk =
@@ -1603,6 +1627,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       serverCard?.registry_distribution?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       serverCard?.registry_distribution?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      serverCard?.registry_distribution?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL &&
+      serverCard?.registry_distribution?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL &&
       serverCard?.registry_distribution?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
       serverCard?.registry_distribution?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
       serverCard?.registry_distribution?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
@@ -1640,6 +1666,8 @@ async function liveMcpCheck() {
       serverCard?.resource_links?.mcpBuyerOrderHandoffsJson === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       serverCard?.resource_links?.mcpBuyerOrderHandoffsMarkdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL &&
       serverCard?.resource_links?.mcpBuyerOrderHandoffsHtml === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      serverCard?.resource_links?.mcpBuyerOrderHandoffsTasksJsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL &&
+      serverCard?.resource_links?.mcpBuyerOrderHandoffsTasksCsv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL &&
       serverCard?.resource_links?.openapiJson === MCP_OPENAPI_JSON_URL &&
       serverCard?.resource_links?.wellKnownOpenapiJson === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       serverCard?.resource_links?.aiPluginJson === MCP_AI_PLUGIN_JSON_URL &&
@@ -1716,6 +1744,7 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL) &&
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_HTML_URL) &&
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.html") &&
@@ -1805,6 +1834,8 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL &&
+      mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL &&
       mcpToolsDiscovery?.conversion_urls?.agent_host_rollout === MCP_AGENT_HOST_ROLLOUT_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.agent_host_rollout_tasks_jsonl === MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL &&
       mcpToolsDiscovery?.conversion_urls?.agent_host_rollout_tasks_csv === MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL &&
@@ -2128,6 +2159,8 @@ async function liveMcpCheck() {
       agentCapture?.hub_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       agentCapture?.hub_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
       agentCapture?.hub_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      agentCapture?.hub_urls?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL &&
+      agentCapture?.hub_urls?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL &&
       agentCapture?.hub_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCapture?.hub_urls?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
       agentCapture?.hub_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
@@ -2150,6 +2183,7 @@ async function liveMcpCheck() {
           surface.id === "mcp_buyer_order_handoffs" &&
           surface.canonical_url === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
           surface.proof_url === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+          surface.install_or_call?.includes("JSONL/CSV checkout task exports") &&
           surface.install_or_call?.includes("never places an order")
       ) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
@@ -4132,6 +4166,8 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL) &&
       resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_HTML_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL) &&
       resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md") &&

@@ -81,6 +81,7 @@ export const serverCard = {
     mcpBuyerOrderHandoffsMarkdown: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md",
     mcpBuyerOrderHandoffsHtml: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
     mcpBuyerOrderHandoffsTasksJsonl: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl",
+    mcpBuyerOrderHandoffsTasksCsv: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv",
     mcpSourceActivationSitemap: "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
     mcpSourceActivationPacketTemplate: "https://mcp.packrift.com/ai/mcp-source-activation/{source}.json",
     mcpSourceActivationPacketCline: "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json",

@@ -416,6 +416,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - MCP buyer order handoffs: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json
 - MCP buyer order handoffs HTML: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html
 - MCP buyer order handoff task JSONL: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl
+- MCP buyer order handoff task CSV: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv
 - MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
