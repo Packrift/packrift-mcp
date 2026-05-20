@@ -8170,6 +8170,9 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
     source_specific_first_run_url: packetUrls.tracked_first_run_url,
     reviewer_activation_shell_url: packetUrls.reviewer_activation_shell_url,
   };
+  const packetBuyerHandoffUrl = row.order_conversion_handoff?.buyer_handoff_url ?? packetSourceOrderHandoff.buyer_handoff_url ?? null;
+  const packetBuyerActionUrl = row.order_conversion_handoff?.buyer_action_url ?? packetSourceOrderHandoff.buyer_action_url ?? null;
+  const packetOrderHandoffShellOneLiner = sourceActivationShellCommand(packetUrls.order_handoff_shell_url);
   const isCline = preferredTarget === "cline" || sourceSlug.includes("cline");
   const targetIsOrder = row.target_event_to_watch === "mcp_attributed_order";
   const packetPrimaryAction = targetIsOrder
@@ -8223,8 +8226,11 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
     source_order_handoff: packetSourceOrderHandoff,
     buyer_handoff_preview: packetSourceOrderHandoff,
     order_conversion_handoff: row.order_conversion_handoff,
-    buyer_handoff_url: row.order_conversion_handoff?.buyer_handoff_url ?? null,
-    buyer_action_url: row.order_conversion_handoff?.buyer_action_url ?? null,
+    buyer_handoff_url: packetBuyerHandoffUrl,
+    buyer_handoff_shell_url: packetUrls.order_handoff_shell_url,
+    order_handoff_shell_url: packetUrls.order_handoff_shell_url,
+    order_handoff_shell_one_liner: packetOrderHandoffShellOneLiner,
+    buyer_action_url: packetBuyerActionUrl,
     cart_landing_action_url: row.cart_landing_action_url,
     recent_measured_cart_urls: row.recent_measured_cart_urls,
     cline_real_host_run: isCline
@@ -8285,6 +8291,8 @@ function mcpSourceActivationPacketPayload(payload: Awaited<ReturnType<typeof mcp
       first_run_shell: packetUrls.tracked_first_run_shell_url,
       activation_runner: packetUrls.reviewer_activation_runner_url,
       activation_shell: packetUrls.reviewer_activation_shell_url,
+      order_handoff: packetBuyerHandoffUrl ?? packetUrls.order_handoff_html_url,
+      order_handoff_shell: packetUrls.order_handoff_shell_url,
       directory_update_card: packetUrls.directory_update_card_json_url,
       eval_pack: packetUrls.eval_pack_json_url,
       tool_discovery_json: row.tool_discovery_json_url,
@@ -8321,6 +8329,8 @@ function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpA
       source_activation_packet: `https://mcp.packrift.com/ai/mcp-source-activation/${sourceSlug}.json`,
       eval_pack: fallbackUrls.eval_pack_json_url,
       order_handoff: fallbackUrls.order_handoff_html_url,
+      order_handoff_shell_url: fallbackUrls.order_handoff_shell_url,
+      order_handoff_shell_one_liner: sourceActivationShellCommand(fallbackUrls.order_handoff_shell_url),
       recommended_action:
         "Use the generic source-aware Packrift MCP endpoint in a real MCP host, then run the first useful SKU 1066 sequence through create_cart_url without placing an order.",
       success_gate:
@@ -8367,6 +8377,26 @@ function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpA
     "create_cart_url returns a measured https://mcp.packrift.com/r/cart/1066 URL without creating an order.",
     "Public usage, source activation, or funnel snapshots show non-suppressed source-attributed progress.",
   ];
+  const rolloutBuyerHandoffUrl = rolloutRow.order_handoff ?? fallbackUrls.order_handoff_html_url;
+  const rolloutOrderHandoffShellUrl = rolloutRow.order_handoff_shell_url ?? fallbackUrls.order_handoff_shell_url;
+  const rolloutOrderHandoffShellOneLiner =
+    rolloutRow.order_handoff_shell_one_liner ?? sourceActivationShellCommand(rolloutOrderHandoffShellUrl);
+  const rolloutSourceOrderHandoff = {
+    status: "checkout_guarded_fallback",
+    source: sourceSlug,
+    preferred_target: rolloutRow.target,
+    mcp_source_context: sourceSlug,
+    mcp_install_target: rolloutRow.target,
+    buyer_handoff_url: rolloutBuyerHandoffUrl,
+    buyer_handoff_shell_url: rolloutOrderHandoffShellUrl,
+    order_handoff_shell_url: rolloutOrderHandoffShellUrl,
+    order_handoff_shell_one_liner: rolloutOrderHandoffShellOneLiner,
+    source_aware_endpoint: rolloutRow.source_aware_endpoint,
+    proof_boundary:
+      "This fallback handoff is useful for buyer/reviewer follow-through, but progress is counted only when external MCP tool calls, measured cart landings, or attributed orders appear.",
+    checkout_guardrail:
+      "The shell runner confirms live product, price, and inventory first and never places an order.",
+  };
   return {
     release: MCP_SOURCE_ACTIVATION_PACKET_RELEASE,
     generated_at: payload.generated_at,
@@ -8404,6 +8434,13 @@ function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpA
       required_cart_url_prefix: "https://mcp.packrift.com/r/cart/1066",
       no_order_created_by_tool_run: true,
     },
+    source_order_handoff: rolloutSourceOrderHandoff,
+    buyer_handoff_preview: rolloutSourceOrderHandoff,
+    buyer_handoff_url: rolloutBuyerHandoffUrl,
+    buyer_handoff_shell_url: rolloutOrderHandoffShellUrl,
+    order_handoff_shell_url: rolloutOrderHandoffShellUrl,
+    order_handoff_shell_one_liner: rolloutOrderHandoffShellOneLiner,
+    buyer_action_url: null,
     cline_real_host_run: rolloutRow.target === "cline"
       ? {
           mcp_json: JSON.stringify(sourceAwareMcpJson(sourceSlug, rolloutRow.target), null, 2),
@@ -8480,6 +8517,8 @@ function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpA
       first_run_shell: rolloutRow.tracked_first_run_shell_url,
       activation_runner: rolloutRow.reviewer_activation_url,
       activation_shell: rolloutRow.reviewer_activation_shell_url,
+      order_handoff: rolloutBuyerHandoffUrl,
+      order_handoff_shell: rolloutOrderHandoffShellUrl,
       directory_update_card: `https://mcp.packrift.com/ai/mcp-directory-update/${sourceSlug}.json`,
       eval_pack: rolloutRow.eval_pack,
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
@@ -8573,6 +8612,15 @@ function mcpSourceActivationPacketMarkdown(payload: NonNullable<ReturnType<typeo
     "",
     fencedShell(payload.real_host_run.activation_shell_one_liner),
     "",
+    "## Guarded Order Handoff",
+    "",
+    `Buyer/reviewer handoff: ${payload.buyer_handoff_url ?? payload.links.order_handoff}`,
+    `Order shell URL: ${payload.order_handoff_shell_url}`,
+    "",
+    fencedShell(payload.order_handoff_shell_one_liner),
+    "",
+    "This path is for buyer or reviewer follow-through after real MCP tool-call and cart proof. It does not place an order.",
+    "",
     "## Acceptance Criteria",
     "",
     payload.acceptance_criteria.map((item) => `- ${item}`).join("\n"),
@@ -8649,6 +8697,7 @@ function mcpSourceActivationPacketHtml(payload: NonNullable<ReturnType<typeof mc
         <a class="button primary" href="${escapeHtml(payload.links.primary_action)}">Primary action</a>
         <a class="button" href="${escapeHtml(payload.links.tracked_install)}">Install</a>
         <a class="button" href="${escapeHtml(payload.links.activation_runner)}">Activation runner</a>
+        <a class="button" href="${escapeHtml(payload.buyer_handoff_url ?? payload.links.order_handoff)}">Order handoff</a>
         <a class="button" href="${escapeHtml(payload.links.eval_pack)}">Eval pack</a>
         <a class="button" href="${escapeHtml(payload.links.funnel_snapshot)}">Funnel proof</a>
       </div>
@@ -8675,6 +8724,14 @@ function mcpSourceActivationPacketHtml(payload: NonNullable<ReturnType<typeof mc
       <pre>${escapeHtml(payload.copy_ready.cline_mcp_json)}</pre>
       <h2>First-Run Shell</h2>
       <pre>${escapeHtml(payload.real_host_run.first_run_shell_one_liner)}</pre>
+    </section>
+    <section>
+      <h2>Guarded Order Handoff</h2>
+      <p>Use this after real MCP tool-call and measured cart proof when the next missing step is buyer or reviewer checkout follow-through. It does not place an order.</p>
+      <h2>Buyer/Reviewer Page</h2>
+      <pre>${escapeHtml(payload.buyer_handoff_url ?? payload.links.order_handoff)}</pre>
+      <h2>Order Shell</h2>
+      <pre>${escapeHtml(payload.order_handoff_shell_one_liner)}</pre>
     </section>
     <section>
       <h2>Acceptance Criteria</h2>
@@ -12471,7 +12528,7 @@ const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
-const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04";
+const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const MCP_ACTIVATION_WAVE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.md";
 const MCP_ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";

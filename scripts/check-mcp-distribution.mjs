@@ -1161,28 +1161,33 @@ async function liveMcpCheck() {
         row?.current_counts?.qualified_cart_landings > 0
     );
   const sourceActivationHostPacketsOk =
-    sourceActivationCodex?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
+    sourceActivationCodex?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05" &&
     sourceActivationCodex?.source === "codex_remote_mcp" &&
     sourceActivationCodex?.preferred_target === "codex" &&
     sourceActivationCodex?.source_aware_endpoint?.includes("packrift_mcp_target=codex") &&
     sourceActivationCodex?.real_host_run?.first_run_shell_url?.includes("/r/run/codex_remote_mcp/codex") &&
+    sourceActivationCodex?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/codex_remote_mcp?format=sh" &&
+    sourceActivationCodex?.order_handoff_shell_one_liner?.includes("curl -sS") &&
     sourceActivationCodex?.copy_ready?.codex_command?.includes("packrift_mcp_target=codex") &&
-    sourceActivationClaude?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
+    sourceActivationClaude?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05" &&
     sourceActivationClaude?.source === "claude_remote_mcp" &&
     sourceActivationClaude?.preferred_target === "claude_code" &&
     sourceActivationClaude?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
     sourceActivationClaude?.real_host_run?.first_run_shell_url?.includes("/r/run/claude_remote_mcp/claude_code") &&
+    sourceActivationClaude?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/claude_remote_mcp?format=sh" &&
     sourceActivationClaude?.copy_ready?.claude_code_command?.includes("packrift_mcp_target=claude_code") &&
-    sourceActivationGlama?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
+    sourceActivationGlama?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05" &&
     sourceActivationGlama?.source === "glama_connector" &&
     sourceActivationGlama?.preferred_target === "glama_connector" &&
     sourceActivationGlama?.source_aware_endpoint?.includes("packrift_mcp_target=glama_connector") &&
     sourceActivationGlama?.real_host_run?.first_run_shell_url?.includes("/r/run/glama_connector/glama_connector") &&
-    sourceActivationAnthropic?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
+    sourceActivationGlama?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/glama_connector?format=sh" &&
+    sourceActivationAnthropic?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05" &&
     sourceActivationAnthropic?.source === "anthropic_connectors_directory" &&
     sourceActivationAnthropic?.preferred_target === "claude_code" &&
     sourceActivationAnthropic?.source_aware_endpoint?.includes("packrift_mcp_target=claude_code") &&
-    sourceActivationAnthropic?.real_host_run?.first_run_shell_url?.includes("/r/run/anthropic_connectors_directory/claude_code");
+    sourceActivationAnthropic?.real_host_run?.first_run_shell_url?.includes("/r/run/anthropic_connectors_directory/claude_code") &&
+    sourceActivationAnthropic?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/anthropic_connectors_directory?format=sh";
   const sourceActivationHostIntentRowsRequireExternalOk = ["claude_remote_mcp", "codex_remote_mcp", "glama_connector"].every((source) => {
     const row = sourceActivationQueue?.queue?.find((candidate) => candidate.source === source);
     if (!row) return true;
@@ -1478,7 +1483,7 @@ async function liveMcpCheck() {
       cart?.release === "PACKRIFT-MCP-CART-HANDOFF-CANDIDATES-R04" &&
       cart?.items?.length >= 50 &&
       cart?.items?.[0]?.cart_url_candidate_type === "mcp_cart_landing_redirect" &&
-      start?.release === "PACKRIFT-MCP-START-R15" &&
+      start?.release === "PACKRIFT-MCP-START-R16" &&
       start?.canonical_endpoint === MCP_ENDPOINT &&
       start?.first_flow?.length >= 6 &&
       start?.first_flow?.some((step) => step?.request?.params?.name === "create_cart_url") &&
@@ -1488,6 +1493,12 @@ async function liveMcpCheck() {
       start?.first_useful_run?.curl_script?.includes("create_cart_url") &&
       start?.first_useful_run?.agent_prompt?.includes("create_cart_url") &&
       start?.first_useful_run?.curl_commands?.length >= 5 &&
+      start?.source_order_handoff?.status === "buyer_confirmation_guarded" &&
+      start?.source_order_handoff?.tracked_order_handoff_template === "https://mcp.packrift.com/r/order/{source}" &&
+      start?.source_order_handoff?.tracked_order_handoff_shell_template === "https://mcp.packrift.com/r/order/{source}?format=sh" &&
+      start?.source_order_handoff?.generic_order_handoff_shell === "https://mcp.packrift.com/r/order/generic?format=sh" &&
+      start?.source_order_handoff?.generic_order_handoff_shell_one_liner?.includes("curl -sS") &&
+      start?.source_order_handoff?.guardrail?.includes("PACKRIFT_BUYER_CONFIRMED=1") &&
       start?.external_activation_handoff?.status === "selected_contact_ready_runs_available" &&
       start?.external_activation_handoff?.selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       start?.external_activation_handoff?.selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
@@ -1601,6 +1612,9 @@ async function liveMcpCheck() {
       start?.start_urls?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       start?.start_urls?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
       start?.start_urls?.tracked_reviewer_activation_html_template === "https://mcp.packrift.com/r/activate/{source}?format=html" &&
+      start?.start_urls?.tracked_order_handoff_template === "https://mcp.packrift.com/r/order/{source}" &&
+      start?.start_urls?.tracked_order_handoff_html_template === "https://mcp.packrift.com/r/order/{source}?format=html" &&
+      start?.start_urls?.tracked_order_handoff_shell_template === "https://mcp.packrift.com/r/order/{source}?format=sh" &&
       start?.start_urls?.source_policy?.partner_specific_sources_allowed === true &&
       start?.start_urls?.source_policy?.accepted_source_format === "^[a-z0-9_]{2,64}$" &&
       start?.start_urls?.tracked_examples?.mcpservers_org?.startsWith("https://mcp.packrift.com/r/start/mcpservers_org") &&
@@ -1612,17 +1626,24 @@ async function liveMcpCheck() {
       start?.start_urls?.tracked_install_examples?.mcpfinder?.codex?.startsWith("https://mcp.packrift.com/r/install/mcpfinder/codex") &&
       start?.start_urls?.tracked_install_examples?.cline_mcp_marketplace?.cline?.startsWith("https://mcp.packrift.com/r/install/cline_mcp_marketplace/cline") &&
       start?.start_urls?.tracked_run_examples?.mcpfinder?.startsWith("https://mcp.packrift.com/r/run/mcpfinder/generic_streamable_http") &&
+      start?.start_urls?.tracked_order_handoff_examples?.mcpfinder === "https://mcp.packrift.com/r/order/mcpfinder?format=html" &&
+      start?.start_urls?.tracked_order_handoff_shell_examples?.cline_mcp_marketplace === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
       start?.proof_urls?.usage_snapshot === "https://mcp.packrift.com/ai/mcp-usage-snapshot.json" &&
       start?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
       start?.proof_urls?.first_run_actions === "https://mcp.packrift.com/ai/mcp-first-run-actions.json" &&
       start?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       start?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
+      start?.proof_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      start?.proof_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+      start?.proof_urls?.tracked_order_handoff_generic === "https://mcp.packrift.com/r/order/generic?format=html" &&
+      start?.proof_urls?.tracked_order_handoff_shell_generic === "https://mcp.packrift.com/r/order/generic?format=sh" &&
       start?.proof_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       start?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       start?.proof_urls?.external_activation_selected_tasks_jsonl === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL &&
       start?.proof_urls?.external_activation_selected_tasks_csv === MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL &&
       start?.proof_urls?.external_activation_selected_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       start?.operating_rules?.some((rule) => rule.includes("selected external activation JSONL/CSV task feed")) &&
+      start?.operating_rules?.some((rule) => rule.includes("/r/order/{source}?format=html") && rule.includes("buyer or reviewer checkout follow-through")) &&
       trackedStartPartnerResult.status === 302 &&
       trackedStartTarget?.origin === PACKRIFT_ORIGIN &&
       trackedStartTarget?.pathname === "/start" &&
@@ -1637,6 +1658,8 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/install/partner_demo/cline") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/run/partner_demo/generic_streamable_http") &&
       trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/activate/partner_demo?format=html") &&
+      trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/order/partner_demo?format=html") &&
+      trackedStartHtmlPartnerResult.text.includes("https://mcp.packrift.com/r/order/partner_demo?format=sh") &&
       trackedStartHtmlPartnerResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL) &&
       trackedStartHtmlPartnerResult.text.includes(MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
       trackedStartHtmlPartnerResult.text.includes("External Activation") &&
@@ -1644,8 +1667,11 @@ async function liveMcpCheck() {
       trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=claude_code") &&
       trackedStartHtmlPartnerResult.text.includes("packrift_mcp_target=codex") &&
       trackedStartHtmlPartnerResult.text.includes("Activation runner") &&
+      trackedStartHtmlPartnerResult.text.includes("Guarded Order Handoff") &&
       trackedStartHtmlPartnerResult.text.includes("Tracked Cline install") &&
       trackedStartHtmlPartnerResult.text.includes("install cline: partner demo") &&
+      trackedStartHtmlPartnerResult.text.includes("order handoff: partner demo") &&
+      trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"source_order_handoff_shell_one_liner\"") &&
       trackedStartHtmlPartnerResult.text.includes("Run After Install") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"first_useful_sequence\"") &&
       trackedStartHtmlPartnerResult.text.includes("data-copy-target=\"first_useful_curl_script\"") &&
@@ -2571,7 +2597,7 @@ async function liveMcpCheck() {
       revenueConversionQueueHtmlResult.text.includes("Prepare purchase shortcut") &&
       mcpPageAnalyticsDiagnostics.revenue_queue_html &&
       revenueConversionQueueHtmlResult.text.includes("Order attribution required") &&
-      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
+      sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05" &&
       sourceActivationCline?.source === "cline_mcp_marketplace" &&
       sourceActivationCline?.preferred_target === "cline" &&
       ["real_host_tool_call_needed", "buyer_checkout_needed"].includes(sourceActivationCline?.status) &&
@@ -2587,16 +2613,22 @@ async function liveMcpCheck() {
       sourceActivationCline?.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
       sourceActivationCline?.source_order_handoff?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
       sourceActivationCline?.source_order_handoff?.order_handoff_shell_one_liner?.includes("curl -sS") &&
+      sourceActivationCline?.buyer_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+      sourceActivationCline?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
+      sourceActivationCline?.order_handoff_shell_one_liner?.includes("curl -sS") &&
+      sourceActivationCline?.links?.order_handoff_shell === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=sh" &&
       sourceActivationCline?.buyer_handoff_preview?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
       sourceActivationCline?.links?.source_packet_html === "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html" &&
       sourceActivationClineMarkdownResult.ok &&
       sourceActivationClineMarkdownResult.text.includes("Packrift MCP Source Activation Packet") &&
       sourceActivationClineMarkdownResult.text.includes("Cline Real-Host Run") &&
       sourceActivationClineMarkdownResult.text.includes("First-run shell one-liner") &&
+      sourceActivationClineMarkdownResult.text.includes("Guarded Order Handoff") &&
       sourceActivationClineHtmlResult.ok &&
       sourceActivationClineHtmlResult.text.includes("Packrift MCP Source Activation") &&
       sourceActivationClineHtmlResult.text.includes("Cline Real-Host Run") &&
       sourceActivationClineHtmlResult.text.includes("Copy-Ready External Request") &&
+      sourceActivationClineHtmlResult.text.includes("Guarded Order Handoff") &&
       sourceActivationHostPacketsOk &&
       activationExperiments?.release === "PACKRIFT-MCP-ACTIVATION-EXPERIMENTS-R13" &&
       activationExperiments?.canonical_endpoint === MCP_ENDPOINT &&

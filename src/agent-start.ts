@@ -24,6 +24,9 @@ const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const TRACKED_INSTALL_TEMPLATE = "https://mcp.packrift.com/r/install/{source}/{target}";
 const TRACKED_REVIEWER_ACTIVATION_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}";
 const TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE = "https://mcp.packrift.com/r/activate/{source}?format=html";
+const TRACKED_ORDER_HANDOFF_TEMPLATE = "https://mcp.packrift.com/r/order/{source}";
+const TRACKED_ORDER_HANDOFF_HTML_TEMPLATE = "https://mcp.packrift.com/r/order/{source}?format=html";
+const TRACKED_ORDER_HANDOFF_SHELL_TEMPLATE = "https://mcp.packrift.com/r/order/{source}?format=sh";
 const TRACKED_START_SOURCE_FORMAT = "^[a-z0-9_]{2,64}$";
 const TRACKED_START_RECOMMENDED_SOURCES = [
   "official_registry",
@@ -126,6 +129,10 @@ function trackedConfigUrl(source: string): string {
   return url.toString();
 }
 
+function trackedOrderHandoffUrl(source: string, format: "html" | "sh" | "json" | "md" = "html"): string {
+  return `https://mcp.packrift.com/r/order/${source}?format=${format}`;
+}
+
 const FIRST_FLOW = [
   {
     step: 1,
@@ -201,7 +208,7 @@ const BUYER_PROMPTS = [
 
 export function mcpStartPayload(runtime: McpStartRuntime) {
   return {
-    release: "PACKRIFT-MCP-START-R15",
+    release: "PACKRIFT-MCP-START-R16",
     generated_at: new Date().toISOString(),
     purpose:
       "One public start surface for agents, developers, directories, and AI-commerce workflows to install Packrift MCP, run the first useful exact-SKU flow, and continue into measured cart handoff without creating a duplicate CLI or buyer surface.",
@@ -218,12 +225,17 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       tracked_run_template: TRACKED_RUN_TEMPLATE,
       tracked_reviewer_activation_template: TRACKED_REVIEWER_ACTIVATION_TEMPLATE,
       tracked_reviewer_activation_html_template: TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE,
+      tracked_order_handoff_template: TRACKED_ORDER_HANDOFF_TEMPLATE,
+      tracked_order_handoff_html_template: TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
+      tracked_order_handoff_shell_template: TRACKED_ORDER_HANDOFF_SHELL_TEMPLATE,
       source_policy: TRACKED_START_SOURCE_POLICY,
       tracked_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedStartUrl(source)])),
       tracked_config_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedConfigUrl(source)])),
       tracked_run_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedRunUrl(source, "generic_streamable_http")])),
       tracked_reviewer_activation_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, `https://mcp.packrift.com/r/activate/${source}`])),
       tracked_reviewer_activation_html_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, `https://mcp.packrift.com/r/activate/${source}?format=html`])),
+      tracked_order_handoff_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedOrderHandoffUrl(source, "html")])),
+      tracked_order_handoff_shell_examples: Object.fromEntries(TRACKED_START_RECOMMENDED_SOURCES.map((source) => [source, trackedOrderHandoffUrl(source, "sh")])),
       tracked_install_examples: Object.fromEntries(
         TRACKED_START_RECOMMENDED_SOURCES.map((source) => [
           source,
@@ -250,6 +262,22 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
     },
     first_flow: FIRST_FLOW,
     first_useful_run: mcpFirstUsefulRun("generic", "generic_streamable_http"),
+    source_order_handoff: {
+      status: "buyer_confirmation_guarded",
+      purpose:
+        "Use this only after a real MCP host has completed source-attributed tool-call and measured cart proof and a buyer or reviewer wants a checkout follow-through path. It remains a thin guarded wrapper around the hosted MCP endpoint.",
+      tracked_order_handoff_template: TRACKED_ORDER_HANDOFF_TEMPLATE,
+      tracked_order_handoff_html_template: TRACKED_ORDER_HANDOFF_HTML_TEMPLATE,
+      tracked_order_handoff_shell_template: TRACKED_ORDER_HANDOFF_SHELL_TEMPLATE,
+      generic_order_handoff_html: trackedOrderHandoffUrl("generic", "html"),
+      generic_order_handoff_shell: trackedOrderHandoffUrl("generic", "sh"),
+      generic_order_handoff_shell_one_liner: `curl -sS ${shellQuote(trackedOrderHandoffUrl("generic", "sh"))} | bash`,
+      required_confirmation_flag: "PACKRIFT_BUYER_CONFIRMED=1",
+      guardrail:
+        "The shell runner calls prepare_purchase_handoff with buyer_confirmed=false first and exits unless PACKRIFT_BUYER_CONFIRMED=1. A confirmed run returns and opens a measured /r/cart URL only; it never places an order.",
+      proof_boundary:
+        "Order handoff views and shell runner fetches are not source activation proof by themselves. Count progress only when external MCP tool calls, measured cart landings, or MCP-attributed orders appear.",
+    },
     external_activation_handoff: {
       status: "selected_contact_ready_runs_available",
       purpose:
@@ -279,6 +307,10 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
+      buyer_order_handoffs: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json",
+      buyer_order_handoffs_html: "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html",
+      tracked_order_handoff_generic: trackedOrderHandoffUrl("generic", "html"),
+      tracked_order_handoff_shell_generic: trackedOrderHandoffUrl("generic", "sh"),
       external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
       external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       external_activation_selected_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
@@ -302,6 +334,7 @@ export function mcpStartPayload(runtime: McpStartRuntime) {
       "Use /r/install/{source}/{target} tracked install-action links when a directory, partner, or agent host needs one target-specific install command or config plus install-intent attribution.",
       "Use /r/run/{source}/{target} tracked first-run links when a directory, partner, or agent host needs a source-specific MCP call sequence with cart-handoff proof.",
       "Use /r/activate/{source}?format=html tracked reviewer activation browser runners when a proof click needs to become a real MCP call sequence ending in create_cart_url.",
+      "Use /r/order/{source}?format=html or /r/order/{source}?format=sh only after real MCP tool-call and cart proof when the next missing step is buyer or reviewer checkout follow-through.",
       "Use the source activation queue to choose the next source-specific first run, tool call, cart landing, or order progression.",
       "Use the selected external activation JSONL/CSV task feed when a reviewer or automation platform needs the smallest current contact-ready source set; success requires real external MCP tool calls, not Packrift self-runs.",
       "Custom /r/start/{source}, /r/config/{source}, /r/install/{source}/{target}, /r/run/{source}/{target}, and /r/activate/{source}?format=html source slugs are allowed when they match ^[a-z0-9_]{2,64}$; no code deploy or pre-registration is required.",
@@ -355,6 +388,8 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     `Tracked run template: \`${payload.start_urls.tracked_run_template}\``,
     `Tracked reviewer activation template: \`${payload.start_urls.tracked_reviewer_activation_template}\``,
     `Tracked reviewer activation browser runner template: \`${payload.start_urls.tracked_reviewer_activation_html_template}\``,
+    `Tracked order handoff template: \`${payload.start_urls.tracked_order_handoff_template}\``,
+    `Tracked order handoff shell template: \`${payload.start_urls.tracked_order_handoff_shell_template}\``,
     `Accepted source format: \`${payload.start_urls.source_policy.accepted_source_format}\``,
     `Partner-specific sources allowed: \`${payload.start_urls.source_policy.partner_specific_sources_allowed}\``,
     `Custom examples: ${payload.start_urls.source_policy.custom_examples.map((source) => `\`${source}\``).join(", ")}`,
@@ -387,6 +422,12 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
     "",
+    "## Tracked Order Handoffs",
+    "",
+    Object.entries(payload.start_urls.tracked_order_handoff_examples)
+      .map(([key, value]) => `- ${key}: ${value} | shell ${payload.start_urls.tracked_order_handoff_shell_examples[key]}`)
+      .join("\n"),
+    "",
     "## First Useful Flow",
     "",
     payload.first_flow
@@ -412,6 +453,17 @@ export function mcpStartMarkdown(runtime: McpStartRuntime): string {
     "Pasteable curl script:",
     "",
     fencedShell(payload.first_useful_run.curl_script),
+    "",
+    "## Guarded Source Order Handoff",
+    "",
+    payload.source_order_handoff.purpose,
+    "",
+    `Generic buyer/reviewer handoff: ${payload.source_order_handoff.generic_order_handoff_html}`,
+    `Generic shell handoff: ${payload.source_order_handoff.generic_order_handoff_shell}`,
+    "",
+    fencedShell(payload.source_order_handoff.generic_order_handoff_shell_one_liner),
+    "",
+    payload.source_order_handoff.guardrail,
     "",
     "## External Activation Handoff",
     "",
@@ -478,6 +530,9 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   const sourceRunUrl = trackedRunUrl(source, "generic_streamable_http");
   const sourceActivationUrl = `https://mcp.packrift.com/r/activate/${source}`;
   const sourceActivationRunnerUrl = `${sourceActivationUrl}?format=html`;
+  const sourceOrderHandoffUrl = trackedOrderHandoffUrl(source, "html");
+  const sourceOrderHandoffShellUrl = trackedOrderHandoffUrl(source, "sh");
+  const sourceOrderHandoffShellOneLiner = `curl -sS ${shellQuote(sourceOrderHandoffShellUrl)} | bash`;
   const firstUsefulRun = mcpFirstUsefulRun(source, "generic_streamable_http");
   const sourceRemoteConfig = remoteMcpJson(firstUsefulRun.endpoint);
   const sourceRemoteConfigJson = JSON.stringify(sourceRemoteConfig, null, 2);
@@ -651,6 +706,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <a class="button" href="${escapeHtml(START_JSON_URL)}">JSON start pack</a>
         <a class="button" href="${escapeHtml(payload.proof_urls.workflow_gallery)}">Workflow gallery</a>
         <a class="button" href="${escapeHtml(sourceActivationRunnerUrl)}">Run real MCP check</a>
+        <a class="button" href="${escapeHtml(sourceOrderHandoffUrl)}">Order handoff</a>
       </div>
       <div class="source-banner">
         <div>
@@ -663,6 +719,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <a class="button" href="${escapeHtml(sourceInstallUrls.cline)}">Tracked Cline install</a>
         <a class="button" href="${escapeHtml(sourceRunUrl)}">Tracked first run</a>
         <a class="button" href="${escapeHtml(sourceActivationRunnerUrl)}">Activation runner</a>
+        <a class="button" href="${escapeHtml(sourceOrderHandoffUrl)}">Order handoff</a>
       </div>
     </header>
     <section>
@@ -697,6 +754,8 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
             <a href="${escapeHtml(sourceInstallUrls.cline)}">install cline: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceActivationUrl)}">activation handoff: ${escapeHtml(sourceLabel)}</a>
             <a href="${escapeHtml(sourceActivationRunnerUrl)}">activation runner: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceOrderHandoffUrl)}">order handoff: ${escapeHtml(sourceLabel)}</a>
+            <a href="${escapeHtml(sourceOrderHandoffShellUrl)}">order shell: ${escapeHtml(sourceLabel)}</a>
           </div>
         </div>
         <div>
@@ -758,6 +817,28 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
         <div class="panel">
           <div class="panel-head"><strong>Curl script</strong>${copyButton(firstUsefulCurlScript, "Copy", "first_useful_curl_script")}</div>
           <pre>${codeBlock(firstUsefulCurlScript)}</pre>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Guarded Order Handoff</h2>
+      <p>Use this after a real source-attributed MCP run has produced tool-call and measured cart proof. The shell runner performs an unconfirmed live check first, requires buyer approval, and never places an order.</p>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><strong>Buyer/reviewer page</strong>${copyButton(sourceOrderHandoffUrl, "Copy", "source_order_handoff_url")}</div>
+          <pre>${codeBlock(sourceOrderHandoffUrl)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Guarded shell URL</strong>${copyButton(sourceOrderHandoffShellUrl, "Copy", "source_order_handoff_shell_url")}</div>
+          <pre>${codeBlock(sourceOrderHandoffShellUrl)}</pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><strong>Shell one-liner</strong>${copyButton(sourceOrderHandoffShellOneLiner, "Copy", "source_order_handoff_shell_one_liner")}</div>
+          <pre>${codeBlock(sourceOrderHandoffShellOneLiner)}</pre>
+        </div>
+        <div class="panel">
+          <h3>Guardrail</h3>
+          <p>${escapeHtml(payload.source_order_handoff.guardrail)}</p>
         </div>
       </div>
     </section>
