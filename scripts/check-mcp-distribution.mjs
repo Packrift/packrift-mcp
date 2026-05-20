@@ -1625,7 +1625,7 @@ async function liveMcpCheck() {
       adoptionKit?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       adoptionKit?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
       adoptionKit?.expected_first_flow_outcomes?.some((outcome) => outcome.includes("https://mcp.packrift.com/r/cart/")) &&
-      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R08" &&
+      installMatrix?.release === "PACKRIFT-MCP-INSTALL-MATRIX-R09" &&
       installMatrix?.hosts?.length >= 8 &&
       installMatrix?.hosts?.some(
         (host) =>
@@ -1645,6 +1645,32 @@ async function liveMcpCheck() {
       installMatrix?.tracked_install_examples?.codex?.startsWith("https://mcp.packrift.com/r/install/generic/codex") &&
       installMatrix?.tracked_install_examples?.stdio_mcp_remote?.startsWith("https://mcp.packrift.com/r/install/generic/stdio_mcp_remote") &&
       installMatrix?.tracked_install_examples?.cline?.startsWith("https://mcp.packrift.com/r/install/generic/cline") &&
+      installMatrix?.runtime_source_attribution?.release === "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03" &&
+      installMatrix?.runtime_source_attribution?.endpoint_query_params?.includes("packrift_mcp_source") &&
+      installMatrix?.runtime_source_attribution?.request_signal_headers_if_supported?.includes("X-MCP-Client-Name") &&
+      installMatrix?.runtime_source_attribution?.no_duplicate_work_rule?.includes("Do not create a separate Packrift CLI") &&
+      installMatrix?.source_aware_install_examples?.some(
+        (example) =>
+          example.source === "mcp_so" &&
+          example.target === "generic_streamable_http" &&
+          example.source_aware_endpoint?.includes("packrift_mcp_source=mcp_so") &&
+          example.generic_remote_mcp_json?.mcpServers?.packrift?.url?.includes("packrift_mcp_target=generic_streamable_http") &&
+          example.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh" &&
+          example.order_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html"
+      ) &&
+      installMatrix?.source_aware_install_examples?.some(
+        (example) =>
+          example.source === "cline_mcp_marketplace" &&
+          example.target === "cline" &&
+          example.source_aware_endpoint?.includes("packrift_mcp_source=cline_mcp_marketplace") &&
+          example.cline_streamable_http_json?.mcpServers?.packrift?.type === "streamableHttp"
+      ) &&
+      installMatrix?.source_aware_install_examples?.some(
+        (example) =>
+          example.source === "glama_connector" &&
+          example.target === "glama_connector" &&
+          example.client_signal_headers_if_supported?.["X-MCP-Client-Name"] === "glama_connector"
+      ) &&
       installMatrix?.proof_urls?.client_config === "https://mcp.packrift.com/ai/mcp-client-config.json" &&
       installMatrix?.proof_urls?.install_actions === "https://mcp.packrift.com/ai/mcp-install-actions.json" &&
       installMatrix?.proof_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&

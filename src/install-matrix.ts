@@ -1,4 +1,11 @@
-import { TRACKED_INSTALL_TEMPLATE, clineMcpJson, stdioMcpRemoteJson, trackedInstallUrl } from "./install-action.js";
+import {
+  TRACKED_INSTALL_TEMPLATE,
+  clineMcpJson,
+  sourceAwareMcpEndpoint,
+  stdioMcpRemoteJson,
+  trackedConfigUrl,
+  trackedInstallUrl,
+} from "./install-action.js";
 
 export interface InstallMatrixRuntime {
   serverVersion: string;
@@ -11,13 +18,14 @@ const MCP_ENDPOINT = "https://mcp.packrift.com/mcp";
 const TRACKED_CONFIG_TEMPLATE = "https://mcp.packrift.com/r/config/{source}";
 const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
 const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
+const RUNTIME_SOURCE_INFERENCE_RELEASE = "PACKRIFT-MCP-RUNTIME-SOURCE-INFERENCE-R03";
 
-function remoteMcpJson(name = "packrift") {
+function remoteMcpJson(name = "packrift", endpoint = MCP_ENDPOINT) {
   return {
     mcpServers: {
       [name]: {
         type: "http",
-        url: MCP_ENDPOINT,
+        url: endpoint,
       },
     },
   };
@@ -273,9 +281,70 @@ const HOSTS = [
   },
 ] as const;
 
-export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
+const SOURCE_AWARE_INSTALL_EXAMPLES = [
+  {
+    source: "mcp_so",
+    target: "generic_streamable_http",
+    reason: "MCP.so has mature MCP tool and cart proof; the next useful action is source-preserving buyer or reviewer follow-through.",
+  },
+  {
+    source: "cline_mcp_marketplace",
+    target: "cline",
+    reason: "Cline Marketplace review already has a canonical issue; use this exact tracked config instead of creating duplicate submissions.",
+  },
+  {
+    source: "glama_connector",
+    target: "glama_connector",
+    reason: "Glama has a live hosted connector and qualified cart landings; keep connector-side installs and tool calls attributable.",
+  },
+  {
+    source: "docker_mcp_catalog",
+    target: "generic_streamable_http",
+    reason: "Docker MCP Catalog has a live PR path; use source-aware remote MCP runs while the catalog review is pending.",
+  },
+  {
+    source: "official_registry",
+    target: "generic_streamable_http",
+    reason: "The official registry listing is current and should preserve attribution when copied into downstream MCP directories.",
+  },
+  {
+    source: "mcpservers_org",
+    target: "generic_streamable_http",
+    reason: "mcpservers.org is live and should remain measurable as downstream agents copy the hosted endpoint.",
+  },
+] as const;
+
+function sourceAwareInstallExample(source: string, target: string, reason: string) {
+  const endpoint = sourceAwareMcpEndpoint(source, target);
   return {
-    release: "PACKRIFT-MCP-INSTALL-MATRIX-R08",
+    source,
+    target,
+    reason,
+    source_aware_endpoint: endpoint,
+    tracked_config_url: trackedConfigUrl(source),
+    tracked_install_url: trackedInstallUrl(source, target),
+    tracked_install_json_url: `https://mcp.packrift.com/r/install/${source}/${target}?format=json`,
+    tracked_first_run_url: `https://mcp.packrift.com/r/run/${source}/${target}?format=html`,
+    tracked_first_run_shell_url: `https://mcp.packrift.com/r/run/${source}/${target}?format=sh`,
+    reviewer_activation_shell_url: `https://mcp.packrift.com/r/activate/${source}?format=sh`,
+    order_handoff_url: `https://mcp.packrift.com/r/order/${source}?format=html`,
+    generic_remote_mcp_json: remoteMcpJson("packrift", endpoint),
+    stdio_mcp_remote_json: stdioMcpRemoteJson("packrift", endpoint),
+    cline_streamable_http_json: clineMcpJson("packrift", endpoint),
+    client_signal_headers_if_supported: {
+      "X-MCP-Client": "packrift-install-matrix",
+      "X-MCP-Client-Name": source,
+      "X-Client-Name": target,
+    },
+  };
+}
+
+export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
+  const sourceAwareInstallExamples = SOURCE_AWARE_INSTALL_EXAMPLES.map((example) =>
+    sourceAwareInstallExample(example.source, example.target, example.reason)
+  );
+  return {
+    release: "PACKRIFT-MCP-INSTALL-MATRIX-R09",
     generated_at: new Date().toISOString(),
     canonical_endpoint: MCP_ENDPOINT,
     purpose:
@@ -308,6 +377,17 @@ export function mcpInstallMatrixPayload(runtime: InstallMatrixRuntime) {
       codex: trackedInstallUrl("generic", "codex"),
       cursor_windsurf_vscode: trackedInstallUrl("generic", "cursor_windsurf_vscode"),
       cline: trackedInstallUrl("generic", "cline"),
+    },
+    source_aware_install_examples: sourceAwareInstallExamples,
+    runtime_source_attribution: {
+      release: RUNTIME_SOURCE_INFERENCE_RELEASE,
+      preferred: "Use a source-aware endpoint from /r/config/{source}, /r/install/{source}/{target}, or the examples below.",
+      endpoint_query_params: ["packrift_mcp_source", "packrift_mcp_target"],
+      request_signal_headers_if_supported: ["User-Agent", "Referer", "Origin", "X-MCP-Client", "X-MCP-Client-Name", "X-Client-Name"],
+      fallback_rule:
+        "If a host strips query params or uses the plain endpoint, Packrift still attempts source inference from recognizable request signals, but explicit source-aware endpoint URLs are preferred.",
+      no_duplicate_work_rule:
+        "Do not create a separate Packrift CLI or buyer surface for attribution. Use the hosted endpoint with source-aware config and first-run URLs.",
     },
     activation_wave: {
       url: ACTIVATION_WAVE_URL,
@@ -413,6 +493,37 @@ export function mcpInstallMatrixMarkdown(runtime: InstallMatrixRuntime): string 
     Object.entries(payload.tracked_install_examples)
       .map(([key, value]) => `- ${key}: ${value}`)
       .join("\n"),
+    "",
+    "## Source-Aware Install Examples",
+    "",
+    `Runtime source inference: ${payload.runtime_source_attribution.release}`,
+    "",
+    payload.runtime_source_attribution.preferred,
+    "",
+    `No duplicate work rule: ${payload.runtime_source_attribution.no_duplicate_work_rule}`,
+    "",
+    payload.source_aware_install_examples
+      .map(
+        (example) =>
+          [
+            `### ${example.source} -> ${example.target}`,
+            "",
+            example.reason,
+            "",
+            `Source-aware endpoint: \`${example.source_aware_endpoint}\``,
+            "",
+            `Tracked config: ${example.tracked_config_url}`,
+            "",
+            `Tracked install: ${example.tracked_install_url}`,
+            "",
+            `Tracked first run shell: ${example.tracked_first_run_shell_url}`,
+            "",
+            "Generic remote MCP JSON:",
+            "",
+            fencedJson(example.generic_remote_mcp_json),
+          ].join("\n")
+      )
+      .join("\n\n"),
     "",
     "## Activation Wave",
     "",
