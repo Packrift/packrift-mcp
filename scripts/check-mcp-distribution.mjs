@@ -524,6 +524,7 @@ async function liveMcpCheck() {
     trackedReviewerActivationHtmlResult,
     trackedReviewerActivationShellResult,
     trackedReviewerActivationClineResult,
+    trackedOrderClineResult,
     trackedOrderMcpSoResult,
     trackedOrderMcpSoHtmlResult,
     trackedOrderMcpSoMarkdownResult,
@@ -647,6 +648,7 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/r/activate/generic?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/activate/generic?format=sh&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/activate/cline_mcp_marketplace?format=json&utm_content=distribution_check"),
+    fetchText("https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/order/mcp_so?format=json&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/order/mcp_so?format=html&utm_content=distribution_check"),
     fetchText("https://mcp.packrift.com/r/order/mcp_so?format=md&utm_content=distribution_check"),
@@ -731,6 +733,7 @@ async function liveMcpCheck() {
   const reviewerActivation = reviewerActivationResult.ok ? JSON.parse(reviewerActivationResult.text) : null;
   const trackedReviewerActivationGeneric = trackedReviewerActivationGenericResult.ok ? JSON.parse(trackedReviewerActivationGenericResult.text) : null;
   const trackedReviewerActivationCline = trackedReviewerActivationClineResult.ok ? JSON.parse(trackedReviewerActivationClineResult.text) : null;
+  const trackedOrderCline = trackedOrderClineResult.ok ? JSON.parse(trackedOrderClineResult.text) : null;
   const trackedOrderMcpSo = trackedOrderMcpSoResult.ok ? JSON.parse(trackedOrderMcpSoResult.text) : null;
   const claudeConnectorSubmission = claudeConnectorSubmissionResult.ok ? JSON.parse(claudeConnectorSubmissionResult.text) : null;
   const agentCaptureOutreach = agentCaptureOutreachResult.ok ? JSON.parse(agentCaptureOutreachResult.text) : null;
@@ -923,6 +926,8 @@ async function liveMcpCheck() {
     [revenueConversionMcpSoRow, revenueConversionClineRow].some(
       (row) =>
         row?.status === "buyer_checkout_needed" &&
+        row?.mcp_source_context === row.source &&
+        typeof row?.mcp_install_target === "string" &&
         row?.buyer_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
         row?.source_preserving_cart_url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
         row?.source_preserving_cart_url?.includes(`mcp_source_context=${row.source}`) &&
@@ -1888,8 +1893,21 @@ async function liveMcpCheck() {
       revenueConversionQueueHtmlResult.text.includes("Packrift MCP Revenue Conversion Queue") &&
       revenueConversionQueueHtmlResult.text.includes("Revenue proof boundary") &&
       revenueConversionQueueHtmlResult.text.includes("Buyer handoff") &&
+      trackedOrderCline?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R03" &&
+      trackedOrderCline?.source === "cline_mcp_marketplace" &&
+      trackedOrderCline?.preferred_target === "cline" &&
+      trackedOrderCline?.mcp_source_context === "cline_mcp_marketplace" &&
+      trackedOrderCline?.mcp_install_target === "cline" &&
+      trackedOrderCline?.buyer_handoff_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+      trackedOrderCline?.buyer_action_url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
+      trackedOrderCline?.buyer_action_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+      trackedOrderCline?.buyer_action_url?.includes("mcp_install_target=cline") &&
+      trackedOrderCline?.copy_ready_messages?.buyer_request?.includes("only place the order if it is actually approved") &&
+      trackedOrderCline?.copy_ready_messages?.agent_prompt?.includes("mcp_source_context=\"cline_mcp_marketplace\"") &&
       trackedOrderMcpSo?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R03" &&
       trackedOrderMcpSo?.source === "mcp_so" &&
+      trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
+      trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http" &&
       trackedOrderMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       trackedOrderMcpSo?.primary_order_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       trackedOrderMcpSo?.source_specific_first_run_url?.includes("/r/run/mcp_so/generic_streamable_http") &&
@@ -1945,6 +1963,8 @@ async function liveMcpCheck() {
           (row) =>
             row.status === "buyer_checkout_needed" &&
             row.target_event_to_watch === "mcp_attributed_order" &&
+            row.mcp_source_context === row.source &&
+            typeof row.mcp_install_target === "string" &&
             row.buyer_handoff_url?.startsWith("https://mcp.packrift.com/r/order/") &&
             row.buyer_action_url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
             row.source_preserving_cart_url?.includes(`mcp_source_context=${row.source}`) &&
@@ -2088,7 +2108,7 @@ async function liveMcpCheck() {
         (task) =>
           typeof task.source === "string" &&
           (task.target_event_to_watch?.startsWith("mcp_tool_call") ||
-            ["mcp_first_run_execution", "mcp_install_intent"].includes(task.target_event_to_watch)) &&
+            ["mcp_first_run_execution", "mcp_first_run_intent", "mcp_install_intent"].includes(task.target_event_to_watch)) &&
           task.external_activation_required === true &&
           task.expected_tool_call_lift > 0 &&
           task.tracked_first_run_shell_url?.includes("format=sh") &&
@@ -2127,7 +2147,7 @@ async function liveMcpCheck() {
         (task) =>
           typeof task.source === "string" &&
           (task.target_event_to_watch?.startsWith("mcp_tool_call") ||
-            ["mcp_first_run_execution", "mcp_install_intent"].includes(task.target_event_to_watch)) &&
+            ["mcp_first_run_execution", "mcp_first_run_intent", "mcp_install_intent"].includes(task.target_event_to_watch)) &&
           task.external_activation_required === true &&
           task.expected_tool_call_lift > 0 &&
           task.source_aware_endpoint?.startsWith(`${MCP_ENDPOINT}?`) &&
