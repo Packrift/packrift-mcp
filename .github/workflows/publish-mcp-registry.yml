@@ -10,6 +10,9 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: publish-mcp-registry-${{ github.ref }}
   cancel-in-progress: false
@@ -33,4 +36,16 @@ jobs:
         run: ./mcp-publisher login github-oidc
 
       - name: Publish server metadata
-        run: ./mcp-publisher publish server.json
+        run: |
+          set +e
+          output="$(./mcp-publisher publish server.json 2>&1)"
+          status=$?
+          printf '%s\n' "$output"
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if printf '%s\n' "$output" | grep -q "cannot publish duplicate version"; then
+            echo "Registry already has this server version; treating as published."
+            exit 0
+          fi
+          exit "$status"
