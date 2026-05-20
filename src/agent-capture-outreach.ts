@@ -31,6 +31,8 @@ const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-
 const SOURCE_ACTIVATION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.json";
 const SOURCE_ACTIVATION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-source-activation-queue.md";
 const ACTIVATION_EXPERIMENTS_URL = "https://mcp.packrift.com/ai/mcp-activation-experiments.json";
+const ACTIVATION_WAVE_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
+const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.html";
 const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const GA4_FUNNEL_PROOF_URL = "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json";
@@ -417,6 +419,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       tracked_reviewer_activation_template: submitActions.tracked_reviewer_activation_template,
       tracked_reviewer_activation_html_template: submitActions.tracked_reviewer_activation_html_template,
       source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
+      source_activation_wave: ACTIVATION_WAVE_URL,
+      source_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       status_counts: submitActions.status_counts,
       actions_count: submitActions.actions.length,
     },
@@ -428,6 +432,8 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       proof_urls: {
         source_activation_queue: SOURCE_ACTIVATION_QUEUE_URL,
         activation_experiments: ACTIVATION_EXPERIMENTS_URL,
+        activation_wave: ACTIVATION_WAVE_URL,
+        activation_wave_html: ACTIVATION_WAVE_HTML_URL,
         eval_pack: MCP_EVAL_PACK_URL,
         eval_pack_template: "https://mcp.packrift.com/ai/mcp-eval-pack.json?source={source}",
         usage_snapshot: USAGE_SNAPSHOT_URL,
