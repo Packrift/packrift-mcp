@@ -2560,7 +2560,7 @@ async function liveMcpCheck() {
       activationWaveRunnerResult.text.includes("mcp-source-activation-queue.json") &&
       activationWaveRunnerResult.text.includes("/r/run/") &&
       activationWaveRunnerResult.text.includes("format=sh") &&
-      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R03" &&
+      externalActivationBrief?.release === "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R04" &&
       externalActivationBrief?.canonical_endpoint === MCP_ENDPOINT &&
       externalActivationBrief?.activation_wave_release === activationWave?.release &&
       externalActivationBrief?.source_queue_release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
@@ -2571,12 +2571,13 @@ async function liveMcpCheck() {
       externalActivationBrief?.external_runner?.threshold_wave?.includes(MCP_ACTIVATION_WAVE_RUNNER_URL) &&
       externalActivationBrief?.goal_summary?.material_usage?.threshold === 50 &&
       externalActivationBrief?.goal_summary?.material_usage?.expected_tool_call_lift_if_selected_runs_complete ===
-        activationWave?.tool_call_gap?.expected_tool_call_lift_if_all_tasks_run &&
+        externalActivationBrief?.selected_external_runs?.reduce((total, task) => total + Number(task.expected_tool_call_lift ?? 0), 0) &&
       externalActivationBrief?.goal_summary?.qualified_visitors?.threshold >= 1000 &&
       externalActivationBrief?.goal_summary?.cart_and_order?.first_party_mcp_orders ===
         activationWave?.source_snapshot?.first_party_mcp_orders &&
-      externalActivationBrief?.selected_external_run_count === activationWave?.wave_tasks?.length &&
+      externalActivationBrief?.selected_external_run_count >= activationWave?.tool_call_gap?.required_sources_to_clear_gate &&
       externalActivationBrief?.selected_external_runs?.length === externalActivationBrief?.selected_external_run_count &&
+      externalActivationBrief?.selection_rule?.includes("handoff readiness") &&
       externalActivationBrief?.selected_external_runs?.every(
         (task) =>
           task.source &&
@@ -2592,6 +2593,18 @@ async function liveMcpCheck() {
           task.source === "glama_connector" &&
           task.external_review_handoff?.support_email === "support@glama.ai" &&
           task.external_review_handoff?.primary_surface === "https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp"
+      ) &&
+      externalActivationBrief?.selected_external_runs?.some(
+        (task) =>
+          task.source === "mcplist_ai" &&
+          task.external_review_handoff?.support_email === "contact@mcplist.ai" &&
+          task.external_review_handoff?.primary_surface === "https://www.mcplist.ai/?search=packrift"
+      ) &&
+      externalActivationBrief?.selected_external_runs?.some(
+        (task) =>
+          task.source === "mcpserverfinder" &&
+          task.external_review_handoff?.support_email === "info@mcpserverfinder.com" &&
+          task.external_review_handoff?.primary_surface === "https://www.mcpserverfinder.com/?q=packrift"
       ) &&
       externalActivationBrief?.selected_external_runs?.some(
         (task) =>

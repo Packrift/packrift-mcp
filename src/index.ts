@@ -9368,19 +9368,18 @@ function mcpActivationWaveHtml(payload: Awaited<ReturnType<typeof mcpActivationW
 </html>`;
 }
 
-const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R03";
+const MCP_EXTERNAL_ACTIVATION_BRIEF_RELEASE = "PACKRIFT-MCP-EXTERNAL-ACTIVATION-BRIEF-R04";
 
-const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<
-  string,
-  {
-    status: string;
-    primary_surface: string;
-    support_email?: string;
-    support_url?: string;
-    public_comment_url?: string;
-    next_contact_action: string;
-  }
-> = {
+type McpExternalActivationReviewHandoff = {
+  status: string;
+  primary_surface: string;
+  support_email?: string;
+  support_url?: string;
+  public_comment_url?: string;
+  next_contact_action: string;
+};
+
+const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<string, McpExternalActivationReviewHandoff> = {
   docker_mcp_catalog: {
     status: "public_pr_comment_updated",
     primary_surface: "https://github.com/docker/mcp-registry/pull/3388",
@@ -9410,6 +9409,20 @@ const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<
     next_contact_action:
       "Use the existing Gmail draft to hello@coderai.dev as the canonical FindMCP/Coder AI owner handoff; the public submit path currently renders the homepage instead of a working form.",
   },
+  mcplist_ai: {
+    status: "support_draft_ready",
+    primary_surface: "https://www.mcplist.ai/?search=packrift",
+    support_email: "contact@mcplist.ai",
+    next_contact_action:
+      "Use the existing Gmail draft to contact@mcplist.ai as the canonical MCPLIST owner handoff; ask them to run the source-aware Packrift MCP first-useful flow from a real review or directory environment.",
+  },
+  mcpserverfinder: {
+    status: "support_draft_ready",
+    primary_surface: "https://www.mcpserverfinder.com/?q=packrift",
+    support_email: "info@mcpserverfinder.com",
+    next_contact_action:
+      "Use the existing Gmail draft to info@mcpserverfinder.com as the canonical MCP Server Finder owner handoff; ask them to run the source-aware Packrift MCP first-useful flow from a real review or directory environment.",
+  },
   mcplane: {
     status: "validator_rejected_contact_route_identified",
     primary_surface: "https://mcplane.com/mcp_servers/new",
@@ -9419,13 +9432,55 @@ const MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS: Record<
   },
 };
 
-function mcpExternalActivationBriefTask(task: McpActivationWavePayload["wave_tasks"][number]) {
-  const reviewHandoff = MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS[task.source] ?? {
+function mcpExternalActivationReviewHandoff(
+  task: McpActivationWavePayload["full_capture_wave"]["tasks"][number]
+): McpExternalActivationReviewHandoff {
+  return MCP_EXTERNAL_ACTIVATION_REVIEW_HANDOFFS[task.source] ?? {
     status: "source_specific_external_run_needed",
     primary_surface: task.primary_action_url ?? task.tracked_install_url ?? task.source_aware_endpoint,
     next_contact_action:
       "Use the source-specific activation card and ask the real external host or reviewer to run the measured first-useful-run sequence.",
   };
+}
+
+function mcpExternalActivationReadinessRank(task: McpActivationWavePayload["full_capture_wave"]["tasks"][number]) {
+  const reviewHandoff = mcpExternalActivationReviewHandoff(task);
+  if (reviewHandoff.public_comment_url) return 0;
+  if (reviewHandoff.support_email) return 1;
+  if (reviewHandoff.support_url) return 2;
+  if (reviewHandoff.status.includes("broken") || reviewHandoff.status.includes("rejected")) return 20;
+  return 10;
+}
+
+function mcpExternalActivationSelectedTasks(payload: McpActivationWavePayload) {
+  const requiredLift = payload.tool_call_gap.remaining_to_threshold;
+  const minimumRunCount = Math.min(
+    payload.full_capture_wave.tasks.length,
+    Math.max(5, payload.tool_call_gap.required_sources_to_clear_gate)
+  );
+  const selectedTasks: McpActivationWavePayload["full_capture_wave"]["tasks"] = [];
+  let selectedLift = 0;
+  const rankedTasks = payload.full_capture_wave.tasks
+    .filter((task) => task.expected_tool_call_lift > 0)
+    .map((task, index) => ({ task, index }))
+    .sort(
+      (a, b) =>
+        mcpExternalActivationReadinessRank(a.task) - mcpExternalActivationReadinessRank(b.task) ||
+        b.task.expected_tool_call_lift - a.task.expected_tool_call_lift ||
+        a.task.wave_rank - b.task.wave_rank ||
+        a.index - b.index
+    );
+
+  for (const { task } of rankedTasks) {
+    selectedTasks.push(task);
+    selectedLift += task.expected_tool_call_lift;
+    if (selectedTasks.length >= minimumRunCount && selectedLift >= requiredLift) break;
+  }
+  return selectedTasks;
+}
+
+function mcpExternalActivationBriefTask(task: McpActivationWavePayload["full_capture_wave"]["tasks"][number]) {
+  const reviewHandoff = mcpExternalActivationReviewHandoff(task);
   return {
     rank: task.wave_rank,
     source: task.source,
@@ -9450,7 +9505,9 @@ function mcpExternalActivationBriefTask(task: McpActivationWavePayload["wave_tas
 }
 
 function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
-  const selectedRuns = payload.wave_tasks.map(mcpExternalActivationBriefTask);
+  const selectedTaskRows = mcpExternalActivationSelectedTasks(payload);
+  const selectedRuns = selectedTaskRows.map(mcpExternalActivationBriefTask);
+  const selectedExpectedLift = selectedRuns.reduce((total, row) => total + row.expected_tool_call_lift, 0);
   const visitorThreshold = Number(payload.source_snapshot.ga4_qualified_external_mcp_session_threshold ?? 1000);
   const visitorCount = Number(payload.source_snapshot.ga4_qualified_external_mcp_session_starts ?? 0);
   const cartLandings = Number(payload.source_snapshot.qualified_first_party_mcp_cart_landings ?? 0);
@@ -9470,17 +9527,21 @@ function mcpExternalActivationBriefPayload(payload: McpActivationWavePayload) {
     activation_wave_release: payload.release,
     source_queue_status: payload.source_queue_status,
     snapshot_coverage: payload.snapshot_coverage,
+    selection_rule:
+      "Select from the full activation wave by external handoff readiness first: public maintainer comment, support-draft-ready owner contacts, then other contact surfaces, then blocked or rejected submit paths. Keep enough expected tool-call lift to clear the material usage gate.",
     goal_summary: {
       material_usage: {
         current_external_qualified_mcp_tool_calls: payload.tool_call_gap.current_external_qualified_mcp_tool_calls,
         threshold: payload.tool_call_gap.material_usage_threshold,
         remaining_to_threshold: payload.tool_call_gap.remaining_to_threshold,
-        selected_wave_size: payload.tool_call_gap.selected_wave_size,
+        selected_wave_size: selectedRuns.length,
         required_sources_to_clear_gate: payload.tool_call_gap.required_sources_to_clear_gate,
-        expected_tool_call_lift_if_selected_runs_complete: payload.tool_call_gap.expected_tool_call_lift_if_all_tasks_run,
+        expected_tool_call_lift_if_selected_runs_complete: selectedExpectedLift,
         projected_external_qualified_mcp_tool_calls_after_selected_runs:
-          payload.tool_call_gap.projected_external_qualified_mcp_tool_calls_after_wave,
-        enough_to_clear_material_tool_usage_gate: payload.tool_call_gap.enough_to_clear_material_tool_usage_gate,
+          payload.tool_call_gap.current_external_qualified_mcp_tool_calls + selectedExpectedLift,
+        enough_to_clear_material_tool_usage_gate:
+          payload.tool_call_gap.current_external_qualified_mcp_tool_calls + selectedExpectedLift >=
+          payload.tool_call_gap.material_usage_threshold,
       },
       qualified_visitors: {
         current_ga4_qualified_external_mcp_sessions: visitorCount,
