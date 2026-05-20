@@ -2843,7 +2843,7 @@ async function liveMcpCheck() {
       directoryRefresh?.recrawl_request?.includes("mcp-activation-wave.json") &&
       directoryRefresh?.recrawl_request?.includes("mcp-tools.json") &&
       directoryRefresh?.recrawl_request?.includes(".well-known/mcp-marketplace.json") &&
-      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R45" &&
+      directorySubmitActions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R46" &&
       directorySubmitActions?.source_mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       directorySubmitActions?.actions?.length >= 28 &&
       directorySubmitActions?.actions?.some((action) => action.id === "anthropic_connectors_directory" && action.action_status === "auth_gated_manual") &&
@@ -2894,6 +2894,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       directorySubmitActions?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       directorySubmitActions?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      directorySubmitActions?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       directorySubmitActions?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       directorySubmitActions?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       directorySubmitActions?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
@@ -2950,6 +2951,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.activation_wave_html === MCP_ACTIVATION_WAVE_HTML_URL) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL) &&
+      directorySubmitActions?.actions?.every((action) => action.proof_urls?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL) &&
       directorySubmitActions?.actions?.every((action) => action.proof_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
@@ -2967,6 +2969,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.activation_wave_html === MCP_ACTIVATION_WAVE_HTML_URL) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL) &&
+      directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL) &&
       directorySubmitActions?.actions?.every((action) => action.activation_packet?.crawler_inputs?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
@@ -2987,7 +2990,7 @@ async function liveMcpCheck() {
       directorySubmitActions?.source_activation_queue_runtime?.row_count > 0 &&
       directorySubmitActions?.actions?.some((action) => action.id === "mcp_so" && action.source_activation_state?.target_event_to_watch === "mcp_attributed_order" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html") &&
       directorySubmitActions?.actions?.some((action) => action.id === "glama_connector" && action.source_activation_state?.target_event_to_watch === "mcp_tool_call" && action.source_activation_state?.primary_action_url === "https://mcp.packrift.com/r/activate/glama_connector?format=html") &&
-      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13" &&
+      directoryUpdateCline?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14" &&
       directoryUpdateCline?.source === "cline_mcp_marketplace" &&
       directoryUpdateCline?.source_activation_queue_runtime?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-QUEUE-R26" &&
       directoryUpdateCline?.source_activation_state?.target_event_to_watch === "mcp_attributed_order" &&
@@ -3015,13 +3018,13 @@ async function liveMcpCheck() {
       directoryUpdateClineMarkdownResult.text.includes("Copy-Ready Concise Email") &&
       directoryUpdateClineMarkdownResult.text.includes("Live tool discovery JSON") &&
       directoryUpdateClineMarkdownResult.text.includes("cline_mcp_marketplace") &&
-      directoryUpdateGlamaServer?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13" &&
+      directoryUpdateGlamaServer?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14" &&
       directoryUpdateGlamaServer?.source === "glama_server_listing" &&
       directoryUpdateGlamaServer?.source_release_readiness?.status === "ready_for_glama_admin_release" &&
       directoryUpdateGlamaServer?.source_release_readiness?.docker_readiness?.tools_list_without_token === true &&
       directoryUpdateGlamaServer?.source_release_readiness?.docker_readiness?.expected_resources_min >= 600 &&
       directoryUpdateGlamaServer?.source_release_readiness?.admin_steps?.some((step) => String(step).includes("release/sync")) &&
-      directoryUpdatePunkpeye?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13" &&
+      directoryUpdatePunkpeye?.release === "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14" &&
       directoryUpdatePunkpeye?.source === "punkpeye_awesome_mcp" &&
       directoryUpdatePunkpeye?.source_release_readiness?.status === "blocked_by_glama_source_quality" &&
       directoryUpdateMcpSo?.source === "mcp_so" &&
@@ -3165,19 +3168,21 @@ async function liveMcpCheck() {
       claudeConnectorSubmission?.activation_readiness?.suppressions?.some((rule) => String(rule).includes("Do not count Packrift self-checks")) &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Legal and support links") &&
       claudeConnectorSubmission?.checklist?.some((row) => row.item === "Activation proof loop") &&
-      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R25" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R26" &&
       agentCaptureOutreach?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreachHtml.includes("Packrift Agent Capture Outreach") &&
       agentCaptureOutreachHtml.includes("Use This, Not A Duplicate Surface") &&
       agentCaptureOutreachHtml.includes("Priority Agent Capture Queue") &&
       agentCaptureOutreachHtml.includes("Activation queue") &&
       agentCaptureOutreachHtml.includes("External brief") &&
+      agentCaptureOutreachHtml.includes("Selected runner") &&
       agentCaptureOutreachHtml.includes("Acceptance check") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "anthropic_connectors_directory") &&
       agentCaptureOutreach?.priority_queue?.some((action) => action.id === "browse_sh") &&
       agentCaptureOutreach?.directory_refreshes?.every((action) => action.concise_email?.release === "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R01") &&
       agentCaptureOutreach?.directory_refreshes?.some((action) => action.id === "glama_server_listing" && action.source_release_readiness?.status === "ready_for_glama_admin_release") &&
-      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R45" &&
+      agentCaptureOutreach?.release === "PACKRIFT-AGENT-CAPTURE-OUTREACH-R26" &&
+      agentCaptureOutreach?.directory_submit_actions?.release === "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R46" &&
       agentCaptureOutreach?.activation_handoff?.canonical_endpoint === MCP_ENDPOINT &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
@@ -3185,6 +3190,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      agentCaptureOutreach?.activation_handoff?.proof_urls?.external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
@@ -3204,6 +3210,7 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.agent_install_snippets?.generic_tracked_reviewer_activation_runner === "https://mcp.packrift.com/r/activate/generic?format=html" &&
       agentCaptureOutreach?.agent_install_snippets?.tracked_order_handoff_template === "https://mcp.packrift.com/r/order/{source}" &&
       agentCaptureOutreach?.agent_install_snippets?.mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
+      agentCaptureOutreach?.agent_install_snippets?.mcp_external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.evidence?.mcp_source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       agentCaptureOutreach?.evidence?.mcp_revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       agentCaptureOutreach?.evidence?.mcp_revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
@@ -3213,12 +3220,14 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.evidence?.mcp_activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       agentCaptureOutreach?.evidence?.mcp_external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       agentCaptureOutreach?.evidence?.mcp_external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
+      agentCaptureOutreach?.evidence?.mcp_external_activation_brief_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.evidence?.mcp_order_handoff_mcp_so === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       agentCaptureOutreach?.evidence?.mcp_eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
       agentCaptureOutreach?.directory_submit_actions?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       agentCaptureOutreach?.directory_submit_actions?.source_activation_wave === MCP_ACTIVATION_WAVE_JSON_URL &&
       agentCaptureOutreach?.directory_submit_actions?.source_activation_wave_html === MCP_ACTIVATION_WAVE_HTML_URL &&
       agentCaptureOutreach?.directory_submit_actions?.source_activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
+      agentCaptureOutreach?.directory_submit_actions?.selected_external_activation_runner_shell === MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL &&
       agentCaptureOutreach?.directory_submit_actions?.external_activation_brief === MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL &&
       agentCaptureOutreach?.directory_submit_actions?.external_activation_brief_html === MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL &&
       agentCaptureOutreach?.directory_submit_actions?.tracked_order_handoff_template === "https://mcp.packrift.com/r/order/{source}" &&

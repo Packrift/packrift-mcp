@@ -55,6 +55,7 @@ const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wav
 const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const USAGE_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-usage-snapshot.json";
 const FUNNEL_SNAPSHOT_URL = "https://mcp.packrift.com/ai/mcp-funnel-snapshot.json";
 const GA4_FUNNEL_PROOF_URL = "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json";
@@ -163,6 +164,7 @@ function agentInstallSnippets() {
     well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
     install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_eval_pack: MCP_EVAL_PACK_URL,
+    mcp_external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
     docker_optional_only: "docker pull ghcr.io/packrift/packrift-mcp:latest",
   };
 }
@@ -384,6 +386,7 @@ function evidenceLinks() {
     mcp_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
     mcp_external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
     mcp_external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+    mcp_external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
     mcp_usage_snapshot: USAGE_SNAPSHOT_URL,
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
@@ -509,7 +512,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
   );
 
   return {
-    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R25",
+    release: "PACKRIFT-AGENT-CAPTURE-OUTREACH-R26",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public packet for getting Packrift MCP into more agent hosts, directories, reviewers, partners, and AI-commerce workflows without creating a duplicate Packrift CLI or buyer surface.",
@@ -543,6 +546,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
       source_activation_wave: ACTIVATION_WAVE_URL,
       source_activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       source_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
+      selected_external_activation_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
       external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
       status_counts: submitActions.status_counts,
@@ -561,6 +565,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
         external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
         external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+        external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
         buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -580,6 +585,7 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         "Use the existing hosted MCP endpoint.",
         "Install with a source-specific /r/install/{source}/{target} link.",
         "Run a source-specific /r/run/{source}/{target} or /r/activate/{source}?format=html flow.",
+        "Use the selected external activation runner when you want the current contact-ready owner/reviewer source set instead of the broader activation-wave bundle.",
         "Use /ai/mcp-eval-pack.json?source={source} when reviewers need copy-ready host acceptance cases.",
         "Require tools/list plus get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
         "Use /r/order/{source}?format=html only for buyer or reviewer checkout follow-through after source-level MCP tool-call and cart proof; it does not place an order.",
@@ -657,6 +663,7 @@ export function agentCaptureOutreachHtml(runtime: AgentCaptureOutreachRuntime): 
     ["Activation queue", payload.evidence.mcp_source_activation_queue, ""],
     ["Activation wave", payload.evidence.mcp_activation_wave_html, ""],
     ["External brief", payload.evidence.mcp_external_activation_brief_html, ""],
+    ["Selected runner", payload.evidence.mcp_external_activation_brief_runner_shell, "primary"],
     ["Revenue queue", payload.evidence.mcp_revenue_conversion_queue_html, "warn"],
     ["Buyer handoffs", payload.evidence.mcp_buyer_order_handoffs_html, "warn"],
     ["JSON", OUTREACH_JSON_URL, ""],

@@ -69,6 +69,7 @@ const ACTIVATION_WAVE_HTML_URL = "https://mcp.packrift.com/ai/mcp-activation-wav
 const ACTIVATION_WAVE_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-activation-wave-runner.sh";
 const EXTERNAL_ACTIVATION_BRIEF_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.json";
 const EXTERNAL_ACTIVATION_BRIEF_HTML_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief.html";
+const EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL = "https://mcp.packrift.com/ai/mcp-external-activation-brief-runner.sh";
 const REVENUE_CONVERSION_QUEUE_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
 const BUYER_ORDER_HANDOFFS_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
@@ -921,6 +922,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     `- Activation wave HTML: ${ACTIVATION_WAVE_HTML_URL}`,
     `- External activation brief: ${EXTERNAL_ACTIVATION_BRIEF_URL}`,
     `- External activation brief HTML: ${EXTERNAL_ACTIVATION_BRIEF_HTML_URL}`,
+    `- Selected external activation runner: ${EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL}`,
     `- Guarded activation wave runner: ${ACTIVATION_WAVE_RUNNER_URL}`,
     `- One-command external wave runner: PACKRIFT_EXTERNAL_ACTIVATION=1 curl -sS '${ACTIVATION_WAVE_RUNNER_URL}' | bash`,
     "- Wave runner rule: use this only from a real external reviewer or host context; Packrift self-runs, generated resource fetches, and browser-only proof do not complete source activation.",
@@ -1027,6 +1029,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
       external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
       revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -1080,6 +1083,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
         external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
         external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+        external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
         revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
         revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
         buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -1095,7 +1099,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R45",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R46",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1124,6 +1128,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     source_activation_wave_runner_shell: ACTIVATION_WAVE_RUNNER_URL,
     external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
     external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+    external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
     revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
     revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
     buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -1169,7 +1174,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R13",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R14",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1208,6 +1213,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       activation_wave_html: ACTIVATION_WAVE_HTML_URL,
       external_activation_brief: EXTERNAL_ACTIVATION_BRIEF_URL,
       external_activation_brief_html: EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
+      external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       revenue_conversion_queue: REVENUE_CONVERSION_QUEUE_URL,
       revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
@@ -1232,6 +1238,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       activation_wave_html: action.proof_urls.activation_wave_html,
       external_activation_brief: action.proof_urls.external_activation_brief,
       external_activation_brief_html: action.proof_urls.external_activation_brief_html,
+      external_activation_brief_runner_shell: action.proof_urls.external_activation_brief_runner_shell,
       revenue_conversion_queue: action.proof_urls.revenue_conversion_queue,
       revenue_conversion_queue_html: action.proof_urls.revenue_conversion_queue_html,
       buyer_order_handoffs: action.proof_urls.buyer_order_handoffs,
@@ -1288,6 +1295,7 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Activation wave HTML: ${payload.canonical_listing.activation_wave_html}`,
     `External activation brief: ${payload.canonical_listing.external_activation_brief}`,
     `External activation brief HTML: ${payload.canonical_listing.external_activation_brief_html}`,
+    `Selected external activation runner: ${payload.canonical_listing.external_activation_brief_runner_shell}`,
     `Revenue conversion queue: ${payload.canonical_listing.revenue_conversion_queue}`,
     `Revenue conversion queue HTML: ${payload.canonical_listing.revenue_conversion_queue_html}`,
     `Buyer order handoffs: ${payload.canonical_listing.buyer_order_handoffs}`,
@@ -1391,6 +1399,7 @@ export function mcpDirectorySubmitActionsMarkdown(runtime: DirectorySubmitAction
     `Activation wave HTML: ${payload.source_activation_wave_html}`,
     `External activation brief: ${payload.external_activation_brief}`,
     `External activation brief HTML: ${payload.external_activation_brief_html}`,
+    `Selected external activation runner: ${payload.external_activation_brief_runner_shell}`,
     `Revenue conversion queue: ${payload.revenue_conversion_queue}`,
     `Revenue conversion queue HTML: ${payload.revenue_conversion_queue_html}`,
     `Buyer order handoffs: ${payload.buyer_order_handoffs}`,
