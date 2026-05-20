@@ -256,6 +256,9 @@ const MCP_N8N_WORKFLOW_JSON_URL = "https://mcp.packrift.com/ai/mcp-n8n-workflow.
 const MCP_REVENUE_CONVERSION_QUEUE_JSON_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json";
 const MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.md";
 const MCP_REVENUE_CONVERSION_QUEUE_HTML_URL = "https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html";
+const MCP_BUYER_ORDER_HANDOFFS_JSON_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json";
+const MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.md";
+const MCP_BUYER_ORDER_HANDOFFS_HTML_URL = "https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html";
 const OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL =
   "https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv";
 const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL =
@@ -479,6 +482,9 @@ async function liveMcpCheck() {
     revenueConversionQueueResult,
     revenueConversionQueueMarkdownResult,
     revenueConversionQueueHtmlResult,
+    buyerOrderHandoffsResult,
+    buyerOrderHandoffsMarkdownResult,
+    buyerOrderHandoffsHtmlResult,
     sourceActivationSitemapResult,
     sourceActivationClineJsonResult,
     sourceActivationClineMarkdownResult,
@@ -606,6 +612,9 @@ async function liveMcpCheck() {
     fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_JSON_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText(`${MCP_REVENUE_CONVERSION_QUEUE_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_JSON_URL}?limit=20000&order_days=90&order_limit=250`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL}?limit=20000&order_days=90&order_limit=250`),
+    fetchText(`${MCP_BUYER_ORDER_HANDOFFS_HTML_URL}?limit=20000&order_days=90&order_limit=250`),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json"),
     fetchText("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md"),
@@ -711,6 +720,7 @@ async function liveMcpCheck() {
   const ga4FunnelProof = ga4FunnelProofResult.ok ? JSON.parse(ga4FunnelProofResult.text) : null;
   const sourceActivationQueue = sourceActivationQueueResult.ok ? JSON.parse(sourceActivationQueueResult.text) : null;
   const revenueConversionQueue = revenueConversionQueueResult.ok ? JSON.parse(revenueConversionQueueResult.text) : null;
+  const buyerOrderHandoffs = buyerOrderHandoffsResult.ok ? JSON.parse(buyerOrderHandoffsResult.text) : null;
   const sourceActivationCline = sourceActivationClineJsonResult.ok ? JSON.parse(sourceActivationClineJsonResult.text) : null;
   const sourceActivationCodex = sourceActivationCodexJsonResult.ok ? JSON.parse(sourceActivationCodexJsonResult.text) : null;
   const sourceActivationClaude = sourceActivationClaudeJsonResult.ok ? JSON.parse(sourceActivationClaudeJsonResult.text) : null;
@@ -940,6 +950,43 @@ async function liveMcpCheck() {
   const revenueConversionRows = Array.isArray(revenueConversionQueue?.rows) ? revenueConversionQueue.rows : [];
   const revenueConversionMcpSoRow = revenueConversionRows.find((row) => row.source === "mcp_so");
   const revenueConversionClineRow = revenueConversionRows.find((row) => row.source === "cline_mcp_marketplace");
+  const buyerOrderHandoffRows = Array.isArray(buyerOrderHandoffs?.handoffs) ? buyerOrderHandoffs.handoffs : [];
+  const buyerOrderHandoffsOk =
+    buyerOrderHandoffs?.release === "PACKRIFT-MCP-BUYER-ORDER-HANDOFFS-R01" &&
+    buyerOrderHandoffs?.status === "buyer_reviewer_handoffs_ready" &&
+    buyerOrderHandoffs?.canonical_endpoint === MCP_ENDPOINT &&
+    buyerOrderHandoffs?.links?.buyer_order_handoffs_json === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+    buyerOrderHandoffs?.links?.buyer_order_handoffs_markdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL &&
+    buyerOrderHandoffs?.links?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+    buyerOrderHandoffs?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
+    buyerOrderHandoffRows.length >= 1 &&
+    buyerOrderHandoffRows.some(
+      (row) =>
+        row.source === "mcp_so" &&
+        row.status === "buyer_checkout_needed" &&
+        row.buyer_handoff_html_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+        row.source_preserving_cart_url?.includes("mcp_source_context=mcp_so") &&
+        row.source_preserving_cart_url?.includes("mcp_install_target=generic_streamable_http") &&
+        row.copy_ready_buyer_request?.includes("only place the order if it is actually approved") &&
+        row.suppression_rule?.includes("Do not count synthetic proof")
+    ) &&
+    buyerOrderHandoffRows.some(
+      (row) =>
+        row.source === "cline_mcp_marketplace" &&
+        row.status === "buyer_checkout_needed" &&
+        row.buyer_handoff_html_url === "https://mcp.packrift.com/r/order/cline_mcp_marketplace?format=html" &&
+        row.source_preserving_cart_url?.includes("mcp_source_context=cline_mcp_marketplace") &&
+        row.source_preserving_cart_url?.includes("mcp_install_target=cline")
+    ) &&
+    buyerOrderHandoffsMarkdownResult.ok &&
+    buyerOrderHandoffsMarkdownResult.text.includes("Packrift MCP Buyer Order Handoffs") &&
+    buyerOrderHandoffsMarkdownResult.text.includes("mcp_so") &&
+    buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace") &&
+    buyerOrderHandoffsHtmlResult.ok &&
+    buyerOrderHandoffsHtmlResult.text.includes("Packrift MCP Buyer Order Handoffs") &&
+    buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request") &&
+    buyerOrderHandoffsHtmlResult.text.includes("mcp_so") &&
+    buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace");
   const revenueConversionRowsOk =
     revenueConversionRows.length >= 1 &&
     [revenueConversionMcpSoRow, revenueConversionClineRow].some(
@@ -1030,6 +1077,9 @@ async function liveMcpCheck() {
     MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
     MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL,
     MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
+    MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
+    MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL,
+    MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
     "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
     "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md",
     "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.html",
@@ -1070,6 +1120,7 @@ async function liveMcpCheck() {
       revenueConversionQueue?.release === "PACKRIFT-MCP-REVENUE-CONVERSION-QUEUE-R02" &&
       revenueConversionQueue?.status === "buyer_checkout_needed" &&
       revenueConversionRowsOk,
+    buyer_order_handoffs: buyerOrderHandoffsOk,
     tracked_orders:
       trackedOrderCline?.mcp_source_context === "cline_mcp_marketplace" &&
       trackedOrderCline?.mcp_install_target === "cline" &&
@@ -1120,6 +1171,8 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.source_activation_queue_html === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html" &&
       serverCard?.registry_distribution?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       serverCard?.registry_distribution?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
+      serverCard?.registry_distribution?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      serverCard?.registry_distribution?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       serverCard?.registry_distribution?.source_activation_sitemap === "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml" &&
       serverCard?.registry_distribution?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       serverCard?.registry_distribution?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
@@ -1142,6 +1195,9 @@ async function liveMcpCheck() {
       serverCard?.resource_links?.openaiPreferredDirectProductFeedGzip === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL &&
       serverCard?.resource_links?.mcpRevenueConversionQueueJson === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       serverCard?.resource_links?.mcpRevenueConversionQueueHtml === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
+      serverCard?.resource_links?.mcpBuyerOrderHandoffsJson === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      serverCard?.resource_links?.mcpBuyerOrderHandoffsMarkdown === MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL &&
+      serverCard?.resource_links?.mcpBuyerOrderHandoffsHtml === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       serverCard?.resource_links?.mcpActivationWaveRunnerShell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       Array.isArray(serverCard?.tools) &&
       serverCard.tools.length >= 15 &&
@@ -1192,6 +1248,9 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_HTML_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_HTML_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-activation-wave.html") &&
@@ -1245,6 +1304,8 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
+      mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.activation_wave === "https://mcp.packrift.com/ai/mcp-activation-wave.json" &&
       mcpToolsDiscovery?.conversion_urls?.activation_wave_html === "https://mcp.packrift.com/ai/mcp-activation-wave.html" &&
       mcpToolsDiscovery?.conversion_urls?.automation_workflows === MCP_AUTOMATION_WORKFLOWS_JSON_URL &&
@@ -1271,6 +1332,7 @@ async function liveMcpCheck() {
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-eval-pack.json") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-queue.json") &&
       specFinderToolsResult.text.includes(MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
+      specFinderToolsResult.text.includes(MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/ai/mcp-activation-wave.json") &&
       specFinderToolsResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       strictPublicProductFeedOk &&
@@ -1398,7 +1460,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/1066") &&
       trackedFirstRunExecute?.cart?.url?.includes("mcp_handoff_id=") &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R24" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R25" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R01" &&
       agentCapture?.counts?.agent_host_fast_paths >= 12 &&
@@ -1461,6 +1523,8 @@ async function liveMcpCheck() {
       agentCapture?.hub_urls?.source_activation_queue_html === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html" &&
       agentCapture?.hub_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       agentCapture?.hub_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
+      agentCapture?.hub_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      agentCapture?.hub_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       agentCapture?.hub_urls?.activation_experiments === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" &&
       agentCapture?.hub_urls?.activation_experiments_html === "https://mcp.packrift.com/ai/mcp-activation-experiments.html" &&
       agentCapture?.hub_urls?.ga4_funnel_proof === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json" &&
@@ -1473,6 +1537,13 @@ async function liveMcpCheck() {
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_ga4_funnel_proof" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_source_activation_queue" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-source-activation-queue.html") &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_revenue_conversion_queue" && surface.canonical_url === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL && surface.proof_url === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL && surface.install_or_call?.includes("source-preserving buyer/reviewer handoff")) &&
+      agentCapture?.surfaces?.some(
+        (surface) =>
+          surface.id === "mcp_buyer_order_handoffs" &&
+          surface.canonical_url === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+          surface.proof_url === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
+          surface.install_or_call?.includes("never places an order")
+      ) &&
       agentCapture?.surfaces?.some((surface) => surface.id === "mcp_activation_experiments" && surface.canonical_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.json" && surface.proof_url === "https://mcp.packrift.com/ai/mcp-activation-experiments.html") &&
       agentCapture?.surfaces?.some(
         (surface) =>
@@ -2040,6 +2111,7 @@ async function liveMcpCheck() {
       revenueConversionQueueHtmlResult.text.includes("Packrift MCP Revenue Conversion Queue") &&
       revenueConversionQueueHtmlResult.text.includes("Revenue proof boundary") &&
       revenueConversionQueueHtmlResult.text.includes("Buyer handoff") &&
+      buyerOrderHandoffsOk &&
       trackedOrderCline?.release === "PACKRIFT-MCP-ORDER-CONVERSION-HANDOFF-R05" &&
       trackedOrderCline?.source === "cline_mcp_marketplace" &&
       trackedOrderCline?.preferred_target === "cline" &&
@@ -2880,6 +2952,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.activation_handoff?.proof_urls?.activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
+      agentCaptureOutreach?.activation_handoff?.proof_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      agentCaptureOutreach?.activation_handoff?.proof_urls?.buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.order_handoff_template === "https://mcp.packrift.com/r/order/{source}" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.order_handoff_mcp_so === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       agentCaptureOutreach?.activation_handoff?.proof_urls?.eval_pack === "https://mcp.packrift.com/ai/mcp-eval-pack.json" &&
@@ -2898,6 +2972,8 @@ async function liveMcpCheck() {
       agentCaptureOutreach?.evidence?.mcp_source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       agentCaptureOutreach?.evidence?.mcp_revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       agentCaptureOutreach?.evidence?.mcp_revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
+      agentCaptureOutreach?.evidence?.mcp_buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
+      agentCaptureOutreach?.evidence?.mcp_buyer_order_handoffs_html === MCP_BUYER_ORDER_HANDOFFS_HTML_URL &&
       agentCaptureOutreach?.evidence?.agent_capture_outreach_html === "https://mcp.packrift.com/ai/agent-capture-outreach.html" &&
       agentCaptureOutreach?.evidence?.mcp_activation_wave_runner_shell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       agentCaptureOutreach?.evidence?.mcp_order_handoff_mcp_so === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
@@ -2966,6 +3042,9 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_JSON_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_MARKDOWN_URL) &&
       resourceUris.has(MCP_REVENUE_CONVERSION_QUEUE_HTML_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_JSON_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_MARKDOWN_URL) &&
+      resourceUris.has(MCP_BUYER_ORDER_HANDOFFS_HTML_URL) &&
       resourceUris.has("https://mcp.packrift.com/r/order/mcp_so?format=md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-agent-adoption-progress.md") &&
