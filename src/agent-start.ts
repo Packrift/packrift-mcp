@@ -1,5 +1,6 @@
 import { mcpFirstUsefulRun, trackedInstallUrl } from "./install-action.js";
 import { TRACKED_RUN_TEMPLATE, trackedRunUrl } from "./first-run-action.js";
+import { packriftMcpGa4HeadScript } from "./mcp-page-analytics.js";
 
 export interface McpStartRuntime {
   serverVersion: string;
@@ -480,6 +481,7 @@ export function mcpStartHtml(runtime: McpStartRuntime, options: McpStartHtmlOpti
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Start</title>
   <meta name="description" content="Install Packrift MCP, run the first exact-spec packaging flow, and create measured cart handoff URLs through the hosted MCP endpoint.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_start", source, target: "generic_streamable_http", utmCampaign: "packrift_mcp_start" })}
   <link rel="icon" href="/favicon.ico" type="image/svg+xml">
   <link rel="icon" href="/favicon.png" type="image/png" sizes="400x400">
   <link rel="apple-touch-icon" href="/favicon.png">

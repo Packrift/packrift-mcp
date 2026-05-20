@@ -10,6 +10,8 @@ const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JS
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
+const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
+const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R01";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
 const FETCH_TIMEOUT_MS = 20000;
 const execFileAsync = promisify(execFile);
@@ -348,6 +350,17 @@ async function fetchMcp(method, params = undefined) {
 
 function hasAll(text, needles) {
   return needles.every((needle) => text.includes(needle));
+}
+
+function hasMcpPageAnalytics(text, pageType, extraNeedles = []) {
+  return hasAll(text, [
+    `googletagmanager.com/gtag/js?id=${PACKRIFT_GA4_MEASUREMENT_ID}`,
+    PACKRIFT_GA4_MEASUREMENT_ID,
+    MCP_PAGE_ANALYTICS_RELEASE,
+    "packrift_mcp_page_view",
+    `"page_type":"${pageType}"`,
+    ...extraNeedles,
+  ]);
 }
 
 function parseJsonOrNull(text) {
@@ -968,6 +981,22 @@ async function liveMcpCheck() {
   const revenueConversionMcpSoRow = revenueConversionRows.find((row) => row.source === "mcp_so");
   const revenueConversionClineRow = revenueConversionRows.find((row) => row.source === "cline_mcp_marketplace");
   const buyerOrderHandoffRows = Array.isArray(buyerOrderHandoffs?.handoffs) ? buyerOrderHandoffs.handoffs : [];
+  const mcpPageAnalyticsDiagnostics = {
+    start_html: hasMcpPageAnalytics(trackedStartHtmlPartnerResult.text, "mcp_start"),
+    install_html: hasMcpPageAnalytics(trackedInstallCodexHtmlResult.text, "mcp_install"),
+    first_run_html: hasMcpPageAnalytics(trackedFirstRunHtmlResult.text, "mcp_first_run"),
+    activation_html: hasMcpPageAnalytics(trackedReviewerActivationHtmlResult.text, "mcp_activation"),
+    order_handoff_html: hasMcpPageAnalytics(trackedOrderMcpSoHtmlResult.text, "mcp_order_handoff", [
+      "utm_source=chatgpt-mcp",
+      "utm_medium=mcp_tool",
+      "utm_campaign=packrift_mcp_order_handoff",
+      "mcp_source_context=mcp_so",
+      "mcp_install_target=generic_streamable_http",
+    ]),
+    revenue_queue_html: hasMcpPageAnalytics(revenueConversionQueueHtmlResult.text, "mcp_revenue_queue"),
+    buyer_order_handoffs_html: hasMcpPageAnalytics(buyerOrderHandoffsHtmlResult.text, "mcp_buyer_order_handoffs"),
+  };
+  const mcpPageAnalyticsOk = Object.values(mcpPageAnalyticsDiagnostics).every(Boolean);
   const buyerOrderHandoffsDiagnostics = {
     json_ok: buyerOrderHandoffsResult.ok,
     markdown_ok: buyerOrderHandoffsMarkdownResult.ok,
@@ -1005,6 +1034,7 @@ async function liveMcpCheck() {
     html_copy_ready: buyerOrderHandoffsHtmlResult.text.includes("Copy-ready buyer request"),
     html_mcp_so: buyerOrderHandoffsHtmlResult.text.includes("mcp_so"),
     html_cline: buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace"),
+    html_analytics: mcpPageAnalyticsDiagnostics.buyer_order_handoffs_html,
   };
   const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
   const revenueConversionRowsOk =
@@ -1190,6 +1220,7 @@ async function liveMcpCheck() {
       firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
       hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]),
+    mcp_page_analytics: mcpPageAnalyticsOk,
     required_core_resource_uris_missing: requiredCoreResourceUris.filter((uri) => !resourceUris.has(uri)),
   };
   return check(
@@ -2258,6 +2289,7 @@ async function liveMcpCheck() {
       trackedOrderMcpSoHtmlResult.text.includes("mcp_order_handoff_live_confirmation") &&
       trackedOrderMcpSoHtmlResult.text.includes("Source Attribution Required") &&
       trackedOrderMcpSoHtmlResult.text.includes("packrift_mcp_source_context") &&
+      mcpPageAnalyticsDiagnostics.order_handoff_html &&
       trackedOrderMcpSoHtmlResult.text.includes("Product") &&
       trackedOrderMcpSoMarkdownResult.ok &&
       trackedOrderMcpSoMarkdownResult.text.includes("Buyer/Reviewer Order Handoff") &&
@@ -2309,6 +2341,7 @@ async function liveMcpCheck() {
       revenueConversionQueueHtmlResult.text.includes("Packrift MCP Revenue Conversion Queue") &&
       revenueConversionQueueHtmlResult.text.includes("Revenue proof boundary") &&
       revenueConversionQueueHtmlResult.text.includes("Buyer request") &&
+      mcpPageAnalyticsDiagnostics.revenue_queue_html &&
       revenueConversionQueueHtmlResult.text.includes("Order attribution required") &&
       sourceActivationCline?.release === "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R04" &&
       sourceActivationCline?.source === "cline_mcp_marketplace" &&
@@ -3317,7 +3350,8 @@ async function liveMcpCheck() {
       firstCartUrl.startsWith("https://mcp.packrift.com/r/cart/") &&
       hasAll(firstCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url", "qty=1"]) &&
       firstFinalCartUrl.startsWith("https://packrift.com/cart/") &&
-      hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"])
+      hasAll(firstFinalCartUrl, ["utm_source=chatgpt-mcp", "utm_medium=mcp_tool", "utm_campaign=create_cart_url"]) &&
+      mcpPageAnalyticsOk
       ? "pass"
       : "fail",
     {
@@ -3450,6 +3484,7 @@ async function liveMcpCheck() {
       tracked_first_run_generic_status: trackedFirstRunGenericResult.status,
       tracked_first_run_html_status: trackedFirstRunHtmlResult.status,
       tracked_first_run_html_has_button: trackedFirstRunHtmlResult.text.includes("Run live proof"),
+      mcp_page_analytics: mcpPageAnalyticsDiagnostics,
       tracked_first_run_execute_status: trackedFirstRunExecuteResult.status,
       tracked_first_run_execute_ok: trackedFirstRunExecute?.status ?? null,
       tracked_first_run_execute_sku: trackedFirstRunExecute?.sku ?? null,

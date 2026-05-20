@@ -86,6 +86,7 @@ import {
   getReorderLinkSchema,
 } from "./tools/procurement_links.js";
 import { buildTrackingContext, trackedUrl } from "./conversion.js";
+import { packriftMcpGa4HeadScript } from "./mcp-page-analytics.js";
 
 type Bindings = Env;
 type AppContext = Context<{ Bindings: Bindings }>;
@@ -5655,6 +5656,7 @@ function sourceActivationOrderHandoffHtml(payload: ReturnType<typeof sourceActiv
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Buyer Handoff</title>
   <meta name="description" content="Source-specific Packrift MCP buyer and reviewer handoff that preserves attribution into Shopify checkout.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_order_handoff", source: payload.source, target: payload.preferred_target, utmCampaign: "packrift_mcp_order_handoff", forceQualifiedMcpUtm: true })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--red:#9f2d20;--blue:#245f9b;--soft:#eef4ef}
     *{box-sizing:border-box}
@@ -7288,6 +7290,7 @@ function mcpRevenueConversionQueueHtml(payload: McpRevenueConversionQueuePayload
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Revenue Conversion Queue</title>
   <meta name="description" content="Mature Packrift MCP source queue for buyer and reviewer checkout follow-through with source-preserving cart attribution.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_revenue_queue", source: "operator", target: "buyer_checkout", utmCampaign: "packrift_mcp_revenue_queue" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--amber:#96610f;--red:#9f2d20}
     *{box-sizing:border-box}
@@ -7520,6 +7523,7 @@ function mcpBuyerOrderHandoffsHtml(payload: ReturnType<typeof mcpBuyerOrderHando
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Buyer Order Handoffs</title>
   <meta name="description" content="Source-preserving Packrift MCP buyer and reviewer order handoffs for mature MCP sources.">
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_buyer_order_handoffs", source: "operator", target: "buyer_checkout", utmCampaign: "packrift_mcp_buyer_order_handoffs" })}
   <style>
     :root{color-scheme:light;--ink:#17211d;--muted:#596a63;--line:#d7ded8;--paper:#f7f8f5;--panel:#fff;--green:#0f6b4f;--blue:#245f9b;--red:#9f2d20}
     *{box-sizing:border-box}
@@ -13655,6 +13659,7 @@ function mcpFirstRunActionHtml(payload: ReturnType<typeof mcpFirstRunActionPaylo
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP First Run</title>
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_first_run", source: payload.source, target: payload.target, utmCampaign: "packrift_mcp_first_run" })}
   <style>
     body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f6f3;color:#1b2533}
     main{max-width:980px;margin:0 auto;padding:28px 18px 48px}

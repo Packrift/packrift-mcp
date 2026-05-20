@@ -1,6 +1,7 @@
 import { mcpDirectorySubmitActionsPayload, type DirectorySubmitActionsRuntime } from "./directory-submit-actions.js";
 import { MCP_ENDPOINT, mcpFirstUsefulRun, trackedConfigUrl, trackedInstallUrl } from "./install-action.js";
 import { trackedRunUrl } from "./first-run-action.js";
+import { packriftMcpGa4HeadScript } from "./mcp-page-analytics.js";
 
 export interface ReviewerActivationRuntime extends DirectorySubmitActionsRuntime {}
 
@@ -356,6 +357,7 @@ export function mcpReviewerActivationHtml(runtime: ReviewerActivationRuntime, so
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Packrift MCP Activation</title>
+  ${packriftMcpGa4HeadScript({ pageType: "mcp_activation", source: target.id, target: target.preferred_target, utmCampaign: "packrift_mcp_activation" })}
   <style>
     body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f6f3;color:#1b2533}
     main{max-width:980px;margin:0 auto;padding:28px 18px 48px}
