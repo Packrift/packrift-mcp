@@ -59,6 +59,7 @@ const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const MCP_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/.well-known/agent.json";
 const MCP_ROOT_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/agent.json";
+const PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL = "https://packrift.com/agent.json";
 const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability-card.json";
 const DIRECTORY_SUBMIT_ACTIONS_URL = "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json";
 const CLAUDE_CONNECTOR_SUBMISSION_URL = "https://mcp.packrift.com/ai/claude-connector-submission.json";
@@ -924,12 +925,13 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
     well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
     agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
     root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+    brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
     capability_card: MCP_CAPABILITY_CARD_URL,
     outreach_board: AGENT_CAPTURE_OUTREACH_HTML_URL,
   };
 
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R03",
+    release: "PACKRIFT-MCP-DIRECTORY-CONCISE-EMAIL-R04",
     to: mailtoRecipient(action),
     subject: action.recrawl_subject,
     body: [
@@ -950,6 +952,7 @@ function conciseDirectoryEmail(runtime: DirectorySubmitActionsRuntime, action: (
       `- Well-known OpenAPI discovery adapter: ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}`,
       `- AI plugin-style manifest: ${MCP_AI_PLUGIN_JSON_URL}`,
       `- Well-known AI plugin-style manifest: ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}`,
+      `- Brand-domain Agent Web manifest: ${PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL}`,
       `- Tracked start: ${trackedStart}`,
       `- Install page: ${proofUrls.tracked_install}`,
       `- First-run page: ${proofUrls.first_run}`,
@@ -1006,7 +1009,7 @@ function sourceActivationRecrawlLines(runtime: DirectorySubmitActionsRuntime, so
 }
 
 function proofLine(runtime: DirectorySubmitActionsRuntime): string {
-  return `Current proof: Packrift MCP version ${runtime.serverVersion} is live; the official registry entry is ${OFFICIAL_REGISTRY_URL}; live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Agent Web discovery is available through ${MCP_AGENT_WEB_MANIFEST_URL}; capability-card discovery is available through ${MCP_CAPABILITY_CARD_URL}. Legacy AI discovery is available through ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, and ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; external activation brief is ${EXTERNAL_ACTIVATION_BRIEF_URL}; selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; revenue conversion queue is ${REVENUE_CONVERSION_QUEUE_URL}; buyer order handoffs hub is ${BUYER_ORDER_HANDOFFS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked first-run actions preserve source into order handoffs without placing an order.`;
+  return `Current proof: Packrift MCP version ${runtime.serverVersion} is live; the official registry entry is ${OFFICIAL_REGISTRY_URL}; live MCP returns ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources, and ${runtime.promptsCount} prompts. Live tool discovery is ${MCP_TOOL_DISCOVERY_URL} and the crawler-readable tool guide is ${MCP_TOOL_DISCOVERY_MARKDOWN_URL}. Agent Web discovery is available through ${PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL}, ${MCP_AGENT_WEB_MANIFEST_URL}, and ${MCP_ROOT_AGENT_WEB_MANIFEST_URL}; capability-card discovery is available through ${MCP_CAPABILITY_CARD_URL}. Legacy AI discovery is available through ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, and ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}. Start page is ${MCP_START_URL}; client config is ${CLIENT_CONFIG_URL}; marketplace manifest is ${MARKETPLACE_MANIFEST_URL}; source activation sitemap is ${SOURCE_ACTIVATION_SITEMAP_URL}; install actions are ${INSTALL_ACTIONS_URL}; tracked config template is ${MCP_TRACKED_CONFIG_TEMPLATE}; tracked install template is ${TRACKED_INSTALL_TEMPLATE}; tracked run template is ${TRACKED_RUN_TEMPLATE}; reviewer activation template is ${MCP_TRACKED_REVIEWER_ACTIVATION_TEMPLATE}; reviewer activation browser runner template is ${MCP_TRACKED_REVIEWER_ACTIVATION_HTML_TEMPLATE}; buyer/reviewer order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_TEMPLATE}; browser order handoff template is ${MCP_TRACKED_ORDER_HANDOFF_HTML_TEMPLATE}; usage snapshot is ${USAGE_SNAPSHOT_URL}; funnel snapshot is ${FUNNEL_SNAPSHOT_URL}; GA4 funnel proof is ${GA4_FUNNEL_PROOF_URL}; source activation queue is ${SOURCE_ACTIVATION_QUEUE_URL}; activation experiments are ${ACTIVATION_EXPERIMENTS_URL}; activation wave is ${ACTIVATION_WAVE_URL}; external activation brief is ${EXTERNAL_ACTIVATION_BRIEF_URL}; selected external activation task feeds are ${EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL} and ${EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL}; guarded activation wave runner is ${ACTIVATION_WAVE_RUNNER_URL}; revenue conversion queue is ${REVENUE_CONVERSION_QUEUE_URL}; buyer order handoffs hub is ${BUYER_ORDER_HANDOFFS_URL}; first-run proof is ${FIRST_RUN_PROOF_URL}; reviewer activation handoff is ${REVIEWER_ACTIVATION_URL}; workflow gallery is ${WORKFLOW_GALLERY_URL}; eval pack is ${MCP_EVAL_PACK_URL}; Browserbase Browse SKILL.md is ${ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL}; Browserbase Browse skill pack is ${BROWSERBASE_BROWSE_SKILL_PACK_URL}; directory refresh pack is ${DIRECTORY_REFRESH_URL}; directory outreach packet is ${AGENT_CAPTURE_OUTREACH_URL}; Claude connector submission packet is ${CLAUDE_CONNECTOR_SUBMISSION_URL}; install matrix is ${INSTALL_MATRIX_URL}; cart activation proof is ${CART_ACTIVATION_URL}; tracked first-run actions include a browser page, copy-ready agent prompt, and one-click live proof that reach create_cart_url after live price and inventory checks; tracked first-run actions preserve source into order handoffs without placing an order.`;
 }
 
 function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof ACTIONS)[number]): string {
@@ -1049,6 +1052,7 @@ function recrawlMessage(runtime: DirectorySubmitActionsRuntime, action: (typeof 
     "- Server name: io.github.Packrift/packrift-mcp",
     "- Title: Packrift MCP",
     "- Remote endpoint: https://mcp.packrift.com/mcp",
+    `- Brand-domain Agent Web manifest: ${PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL}`,
     `- Tracked start page: ${trackedStart}`,
     `- Tracked MCP JSON config: ${trackedConfig}`,
     `- Tracked Codex install action: ${trackedInstallCodex}`,
@@ -1188,6 +1192,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
       source_eval_pack: sourceEvalPackUrl(action.id),
       source_eval_pack_markdown: sourceEvalPackUrl(action.id, "md"),
       tracked_run_codex: trackedRunUrl(action.id, "codex"),
+      brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
       start_pack: MCP_START_JSON_URL,
       health: "https://mcp.packrift.com/health",
       manifest: "https://mcp.packrift.com/manifest",
@@ -1280,6 +1285,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
         external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
         external_activation_brief_tasks_csv: EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
         external_activation_brief_runner_shell: EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
+        brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
         openapi_json: MCP_OPENAPI_JSON_URL,
         well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
         ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -1299,7 +1305,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R52",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R53",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1352,6 +1358,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     source_well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
     source_ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
     source_well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+    source_brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
     source_agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
     source_root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
     source_capability_card: MCP_CAPABILITY_CARD_URL,
@@ -1400,7 +1407,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R19",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R20",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1432,6 +1439,10 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       prompts_count: runtime.promptsCount,
       repository_url: "https://github.com/Packrift/packrift-mcp",
       website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
+      brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       marketplace_manifest: MARKETPLACE_MANIFEST_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
@@ -1460,6 +1471,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       live_proof: action.tracked_run_urls.generic_streamable_http_execute,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -1529,6 +1541,10 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Authentication: ${payload.canonical_listing.authentication}`,
     `Version: ${payload.canonical_listing.version}`,
     `Tools: ${payload.canonical_listing.tool_count} (${payload.canonical_listing.tool_names.join(", ")})`,
+    `Brand-domain Agent Web manifest: ${payload.canonical_listing.brand_agent_web_manifest}`,
+    `Hosted Agent Web manifest: ${payload.canonical_listing.agent_web_manifest}`,
+    `Root Agent Web manifest: ${payload.canonical_listing.root_agent_web_manifest}`,
+    `Capability card: ${payload.canonical_listing.capability_card}`,
     `Marketplace manifest: ${payload.canonical_listing.marketplace_manifest}`,
     `Live tool discovery JSON: ${payload.canonical_listing.tool_discovery_json}`,
     `Live tool discovery Markdown: ${payload.canonical_listing.tool_discovery_markdown}`,

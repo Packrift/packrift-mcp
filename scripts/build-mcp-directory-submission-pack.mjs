@@ -319,6 +319,10 @@ const LIVE_PROOF_URLS = {
   well_known_server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
   glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
   marketplace_manifest: "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
+  brand_agent_web_manifest: "https://packrift.com/agent.json",
+  agent_web_manifest: "https://mcp.packrift.com/.well-known/agent.json",
+  root_agent_web_manifest: "https://mcp.packrift.com/agent.json",
+  capability_card: "https://mcp.packrift.com/.well-known/capability-card.json",
   source_activation_sitemap: "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml",
   cart_handoff_candidates: "https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json",
   all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
@@ -472,7 +476,7 @@ function canonicalListingCopy(liveProof) {
     },
     category: "Business",
     tags: ["mcp", "ecommerce", "packaging", "procurement", "shopify", "cart-handoff", "inventory"],
-    proof_summary: `${toolsCount} tools, ${promptsCount} prompts, ${resourcesCount} resources, direct live MCP introspection, public manifests, valid Glama claim, source-attributed /r/config/{source} config links, and MCP-attributed cart handoff candidates.`,
+    proof_summary: `${toolsCount} tools, ${promptsCount} prompts, ${resourcesCount} resources, direct live MCP introspection, public manifests, brand-domain Agent Web discovery, valid Glama claim, source-attributed /r/config/{source} config links, and MCP-attributed cart handoff candidates.`,
     contact_email: CONTACT_EMAIL_PLACEHOLDER,
   };
 }
@@ -502,6 +506,10 @@ function targetRows(distribution, copy) {
       live_manifest: LIVE_PROOF_URLS.manifest,
       mcp_tools_list: `${MCP_ENDPOINT} via JSON-RPC method tools/list`,
       glama_claim: LIVE_PROOF_URLS.glama_claim,
+      brand_agent_web_manifest: LIVE_PROOF_URLS.brand_agent_web_manifest,
+      agent_web_manifest: LIVE_PROOF_URLS.agent_web_manifest,
+      root_agent_web_manifest: LIVE_PROOF_URLS.root_agent_web_manifest,
+      capability_card: LIVE_PROOF_URLS.capability_card,
       cart_handoff_candidates: LIVE_PROOF_URLS.cart_handoff_candidates,
       all_agent_capture: LIVE_PROOF_URLS.all_agent_capture,
       mcp_adoption_kit: LIVE_PROOF_URLS.mcp_adoption_kit,
@@ -753,7 +761,7 @@ function liveProofDigest(liveProof) {
 function directoryUpdateCard(payload, target) {
   const toolNames = payload.live_proof.mcp_tools_list.tool_names ?? [];
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R09",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R10",
     generated_at: payload.generated_at,
     source: target.name,
     directory: {
@@ -777,6 +785,9 @@ function directoryUpdateCard(payload, target) {
       tool_names: toolNames,
       repository_url: payload.copy.repository_url,
       website_url: payload.copy.website_url,
+      brand_agent_web_manifest: LIVE_PROOF_URLS.brand_agent_web_manifest,
+      agent_web_manifest: LIVE_PROOF_URLS.agent_web_manifest,
+      capability_card: LIVE_PROOF_URLS.capability_card,
       marketplace_manifest: LIVE_PROOF_URLS.marketplace_manifest,
       source_activation_sitemap: LIVE_PROOF_URLS.source_activation_sitemap,
     },
@@ -791,6 +802,7 @@ function directoryUpdateCard(payload, target) {
       reviewer_activation: `https://mcp.packrift.com/r/activate/${target.name}`,
       reviewer_activation_html: `https://mcp.packrift.com/r/activate/${target.name}?format=html`,
       eval_pack: sourceEvalPackUrl(target.name),
+      brand_agent_web_manifest: LIVE_PROOF_URLS.brand_agent_web_manifest,
     },
     acceptance_gate: [
       "Install the hosted no-auth Streamable HTTP endpoint.",
@@ -804,6 +816,7 @@ function directoryUpdateCard(payload, target) {
       "",
       `Please recrawl Packrift MCP from ${LIVE_PROOF_URLS.marketplace_manifest} and ${LIVE_PROOF_URLS.source_activation_sitemap}.`,
       `Endpoint: ${MCP_ENDPOINT}`,
+      `Brand-domain Agent Web manifest: ${LIVE_PROOF_URLS.brand_agent_web_manifest}`,
       `Source-specific update card: https://mcp.packrift.com/ai/mcp-directory-update/${target.name}.json`,
       `Tracked config: ${TRACKED_CONFIG_TEMPLATE.replace("{source}", target.name)}`,
       `Live first-run proof: ${trackedRunUrl(target.name, "generic_streamable_http")}?execute=1`,
@@ -832,6 +845,9 @@ function directoryUpdateCardMarkdown(card) {
     `Authentication: ${card.canonical_listing.authentication}`,
     `Version: ${card.canonical_listing.version}`,
     `Tools: ${card.canonical_listing.tool_count} (${card.canonical_listing.tool_names.join(", ")})`,
+    `Brand-domain Agent Web manifest: ${card.canonical_listing.brand_agent_web_manifest}`,
+    `Hosted Agent Web manifest: ${card.canonical_listing.agent_web_manifest}`,
+    `Capability card: ${card.canonical_listing.capability_card}`,
     `Marketplace manifest: ${card.canonical_listing.marketplace_manifest}`,
     `Source activation sitemap: ${card.canonical_listing.source_activation_sitemap}`,
     `Host acceptance eval pack: ${card.tracked_urls.eval_pack}`,

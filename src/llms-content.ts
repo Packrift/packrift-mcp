@@ -46,7 +46,7 @@ Use these as examples of exact product families that converted, not as universal
 - [MCP adoption kit](https://mcp.packrift.com/ai/mcp-adoption-kit.json): install snippets, first-five-minute JSON-RPC calls, curl/JavaScript/Python examples, demo SKUs, useful workflows, proof URLs, and exact-match rules for new agents and developers
 - [MCP install matrix](https://mcp.packrift.com/ai/mcp-install-matrix.json): copy-ready remote MCP setup paths for common agent hosts, smoke tests, and measured cart handoff rules
 - [MCP client config](https://mcp.packrift.com/ai/mcp-client-config.json): smallest copy-ready install bundle for IDEs, agent hosts, and directory reviewers; aliases are https://mcp.packrift.com/mcp.json, https://mcp.packrift.com/.well-known/mcp.json, and source-attributed https://mcp.packrift.com/r/config/{source}
-- [Agent Web Protocol manifest](https://mcp.packrift.com/.well-known/agent.json): no-auth public agent manifest for Packrift MCP, exact-spec catalog lookup, SKU reads, and guarded cart handoffs; root alias is https://mcp.packrift.com/agent.json
+- [Agent Web Protocol manifest](https://mcp.packrift.com/.well-known/agent.json): no-auth public agent manifest for Packrift MCP, exact-spec catalog lookup, SKU reads, and guarded cart handoffs; brand-domain alias is https://packrift.com/agent.json and hosted root alias is https://mcp.packrift.com/agent.json
 - [CapIndex capability card](https://mcp.packrift.com/.well-known/capability-card.json): compact capability card for agents and directories that classify commerce tools by protocol, endpoint, use case, and order-safety policy
 - [OpenAPI discovery adapter](https://mcp.packrift.com/openapi.json): REST discovery manifest for legacy AI agents that probe OpenAPI before MCP; well-known alias is https://mcp.packrift.com/.well-known/openapi.json
 - [AI plugin-style discovery manifest](https://mcp.packrift.com/.well-known/ai-plugin.json): no-auth legacy agent manifest that points back to the hosted MCP endpoint and OpenAPI adapter
@@ -117,7 +117,7 @@ Use these as examples of exact product families that converted, not as universal
 - [Public exact-spec data page](https://packrift.com/pages/packrift-ai-exact-spec-data): Shopify-hosted resource page linking buyers, crawlers, and agents to the MCP corpus files
 - [AI agent instructions](https://packrift.com/pages/packrift-ai-agent-instructions): exact-match policy, MCP usage pattern, resources/list guidance, and purchase handoff rules
 - [Server card](https://mcp.packrift.com/.well-known/mcp/server-card.json): MCP discovery manifest
-- [Agent Web Protocol manifest](https://mcp.packrift.com/.well-known/agent.json): public agent manifest for Packrift MCP and exact-spec procurement actions
+- [Agent Web Protocol manifest](https://mcp.packrift.com/.well-known/agent.json): public agent manifest for Packrift MCP and exact-spec procurement actions; brand-domain alias is https://packrift.com/agent.json
 - [CapIndex capability card](https://mcp.packrift.com/.well-known/capability-card.json): public capability summary for agent directories and source indexes
 - [Root MCP JSON](https://mcp.packrift.com/mcp.json): copy-ready MCP client config
 - [Well-known MCP JSON](https://mcp.packrift.com/.well-known/mcp.json): well-known copy-ready MCP client config
