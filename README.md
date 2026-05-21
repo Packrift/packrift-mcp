@@ -153,6 +153,7 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - `llms.txt`: https://mcp.packrift.com/llms.txt
 - `llms-full.txt`: https://mcp.packrift.com/llms-full.txt
 - Agent Web Protocol manifest: https://mcp.packrift.com/.well-known/agent.json
+- Agent Web Protocol brand-domain alias: https://packrift.com/agent.json
 - CapIndex capability card: https://mcp.packrift.com/.well-known/capability-card.json
 - MCP server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
 - MCP client config: https://mcp.packrift.com/ai/mcp-client-config.json

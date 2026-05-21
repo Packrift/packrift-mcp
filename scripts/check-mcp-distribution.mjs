@@ -10,6 +10,7 @@ const EXPECTED_VERSION = process.env.PACKRIFT_MCP_EXPECTED_VERSION || PACKAGE_JS
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-distribution-check");
 const RUN_CACHE_BUST = Date.now().toString(36);
 const PACKRIFT_ORIGIN = "https://mcp.packrift.com";
+const PACKRIFT_BRAND_ORIGIN = "https://packrift.com";
 const MCP_OPENAPI_JSON_URL = `${PACKRIFT_ORIGIN}/openapi.json`;
 const MCP_WELL_KNOWN_OPENAPI_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/openapi.json`;
 const MCP_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/ai-plugin.json`;
@@ -17,6 +18,9 @@ const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/ai-plu
 const MCP_AGENT_WEB_MANIFEST_URL = `${PACKRIFT_ORIGIN}/.well-known/agent.json`;
 const MCP_ROOT_AGENT_WEB_MANIFEST_URL = `${PACKRIFT_ORIGIN}/agent.json`;
 const MCP_CAPABILITY_CARD_URL = `${PACKRIFT_ORIGIN}/.well-known/capability-card.json`;
+const PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL = `${PACKRIFT_BRAND_ORIGIN}/.well-known/agent.json`;
+const PACKRIFT_BRAND_ROOT_AGENT_WEB_MANIFEST_URL = `${PACKRIFT_BRAND_ORIGIN}/agent.json`;
+const PACKRIFT_BRAND_CAPABILITY_CARD_URL = `${PACKRIFT_BRAND_ORIGIN}/.well-known/capability-card.json`;
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
@@ -312,14 +316,14 @@ const OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_IMMUTABLE_GZIP_SHA256 =
   "55f20495b8ad5bbe592d404a5caf6cb1a20b1d75e9f1c0d48dd0993f2bfb8874";
 
 function cacheBustedUrl(url) {
-  if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
+  if (!url.startsWith(PACKRIFT_ORIGIN) && !url.startsWith(PACKRIFT_BRAND_ORIGIN)) return url;
   const parsed = new URL(url);
   parsed.searchParams.set("packrift_check", RUN_CACHE_BUST);
   return parsed.toString();
 }
 
 function freshDerivedUrl(url) {
-  if (!url.startsWith(PACKRIFT_ORIGIN)) return url;
+  if (!url.startsWith(PACKRIFT_ORIGIN) && !url.startsWith(PACKRIFT_BRAND_ORIGIN)) return url;
   const parsed = new URL(url);
   parsed.searchParams.set("refresh", "1");
   return parsed.toString();
@@ -327,7 +331,7 @@ function freshDerivedUrl(url) {
 
 async function fetchText(url) {
   let lastResult = { ok: false, status: 0, url, text: "", error: "not attempted", attempts: 0 };
-  const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) ? 3 : 1;
+  const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) || url.startsWith(PACKRIFT_BRAND_ORIGIN) ? 3 : 1;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
@@ -551,6 +555,9 @@ async function liveMcpCheck() {
     agentWebManifestResult,
     rootAgentWebManifestResult,
     capabilityCardResult,
+    brandAgentWebManifestResult,
+    brandRootAgentWebManifestResult,
+    brandCapabilityCardResult,
     openapiJsonResult,
     wellKnownOpenapiJsonResult,
     aiPluginJsonResult,
@@ -711,6 +718,9 @@ async function liveMcpCheck() {
     fetchText(MCP_AGENT_WEB_MANIFEST_URL),
     fetchText(MCP_ROOT_AGENT_WEB_MANIFEST_URL),
     fetchText(MCP_CAPABILITY_CARD_URL),
+    fetchText(PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL),
+    fetchText(PACKRIFT_BRAND_ROOT_AGENT_WEB_MANIFEST_URL),
+    fetchText(PACKRIFT_BRAND_CAPABILITY_CARD_URL),
     fetchText(MCP_OPENAPI_JSON_URL),
     fetchText(MCP_WELL_KNOWN_OPENAPI_JSON_URL),
     fetchText(MCP_AI_PLUGIN_JSON_URL),
@@ -881,6 +891,9 @@ async function liveMcpCheck() {
   const agentWebManifest = agentWebManifestResult.ok ? JSON.parse(agentWebManifestResult.text) : null;
   const rootAgentWebManifest = rootAgentWebManifestResult.ok ? JSON.parse(rootAgentWebManifestResult.text) : null;
   const capabilityCard = capabilityCardResult.ok ? JSON.parse(capabilityCardResult.text) : null;
+  const brandAgentWebManifest = brandAgentWebManifestResult.ok ? JSON.parse(brandAgentWebManifestResult.text) : null;
+  const brandRootAgentWebManifest = brandRootAgentWebManifestResult.ok ? JSON.parse(brandRootAgentWebManifestResult.text) : null;
+  const brandCapabilityCard = brandCapabilityCardResult.ok ? JSON.parse(brandCapabilityCardResult.text) : null;
   const openapiJson = openapiJsonResult.ok ? JSON.parse(openapiJsonResult.text) : null;
   const wellKnownOpenapiJson = wellKnownOpenapiJsonResult.ok ? JSON.parse(wellKnownOpenapiJsonResult.text) : null;
   const aiPluginJson = aiPluginJsonResult.ok ? JSON.parse(aiPluginJsonResult.text) : null;
@@ -1683,8 +1696,10 @@ async function liveMcpCheck() {
       agentWebManifestResult.ok &&
       rootAgentWebManifestResult.ok &&
       capabilityCardResult.ok &&
+      brandRootAgentWebManifestResult.ok &&
       agentWebManifest?.awp_version === "0.2" &&
       rootAgentWebManifest?.awp_version === agentWebManifest?.awp_version &&
+      brandRootAgentWebManifest?.awp_version === agentWebManifest?.awp_version &&
       agentWebManifest?.protocols?.mcp?.endpoint === MCP_ENDPOINT &&
       agentWebManifest?.protocols?.mcp?.server_card === "https://mcp.packrift.com/.well-known/mcp/server-card.json" &&
       agentWebManifest?.protocols?.capindex?.capability_card === MCP_CAPABILITY_CARD_URL &&
@@ -1795,8 +1810,10 @@ async function liveMcpCheck() {
       agentWebManifestResult.ok &&
       rootAgentWebManifestResult.ok &&
       capabilityCardResult.ok &&
+      brandRootAgentWebManifestResult.ok &&
       agentWebManifest?.awp_version === "0.2" &&
       rootAgentWebManifest?.awp_version === agentWebManifest?.awp_version &&
+      brandRootAgentWebManifest?.awp_version === agentWebManifest?.awp_version &&
       agentWebManifest?.protocols?.mcp?.endpoint === MCP_ENDPOINT &&
       agentWebManifest?.protocols?.capindex?.capability_card === MCP_CAPABILITY_CARD_URL &&
       agentWebManifest?.actions?.some((action) => action?.id === "create_guarded_cart_handoff" && action?.requires_human_confirmation === true) &&
@@ -4572,6 +4589,12 @@ async function liveMcpCheck() {
         agent_web_manifest_status: agentWebManifestResult.status,
         root_agent_web_manifest_status: rootAgentWebManifestResult.status,
         capability_card_status: capabilityCardResult.status,
+        brand_agent_web_manifest_status: brandAgentWebManifestResult.status,
+        brand_root_agent_web_manifest_status: brandRootAgentWebManifestResult.status,
+        brand_capability_card_status: brandCapabilityCardResult.status,
+        brand_agent_web_effective_url: brandAgentWebManifestResult.url,
+        brand_root_agent_web_effective_url: brandRootAgentWebManifestResult.url,
+        brand_capability_card_effective_url: brandCapabilityCardResult.url,
         openapi_json_status: openapiJsonResult.status,
         well_known_openapi_json_status: wellKnownOpenapiJsonResult.status,
         ai_plugin_json_status: aiPluginJsonResult.status,

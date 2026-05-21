@@ -40,7 +40,19 @@ pattern = "packrift.com/llms-full.txt*"
 zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
 
 [[routes]]
+pattern = "packrift.com/agent.json*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/.well-known/agent.json*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
 pattern = "packrift.com/.well-known/mcp/server-card.json*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/.well-known/capability-card.json*"
 zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
 
 [[routes]]
