@@ -14,6 +14,9 @@ const MCP_OPENAPI_JSON_URL = `${PACKRIFT_ORIGIN}/openapi.json`;
 const MCP_WELL_KNOWN_OPENAPI_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/openapi.json`;
 const MCP_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/ai-plugin.json`;
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = `${PACKRIFT_ORIGIN}/.well-known/ai-plugin.json`;
+const MCP_AGENT_WEB_MANIFEST_URL = `${PACKRIFT_ORIGIN}/.well-known/agent.json`;
+const MCP_ROOT_AGENT_WEB_MANIFEST_URL = `${PACKRIFT_ORIGIN}/agent.json`;
+const MCP_CAPABILITY_CARD_URL = `${PACKRIFT_ORIGIN}/.well-known/capability-card.json`;
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
@@ -545,6 +548,9 @@ async function liveMcpCheck() {
     clientConfigResult,
     rootMcpJsonResult,
     wellKnownMcpJsonResult,
+    agentWebManifestResult,
+    rootAgentWebManifestResult,
+    capabilityCardResult,
     openapiJsonResult,
     wellKnownOpenapiJsonResult,
     aiPluginJsonResult,
@@ -702,6 +708,9 @@ async function liveMcpCheck() {
     fetchText("https://mcp.packrift.com/ai/mcp-client-config.json"),
     fetchText("https://mcp.packrift.com/mcp.json"),
     fetchText("https://mcp.packrift.com/.well-known/mcp.json"),
+    fetchText(MCP_AGENT_WEB_MANIFEST_URL),
+    fetchText(MCP_ROOT_AGENT_WEB_MANIFEST_URL),
+    fetchText(MCP_CAPABILITY_CARD_URL),
     fetchText(MCP_OPENAPI_JSON_URL),
     fetchText(MCP_WELL_KNOWN_OPENAPI_JSON_URL),
     fetchText(MCP_AI_PLUGIN_JSON_URL),
@@ -869,6 +878,9 @@ async function liveMcpCheck() {
   const clientConfig = clientConfigResult.ok ? JSON.parse(clientConfigResult.text) : null;
   const rootMcpJson = rootMcpJsonResult.ok ? JSON.parse(rootMcpJsonResult.text) : null;
   const wellKnownMcpJson = wellKnownMcpJsonResult.ok ? JSON.parse(wellKnownMcpJsonResult.text) : null;
+  const agentWebManifest = agentWebManifestResult.ok ? JSON.parse(agentWebManifestResult.text) : null;
+  const rootAgentWebManifest = rootAgentWebManifestResult.ok ? JSON.parse(rootAgentWebManifestResult.text) : null;
+  const capabilityCard = capabilityCardResult.ok ? JSON.parse(capabilityCardResult.text) : null;
   const openapiJson = openapiJsonResult.ok ? JSON.parse(openapiJsonResult.text) : null;
   const wellKnownOpenapiJson = wellKnownOpenapiJsonResult.ok ? JSON.parse(wellKnownOpenapiJsonResult.text) : null;
   const aiPluginJson = aiPluginJsonResult.ok ? JSON.parse(aiPluginJsonResult.text) : null;
@@ -1629,6 +1641,9 @@ async function liveMcpCheck() {
     MCP_WELL_KNOWN_OPENAPI_JSON_URL,
     MCP_AI_PLUGIN_JSON_URL,
     MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+    MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+    MCP_AGENT_WEB_MANIFEST_URL,
+    MCP_CAPABILITY_CARD_URL,
     "https://mcp.packrift.com/r/order/mcp_so?format=md",
     "https://mcp.packrift.com/r/order/mcp_so?format=sh",
     MCP_ACTIVATION_WAVE_RUNNER_URL,
@@ -1664,6 +1679,20 @@ async function liveMcpCheck() {
       aiPluginJson?.mcp?.endpoint === MCP_ENDPOINT &&
       aiPluginJson?.mcp?.source_activation_queue === "https://mcp.packrift.com/ai/mcp-source-activation-queue.json" &&
       wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL,
+    agent_web_discovery:
+      agentWebManifestResult.ok &&
+      rootAgentWebManifestResult.ok &&
+      capabilityCardResult.ok &&
+      agentWebManifest?.awp_version === "0.2" &&
+      rootAgentWebManifest?.awp_version === agentWebManifest?.awp_version &&
+      agentWebManifest?.protocols?.mcp?.endpoint === MCP_ENDPOINT &&
+      agentWebManifest?.protocols?.mcp?.server_card === "https://mcp.packrift.com/.well-known/mcp/server-card.json" &&
+      agentWebManifest?.protocols?.capindex?.capability_card === MCP_CAPABILITY_CARD_URL &&
+      agentWebManifest?.actions?.some((action) => action?.id === "create_guarded_cart_handoff" && action?.requires_human_confirmation === true) &&
+      capabilityCard?.source_type === "mcp" &&
+      capabilityCard?.endpoint_url === MCP_ENDPOINT &&
+      capabilityCard?.server_card_url === "https://mcp.packrift.com/.well-known/mcp/server-card.json" &&
+      capabilityCard?.connection_policy?.can_execute_orders === false,
     first_page_goal_resources: firstPageGoalResourceMissing.length === 0,
     feeds:
       strictPublicProductFeedOk &&
@@ -1695,7 +1724,7 @@ async function liveMcpCheck() {
       trackedOrderMcpSo?.mcp_source_context === "mcp_so" &&
       trackedOrderMcpSo?.mcp_install_target === "generic_streamable_http",
     agent_capture:
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R30" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R31" &&
       (agentCapture?.operating_rules ?? []).some(
         (rule) =>
           /OpenAI\/ChatGPT/.test(rule) &&
@@ -1763,6 +1792,17 @@ async function liveMcpCheck() {
       wellKnownOpenapiJson?.info?.title === openapiJson?.info?.title &&
       aiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
       wellKnownAiPluginJson?.api?.url === MCP_OPENAPI_JSON_URL &&
+      agentWebManifestResult.ok &&
+      rootAgentWebManifestResult.ok &&
+      capabilityCardResult.ok &&
+      agentWebManifest?.awp_version === "0.2" &&
+      rootAgentWebManifest?.awp_version === agentWebManifest?.awp_version &&
+      agentWebManifest?.protocols?.mcp?.endpoint === MCP_ENDPOINT &&
+      agentWebManifest?.protocols?.capindex?.capability_card === MCP_CAPABILITY_CARD_URL &&
+      agentWebManifest?.actions?.some((action) => action?.id === "create_guarded_cart_handoff" && action?.requires_human_confirmation === true) &&
+      capabilityCard?.source_type === "mcp" &&
+      capabilityCard?.endpoint_url === MCP_ENDPOINT &&
+      capabilityCard?.connection_policy?.can_execute_orders === false &&
       serverCard?.client_config?.root_mcp_json === "https://mcp.packrift.com/mcp.json" &&
       serverCard?.client_config?.openapi_json === MCP_OPENAPI_JSON_URL &&
       serverCard?.client_config?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
@@ -1776,6 +1816,9 @@ async function liveMcpCheck() {
       serverCard?.registry_distribution?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       serverCard?.registry_distribution?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
       serverCard?.registry_distribution?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
+      serverCard?.registry_distribution?.agent_web_manifest === MCP_AGENT_WEB_MANIFEST_URL &&
+      serverCard?.registry_distribution?.root_agent_web_manifest === MCP_ROOT_AGENT_WEB_MANIFEST_URL &&
+      serverCard?.registry_distribution?.capability_card === MCP_CAPABILITY_CARD_URL &&
       serverCard?.registry_distribution?.tool_discovery_json === "https://mcp.packrift.com/ai/mcp-tools.json" &&
       serverCard?.registry_distribution?.tool_discovery_markdown === "https://mcp.packrift.com/ai/spec-finder-tools.md" &&
       serverCard?.registry_distribution?.reviewer_activation === "https://mcp.packrift.com/ai/mcp-reviewer-activation.json" &&
@@ -1834,6 +1877,9 @@ async function liveMcpCheck() {
       serverCard?.resource_links?.wellKnownOpenapiJson === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       serverCard?.resource_links?.aiPluginJson === MCP_AI_PLUGIN_JSON_URL &&
       serverCard?.resource_links?.wellKnownAiPluginJson === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
+      serverCard?.resource_links?.rootAgentWebManifest === MCP_ROOT_AGENT_WEB_MANIFEST_URL &&
+      serverCard?.resource_links?.agentWebManifest === MCP_AGENT_WEB_MANIFEST_URL &&
+      serverCard?.resource_links?.capabilityCard === MCP_CAPABILITY_CARD_URL &&
       serverCard?.resource_links?.mcpActivationWaveRunnerShell === MCP_ACTIVATION_WAVE_RUNNER_URL &&
       serverCard?.resource_links?.mcpActivationWaveTasksJsonl === MCP_ACTIVATION_WAVE_TASKS_JSONL_URL &&
       serverCard?.resource_links?.mcpActivationWaveTasksCsv === MCP_ACTIVATION_WAVE_TASKS_CSV_URL &&
@@ -1872,6 +1918,9 @@ async function liveMcpCheck() {
       resourceUris.has(MCP_WELL_KNOWN_OPENAPI_JSON_URL) &&
       resourceUris.has(MCP_AI_PLUGIN_JSON_URL) &&
       resourceUris.has(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
+      resourceUris.has(MCP_ROOT_AGENT_WEB_MANIFEST_URL) &&
+      resourceUris.has(MCP_AGENT_WEB_MANIFEST_URL) &&
+      resourceUris.has(MCP_CAPABILITY_CARD_URL) &&
       resourceUris.has(MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL) &&
       resourceUris.has(MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md") &&
@@ -2008,6 +2057,9 @@ async function liveMcpCheck() {
       mcpToolsDiscovery?.conversion_urls?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
+      mcpToolsDiscovery?.conversion_urls?.agent_web_manifest === MCP_AGENT_WEB_MANIFEST_URL &&
+      mcpToolsDiscovery?.conversion_urls?.root_agent_web_manifest === MCP_ROOT_AGENT_WEB_MANIFEST_URL &&
+      mcpToolsDiscovery?.conversion_urls?.capability_card === MCP_CAPABILITY_CARD_URL &&
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL &&
       mcpToolsDiscovery?.conversion_urls?.revenue_conversion_queue_html === MCP_REVENUE_CONVERSION_QUEUE_HTML_URL &&
       mcpToolsDiscovery?.conversion_urls?.buyer_order_handoffs === MCP_BUYER_ORDER_HANDOFFS_JSON_URL &&
@@ -2082,6 +2134,9 @@ async function liveMcpCheck() {
       marketplaceManifest?.discovery?.well_known_openapi_json === MCP_WELL_KNOWN_OPENAPI_JSON_URL &&
       marketplaceManifest?.discovery?.ai_plugin_json === MCP_AI_PLUGIN_JSON_URL &&
       marketplaceManifest?.discovery?.well_known_ai_plugin_json === MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL &&
+      marketplaceManifest?.discovery?.agent_web_manifest === MCP_AGENT_WEB_MANIFEST_URL &&
+      marketplaceManifest?.discovery?.root_agent_web_manifest === MCP_ROOT_AGENT_WEB_MANIFEST_URL &&
+      marketplaceManifest?.discovery?.capability_card === MCP_CAPABILITY_CARD_URL &&
       marketplaceManifest?.discovery?.tracked_start_template === "https://mcp.packrift.com/r/start/{source}" &&
       marketplaceManifest?.discovery?.tracked_install_template === "https://mcp.packrift.com/r/install/{source}/{target}" &&
       marketplaceManifest?.discovery?.tracked_run_template === "https://mcp.packrift.com/r/run/{source}/{target}" &&
@@ -2098,6 +2153,8 @@ async function liveMcpCheck() {
       llmsTxtResult.text.includes("https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       llmsTxtResult.text.includes(MCP_OPENAPI_JSON_URL) &&
       llmsTxtResult.text.includes(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
+      llmsTxtResult.text.includes(MCP_AGENT_WEB_MANIFEST_URL) &&
+      llmsTxtResult.text.includes(MCP_CAPABILITY_CARD_URL) &&
       llmsTxtResult.text.includes("https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       llmsTxtResult.text.includes(OPENAI_PRODUCT_FEED_MANIFEST_URL) &&
       llmsTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
@@ -2107,6 +2164,8 @@ async function liveMcpCheck() {
       llmsFullTxtResult.text.includes("MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml") &&
       llmsFullTxtResult.text.includes(MCP_OPENAPI_JSON_URL) &&
       llmsFullTxtResult.text.includes(MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL) &&
+      llmsFullTxtResult.text.includes(MCP_AGENT_WEB_MANIFEST_URL) &&
+      llmsFullTxtResult.text.includes(MCP_CAPABILITY_CARD_URL) &&
       llmsFullTxtResult.text.includes("Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh") &&
       llmsFullTxtResult.text.includes(OPENAI_PRODUCT_FEED_MANIFEST_URL) &&
       llmsFullTxtResult.text.includes(OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL) &&
@@ -2242,7 +2301,7 @@ async function liveMcpCheck() {
       trackedFirstRunExecute.mcp_tool_call_sequence.map((row) => row.name).join(",") ===
         "get_cart_handoff_candidates,get_pricing,check_inventory,create_cart_url" &&
       trackedFirstRunExecute?.no_order_created === true &&
-      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R30" &&
+      agentCapture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R31" &&
       agentCapture?.surfaces?.length >= 22 &&
       agentCapture?.agent_host_fast_paths_release === "PACKRIFT-AGENT-HOST-FAST-PATHS-R03" &&
       agentCapture?.counts?.agent_host_fast_paths >= 60 &&
@@ -4350,6 +4409,9 @@ async function liveMcpCheck() {
       resourceUris.has("https://mcp.packrift.com/ai/mcp-first-run-actions.md") &&
       resourceUris.has("https://mcp.packrift.com/mcp.json") &&
       resourceUris.has("https://mcp.packrift.com/.well-known/mcp.json") &&
+      resourceUris.has(MCP_ROOT_AGENT_WEB_MANIFEST_URL) &&
+      resourceUris.has(MCP_AGENT_WEB_MANIFEST_URL) &&
+      resourceUris.has(MCP_CAPABILITY_CARD_URL) &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-client-config.json") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-client-config.md") &&
       resourceUris.has("https://mcp.packrift.com/ai/mcp-usage-snapshot.json") &&
@@ -4507,6 +4569,9 @@ async function liveMcpCheck() {
         endpoint: clientConfig?.canonical_endpoint ?? null,
         root_mcp_json_status: rootMcpJsonResult.status,
         well_known_mcp_json_status: wellKnownMcpJsonResult.status,
+        agent_web_manifest_status: agentWebManifestResult.status,
+        root_agent_web_manifest_status: rootAgentWebManifestResult.status,
+        capability_card_status: capabilityCardResult.status,
         openapi_json_status: openapiJsonResult.status,
         well_known_openapi_json_status: wellKnownOpenapiJsonResult.status,
         ai_plugin_json_status: aiPluginJsonResult.status,
@@ -4514,6 +4579,9 @@ async function liveMcpCheck() {
         openapi_paths: Object.keys(openapiJson?.paths ?? {}),
         ai_plugin_api_url: aiPluginJson?.api?.url ?? null,
         ai_plugin_mcp_endpoint: aiPluginJson?.mcp?.endpoint ?? null,
+        agent_web_mcp_endpoint: agentWebManifest?.protocols?.mcp?.endpoint ?? null,
+        capability_card_endpoint: capabilityCard?.endpoint_url ?? null,
+        capability_card_can_execute_orders: capabilityCard?.connection_policy?.can_execute_orders ?? null,
         marketplace_manifest_status: marketplaceManifestResult.status,
         marketplace_manifest_tool_count: marketplaceManifest?.signals?.tool_count ?? null,
         marketplace_manifest_has_prepare_purchase_handoff: Boolean(

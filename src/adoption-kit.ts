@@ -425,6 +425,8 @@ export function mcpAdoptionKitPayload(runtime: AdoptionKitRuntime) {
       mcp_start: "https://mcp.packrift.com/ai/mcp-start.json",
       manifest: "https://mcp.packrift.com/manifest",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      agent_web_manifest: "https://mcp.packrift.com/.well-known/agent.json",
+      capability_card: "https://mcp.packrift.com/.well-known/capability-card.json",
       all_agent_capture: "https://mcp.packrift.com/ai/all-agent-capture.json",
       install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",

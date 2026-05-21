@@ -623,6 +623,22 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       next_action: "Use this as the shortest config file in directory submissions and IDE agent setup docs.",
     }),
     surface({
+      id: "agent_web_manifest_and_capability_card",
+      name: "Agent Web manifest and capability card",
+      agent_type: "agent_discovery_manifest",
+      audience: "Agent crawlers, capability indexes, commerce-agent directories, and source registries that probe well-known agent metadata before MCP-specific cards.",
+      status: "live",
+      priority: "core",
+      packrift_owned: true,
+      canonical_url: "https://mcp.packrift.com/.well-known/agent.json",
+      install_or_call:
+        "Fetch /.well-known/agent.json for Packrift's action-level agent manifest, then fetch /.well-known/capability-card.json for the compact protocol, endpoint, use-case, and order-safety card.",
+      proof_url: "https://mcp.packrift.com/.well-known/capability-card.json",
+      fallback_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      next_action:
+        "Keep both well-known manifests in llms.txt, llms-full.txt, server cards, resources/list, cache purges, and distribution checks so generic agent crawlers can discover the hosted MCP endpoint.",
+    }),
+    surface({
       id: "mcp_usage_snapshot",
       name: "Packrift MCP usage snapshot",
       agent_type: "usage_measurement",
@@ -1170,7 +1186,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
 
   const generatedAt = new Date().toISOString();
   return {
-    release: "PACKRIFT-ALL-AGENT-CAPTURE-R30",
+    release: "PACKRIFT-ALL-AGENT-CAPTURE-R31",
     generated_at: generatedAt,
     status: "canonical_current_mcp_capture_layer",
     owner: "Packrift",
@@ -1220,6 +1236,9 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
       root_mcp_json: "https://mcp.packrift.com/mcp.json",
       well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
+      agent_web_manifest: "https://mcp.packrift.com/.well-known/agent.json",
+      root_agent_web_manifest: "https://mcp.packrift.com/agent.json",
+      capability_card: "https://mcp.packrift.com/.well-known/capability-card.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
@@ -1248,6 +1267,7 @@ export function allAgentCapturePayload(runtime: AgentCaptureRuntime) {
       "When create_cart_url returns an MCP /r/cart landing URL, use that as the primary buyer handoff so cart progression is measurable before Shopify checkout.",
       "When an external directory is stale or blocked, refresh that directory with this matrix, server.json, health, resources/list, tools/list, and cart smoke evidence.",
       "Use /r/config/{source} for tracked config fetches when a directory or host accepts a direct MCP JSON config URL.",
+      "Use /.well-known/agent.json and /.well-known/capability-card.json for generic agent-web and capability-index crawlers that probe well-known manifests before MCP resources/list.",
       "Use /r/install/{source}/{target} for tracked target-specific install actions before install-copy or tool-call events are visible.",
       "Use stdio_mcp_remote with npx mcp-remote only as a thin bridge for MCP hosts that cannot connect to remote HTTP directly.",
       "Use /r/run/{source}/{target} after install to measure first-run intent and push users into create_cart_url.",

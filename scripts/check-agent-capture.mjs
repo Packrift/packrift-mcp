@@ -131,6 +131,8 @@ async function main() {
     agentHostRolloutTasksJsonlResult,
     agentHostRolloutTasksCsvResult,
     clientConfigResult,
+    agentWebManifestResult,
+    capabilityCardResult,
     directoryRefreshResult,
     directorySubmitActionsResult,
     visitorGrowthResult,
@@ -146,6 +148,8 @@ async function main() {
     fetchText(`${BASE_URL}/ai/mcp-agent-host-rollout-tasks.jsonl`),
     fetchText(`${BASE_URL}/ai/mcp-agent-host-rollout-tasks.csv`),
     fetchJson(`${BASE_URL}/ai/mcp-client-config.json`),
+    fetchJson(`${BASE_URL}/.well-known/agent.json`),
+    fetchJson(`${BASE_URL}/.well-known/capability-card.json`),
     fetchJson(`${BASE_URL}/ai/mcp-directory-refresh.json`),
     fetchJson(`${BASE_URL}/ai/mcp-directory-submit-actions.json`),
     fetchJson(`${BASE_URL}/ai/mcp-visitor-growth-queue.json`),
@@ -168,6 +172,7 @@ async function main() {
     "mcp_first_run_actions",
     "mcp_reviewer_activation",
     "mcp_client_config",
+    "agent_web_manifest_and_capability_card",
     "mcp_usage_snapshot",
     "mcp_funnel_snapshot",
     "mcp_ga4_funnel_proof",
@@ -212,6 +217,8 @@ async function main() {
   const coreSurface = capture?.surfaces?.find((row) => row.id === "hosted_mcp_endpoint");
   const browseSurface = capture?.surfaces?.find((row) => row.id === "browserbase_browse_candidate");
   const clientConfig = clientConfigResult.value;
+  const agentWebManifest = agentWebManifestResult.value;
+  const capabilityCard = capabilityCardResult.value;
   const directoryRefresh = directoryRefreshResult.value;
   const directorySubmitActions = directorySubmitActionsResult.value;
   const visitorGrowth = visitorGrowthResult.value;
@@ -274,7 +281,7 @@ async function main() {
   const checks = [
     check("json route fetch", jsonResult.ok && capture, { detail: `${jsonResult.status} ${jsonResult.url}` }),
     check("markdown route fetch", mdResult.ok && mdResult.text.length > 1000, { detail: `${mdResult.status} ${mdResult.url}` }),
-    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R30", { detail: capture?.release }),
+    check("release marker", capture?.release === "PACKRIFT-ALL-AGENT-CAPTURE-R31", { detail: capture?.release }),
     check("canonical endpoint", capture?.canonical_endpoint === "https://mcp.packrift.com/mcp", {
       detail: capture?.canonical_endpoint,
     }),
@@ -434,6 +441,25 @@ async function main() {
     check("resources/list advertises client config", hasResourceUri(resourceUris, "/mcp.json") && hasResourceUri(resourceUris, "/.well-known/mcp.json") && hasResourceUri(resourceUris, "/r/config/generic") && hasResourceUri(resourceUris, "/ai/mcp-client-config.json") && hasResourceUri(resourceUris, "/ai/mcp-client-config.md"), {
       detail: `resources=${resources.length}`,
     }),
+    check("resources/list advertises agent-web manifests", hasResourceUri(resourceUris, "/agent.json") && hasResourceUri(resourceUris, "/.well-known/agent.json") && hasResourceUri(resourceUris, "/.well-known/capability-card.json"), {
+      detail: `resources=${resources.length}`,
+    }),
+    check(
+      "agent-web manifest and capability card are coherent",
+      agentWebManifestResult.ok &&
+        capabilityCardResult.ok &&
+        agentWebManifest?.awp_version === "0.2" &&
+        agentWebManifest?.protocols?.mcp?.endpoint === "https://mcp.packrift.com/mcp" &&
+        agentWebManifest?.protocols?.capindex?.capability_card === "https://mcp.packrift.com/.well-known/capability-card.json" &&
+        agentWebManifest?.actions?.some((action) => action?.id === "create_guarded_cart_handoff" && action?.requires_human_confirmation === true) &&
+        capabilityCard?.source_type === "mcp" &&
+        capabilityCard?.endpoint_url === "https://mcp.packrift.com/mcp" &&
+        capabilityCard?.connection_policy?.can_execute_orders === false,
+      { detail: `agent=${agentWebManifestResult.status}, capability=${capabilityCardResult.status}` }
+    ),
+    check("capture hub advertises agent-web manifests", capture?.hub_urls?.agent_web_manifest === "https://mcp.packrift.com/.well-known/agent.json" && capture?.hub_urls?.capability_card === "https://mcp.packrift.com/.well-known/capability-card.json", {
+      detail: capture?.hub_urls?.agent_web_manifest ?? "missing",
+    }),
     check("resources/list advertises legacy AI discovery", hasResourceUri(resourceUris, "/openapi.json") && hasResourceUri(resourceUris, "/.well-known/openapi.json") && hasResourceUri(resourceUris, "/ai-plugin.json") && hasResourceUri(resourceUris, "/.well-known/ai-plugin.json"), {
       detail: `resources=${resources.length}`,
     }),
@@ -441,14 +467,23 @@ async function main() {
       "public activation packets advertise legacy discovery",
       clientConfig?.aliases?.openapi_json === "https://mcp.packrift.com/openapi.json" &&
         clientConfig?.aliases?.ai_plugin_json === "https://mcp.packrift.com/ai-plugin.json" &&
+        clientConfig?.aliases?.agent_web_manifest === "https://mcp.packrift.com/.well-known/agent.json" &&
+        clientConfig?.aliases?.capability_card === "https://mcp.packrift.com/.well-known/capability-card.json" &&
         clientConfig?.legacy_ai_discovery?.well_known_openapi_json === "https://mcp.packrift.com/.well-known/openapi.json" &&
+        clientConfig?.legacy_ai_discovery?.agent_web_manifest === "https://mcp.packrift.com/.well-known/agent.json" &&
         directoryRefresh?.canonical_listing?.openapi_json === "https://mcp.packrift.com/openapi.json" &&
+        directoryRefresh?.canonical_listing?.agent_web_manifest === "https://mcp.packrift.com/.well-known/agent.json" &&
         directoryRefresh?.live_proof?.ai_plugin_json === "https://mcp.packrift.com/ai-plugin.json" &&
+        directoryRefresh?.live_proof?.capability_card === "https://mcp.packrift.com/.well-known/capability-card.json" &&
         /openapi\.json/.test(directoryRefresh?.recrawl_request ?? "") &&
         directorySubmitActions?.source_openapi_json === "https://mcp.packrift.com/openapi.json" &&
         directorySubmitActions?.source_ai_plugin_json === "https://mcp.packrift.com/ai-plugin.json" &&
+        directorySubmitActions?.source_agent_web_manifest === "https://mcp.packrift.com/.well-known/agent.json" &&
+        directorySubmitActions?.source_capability_card === "https://mcp.packrift.com/.well-known/capability-card.json" &&
         /openapi\.json/.test(directorySubmitActions?.actions?.find((row) => row.id === "mcp_directory")?.concise_email?.body ?? "") &&
         outreach?.evidence?.openapi_json === "https://mcp.packrift.com/openapi.json" &&
+        outreach?.evidence?.agent_web_manifest === "https://mcp.packrift.com/.well-known/agent.json" &&
+        outreach?.evidence?.capability_card === "https://mcp.packrift.com/.well-known/capability-card.json" &&
         /ai-plugin\.json/.test(outreachText),
       {
         detail:

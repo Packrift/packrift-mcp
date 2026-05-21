@@ -16,6 +16,9 @@ const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
 const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
 const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
+const MCP_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/.well-known/agent.json";
+const MCP_ROOT_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/agent.json";
+const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability-card.json";
 const MCP_AGENT_ADOPTION_PROGRESS_URL = "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json";
 const MCP_AGENT_HOST_ROLLOUT_JSON_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.json";
 const MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-agent-host-rollout.md";
@@ -209,6 +212,9 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
       well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
       agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
@@ -253,10 +259,15 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
       well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       canonical_mcp_endpoint: MCP_ENDPOINT,
       key_paths: [
         "/mcp",
         "/ai/mcp-client-config.json",
+        "/.well-known/agent.json",
+        "/.well-known/capability-card.json",
         "/ai/mcp-agent-adoption-progress.json",
         "/ai/mcp-agent-host-rollout.json",
         "/ai/mcp-agent-host-rollout-tasks.jsonl",
@@ -311,6 +322,8 @@ export function mcpClientConfigPayload(runtime: McpClientConfigRuntime) {
       health: "https://mcp.packrift.com/health",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
       start: "https://mcp.packrift.com/start",
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -407,6 +420,10 @@ export function mcpClientConfigMarkdown(runtime: McpClientConfigRuntime): string
     `AI plugin manifest: ${payload.legacy_ai_discovery.ai_plugin_json}`,
     "",
     `Well-known AI plugin manifest: ${payload.legacy_ai_discovery.well_known_ai_plugin_json}`,
+    "",
+    `Agent Web manifest: ${payload.legacy_ai_discovery.agent_web_manifest}`,
+    "",
+    `CapIndex capability card: ${payload.legacy_ai_discovery.capability_card}`,
     "",
     fencedJson(payload.legacy_ai_discovery),
     "",

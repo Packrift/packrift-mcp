@@ -40,6 +40,9 @@ const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
 const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
 const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
+const MCP_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/.well-known/agent.json";
+const MCP_ROOT_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/agent.json";
+const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability-card.json";
 const CAPTURE_JSON_URL = "https://mcp.packrift.com/ai/all-agent-capture.json";
 const CAPTURE_MARKDOWN_URL = "https://mcp.packrift.com/ai/all-agent-capture.md";
 const OUTREACH_JSON_URL = "https://mcp.packrift.com/ai/agent-capture-outreach.json";
@@ -174,6 +177,9 @@ function agentInstallSnippets() {
     well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
     ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
     well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+    agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+    root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+    capability_card: MCP_CAPABILITY_CARD_URL,
     install_matrix: "https://mcp.packrift.com/ai/mcp-install-matrix.json",
     mcp_eval_pack: MCP_EVAL_PACK_URL,
     mcp_external_activation_brief_tasks_jsonl: EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
@@ -240,7 +246,7 @@ function browserAssistedSubmissions(runtime: AgentCaptureOutreachRuntime, rows: 
   const mcpSo = trackedUrls(rows, "mcp_so");
   const claude = trackedUrls(rows, "anthropic_connectors_directory");
   const browse = trackedUrls(rows, "browse_sh");
-  const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${runtime.serverVersion}, ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources. Legacy discovery: ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}.`;
+  const proofLine = `Hosted no-auth Streamable HTTP MCP for exact-spec Packrift packaging search with live price, stock, shipping, cart handoff, and no-match recovery. Endpoint: ${MCP_ENDPOINT}. Current health: version ${runtime.serverVersion}, ${runtime.toolsCount} tools, ${runtime.resourcesCount} resources. Agent Web discovery: ${MCP_AGENT_WEB_MANIFEST_URL}. Capability-card discovery: ${MCP_CAPABILITY_CARD_URL}. Legacy discovery: ${MCP_OPENAPI_JSON_URL}, ${MCP_WELL_KNOWN_OPENAPI_JSON_URL}, ${MCP_AI_PLUGIN_JSON_URL}, ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL}.`;
   const mcpSoPromptSupport = agentPromptSupport("mcp_so", "generic_streamable_http");
   const claudePromptSupport = agentPromptSupport("anthropic_connectors_directory", "claude_code");
   const browsePromptSupport = agentPromptSupport("browse_sh", "codex");
@@ -387,6 +393,9 @@ function evidenceLinks() {
     well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
     ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
     well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+    agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+    root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+    capability_card: MCP_CAPABILITY_CARD_URL,
     mcp_first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
     mcp_first_run_agent_prompt_page: "https://mcp.packrift.com/r/run/generic/generic_streamable_http?format=html",
     mcp_reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
@@ -616,6 +625,9 @@ export function agentCaptureOutreachPayload(runtime: AgentCaptureOutreachRuntime
         well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
         ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
         well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
+        agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+        root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+        capability_card: MCP_CAPABILITY_CARD_URL,
       },
       reviewer_acceptance_gate: [
         "Use the existing hosted MCP endpoint.",

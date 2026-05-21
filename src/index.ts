@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { shopifyQuery, type Env } from "./shopify.js";
 import { serverCard } from "./server-card.js";
+import { capabilityCard } from "./capability-card.js";
+import { agentWebManifest } from "./agent-web-manifest.js";
 import { llmsTxt } from "./llms-content.js";
 import { llmsFullTxt } from "./llms-full-content.js";
 import { agentInstructionsMd } from "./agent-instructions-content.js";
@@ -14211,6 +14213,9 @@ const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
 const MCP_WELL_KNOWN_OPENAPI_JSON_URL = "https://mcp.packrift.com/.well-known/openapi.json";
 const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
+const MCP_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/.well-known/agent.json";
+const MCP_ROOT_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/agent.json";
+const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability-card.json";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
 const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05";
 const MCP_ACTIVATION_WAVE_JSON_URL = "https://mcp.packrift.com/ai/mcp-activation-wave.json";
@@ -14368,6 +14373,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/SKILL.md",
   "https://mcp.packrift.com/llms.txt",
   "https://mcp.packrift.com/llms-full.txt",
+  MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+  MCP_AGENT_WEB_MANIFEST_URL,
   "https://mcp.packrift.com/mcp.json",
   MCP_OPENAPI_JSON_URL,
   MCP_WELL_KNOWN_OPENAPI_JSON_URL,
@@ -14385,6 +14392,7 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/server-card.json",
   "https://mcp.packrift.com/.well-known/mcp.json",
   "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+  MCP_CAPABILITY_CARD_URL,
   "https://mcp.packrift.com/.well-known/glama.json",
   "https://mcp.packrift.com/.well-known/mcp-marketplace.json",
   "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md",
@@ -14556,6 +14564,8 @@ const AI_DISCOVERY_URLS = [
 const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/llms.txt": "Short Packrift agent index with MCP, corpus, and family file links.",
   "/llms-full.txt": "Dense Packrift agent reference for packaging categories, tools, guides, and discovery links.",
+  "/agent.json": "Agent Web Protocol manifest for Packrift's public MCP and exact-spec packaging procurement actions.",
+  "/.well-known/agent.json": "Well-known Agent Web Protocol manifest for Packrift's public MCP and exact-spec packaging procurement actions.",
   "/mcp.json": "Copy-ready remote MCP client config for installing Packrift MCP in common agent hosts.",
   "/openapi.json": "OpenAPI discovery adapter for legacy AI agents and crawlers that probe REST manifests before MCP.",
   "/.well-known/openapi.json": "Well-known OpenAPI discovery adapter for legacy AI agents and crawlers.",
@@ -14578,6 +14588,7 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/server-card.json": "Root Packrift MCP server discovery card.",
   "/.well-known/mcp.json": "Well-known copy-ready remote MCP client config for installing Packrift MCP.",
   "/.well-known/mcp/server-card.json": "Packrift MCP server discovery card.",
+  "/.well-known/capability-card.json": "CapIndex-style capability card for agent discovery of Packrift exact-spec packaging procurement.",
   "/.well-known/glama.json": "Glama remote connector claim file for the Packrift hosted MCP endpoint.",
   "/.well-known/mcp-marketplace.json": "MCP Marketplace discovery manifest for Packrift MCP.",
   "/agents.md": "Root-domain Packrift exact-spec AI-agent instructions.",
@@ -15075,6 +15086,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   }
   if (pathname === "/llms.txt") return llmsTxt;
   if (pathname === "/llms-full.txt") return llmsFullTxt;
+  if (pathname === "/agent.json" || pathname === "/.well-known/agent.json") return JSON.stringify(agentWebManifest, null, 2);
   if (pathname === "/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
   if (pathname === "/openapi.json" || pathname === "/.well-known/openapi.json") {
     return JSON.stringify(mcpOpenApiPayload(), null, 2);
@@ -15095,6 +15107,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/server-card.json") return JSON.stringify(mcpServerCardPayload(), null, 2);
   if (pathname === "/.well-known/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
   if (pathname === "/.well-known/mcp/server-card.json") return JSON.stringify(mcpServerCardPayload(), null, 2);
+  if (pathname === "/.well-known/capability-card.json") return JSON.stringify(capabilityCard, null, 2);
   if (pathname === "/.well-known/glama.json") return JSON.stringify(glamaConnectorClaim(), null, 2);
   if (pathname === "/.well-known/mcp-marketplace.json") return JSON.stringify(mcpMarketplaceDiscoveryPayload(), null, 2);
   if (pathname === "/agents.md") return agentInstructionsMd;
@@ -15465,6 +15478,9 @@ function mcpToolDiscoveryPayload() {
       manifest: "https://mcp.packrift.com/manifest",
       resources: "https://mcp.packrift.com/resources",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -15571,6 +15587,8 @@ function mcpToolDiscoveryMarkdown(): string {
     "## Source Activation",
     "",
     `- Source activation sitemap: ${payload.conversion_urls.source_activation_sitemap}`,
+    `- Agent Web Protocol manifest: ${payload.conversion_urls.agent_web_manifest}`,
+    `- CapIndex capability card: ${payload.conversion_urls.capability_card}`,
     `- Source activation queue: ${payload.conversion_urls.source_activation_queue}`,
     `- Visitor growth queue: ${payload.conversion_urls.visitor_growth_queue}`,
     `- Visitor growth task JSONL: ${payload.conversion_urls.visitor_growth_tasks_jsonl}`,
@@ -15974,6 +15992,9 @@ function mcpManifestPayload() {
     sse_url: "https://mcp.packrift.com/sse",
     health_url: "https://mcp.packrift.com/health",
     resources_url: "https://mcp.packrift.com/resources",
+    agent_web_manifest_url: MCP_AGENT_WEB_MANIFEST_URL,
+    root_agent_web_manifest_url: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+    capability_card_url: MCP_CAPABILITY_CARD_URL,
     openapi_url: MCP_OPENAPI_JSON_URL,
     well_known_openapi_url: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
     ai_plugin_url: MCP_AI_PLUGIN_JSON_URL,
@@ -16090,6 +16111,9 @@ function mcpServerCardPayload() {
     registry_distribution: {
       directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
       directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -16793,6 +16817,9 @@ function mcpMarketplaceDiscoveryPayload() {
       resources: "https://mcp.packrift.com/resources",
       health: "https://mcp.packrift.com/health",
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
+      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
+      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
+      capability_card: MCP_CAPABILITY_CARD_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
       ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -17866,6 +17893,26 @@ app.get("/llms-full.txt", (c) =>
   cachedStaticTextResponse(c, "llms-full.txt", llmsFullTxt, "text/plain; charset=utf-8")
 );
 
+app.get("/agent.json", async (c) => {
+  await recordGeneratedAiResourceFetch(c, "/agent.json", "agent_web_manifest", jsonByteSize(agentWebManifest));
+  return cachedStaticTextResponse(
+    c,
+    "agent.json",
+    JSON.stringify(agentWebManifest, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
+app.get("/.well-known/agent.json", async (c) => {
+  await recordGeneratedAiResourceFetch(c, "/.well-known/agent.json", "agent_web_manifest", jsonByteSize(agentWebManifest));
+  return cachedStaticTextResponse(
+    c,
+    "agent.json",
+    JSON.stringify(agentWebManifest, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
 app.get("/.well-known/mcp/server-card.json", (c) =>
   cachedStaticTextResponse(
     c,
@@ -17874,6 +17921,16 @@ app.get("/.well-known/mcp/server-card.json", (c) =>
     "application/json; charset=utf-8"
   )
 );
+
+app.get("/.well-known/capability-card.json", async (c) => {
+  await recordGeneratedAiResourceFetch(c, "/.well-known/capability-card.json", "mcp_capability_card", jsonByteSize(capabilityCard));
+  return cachedStaticTextResponse(
+    c,
+    "capability-card.json",
+    JSON.stringify(capabilityCard, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
 
 app.get("/.well-known/mcp.json", async (c) => {
   const config = mcpClientConfigPayload(clientConfigRuntime()).config;

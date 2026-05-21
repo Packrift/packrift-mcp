@@ -400,6 +400,9 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Tracked MCP first-run template: https://mcp.packrift.com/r/run/{source}/{target}
 - Root MCP JSON config: https://mcp.packrift.com/mcp.json
 - Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
+- Agent Web Protocol manifest: https://mcp.packrift.com/.well-known/agent.json
+- Root Agent Web Protocol manifest: https://mcp.packrift.com/agent.json
+- CapIndex capability card: https://mcp.packrift.com/.well-known/capability-card.json
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
@@ -467,6 +470,8 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - Public exact-spec data page: https://packrift.com/pages/packrift-ai-exact-spec-data
 - AI agent instructions: https://packrift.com/pages/packrift-ai-agent-instructions
 - Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
+- Agent Web Protocol manifest: https://mcp.packrift.com/.well-known/agent.json
+- CapIndex capability card: https://mcp.packrift.com/.well-known/capability-card.json
 - MCP client config: https://mcp.packrift.com/ai/mcp-client-config.json
 - Root MCP JSON config: https://mcp.packrift.com/mcp.json
 - Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
