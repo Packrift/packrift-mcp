@@ -1456,7 +1456,9 @@ async function liveMcpCheck() {
         task.lane === "qualified_visitor_growth" &&
         task.tracked_start_url?.startsWith("https://mcp.packrift.com/r/start/") &&
         task.source_aware_endpoint?.startsWith(MCP_ENDPOINT) &&
-        task.copy_ready_request?.includes("Tracked start")
+        task.copy_ready_request?.includes("Tracked start") &&
+        task.copy_ready_request?.includes("https://packrift.com/agent.json") &&
+        task.proof_urls?.brand_agent_manifest === "https://packrift.com/agent.json"
     ),
     external_activation_row: visitorGrowthQueue?.tasks?.some(
       (task) =>
@@ -1484,6 +1486,7 @@ async function liveMcpCheck() {
         (task) =>
           task.contact_handoff?.mailto_url?.startsWith("mailto:") &&
           task.contact_handoff?.body?.includes("https://mcp.packrift.com/mcp") &&
+          task.contact_handoff?.body?.includes("https://packrift.com/agent.json") &&
           task.contact_handoff?.no_send_rule?.includes("does not send email")
       ) &&
       visitorGrowthQueue?.tasks?.every(

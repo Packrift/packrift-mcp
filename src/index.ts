@@ -7965,6 +7965,8 @@ function visitorGrowthCopyReadyRequest(input: {
         : "list or refresh Packrift MCP with the tracked start/install links so qualified external users can try it";
   return [
     `Packrift MCP is live at https://mcp.packrift.com/mcp with no auth required for exact-spec packaging search, live price/inventory checks, and measured cart handoff.`,
+    "Brand-domain agent manifest: https://packrift.com/agent.json",
+    "Hosted well-known agent manifest: https://mcp.packrift.com/.well-known/agent.json",
     `For ${input.name}, please ${intent}.`,
     `Tracked start: ${input.trackedStartUrl}`,
     `Tracked install: ${input.trackedInstallUrl}`,
@@ -8022,6 +8024,10 @@ function visitorGrowthContactHandoff(input: {
       "",
       "This is a copy-ready handoff only. Please do not create a duplicate Packrift CLI, duplicate MCP server, or alternate checkout surface.",
     ].join("\n");
+  const bodyWithDiscovery =
+    body.includes("https://packrift.com/agent.json")
+      ? body
+      : [body, "", "Brand-domain agent manifest: https://packrift.com/agent.json"].join("\n");
   const primarySurface =
     reviewHandoff?.primary_surface ??
     input.submitAction?.submission_url ??
@@ -8045,8 +8051,8 @@ function visitorGrowthContactHandoff(input: {
     support_url: reviewHandoff?.support_url ?? null,
     public_comment_url: reviewHandoff?.public_comment_url ?? null,
     subject,
-    body,
-    mailto_url: supportEmail ? `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` : null,
+    body: bodyWithDiscovery,
+    mailto_url: supportEmail ? `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyWithDiscovery)}` : null,
     next_contact_action:
       reviewHandoff?.next_contact_action ??
       input.submitAction?.next_action ??
@@ -8218,6 +8224,9 @@ async function mcpVisitorGrowthQueuePayload(
       no_duplicate_work_rule:
         "Use the hosted Packrift MCP endpoint plus existing /r/start, /r/config, /r/install, /r/run, /r/activate, /r/order, and /r/cart handoffs. Do not create a separate Packrift CLI, buyer app, checkout, or duplicate MCP server.",
       proof_urls: {
+        brand_agent_manifest: "https://packrift.com/agent.json",
+        hosted_agent_manifest: "https://mcp.packrift.com/.well-known/agent.json",
+        capability_card: "https://mcp.packrift.com/.well-known/capability-card.json",
         visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
         agent_adoption_progress: adoption.links.agent_adoption_progress_json,
         ga4_funnel_proof: adoption.links.ga4_funnel_proof_json,
