@@ -6,11 +6,16 @@ import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversio
 export const checkInventorySchema = {
   name: "check_inventory",
   description:
-    "Use to confirm a SKU is in stock before recommending it or building a cart. Input: variant_ids (numeric). Returns available count and in_stock boolean per variant. Live, never cached.",
+    "Use to confirm stock before recommending a SKU or building a cart. Required argument: variant_ids as an array of numeric Shopify variant IDs encoded as strings, for example [\"53475949216112\"]. Never send variant_ids as numbers. Live, never cached.",
   inputSchema: {
     type: "object",
     properties: {
-      variant_ids: { type: "array", items: { type: "string" }, minItems: 1 },
+      variant_ids: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 1,
+        description: "Numeric Shopify variant IDs as strings, not numbers. Example: [\"53475949216112\"].",
+      },
       journey_id: { type: "string" },
       result_set_id: { type: "string" },
       selected_sku: { type: "string" },

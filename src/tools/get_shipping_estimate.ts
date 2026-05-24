@@ -11,7 +11,7 @@ import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversio
 export const getShippingEstimateSchema = {
   name: "get_shipping_estimate",
   description:
-    "Use when the user asks shipping cost to a ZIP for a chosen cart. Inputs: destination_postal_code, country (US|CA), items[{variant_id, qty}]. Returns carrier rate options with price and currency.",
+    "Use when the buyer asks shipping cost for selected AI_APPROVE variants. Required arguments: destination_postal_code, country (US|CA), and items with variant_id as a numeric Shopify variant ID string plus qty, for example {\"variant_id\":\"53475949216112\",\"qty\":1}. Never send variant_id as a number.",
   inputSchema: {
     type: "object",
     properties: {
@@ -23,8 +23,11 @@ export const getShippingEstimateSchema = {
         items: {
           type: "object",
           properties: {
-            variant_id: { type: "string" },
-            qty: { type: "integer", minimum: 1 },
+            variant_id: {
+              type: "string",
+              description: "Numeric Shopify variant ID as a string, not a number. Example: \"53475949216112\".",
+            },
+            qty: { type: "integer", minimum: 1, description: "Quantity for this line item." },
           },
           required: ["variant_id", "qty"],
         },

@@ -17,7 +17,7 @@ type CreateCartUrlContext = {
 export const createCartUrlSchema = {
   name: "create_cart_url",
   description:
-    "Final step: hand the user off to checkout. Inputs: either items[{variant_id, qty}] or an exact AI_APPROVE sku plus quantity, optional discount_code. Returns a Packrift cart landing URL with ref=mcp plus UTM attribution for AI-commerce purchase tracking, and the final Shopify cart permalink.",
+    "Final checkout handoff after live product, price, inventory, and buyer confirmation. For most agents, use exact AI_APPROVE sku plus quantity. Use items only when you already have variant IDs as strings. Returns a measured Packrift /r/cart URL with MCP attribution and a Shopify cart permalink; it does not place an order.",
   inputSchema: {
     type: "object",
     properties: {
@@ -34,12 +34,16 @@ export const createCartUrlSchema = {
       },
       items: {
         type: "array",
+        description: "Advanced path for agents that already have approved variant IDs. Most buyers should use sku plus quantity instead.",
         minItems: 1,
         items: {
           type: "object",
           properties: {
-            variant_id: { type: "string" },
-            qty: { type: "integer", minimum: 1 },
+            variant_id: {
+              type: "string",
+              description: "Numeric Shopify variant ID as a string, not a number. Example: \"53475949216112\".",
+            },
+            qty: { type: "integer", minimum: 1, description: "Buyer-confirmed quantity for this line item." },
           },
           required: ["variant_id", "qty"],
         },

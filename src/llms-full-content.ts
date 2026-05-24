@@ -370,9 +370,9 @@ Packrift exposes a public MCP server for AI agents that need real-time catalog a
 
 - \`search_products(query, limit)\` — keyword product search
 - \`get_product(handle)\` — full product detail including variants, dimensions, weight, and GTIN
-- \`get_pricing(variant_ids, qty)\` — real-time price for variant ids
-- \`check_inventory(variant_ids)\` — real-time inventory count
-- \`find_packaging_for_item(dims, weight, use_case)\` — ranked box and mailer suggestions for an item's dimensions, weight, and use case
+- \`get_pricing(variant_ids, qty)\` — real-time price for variant ids; send \`variant_ids\` as strings, e.g. \`["53475949216112"]\`
+- \`check_inventory(variant_ids)\` — real-time inventory count; send \`variant_ids\` as strings, e.g. \`["53475949216112"]\`
+- \`find_packaging_for_item(item_length_in, item_width_in, item_depth_in, item_weight_lb, use_case)\` — ranked box and mailer suggestions for an item's dimensions, weight, and use case
 - \`compare_alternatives(requested_spec, family, competitor_reference)\` — ranked Packrift AI_APPROVE alternatives for a buyer's exact spec or competitor-style packaging request
 - \`pack_calculator(item dimensions, weight, padding, use_case)\` — calculated inside dimensions, fitted box/mailer candidates, and void-fill guidance
 - \`inventory_status(variant_ids, sku, handle, quantity)\` — live Shopify total and location-level inventory status where Shopify exposes location quantities

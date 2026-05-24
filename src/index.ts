@@ -14215,7 +14215,7 @@ function aiCorpusBodyIsLoaded(route: { key: string }, body: string | ArrayBuffer
 
 const AI_SALES_PRIORITY_SKUS = ["1066", "LL251WR", "MFL1295"] as const;
 const AI_SALES_SKU_ROUTE_LIMIT = 1000;
-const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R01";
+const MCP_TOOL_DISCOVERY_RELEASE = "PACKRIFT-MCP-TOOL-DISCOVERY-R02";
 const MCP_TOOL_DISCOVERY_JSON_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
 const MCP_OPENAPI_JSON_URL = "https://mcp.packrift.com/openapi.json";
@@ -15417,6 +15417,71 @@ function sourceActivationSitemapXml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
+function toolDiscoveryCallContract(toolName: string) {
+  switch (toolName) {
+    case "find_packaging_for_item":
+      return {
+        preferred_when: "Buyer has item dimensions and needs a fitting box or mailer.",
+        required_arguments: ["item_length_in", "item_width_in", "item_depth_in", "item_weight_lb", "use_case"],
+        example_arguments: {
+          item_length_in: 11,
+          item_width_in: 8.5,
+          item_depth_in: 1,
+          item_weight_lb: 2,
+          use_case: "mailer",
+        },
+        common_mistakes_to_avoid: ["Do not send a single dims string; use the exact item_* numeric fields."],
+      };
+    case "get_pricing":
+      return {
+        preferred_when: "Agent has one or more approved variant IDs and needs live unit price or line total.",
+        required_arguments: ["variant_ids"],
+        example_arguments: { variant_ids: ["53475949216112"], quantity: 1 },
+        common_mistakes_to_avoid: ["variant_ids must be strings, not numbers."],
+      };
+    case "check_inventory":
+      return {
+        preferred_when: "Agent has one or more approved variant IDs and needs live stock confirmation.",
+        required_arguments: ["variant_ids"],
+        example_arguments: { variant_ids: ["53475949216112"] },
+        common_mistakes_to_avoid: ["variant_ids must be strings, not numbers."],
+      };
+    case "get_shipping_estimate":
+      return {
+        preferred_when: "Buyer has selected approved variants and asks shipping cost to a US or CA postal code.",
+        required_arguments: ["destination_postal_code", "country", "items"],
+        example_arguments: {
+          destination_postal_code: "10001",
+          country: "US",
+          items: [{ variant_id: "53475949216112", qty: 1 }],
+        },
+        common_mistakes_to_avoid: ["items[].variant_id must be a string, not a number."],
+      };
+    case "prepare_purchase_handoff":
+      return {
+        preferred_when: "Fastest path when the buyer already has an exact Packrift SKU.",
+        required_arguments: ["sku"],
+        example_arguments_before_buyer_approval: { sku: "1066", quantity: 1, buyer_confirmed: false },
+        example_arguments_after_buyer_approval: { sku: "1066", quantity: 1, buyer_confirmed: true },
+        common_mistakes_to_avoid: ["Do not set buyer_confirmed=true until the buyer approves the exact SKU and quantity."],
+      };
+    case "create_cart_url":
+      return {
+        preferred_when: "Final fallback cart handoff after live checks and buyer confirmation.",
+        required_arguments: ["sku or items"],
+        preferred_example_arguments: { sku: "1066", quantity: 1 },
+        advanced_example_arguments: { items: [{ variant_id: "53475949216112", qty: 1 }] },
+        common_mistakes_to_avoid: [
+          "Prefer sku plus quantity unless you already have approved variant IDs.",
+          "items[].variant_id must be a string, not a number.",
+          "This creates a measured cart URL only; it does not place an order.",
+        ],
+      };
+    default:
+      return null;
+  }
+}
+
 function mcpToolDiscoveryPayload() {
   const sourceActivationSources = Array.from(
     new Set([...MCP_SOURCE_ACTIVATION_SITEMAP_SOURCES.map((row) => row.source), ...AGENT_HOST_FAST_PATHS.map((row) => row.source)])
@@ -15425,6 +15490,7 @@ function mcpToolDiscoveryPayload() {
     name: tool.schema.name,
     description: tool.schema.description,
     input_schema: tool.schema.inputSchema,
+    agent_call_contract: toolDiscoveryCallContract(tool.schema.name),
     json_rpc_call: {
       method: "tools/call",
       params: {
@@ -15570,6 +15636,13 @@ function mcpToolDiscoveryMarkdown(): string {
   const toolRows = payload.tools
     .map((tool) => `| \`${tool.name}\` | ${tool.description.replace(/\|/g, "\\|")} |`)
     .join("\n");
+  const contractRows = payload.tools
+    .filter((tool) => tool.agent_call_contract)
+    .map((tool) => {
+      const contract = tool.agent_call_contract as Record<string, unknown>;
+      return `| \`${tool.name}\` | ${markdownTableCell(contract.required_arguments)} | \`${JSON.stringify(contract.example_arguments ?? contract.preferred_example_arguments ?? contract.example_arguments_before_buyer_approval)}\` | ${markdownTableCell(contract.common_mistakes_to_avoid)} |`;
+    })
+    .join("\n");
   const flowRows = payload.buyer_flows
     .map((flow) => `| ${flow.id} | ${flow.tools.map((tool) => `\`${tool}\``).join(", ")} | ${flow.outcome} |`)
     .join("\n");
@@ -15586,6 +15659,12 @@ function mcpToolDiscoveryMarkdown(): string {
     "| Tool | Use |",
     "| --- | --- |",
     toolRows,
+    "",
+    "## First-Call Contracts",
+    "",
+    "| Tool | Required args | Example args | Avoid |",
+    "| --- | --- | --- | --- |",
+    contractRows,
     "",
     "## Buyer Flows",
     "",

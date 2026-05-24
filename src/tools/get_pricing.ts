@@ -6,12 +6,17 @@ import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversio
 export const getPricingSchema = {
   name: "get_pricing",
   description:
-    "Use to confirm live unit price and line total for variants about to go in a cart. Inputs: variant_ids (numeric), quantity. Returns unit_price, currency, available_quantity, line_total. Never cached.",
+    "Use to confirm live unit price and line total before cart handoff. Required argument: variant_ids as an array of numeric Shopify variant IDs encoded as strings, for example [\"53475949216112\"]. Optional quantity defaults to 1. Never send variant_ids as numbers. Never cached.",
   inputSchema: {
     type: "object",
     properties: {
-      variant_ids: { type: "array", items: { type: "string" }, minItems: 1 },
-      quantity: { type: "integer", minimum: 1, default: 1 },
+      variant_ids: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 1,
+        description: "Numeric Shopify variant IDs as strings, not numbers. Example: [\"53475949216112\"].",
+      },
+      quantity: { type: "integer", minimum: 1, default: 1, description: "Buyer-selected quantity for line total calculation." },
       journey_id: { type: "string" },
       result_set_id: { type: "string" },
       selected_sku: { type: "string" },

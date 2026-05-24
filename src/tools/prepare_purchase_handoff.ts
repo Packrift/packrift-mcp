@@ -17,7 +17,7 @@ type PreparePurchaseHandoffContext = {
 export const preparePurchaseHandoffSchema = {
   name: "prepare_purchase_handoff",
   description:
-    "One-call exact-SKU purchase prep for agents. Confirms AI_APPROVE product, live price, and live inventory for a Packrift SKU, then returns a measured source-preserving MCP cart URL only when buyer_confirmed is true.",
+    "Preferred exact-SKU purchase prep for agents. Call first with sku, quantity, and buyer_confirmed=false to confirm AI_APPROVE product, live price, and live inventory. Call again with buyer_confirmed=true only after buyer approval; then it returns a measured source-preserving MCP /r/cart URL. It does not place an order.",
   inputSchema: {
     type: "object",
     properties: {

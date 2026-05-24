@@ -269,11 +269,11 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 
 | Tool | Purpose |
 |---|---|
-| `find_packaging_for_item(dims, weight, use_case)` | Hero. Item L/W/D + weight + use case -> ranked packaging SKUs that fit. Use for smallest-fit, box-vs-mailer, and Uline-by-size style questions. |
+| `find_packaging_for_item(item_length_in, item_width_in, item_depth_in, item_weight_lb, use_case)` | Hero. Item L/W/D + weight + use case -> ranked packaging SKUs that fit. Use for smallest-fit, box-vs-mailer, and Uline-by-size style questions. |
 | `search_products(query, limit?)` | Keyword fallback when dimensions are unknown, such as kraft tape, bubble mailer, starter kit, or weather-resistant labels. Cached 5 min in KV. |
 | `get_product(handle)` | Full product detail including variants, dimensions/metafields, weight, stock, and product URL. |
-| `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. Never cached. |
-| `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. Never cached. |
+| `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. `variant_ids` must be numeric Shopify variant IDs encoded as strings. Never cached. |
+| `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. `variant_ids` must be numeric Shopify variant IDs encoded as strings. Never cached. |
 | `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
 | `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority AI-approved SKUs with ready `create_cart_url` arguments, measured SKU/product/reorder/quote/cart links, and required live-confirmation sequence. |
 | `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a GA4-visible Packrift cart landing URL plus the final `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |

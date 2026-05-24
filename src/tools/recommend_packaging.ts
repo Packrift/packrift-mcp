@@ -8,17 +8,18 @@ import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildP
 export const recommendPackagingSchema = {
   name: "find_packaging_for_item",
   description:
-    "Use when the user has an item's L/W/D and needs the right box or mailer (also: box-vs-mailer, Uline-by-size). Inputs: L/W/D in, weight lb, use_case (mailer|box|fragile|apparel|ecommerce). Returns 5 SKUs ranked by fit with price, stock, URL.",
+    "Use when the buyer has item dimensions and needs a fitting box or mailer. Required arguments are item_length_in, item_width_in, item_depth_in, item_weight_lb, and use_case (mailer|box|fragile|apparel|ecommerce). Returns up to 5 AI_APPROVE SKUs ranked by fit with price, stock, URL, and cart-continuity fields.",
   inputSchema: {
     type: "object",
     properties: {
-      item_length_in: { type: "number", minimum: 0.1 },
-      item_width_in: { type: "number", minimum: 0.1 },
-      item_depth_in: { type: "number", minimum: 0.1 },
-      item_weight_lb: { type: "number", minimum: 0 },
+      item_length_in: { type: "number", minimum: 0.1, description: "Item length in inches." },
+      item_width_in: { type: "number", minimum: 0.1, description: "Item width in inches." },
+      item_depth_in: { type: "number", minimum: 0.1, description: "Item depth/height in inches." },
+      item_weight_lb: { type: "number", minimum: 0, description: "Packed item weight in pounds; use 0 when unknown." },
       use_case: {
         type: "string",
         enum: ["mailer", "box", "fragile", "apparel", "ecommerce"],
+        description: "Packaging context that guides fit ranking.",
       },
     },
     required: ["item_length_in", "item_width_in", "item_depth_in", "item_weight_lb", "use_case"],
