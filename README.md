@@ -326,10 +326,12 @@ Use `/Users/farhan/Downloads/packrift-mcp` as the canonical production worktree.
 `/Users/farhan/Downloads/packrift-mcp-server` checkout is a legacy duplicate and must not be
 used for Worker deploys because it can overwrite `mcp.packrift.com` with stale routes/tools.
 
-Local secrets — already created at `.dev.vars` (gitignored):
+Local secrets belong in `.dev.vars` (gitignored). Do not paste real tokens into
+this README, issues, directory submissions, screenshots, or third-party support
+threads.
 
 ```
-SHOPIFY_PACKRIFT_TOKEN=shpat_...
+SHOPIFY_PACKRIFT_TOKEN=<shopify_admin_api_token>
 ```
 
 Run the server:
@@ -487,7 +489,12 @@ briefs, proof links, and MCP install snippets under
 
 ## Deployment
 
-The Cloudflare account is being created in a separate process. Once it's ready and `wrangler` is logged in (`wrangler login`), run these in order:
+The production endpoint is `https://mcp.packrift.com/mcp`. Use the hosted
+endpoint for buyers, directory reviewers, and agent integrations. Only deploy a
+self-hosted worker when you are updating the production service or testing a
+controlled fork.
+
+When deploying with an authorized Cloudflare session, run:
 
 ```sh
 cd ~/Downloads/packrift-mcp
@@ -496,19 +503,18 @@ cd ~/Downloads/packrift-mcp
 #    (replace both `id` and `preview_id` with the same value).
 npx wrangler kv namespace create CATALOG_CACHE
 
-# 2. Set the Shopify Admin token as a secret (paste shpat_... when prompted).
+# 2. Set the Shopify Admin token as a secret when prompted.
+#    Never write the token into this repository or public documentation.
 npx wrangler secret put SHOPIFY_PACKRIFT_TOKEN
 
-# 3. Deploy. Initial deploy puts the worker on
-#    https://packrift-mcp.<account>.workers.dev
+# 3. Deploy.
 npx wrangler deploy
 
-# 4. (Once mcp.packrift.com is CNAME'd to the worker) uncomment the [[routes]]
-#    block in wrangler.toml and redeploy.
-npx wrangler deploy
+# 4. Verify the public hosted endpoint after deploy.
+curl -sS https://mcp.packrift.com/start >/dev/null
 ```
 
-After deploy, the MCP endpoint is `https://packrift-mcp.<account>.workers.dev/mcp` (and later `https://mcp.packrift.com/mcp`). The server card lives at `/.well-known/mcp/server-card.json`.
+The server card lives at `https://mcp.packrift.com/.well-known/mcp/server-card.json`.
 
 ## Design notes / caveats
 
