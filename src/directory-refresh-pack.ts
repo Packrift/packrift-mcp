@@ -41,6 +41,8 @@ const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability
 const MCP_MARKETPLACE_MANIFEST_URL = "https://mcp.packrift.com/.well-known/mcp-marketplace.json";
 const MCP_TOOL_DISCOVERY_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
+const OFFICIAL_REGISTRY_URL = "https://registry.modelcontextprotocol.io/v0/servers/io.github.Packrift%2Fpackrift-mcp/versions/0.2.13";
+const OFFICIAL_REGISTRY_SEARCH_URL = "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift";
 const SOURCE_README_URL = "https://github.com/Packrift/packrift-mcp/blob/main/README.md";
 const SOURCE_README_RAW_URL = "https://raw.githubusercontent.com/Packrift/packrift-mcp/main/README.md";
 const PUBLIC_DOCS_HYGIENE = {
@@ -147,7 +149,7 @@ const DIRECTORY_TARGETS = [
     id: "mcpbench",
     name: "MCPBench",
     listing_url: "https://mcpbench.ai/servers/io.github.Packrift/packrift-mcp",
-    refresh_url: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
+    refresh_url: OFFICIAL_REGISTRY_URL,
     priority: "medium",
     requested_action: "Refresh from the official registry latest version and hosted endpoint proof.",
   },
@@ -163,7 +165,7 @@ const DIRECTORY_TARGETS = [
     id: "pulsemcp_packrift",
     name: "PulseMCP",
     listing_url: "https://www.pulsemcp.com/servers/packrift",
-    refresh_url: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
+    refresh_url: OFFICIAL_REGISTRY_URL,
     priority: "high",
     requested_action: "Use the official registry entry and public server.json as the recrawl source if direct crawler access is blocked.",
   },
@@ -342,7 +344,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, Agent Web manifest, CapIndex capability card, live tool discovery JSON and Markdown, legacy OpenAPI discovery, AI plugin-style discovery manifests, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R31",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R32",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -359,6 +361,8 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       tool_count: runtime.toolsCount,
       resources_count: runtime.resourcesCount,
       prompts_count: runtime.promptsCount,
+      official_registry: OFFICIAL_REGISTRY_URL,
+      official_registry_search: OFFICIAL_REGISTRY_SEARCH_URL,
       website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
       start_url: MCP_START_URL,
       tracked_start_template: MCP_TRACKED_START_TEMPLATE,
@@ -454,7 +458,8 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
       install_actions: INSTALL_ACTIONS_URL,
       server_card: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
-      official_registry: "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift",
+      official_registry: OFFICIAL_REGISTRY_URL,
+      official_registry_search: OFFICIAL_REGISTRY_SEARCH_URL,
       glama_claim: "https://mcp.packrift.com/.well-known/glama.json",
       marketplace_manifest: MCP_MARKETPLACE_MANIFEST_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
@@ -600,6 +605,8 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     "",
     `Server name: ${payload.canonical_listing.server_name}`,
     `Registry name: ${payload.canonical_listing.registry_name}`,
+    `Official registry version: ${payload.canonical_listing.official_registry}`,
+    `Registry search fallback: ${payload.canonical_listing.official_registry_search}`,
     `Short description: ${payload.canonical_listing.short_description}`,
     `Long description: ${payload.canonical_listing.long_description}`,
     `Start page: ${payload.canonical_listing.start_url}`,
