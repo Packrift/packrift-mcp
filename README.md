@@ -123,7 +123,7 @@ self-hosted package-style install surface:
 ```sh
 docker pull ghcr.io/packrift/packrift-mcp:latest
 docker run --rm -p 8787:8787 \
-  -e SHOPIFY_PACKRIFT_TOKEN=... \
+  -e SHOPIFY_PACKRIFT_TOKEN=<shopify_admin_api_token> \
   ghcr.io/packrift/packrift-mcp:latest
 ```
 
@@ -132,7 +132,7 @@ You can also build the image from this repository:
 ```sh
 docker build -t packrift-mcp .
 docker run --rm -p 8787:8787 \
-  -e SHOPIFY_PACKRIFT_TOKEN=... \
+  -e SHOPIFY_PACKRIFT_TOKEN=<shopify_admin_api_token> \
   packrift-mcp
 ```
 
