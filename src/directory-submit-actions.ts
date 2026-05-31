@@ -101,6 +101,8 @@ const MARKETPLACE_MANIFEST_URL = "https://mcp.packrift.com/.well-known/mcp-marke
 const ROOT_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/SKILL.md";
 const BROWSERBASE_BROWSE_SKILL_PACK_URL = "https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json";
 const CANONICAL_BROWSERBASE_BROWSE_SKILL_MD_URL = "https://mcp.packrift.com/ai/browserbase-browse/SKILL.md";
+const SOURCE_README_URL = "https://github.com/Packrift/packrift-mcp/blob/main/README.md";
+const SOURCE_README_RAW_URL = "https://raw.githubusercontent.com/Packrift/packrift-mcp/main/README.md";
 const DEFAULT_TOOL_NAMES = [
   "search_products",
   "get_product",
@@ -118,6 +120,22 @@ const DEFAULT_TOOL_NAMES = [
   "get_bulk_quote_link",
   "explain_no_exact_match",
 ];
+const PUBLIC_DOCS_HYGIENE = {
+  release: "PACKRIFT-MCP-PUBLIC-DOCS-HYGIENE-R01",
+  status: "passing",
+  build_gate: "npm run check:public-doc-hygiene",
+  policy:
+    "Public documentation and directory packets must not publish token-shaped Shopify/API placeholders; hosted Packrift MCP remains no-auth at https://mcp.packrift.com/mcp.",
+  recrawler_instruction:
+    "If a directory has stale copied README snippets, recrawl the raw README, marketplace manifest, tool discovery JSON, and source-specific update card before displaying cached examples.",
+  current_source_docs: {
+    readme: SOURCE_README_URL,
+    raw_readme: SOURCE_README_RAW_URL,
+    marketplace_manifest: MARKETPLACE_MANIFEST_URL,
+    tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
+    tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+  },
+};
 
 const ACTIONS = [
   {
@@ -1305,7 +1323,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     };
   });
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R53",
+    release: "PACKRIFT-MCP-DIRECTORY-SUBMIT-ACTIONS-R54",
     generated_at: new Date().toISOString(),
     purpose:
       "Public action queue for converting stale and pending MCP directory surfaces into current Packrift MCP listings that can drive external agent discovery.",
@@ -1345,6 +1363,9 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     source_marketplace_manifest: MARKETPLACE_MANIFEST_URL,
     source_tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
     source_tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+    source_readme: SOURCE_README_URL,
+    source_readme_raw: SOURCE_README_RAW_URL,
+    public_docs_hygiene: PUBLIC_DOCS_HYGIENE,
     source_usage_snapshot: USAGE_SNAPSHOT_URL,
     source_funnel_snapshot: FUNNEL_SNAPSHOT_URL,
     source_ga4_funnel_proof: GA4_FUNNEL_PROOF_URL,
@@ -1395,7 +1416,7 @@ export function mcpDirectorySubmitActionsPayload(runtime: DirectorySubmitActions
     public_comment_policy:
       "Do not post another unsolicited update to already-submitted public issues or PRs such as Cline #1610, MCP.so #2189, or Docker #3388. Use this packet as central evidence and only comment when maintainers ask for more proof.",
     operating_rule:
-      "Use this as a support/reviewer queue, not as proof that the MCP revenue goal is complete. Completion still requires qualified external MCP sessions, cart landings, and attributed orders.",
+      "Use this as a support/reviewer queue, not as proof that the MCP revenue goal is complete. Completion still requires qualified external MCP sessions, cart landings, and attributed orders. When a directory displays stale copied docs, recrawl the raw README and public manifests instead of creating a duplicate submission.",
   };
 }
 
@@ -1407,7 +1428,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
   const toolNames = runtime.toolNames?.length ? runtime.toolNames : DEFAULT_TOOL_NAMES;
   const sourceActivationState = action.source_activation_state ?? null;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R20",
+    release: "PACKRIFT-MCP-DIRECTORY-UPDATE-CARD-R21",
     generated_at: new Date().toISOString(),
     purpose:
       "One source-specific, no-auth update card for stale MCP directories, marketplaces, and agent indexes to recrawl Packrift MCP and run the activation gate.",
@@ -1438,6 +1459,8 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       resources_count: runtime.resourcesCount,
       prompts_count: runtime.promptsCount,
       repository_url: "https://github.com/Packrift/packrift-mcp",
+      repository_readme: SOURCE_README_URL,
+      repository_readme_raw: SOURCE_README_RAW_URL,
       website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
       brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
       agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
@@ -1462,6 +1485,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       revenue_conversion_queue_html: REVENUE_CONVERSION_QUEUE_HTML_URL,
       buyer_order_handoffs: BUYER_ORDER_HANDOFFS_URL,
       buyer_order_handoffs_html: BUYER_ORDER_HANDOFFS_HTML_URL,
+      public_docs_hygiene: PUBLIC_DOCS_HYGIENE,
     },
     tracked_urls: {
       start: action.tracked_start_url,
@@ -1471,6 +1495,9 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
       live_proof: action.tracked_run_urls.generic_streamable_http_execute,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      source_readme: SOURCE_README_URL,
+      source_readme_raw: SOURCE_README_RAW_URL,
+      public_docs_hygiene: PUBLIC_DOCS_HYGIENE,
       brand_agent_web_manifest: PACKRIFT_BRAND_AGENT_WEB_MANIFEST_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
       well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
@@ -1499,6 +1526,7 @@ export function mcpDirectorySubmitActionPayload(runtime: DirectorySubmitActionsR
     source_preserving_prepare_purchase_handoff: action.source_preserving_prepare_purchase_handoff,
     acceptance_gate: [
       "Install the hosted no-auth Streamable HTTP endpoint.",
+      "Recrawl the current raw README and public manifests if the directory has stale copied snippets.",
       "Run tools/list against the source-aware endpoint.",
       "Run the source-specific eval pack acceptance cases when a marketplace, MCP host, or reviewer needs host-side proof.",
       "Run get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url.",
@@ -1548,6 +1576,9 @@ export function mcpDirectorySubmitActionMarkdown(runtime: DirectorySubmitActions
     `Marketplace manifest: ${payload.canonical_listing.marketplace_manifest}`,
     `Live tool discovery JSON: ${payload.canonical_listing.tool_discovery_json}`,
     `Live tool discovery Markdown: ${payload.canonical_listing.tool_discovery_markdown}`,
+    `Repository README: ${payload.canonical_listing.repository_readme}`,
+    `Raw README for recrawlers: ${payload.canonical_listing.repository_readme_raw}`,
+    `Public docs hygiene: ${payload.canonical_listing.public_docs_hygiene.status} (${payload.canonical_listing.public_docs_hygiene.build_gate})`,
     `Source activation sitemap: ${payload.canonical_listing.source_activation_sitemap}`,
     `Activation wave: ${payload.canonical_listing.activation_wave}`,
     `Activation wave HTML: ${payload.canonical_listing.activation_wave_html}`,

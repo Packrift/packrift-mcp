@@ -41,6 +41,22 @@ const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability
 const MCP_MARKETPLACE_MANIFEST_URL = "https://mcp.packrift.com/.well-known/mcp-marketplace.json";
 const MCP_TOOL_DISCOVERY_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
+const SOURCE_README_URL = "https://github.com/Packrift/packrift-mcp/blob/main/README.md";
+const SOURCE_README_RAW_URL = "https://raw.githubusercontent.com/Packrift/packrift-mcp/main/README.md";
+const PUBLIC_DOCS_HYGIENE = {
+  release: "PACKRIFT-MCP-PUBLIC-DOCS-HYGIENE-R01",
+  status: "passing",
+  build_gate: "npm run check:public-doc-hygiene",
+  policy:
+    "Public documentation and directory packets must not publish token-shaped Shopify/API placeholders; hosted Packrift MCP remains no-auth at https://mcp.packrift.com/mcp.",
+  current_source_docs: {
+    readme: SOURCE_README_URL,
+    raw_readme: SOURCE_README_RAW_URL,
+    marketplace_manifest: MCP_MARKETPLACE_MANIFEST_URL,
+    tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
+    tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+  },
+};
 const MCP_TRACKED_START_SOURCE_POLICY = {
   accepted_source_format: "^[a-z0-9_]{2,64}$",
   partner_specific_sources_allowed: true,
@@ -326,7 +342,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
   const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, Agent Web manifest, CapIndex capability card, live tool discovery JSON and Markdown, legacy OpenAPI discovery, AI plugin-style discovery manifests, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R30",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R31",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -339,6 +355,10 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         "Packrift MCP lets AI agents find exact-spec packaging products, confirm live price and inventory, compare alternatives, estimate shipping, and hand off attributed carts to Packrift.",
       category: "Business",
       tags: ["mcp", "ecommerce", "packaging", "procurement", "shopify", "cart-handoff", "inventory"],
+      version: runtime.serverVersion,
+      tool_count: runtime.toolsCount,
+      resources_count: runtime.resourcesCount,
+      prompts_count: runtime.promptsCount,
       website_url: "https://packrift.com/pages/packrift-ai-agent-instructions",
       start_url: MCP_START_URL,
       tracked_start_template: MCP_TRACKED_START_TEMPLATE,
@@ -402,6 +422,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
       root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
       capability_card: MCP_CAPABILITY_CARD_URL,
+      public_docs_hygiene: PUBLIC_DOCS_HYGIENE,
       proof_summary: proofSummary,
     },
     live_proof: {
@@ -454,6 +475,9 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
       root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
       capability_card: MCP_CAPABILITY_CARD_URL,
+      source_readme: SOURCE_README_URL,
+      source_readme_raw: SOURCE_README_RAW_URL,
+      public_docs_hygiene: PUBLIC_DOCS_HYGIENE,
       usage_snapshot: "https://mcp.packrift.com/ai/mcp-usage-snapshot.json",
       funnel_snapshot: MCP_FUNNEL_SNAPSHOT_URL,
       source_activation_queue: MCP_SOURCE_ACTIVATION_QUEUE_URL,
@@ -531,7 +555,8 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       "Use /r/activate/{source}?format=html when a reviewer has clicked proof but still needs a browser-run real MCP client sequence ending in create_cart_url.",
       "Use the source activation queue to decide which directory or agent host needs the next start, install, first-run, tool-call, cart-landing, or order event.",
       "Use the activation wave when a directory or agent host needs a current, source-aware task packet for real host-side MCP tool calls; do not turn it into a duplicate CLI or separate buyer surface.",
-      "Keep stale directory listings separate from the live MCP truth. The live health, server card, tools/list, resources/list, and prompts/list are authoritative.",
+      "Keep stale directory listings separate from the live MCP truth. The live health, server card, tools/list, resources/list, prompts/list, current raw README, and public docs hygiene gate are authoritative.",
+      "If a directory shows stale copied README snippets, recrawl the raw README, marketplace manifest, tool discovery JSON, and this refresh pack before displaying cached examples.",
       "Discovery is not the final goal. Recrawls should drive external MCP sessions, tool calls, stamped cart landings, and measurable revenue.",
     ],
     success_metrics: [
@@ -561,7 +586,7 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     )
     .join("\n");
   const proofRows = Object.entries(payload.live_proof)
-    .map(([key, value]) => `- ${key}: ${value}`)
+    .map(([key, value]) => `- ${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`)
     .join("\n");
   const rules = payload.operating_rules.map((rule) => `- ${rule}`).join("\n");
   return [
@@ -606,6 +631,9 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     "",
     `Tracked source format: ${payload.canonical_listing.tracked_start_source_policy.accepted_source_format}`,
     `Repository: ${payload.canonical_listing.repository_url}`,
+    `Source README: ${payload.canonical_listing.public_docs_hygiene.current_source_docs.readme}`,
+    `Raw README for recrawlers: ${payload.canonical_listing.public_docs_hygiene.current_source_docs.raw_readme}`,
+    `Public docs hygiene: ${payload.canonical_listing.public_docs_hygiene.status} (${payload.canonical_listing.public_docs_hygiene.build_gate})`,
     `Website: ${payload.canonical_listing.website_url}`,
     `Tags: ${payload.canonical_listing.tags.join(", ")}`,
     `Proof summary: ${payload.canonical_listing.proof_summary}`,
