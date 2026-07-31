@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { APPROVED_CATALOG, ApprovedCatalogItem } from "../approved-catalog.js";
+import { APPROVED_CATALOG, ApprovedCatalogItem } from "../effective-approved-catalog.js";
 import { approvalStatus } from "../approval.js";
 import { buildMatchSummary, buildNoMatchRecovery, buildTrackingContext, trackedUrl } from "../conversion.js";
 import type { Env } from "../shopify.js";
@@ -34,7 +34,7 @@ export const getBulkQuoteLinkSchema = {
       requested_spec: { type: "string", description: "Exact unavailable or bulk quote packaging spec." },
       sku: { type: "string", description: "Optional Packrift SKU to prefill if the quote relates to a known product." },
       family: { type: "string", description: "Optional product family such as boxes, labels, mailers, tape, or poly_bags." },
-      quantity: { type: "string", description: "Optional buyer quantity." },
+      quantity: { type: "string", description: "Optional buyer quantity. Numbers are accepted and coerced to string." },
       reason: { type: "string", description: "Optional reason for quote handoff." },
     },
     required: ["requested_spec"],
@@ -80,7 +80,10 @@ const getBulkQuoteLinkZod = z.object({
   requested_spec: z.string().min(1).max(220),
   sku: z.string().min(1).max(80).optional(),
   family: z.string().min(1).max(80).optional(),
-  quantity: z.string().min(1).max(80).optional(),
+  quantity: z.preprocess(
+    (value) => (typeof value === "number" && Number.isFinite(value) ? String(value) : value),
+    z.string().min(1).max(80).optional()
+  ),
   reason: z.string().min(1).max(240).optional(),
   suppress_analytics: z.boolean().optional(),
   analytics_context: z.record(z.unknown()).optional(),

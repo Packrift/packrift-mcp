@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tolerantLineItemZod } from "../line-items.js";
 import { Env, variantIdToNumeric } from "../shopify.js";
 import { approvalForHandle, approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
 import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
@@ -44,7 +45,7 @@ export const createCartUrlSchema = {
               type: "string",
               description: "Numeric Shopify variant ID as a string, not a number. Example: \"53475949216112\".",
             },
-            qty: { type: "integer", minimum: 1, description: "Buyer-confirmed quantity for this line item." },
+            qty: { type: "integer", minimum: 1, description: "Buyer-confirmed quantity for this line item. The alias key quantity is also accepted." },
           },
           required: ["variant_id", "qty"],
         },
@@ -84,15 +85,7 @@ export const createCartUrlSchema = {
 export const createCartUrlZod = z.object({
   sku: z.string().min(1).max(80).optional(),
   quantity: z.number().int().min(1).optional(),
-  items: z
-    .array(
-      z.object({
-        variant_id: z.string(),
-        qty: z.number().int().min(1),
-      })
-    )
-    .min(1)
-    .optional(),
+  items: z.array(tolerantLineItemZod).min(1).optional(),
   discount_code: z.string().min(1).optional(),
   ref: z.string().default("mcp"),
   source_context: z.string().min(1).max(80).optional(),

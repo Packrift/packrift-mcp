@@ -1,8 +1,17 @@
 import { z } from "zod";
 import { Env, shopifyQuery, variantIdToNumeric } from "../shopify.js";
 import { approvalForHandle, approvalForVariantId, approvalStatus } from "../approval.js";
-import { APPROVED_CATALOG } from "../approved-catalog.js";
+import { APPROVED_CATALOG } from "../effective-approved-catalog.js";
 import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildProductCard, buildTrackingContext } from "../conversion.js";
+import {
+  DIMENSION_EXACT_MIN_SCORE,
+  dimensionTokens,
+  normalizeText,
+  queryIncludesSku,
+  type RankableRow,
+  scoreRow,
+  searchTokens,
+} from "../search-ranking.js";
 
 export const searchProductsSchema = {
   name: "search_products",
@@ -90,7 +99,7 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   const { query, limit } = searchProductsZod.parse(raw);
   const suppressAnalytics = isSyntheticEval(raw);
 
-  const cacheKey = `search:ai-approve:v12:${limit}:${query}`;
+  const cacheKey = `search:ai-approve:v13:${limit}:${query}`;
   if (!suppressAnalytics) {
     const cached = await env.CATALOG_CACHE.get(cacheKey, "json");
     if (cached) {
@@ -118,8 +127,16 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   const seen = new Set(rows.map((row) => row.handle));
   const dims = dimensionTokens(query);
   const fallbackHandles = catalogFallbackHandles(query, limit * 2).filter((handle) => !seen.has(handle));
+  // Keyword queries: always merge the top locally-ranked catalog candidates
+  // into the pool (budgeted at `limit` fetches) even when the Shopify text
+  // search already filled `limit` rows — Shopify's text match routinely misses
+  // the category-correct product (e.g. use-case queries), and the ranking pass
+  // below decides the final order anyway. Dimension queries keep fetching the
+  // full fallback list (unchanged behavior: the >=250 exact gate re-applies).
+  let keywordFallbackFetches = 0;
   for (const handle of fallbackHandles) {
-    if (!dims.length && rows.length >= limit) break;
+    if (!dims.length && keywordFallbackFetches >= limit) break;
+    keywordFallbackFetches += 1;
     try {
       const detail = await shopifyQuery<{ productByHandle: ProductNode | null }>(
         env,
@@ -139,17 +156,18 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
 
   const rankedRows = rows
     .filter((row) => searchAllowsExactOnlyMarginHold(query, row.approved_sku ?? "", row.approved_risk_flags ?? ""))
-    .map((row) => ({ row, score: scoreSearchRow(query, row) }))
+    .map((row) => ({ row, ...scoreSearchRow(query, row) }))
     .sort((a, b) => b.score - a.score);
-  const dimensionFilteredRows = dims.length
-    ? rankedRows.filter(({ score }) => score >= 250)
-    : rankedRows;
-  const dimensionNoExact = Boolean(dims.length && !dimensionFilteredRows.length);
-  const out = dimensionNoExact
-    ? buildSearchNoMatchResult(query, rankedRows.length)
-    : (dimensionFilteredRows.length ? dimensionFilteredRows : rankedRows)
-        .slice(0, limit)
-        .map(({ row }) => row);
+  // Dimension queries: keep only exact-spec candidates (unchanged behavior).
+  // Keyword queries: keep only rows with a qualifying signal so a row that
+  // matched ONLY low-signal modifiers ("mil"/"free") no longer surfaces.
+  const filteredRows = dims.length
+    ? rankedRows.filter(({ score }) => score >= DIMENSION_EXACT_MIN_SCORE)
+    : rankedRows.filter(({ qualifies }) => qualifies);
+  const noExactMatch = !filteredRows.length;
+  const out = noExactMatch
+    ? buildSearchNoMatchResult(query, rankedRows.length, dims.length > 0)
+    : filteredRows.slice(0, limit).map(({ row }) => row);
 
   if (!suppressAnalytics) {
     await env.CATALOG_CACHE.put(cacheKey, JSON.stringify(out), { expirationTtl: 300 });
@@ -162,7 +180,7 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
       Array.isArray(out) ? out : [],
       false,
       rankedRows[0]?.score ?? 0,
-      dimensionNoExact
+      noExactMatch
     );
   }
   return out;
@@ -179,9 +197,10 @@ function isSearchNoMatchResult(raw: unknown): boolean {
   return Boolean(raw && typeof raw === "object" && (raw as Record<string, unknown>).no_match_recovery);
 }
 
-function buildSearchNoMatchResult(query: string, blockedCandidateCount: number) {
-  const reason =
-    `No AI_APPROVE product exactly matched the dimension-bearing search "${query}". Nearby keyword matches were blocked from being presented as exact substitutes.`;
+function buildSearchNoMatchResult(query: string, blockedCandidateCount: number, isDimension = false) {
+  const reason = isDimension
+    ? `No AI_APPROVE product exactly matched the dimension-bearing search "${query}". Nearby keyword matches were blocked from being presented as exact substitutes.`
+    : `No AI_APPROVE product matched the discriminating terms in "${query}". Only generic-modifier (e.g. "mil", "free", "case") matches were found, which are not reliable product matches, so they were not presented as exact substitutes.`;
   return {
     results: [],
     match: buildMatchSummary({
@@ -335,6 +354,7 @@ function productToSearchRow(env: Env, node: ProductNode) {
     title: node.title,
     vendor: node.vendor,
     ...approvalStatus(approval),
+    approved_search_aliases: String((approval as { searchAliases?: string }).searchAliases ?? ""),
     price_range: {
       min: priceMin,
       max: Number(node.priceRangeV2.maxVariantPrice.amount),
@@ -358,73 +378,39 @@ function productToSearchRow(env: Env, node: ProductNode) {
   };
 }
 
-const STOP_WORDS = new Set([
-  "find",
-  "packrift",
-  "product",
-  "products",
-  "like",
-  "need",
-  "around",
-  "with",
-  "for",
-  "the",
-  "and",
-  "inch",
-  "inches",
-]);
-
-function normalizeText(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/["']/g, "")
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9.]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function searchTokens(value: string): string[] {
-  return normalizeText(value)
-    .split(" ")
-    .filter((token) => token.length > 1 && !STOP_WORDS.has(token));
-}
-
-function dimensionTokens(value: string): string[] {
-  return [...normalizeText(value).matchAll(/\b\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?(?:\s*x\s*\d+(?:\.\d+)?)?\b/g)]
-    .map((match) => match[0]!.replace(/\s+/g, ""));
+// Map an in-flight Shopify search row into the shared ranking shape.
+function toRankableRow(row: NonNullable<ReturnType<typeof productToSearchRow>>): RankableRow {
+  return {
+    sku: row.approved_sku ?? "",
+    handle: row.handle,
+    title: row.title,
+    family: row.approved_family ?? "",
+    searchAliases: row.approved_search_aliases ?? "",
+  };
 }
 
 function catalogFallbackHandles(query: string, limit: number): string[] {
-  const queryNorm = normalizeText(query);
-  const tokens = searchTokens(query);
   const dims = dimensionTokens(query);
-  const hasDims = dims.length > 0;
   const allowSensitive = searchAllowsSensitive(query);
   const scored = APPROVED_CATALOG.map((item) => {
-    if (!allowSensitive && isSensitiveProductText(item.title)) return { handle: item.handle, score: 0 };
-    if (!searchAllowsExactOnlyMarginHold(query, item.sku, item.riskFlags)) return { handle: item.handle, score: 0 };
-    const haystack = `${item.sku} ${item.handle} ${item.title} ${item.family}`;
-    const hayNorm = normalizeText(haystack);
-    const titleNorm = normalizeText(item.title);
-    const hayTokens = new Set(searchTokens(haystack));
-    let score = 0;
-    if (queryIncludesSku(queryNorm, item.sku, hasDims)) score += 1000;
-    if (queryNorm.includes(normalizeText(item.handle))) score += 900;
-    if (queryNorm === titleNorm) score += 1000;
-    else if (queryNorm.includes(titleNorm) || titleNorm.includes(queryNorm)) score += 500;
-    for (const dim of dims) {
-      if (hayNorm.replace(/\s+/g, "").includes(dim)) score += 300;
+    if (!allowSensitive && isSensitiveProductText(item.title)) return { handle: item.handle, score: 0, qualifies: false };
+    if (!searchAllowsExactOnlyMarginHold(query, item.sku, item.riskFlags)) {
+      return { handle: item.handle, score: 0, qualifies: false };
     }
-    for (const token of tokens) {
-      if (hayTokens.has(token)) score += 20;
-    }
-    if (/\bbox(?:es)?\b/.test(queryNorm) && item.family === "boxes") score += 50;
-    if (/\blabel(?:s)?\b/.test(queryNorm) && item.family === "labels") score += 50;
-    if (/\bmailer(?:s)?\b/.test(queryNorm) && item.family === "mailers") score += 50;
-    return { handle: item.handle, score };
+    const { score, qualifies } = scoreRow(query, {
+      sku: item.sku,
+      handle: item.handle,
+      title: item.title,
+      family: item.family,
+      searchAliases: item.searchAliases,
+    });
+    return { handle: item.handle, score, qualifies };
   })
-    .filter((row) => row.score > 0)
+    // Dimension queries can still pull near-dimension candidates into the fetch
+    // pool (the handler re-applies the >=250 exact gate). Keyword queries only
+    // pull rows that cleared the qualifying-signal gate, so generic-modifier-only
+    // rows ("mil"/"free" tape) never enter the candidate set.
+    .filter((row) => (dims.length ? row.score > 0 : row.qualifies))
     .sort((a, b) => b.score - a.score);
   return scored.slice(0, Math.max(limit, 1)).map((row) => row.handle);
 }
@@ -439,34 +425,10 @@ function searchAllowsExactOnlyMarginHold(query: string, sku: string, riskFlags: 
   return queryIncludesSku(queryNorm, sku, hasDims);
 }
 
-function scoreSearchRow(
-  query: string,
-  row: NonNullable<ReturnType<typeof productToSearchRow>>
-): number {
-  const queryNorm = normalizeText(query);
-  const rowText = `${row.approved_sku ?? ""} ${row.handle} ${row.title} ${row.approved_family ?? ""}`;
-  const rowNorm = normalizeText(rowText);
-  const titleNorm = normalizeText(row.title);
-  const rowCompact = rowNorm.replace(/\s+/g, "");
-  const tokens = searchTokens(query);
-  const dims = dimensionTokens(query);
-  const rowTokens = new Set(searchTokens(rowText));
-  let score = 0;
-
-  if (queryIncludesSku(queryNorm, row.approved_sku ?? "", dims.length > 0)) score += 1000;
-  if (queryNorm.includes(normalizeText(row.handle))) score += 900;
-  if (queryNorm === titleNorm) score += 1000;
-  else if (queryNorm.includes(titleNorm) || titleNorm.includes(queryNorm)) score += 500;
-  for (const dim of dims) {
-    if (rowCompact.includes(dim)) score += 300;
-  }
-  for (const token of tokens) {
-    if (rowTokens.has(token)) score += 20;
-  }
-  if (/\bbox(?:es)?\b/.test(queryNorm) && row.approved_family === "boxes") score += 50;
-  if (/\blabel(?:s)?\b/.test(queryNorm) && row.approved_family === "labels") score += 50;
-  if (/\bmailer(?:s)?\b/.test(queryNorm) && row.approved_family === "mailers") score += 50;
-  return score;
+// Relevance scoring is delegated to ../search-ranking (IDF + phrase + field
+// boost + qualifying gate). Returns { score, qualifies, matchedDiscriminating }.
+function scoreSearchRow(query: string, row: NonNullable<ReturnType<typeof productToSearchRow>>) {
+  return scoreRow(query, toRankableRow(row));
 }
 
 function scoreSearchSummary(
@@ -474,29 +436,7 @@ function scoreSearchSummary(
   row?: { sku: string; handle: string; family: string }
 ): number {
   if (!row) return 0;
-  const queryNorm = normalizeText(query);
-  const hasDims = dimensionTokens(query).length > 0;
-  let score = 0;
-  if (row.sku && queryIncludesSku(queryNorm, row.sku, hasDims)) score += 1000;
-  if (row.handle && queryNorm.includes(normalizeText(row.handle))) score += 900;
-  if (/\bbox(?:es)?\b/.test(queryNorm) && row.family === "boxes") score += 50;
-  if (/\blabel(?:s)?\b/.test(queryNorm) && row.family === "labels") score += 50;
-  if (/\bmailer(?:s)?\b/.test(queryNorm) && row.family === "mailers") score += 50;
-  return score;
-}
-
-function queryIncludesSku(queryNorm: string, sku: string, hasDimensions: boolean): boolean {
-  const skuNorm = normalizeText(sku);
-  if (!skuNorm) return false;
-  if (hasDimensions && /^\d{5,}$/.test(skuNorm)) {
-    return new RegExp(`\\b(?:sku\\s+)?${escapeRegExp(skuNorm)}\\b`).test(queryNorm);
-  }
-  if (!hasDimensions || /[a-z]/.test(skuNorm)) return queryNorm.includes(skuNorm);
-  return new RegExp(`\\bsku\\s+${escapeRegExp(skuNorm)}\\b`).test(queryNorm);
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return scoreRow(query, { sku: row.sku, handle: row.handle, title: "", family: row.family }).score;
 }
 
 function searchAllowsSensitive(value: string): boolean {

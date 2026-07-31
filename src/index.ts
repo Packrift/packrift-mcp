@@ -4,6 +4,7 @@ import { shopifyQuery, type Env } from "./shopify.js";
 import { serverCard } from "./server-card.js";
 import { capabilityCard } from "./capability-card.js";
 import { agentWebManifest } from "./agent-web-manifest.js";
+import { agentManifestProtocolManifest } from "./agent-manifest-protocol.js";
 import { llmsTxt } from "./llms-content.js";
 import { llmsFullTxt } from "./llms-full-content.js";
 import { agentInstructionsMd } from "./agent-instructions-content.js";
@@ -36,6 +37,68 @@ import {
 import { mcpClientConfigMarkdown, mcpClientConfigPayload } from "./client-config.js";
 import { mcpBuyerUseCasesHtml, mcpBuyerUseCasesMarkdown, mcpBuyerUseCasesPayload } from "./buyer-use-cases.js";
 import { mcpCartActivationHtml, mcpCartActivationMarkdown, mcpCartActivationPayload } from "./cart-activation.js";
+import { packriftAiPackagingFinderHtml, packriftAiPackagingFinderMarkdown, packriftAiPackagingFinderPayload } from "./ai-packaging-finder.js";
+import { mcpUcpStarterCatalogHtml, mcpUcpStarterCatalogMarkdown, mcpUcpStarterCatalogPayload, UCP_STARTER_CATALOG_SOURCE_SLUGS } from "./ucp-starter-catalog.js";
+import { mcpUcpBuilderKitHtml, mcpUcpBuilderKitMarkdown, mcpUcpBuilderKitPayload } from "./ucp-builder-kit.js";
+import { packriftUcpBuilderSalesLoopHtml, packriftUcpBuilderSalesLoopMarkdown, packriftUcpBuilderSalesLoopPayload } from "./ucp-builder-sales-loop.js";
+import {
+  packriftUcpShippingSuppliesCollectionMapHtml,
+  packriftUcpShippingSuppliesCollectionMapMarkdown,
+  packriftUcpShippingSuppliesCollectionMapPayload,
+} from "./ucp-collection-route-map.js";
+import {
+  packriftUlineAuthoritySourceHtml,
+  packriftUlineAuthoritySourceMarkdown,
+  packriftUlineAuthoritySourcePayload,
+} from "./uline-authority-source.js";
+import {
+  mcpUcpStorefrontImportCsv,
+  mcpUcpStorefrontImportHtml,
+  mcpUcpStorefrontImportJsonl,
+  mcpUcpStorefrontImportMarkdown,
+  mcpUcpStorefrontImportPayload,
+  mcpUcpBuilderActivationHandoffHtml,
+  mcpUcpBuilderActivationHandoffMarkdown,
+  mcpUcpBuilderActivationHandoffPayload,
+  packriftUcpBuilderLaunchpadHtml,
+  packriftUcpBuilderLaunchpadMarkdown,
+  packriftUcpBuilderLaunchpadPayload,
+  packriftUcpBuilderApprovalPacketHtml,
+  packriftUcpBuilderApprovalPacketMarkdown,
+  packriftUcpBuilderApprovalPacketPayload,
+  packriftUcpBuilderIntegrationPackHtml,
+  packriftUcpBuilderIntegrationPackMarkdown,
+  packriftUcpBuilderIntegrationPackPayload,
+  packriftUcpBuilderPrActivationPackHtml,
+  packriftUcpBuilderPrActivationPackMarkdown,
+  packriftUcpBuilderPrActivationPackPayload,
+  packriftUcpShippingSuppliesStarterKitHtml,
+  packriftUcpShippingSuppliesStarterKitMarkdown,
+  packriftUcpShippingSuppliesStarterKitPayload,
+  packriftUcpOpenScoutShoppingAgentPathHtml,
+  packriftUcpOpenScoutShoppingAgentPathMarkdown,
+  packriftUcpOpenScoutShoppingAgentPathPayload,
+  packriftUcpUpsonicAgentWorkflowHtml,
+  packriftUcpUpsonicAgentWorkflowMarkdown,
+  packriftUcpUpsonicAgentWorkflowPayload,
+  packriftUcpPlugThatShopContextualShelfHtml,
+  packriftUcpPlugThatShopContextualShelfMarkdown,
+  packriftUcpPlugThatShopContextualShelfPayload,
+  packriftUcpStack412ShippingSuppliesAisleHtml,
+  packriftUcpStack412ShippingSuppliesAisleMarkdown,
+  packriftUcpStack412ShippingSuppliesAislePayload,
+  packriftUcpShippingSuppliesStorefrontTemplateHtml,
+  packriftUcpShippingSuppliesStorefrontTemplateMarkdown,
+  packriftUcpShippingSuppliesStorefrontTemplatePayload,
+  mcpUcpStorefrontShelfAdoptionHtml,
+  mcpUcpStorefrontShelfAdoptionMarkdown,
+  mcpUcpStorefrontShelfAdoptionPayload,
+  mcpUcpStorefrontShelfDemoHtml,
+  mcpUcpStorefrontShelfEmbedJs,
+  mcpUcpStorefrontShelfHtml,
+  mcpUcpStorefrontShelfMarkdown,
+  mcpUcpStorefrontShelfPayload,
+} from "./ucp-storefront-import.js";
 import { mcpFirstRunProofMarkdown, mcpFirstRunProofPayload, type FirstRunProofDemo } from "./first-run-proof.js";
 import {
   mcpAutomationWorkflowsHtml,
@@ -60,7 +123,7 @@ import {
 import { mcpReviewerActivationHtml, mcpReviewerActivationMarkdown, mcpReviewerActivationPayload, trackedReviewerActivationUrl } from "./reviewer-activation.js";
 import { claudeConnectorSubmissionMarkdown, claudeConnectorSubmissionPayload } from "./claude-connector-submission.js";
 import { agentCaptureOutreachHtml, agentCaptureOutreachMarkdown, agentCaptureOutreachPayload } from "./agent-capture-outreach.js";
-import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./approved-catalog.js";
+import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./effective-approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 import { isMcpCommerceHeldSku, MCP_COMMERCE_HELD_SKUS, MCP_COMMERCE_HOLD_REASON } from "./mcp-commerce-holds.js";
 
@@ -1035,7 +1098,9 @@ function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
   }
 
   const payload = cartHandoffCandidatesPayload(50);
-  const filtered = payload.items
+  const exactApprovedItem = sku && !heldSkuRequested ? APPROVED_CATALOG_BY_SKU.get(sku) : null;
+  const candidateItems = exactApprovedItem ? [cartHandoffCandidateItem(exactApprovedItem, 1)] : payload.items;
+  const filtered = candidateItems
     .filter((item) => !sku || item.sku.toUpperCase() === sku)
     .filter((item) => !family || item.family === family)
     .slice(0, limit);
@@ -1364,6 +1429,9 @@ const OWNED_PAGE_PRODUCT_LINKS_RELEASE = "PACKRIFT-OWNED-PAGE-PRODUCT-LINKS-2026
 const REORDER_PAGE_CANONICAL_VIEW = "packrift_ai_reorder_live_r07";
 const REORDER_PAGE_FEATURED_RELEASE = "PACKRIFT-REORDER-PAGE-TOP1000-2026-05-19-R05";
 const REORDER_PAGE_EDGE_REPAIR_RELEASE = "PACKRIFT-REORDER-PAGE-LIVE-R07-LINK-REPAIR-2026-05-19-R01";
+const PACKRIFT_PACKAGING_FINDER_SITE_ROUTE_RELEASE = "PACKRIFT-PACKAGING-FINDER-SITE-ROUTE-2026-06-27-R01";
+const PACKRIFT_PACKAGING_FINDER_CTA_RELEASE = "PACKRIFT-PACKAGING-FINDER-CTA-2026-06-27-R01";
+const PACKRIFT_PACKAGING_FINDER_SITE_URL = "https://packrift.com/tools/packaging-finder";
 const AI_SALES_ADD_TO_CART_RELEASE = "PACKRIFT-AI-SALES-ADD-TO-CART-2026-05-14-R02";
 const ROUTE_LANDING_SERVER_TELEMETRY_RELEASE = "PACKRIFT-ROUTE-LANDING-SERVER-TELEMETRY-2026-05-16-R01";
 const ROUTE_REDIRECT_SERVER_TELEMETRY_RELEASE = "PACKRIFT-MCP-ROUTE-REDIRECT-TELEMETRY-2026-05-16-R01";
@@ -1382,9 +1450,13 @@ const CART_LANDING_SHIM_RELEASE = "PACKRIFT-MCP-CART-LANDING-SHIM-R02";
 const MCP_ORDER_ATTRIBUTION_RELEASE = "PACKRIFT-MCP-ORDER-ATTRIBUTION-R01";
 const PACKRIFT_GA4_MEASUREMENT_ID = "G-HPMNFWG4DV";
 const SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SEMRUSH-36X16X16-WORKER-BYPASS-2026-05-18-R01";
+const SITEWIDE_4VS6_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-SITEWIDE-4VS6-WORKER-BYPASS-2026-06-01-R01";
+const LABELS_BAKERIES_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-LABELS-BAKERIES-WORKER-BYPASS-2026-06-04-R01";
+const FINAL9_ECOMMERCE_PAGE_CACHE_BYPASS_RELEASE = "PACKRIFT-FINAL9-ECOMMERCE-WORKER-BYPASS-2026-06-04-R01";
 const AI_SALES_EVENT_PREFIX = "events/ai-sales";
 const AI_SALES_EVENT_TTL_SECONDS = 60 * 60 * 24 * 90;
 const AI_SALES_EVENT_READ_CONCURRENCY = 50;
+const OPENAI_PREF_DIRECT_TOPSKU_UTM_ID = "packrift_openai_pref_direct_topsku_20260603";
 const PUBLIC_MCP_ORDER_SUMMARY_TIMEOUT_MS = 3500;
 const PUBLIC_MCP_DEFAULT_EVENT_LIMIT = 500;
 const PUBLIC_MCP_USAGE_EVENT_LIMIT_MAX = 1000;
@@ -1845,6 +1917,170 @@ const OWNED_PAGE_PRODUCT_LINK_BLOCKS: Record<string, OwnedPageProductLinkBlock> 
   },
 };
 
+type PackagingFinderCtaContext = {
+  placement: string;
+  heading: string;
+  body: string;
+  linkText: string;
+  utmContent: string;
+};
+
+function packriftAiPackagingFinderSiteHtml(): string {
+  return packriftAiPackagingFinderHtml(ucpStarterCatalogRuntime())
+    .replaceAll("https://mcp.packrift.com/ai/packrift-ai-packaging-finder.html", PACKRIFT_PACKAGING_FINDER_SITE_URL)
+    .replace(
+      '<meta name="description" content="Find Packrift packaging by item dimensions and send buyers to source-attributed cart handoffs.">',
+      '<meta name="description" content="Find the right Packrift box, mailer, bag, or shipping supply by item dimensions and open a measured Packrift cart handoff.">'
+    )
+    .replace(
+      "</head>",
+      `  <meta property="og:title" content="Packrift AI Packaging Finder">
+  <meta property="og:description" content="Find Packrift packaging by item dimensions and open a measured Packrift cart handoff.">
+  <meta property="og:url" content="${PACKRIFT_PACKAGING_FINDER_SITE_URL}">
+  <meta name="packrift-release" content="${PACKRIFT_PACKAGING_FINDER_SITE_ROUTE_RELEASE}">
+</head>`
+    );
+}
+
+function packagingFinderCtaContext(pathname: string): PackagingFinderCtaContext | null {
+  if (pathname.startsWith("/products/")) {
+    return {
+      placement: "product",
+      heading: "Not sure this is the right size?",
+      body: "Use the Packrift Packaging Finder to match item dimensions to boxes, mailers, bags, and supporting supplies before you cart.",
+      linkText: "Find packaging fit",
+      utmContent: "product_page",
+    };
+  }
+  if (pathname.startsWith("/collections/")) {
+    return {
+      placement: "collection",
+      heading: "Need a size recommendation?",
+      body: "Enter item dimensions and use case to narrow Packrift options before choosing a product.",
+      linkText: "Open packaging finder",
+      utmContent: "collection_page",
+    };
+  }
+  if (
+    [
+      "/pages/find-packaging-by-exact-spec",
+      "/pages/reorder-packaging-by-sku",
+      "/pages/packrift-ai-exact-spec-data",
+      "/pages/tools",
+      "/pages/bulk-quote",
+      "/pages/bulk-packaging-quote",
+    ].includes(pathname) ||
+    /packaging|shipping|boxes|corrugated|mailers|poly|labels|tape|stretch|void|fulfillment/i.test(pathname)
+  ) {
+    return {
+      placement: "buyer_page",
+      heading: "Turn dimensions into a Packrift cart",
+      body: "Use the finder when the buyer knows the item size but needs the packaging SKU and measured cart handoff.",
+      linkText: "Find matching packaging",
+      utmContent: "buyer_page",
+    };
+  }
+  return null;
+}
+
+function packagingFinderCtaUrl(context: PackagingFinderCtaContext): string {
+  const params = new URLSearchParams({
+    utm_source: "packrift_site",
+    utm_medium: "edge_cta",
+    utm_campaign: "packaging_finder_20260627",
+    utm_content: context.utmContent,
+    mcp_source_context: "owned_packrift_finder",
+    mcp_install_target: "packrift_site",
+  });
+  return `${PACKRIFT_PACKAGING_FINDER_SITE_URL}?${params.toString()}`;
+}
+
+function buildPackagingFinderCta(context: PackagingFinderCtaContext): string {
+  const href = packagingFinderCtaUrl(context);
+  return `
+<section class="packrift-packaging-finder-cta" data-packrift-release="${PACKRIFT_PACKAGING_FINDER_CTA_RELEASE}" data-packrift-placement="${escapeHtml(context.placement)}">
+  <style>
+    .packrift-packaging-finder-cta {
+      margin: 18px 0;
+      padding: 14px 16px;
+      border: 1px solid #cbd7de;
+      border-radius: 8px;
+      background: #f5faf8;
+      color: #17212b;
+    }
+    .packrift-packaging-finder-cta__inner {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .packrift-packaging-finder-cta h2,
+    .packrift-packaging-finder-cta h3 {
+      margin: 0 0 4px;
+      color: #17212b;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+    .packrift-packaging-finder-cta p {
+      margin: 0;
+      color: #4b5f6b;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .packrift-packaging-finder-cta a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 9px 13px;
+      border-radius: 6px;
+      border: 1px solid #0b5f59;
+      background: #0f766e;
+      color: #fff;
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .packrift-packaging-finder-cta a:hover { background: #0b5f59; color: #fff; }
+    @media (max-width: 720px) {
+      .packrift-packaging-finder-cta__inner { display: grid; }
+      .packrift-packaging-finder-cta a { width: 100%; }
+    }
+  </style>
+  <div class="packrift-packaging-finder-cta__inner">
+    <div>
+      <h2>${escapeHtml(context.heading)}</h2>
+      <p>${escapeHtml(context.body)}</p>
+    </div>
+    <a href="${escapeHtml(href)}">${escapeHtml(context.linkText)}</a>
+  </div>
+</section>`;
+}
+
+function injectPackagingFinderCta(html: string, context: PackagingFinderCtaContext | null): { html: string; repaired: boolean } {
+  if (!context || html.includes(PACKRIFT_PACKAGING_FINDER_CTA_RELEASE)) {
+    return { html, repaired: false };
+  }
+  const injection = buildPackagingFinderCta(context);
+  const targets = [
+    "</form><!-- Trust Badges -->",
+    "</div><!-- /.ph__sidebar-inner -->",
+    "</rte-formatter>",
+    "</main>",
+    "</body>",
+  ];
+  for (const target of targets) {
+    if (html.includes(target)) {
+      if (target === "</form><!-- Trust Badges -->") {
+        return { html: html.replace(target, `</form>${injection}<!-- Trust Badges -->`), repaired: true };
+      }
+      return { html: html.replace(target, `${injection}${target}`), repaired: true };
+    }
+  }
+  return { html: `${html}${injection}`, repaired: true };
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -2030,6 +2266,12 @@ function conversionRouteTelemetrySurface(pathname: string): "conversion_route_ca
   if (pathname.startsWith("/ai/conversion-starter-routes.")) return "conversion_starter_routes";
   if (pathname.startsWith("/ai/conversion-route-telemetry-watch.")) return "conversion_route_telemetry_watch";
   if (pathname.startsWith("/ai/measured-handoffs.")) return "measured_handoff_directory";
+  return "";
+}
+
+function openAiPreferredDirectFeedFormat(pathname: string): "tsv" | "gzip" | "" {
+  if (pathname === "/ai/packrift-openai-products-preferred-direct-current.tsv") return "tsv";
+  if (pathname === "/ai/packrift-openai-products-preferred-direct-current.tsv.gz") return "gzip";
   return "";
 }
 
@@ -4313,7 +4555,7 @@ function matchesPublicFunnelInternalSynthetic(text: string): boolean {
 }
 
 function matchesPublicFunnelSelfGenerated(text: string): boolean {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_openapi_discovery|mcp_ai_plugin_discovery|openapi\.json|ai-plugin\.json|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_visitor_growth_queue|mcp_visitor_growth_tasks|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_ucp_starter_catalog|mcp_ucp_builder_kit|mcp_ucp_storefront_import|mcp_ucp_storefront_shelf|mcp_ucp_storefront_adoption|mcp_ucp_builder_activation_handoff|packrift_ucp_builder_launchpad|packrift_ucp_builder_approval_packet|packrift_ucp_builder_integration_pack|packrift_ucp_builder_pr_activation_pack|packrift_ucp_shipping_supplies_starter_kit|packrift_ucp_shipping_supplies_storefront_template|packrift_ucp_builder_sales_loop|packrift_ucp_stack412_shipping_supplies_aisle|packrift_ucp_plugthatshop_contextual_shelf|packrift_ucp_open_scout_shopping_agent_path|packrift_ucp_upsonic_agent_workflow|packrift_ucp_shelf|mcp_agent_adoption_progress|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_openapi_discovery|mcp_ai_plugin_discovery|openapi\.json|ai-plugin\.json|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_external_activation_brief|mcp_source_activation_queue|mcp_visitor_growth_queue|mcp_visitor_growth_tasks|mcp_revenue_conversion_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_automation_workflows|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesPublicFunnelQualifiedDemand(text: string): boolean {
@@ -4632,6 +4874,13 @@ const SOURCE_ACTIVATION_DIRECTORY_STATUS: Record<string, string> = {
 };
 
 const SOURCE_ACTIVATION_SEED_SOURCES = Object.keys(SOURCE_ACTIVATION_DIRECTORY_STATUS);
+const SOURCE_ACTIVATION_REQUIRED_QUEUE_SOURCES = [
+  "cline_mcp_marketplace",
+  "mcp_so",
+  "glama_connector",
+  "claude_remote_mcp",
+  "codex_remote_mcp",
+];
 const SOURCE_ACTIVATION_TARGET_OVERRIDES = new Map<string, string>([
   ...MCP_RUNTIME_SOURCE_INFERENCE_FAMILIES.map((rule) => [rule.source_slug, rule.install_target] as const),
   ["anthropic_connectors_directory", "claude_code"],
@@ -6626,6 +6875,15 @@ function sourceActivationStage(row: PostInstallActivationRow): string {
 }
 
 function sourceActivationTargetEvent(row: PostInstallActivationRow): string {
+  if (
+    row.source === "glama_connector" &&
+    row.starts === 0 &&
+    row.tracked_config_fetches === 0 &&
+    row.install_intents === 0 &&
+    row.first_run_actions === 0 &&
+    row.first_run_executions === 0 &&
+    row.mcp_tool_calls === 0
+  ) return "mcp_tool_call";
   if (sourceActivationHasToolAndCartProof(row)) return "mcp_attributed_order";
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return "mcp_cart_landing";
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return "mcp_tool_call";
@@ -6640,6 +6898,17 @@ function sourceActivationTargetEvent(row: PostInstallActivationRow): string {
 }
 
 function sourceActivationRecommendedAction(row: PostInstallActivationRow): string {
+  if (
+    row.source === "glama_connector" &&
+    row.starts === 0 &&
+    row.tracked_config_fetches === 0 &&
+    row.install_intents === 0 &&
+    row.first_run_actions === 0 &&
+    row.first_run_executions === 0 &&
+    row.mcp_tool_calls === 0
+  ) {
+    return "Run the source-specific reviewer activation runner so the hosted Glama connector records a real MCP tool sequence instead of another install-only proof.";
+  }
   if (sourceActivationHasToolAndCartProof(row)) {
     return "Stop looping on first-run proof. Use the source-aware measured cart handoff in a real buyer or reviewer procurement flow and watch Shopify/GA4 for an MCP-attributed order or revenue event.";
   }
@@ -6788,6 +7057,17 @@ function sourceActivationExternalMessage(row: PostInstallActivationRow, urls: Re
 }
 
 function sourceActivationPrimaryUrl(row: PostInstallActivationRow, urls: ReturnType<typeof sourceActivationUrls>): string {
+  if (
+    row.source === "glama_connector" &&
+    row.starts === 0 &&
+    row.tracked_config_fetches === 0 &&
+    row.install_intents === 0 &&
+    row.first_run_actions === 0 &&
+    row.first_run_executions === 0 &&
+    row.mcp_tool_calls === 0
+  ) {
+    return urls.reviewer_activation_runner_url;
+  }
   if (sourceActivationHasToolAndCartProof(row)) {
     return urls.order_handoff_html_url;
   }
@@ -6808,7 +7088,10 @@ function sourceActivationPriorityScore(row: PostInstallActivationRow): number {
     Math.min(30, row.starts + row.tracked_config_fetches + row.install_intents + row.first_run_actions + row.first_run_executions) +
     Math.min(20, row.mcp_tool_calls * 2) +
     Math.min(20, row.qualified_cart_landings * 5);
-  if (SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] && signalScore === 0) return sourcePreferredActivationTarget(row.source) === "cline" ? 112 : 96;
+  if (SOURCE_ACTIVATION_DIRECTORY_STATUS[row.source] && signalScore === 0) {
+    const preferredTarget = sourcePreferredActivationTarget(row.source);
+    return preferredTarget === "cline" || preferredTarget === "glama_connector" ? 112 : 96;
+  }
   if (sourceActivationHasToolAndCartProof(row)) return 130 + signalScore;
   if (row.external_qualified_create_cart_url_calls > 0 && row.qualified_cart_landings === 0) return 120 + signalScore;
   if (row.qualified_cart_landings > 0 && row.mcp_tool_calls === 0) return 110 + signalScore;
@@ -6821,7 +7104,7 @@ function sourceActivationPriorityScore(row: PostInstallActivationRow): number {
 }
 
 function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
-  return sourceActivationRowsWithSeeds(rows)
+  const prioritizedRows = sourceActivationRowsWithSeeds(rows)
     .filter((row) => !SOURCE_ACTIVATION_INTERNAL_SOURCES.has(row.source))
     .map((row) => {
       const urls = sourceActivationUrls(row.source);
@@ -6911,8 +7194,28 @@ function mcpSourceActivationPriorityQueue(rows: PostInstallActivationRow[]) {
       };
     })
     .filter((row) => row.priority !== "watch" || row.current_counts.starts + row.current_counts.install_intents + row.current_counts.first_run_actions > 0)
-    .sort((a, b) => b.priority_score - a.priority_score || a.source.localeCompare(b.source))
-    .slice(0, 25);
+    .sort((a, b) => b.priority_score - a.priority_score || a.source.localeCompare(b.source));
+  const topRows = prioritizedRows.slice(0, 25);
+  const topSources = new Set(topRows.map((row) => row.source));
+  for (const requiredSource of SOURCE_ACTIVATION_REQUIRED_QUEUE_SOURCES) {
+    if (topSources.has(requiredSource)) continue;
+    const requiredRow = prioritizedRows.find((row) => row.source === requiredSource);
+    if (!requiredRow) continue;
+    let replaceIndex = -1;
+    for (let index = topRows.length - 1; index >= 0; index -= 1) {
+      if (!SOURCE_ACTIVATION_REQUIRED_QUEUE_SOURCES.includes(topRows[index]?.source ?? "")) {
+        replaceIndex = index;
+        break;
+      }
+    }
+    if (replaceIndex === -1) continue;
+    const replacedRow = topRows[replaceIndex];
+    if (!replacedRow) continue;
+    topSources.delete(replacedRow.source);
+    topRows[replaceIndex] = requiredRow;
+    topSources.add(requiredSource);
+  }
+  return topRows.sort((a, b) => b.priority_score - a.priority_score || a.source.localeCompare(b.source));
 }
 
 async function mcpSourceActivationQueuePayload(
@@ -9906,10 +10209,12 @@ function mcpAgentHostRolloutSourcePacket(payload: Awaited<ReturnType<typeof mcpA
     current_stage: isGenericSourcePacket
       ? "source is listed in the activation sitemap; no source-specific activation row is proven yet"
       : "agent host source family is recognized for runtime attribution; no source-specific activation row is proven yet",
-    target_event_to_watch: "mcp_install_intent",
+    target_event_to_watch: rolloutRow.target === "glama_connector" ? "mcp_tool_call" : "mcp_install_intent",
     recommended_action: rolloutRow.recommended_action,
     exact_next_action:
-      "Install the source-aware endpoint in the real agent host and run the first useful SKU 1066 sequence through create_cart_url.",
+      rolloutRow.target === "glama_connector"
+        ? "Run the reviewer activation path in the real Glama host and complete the first useful SKU 1066 tool sequence through create_cart_url."
+        : "Install the source-aware endpoint in the real agent host and run the first useful SKU 1066 sequence through create_cart_url.",
     why_this_packet_exists:
       isGenericSourcePacket
         ? "This packet keeps every valid source activation sitemap URL useful even before the source has enough telemetry to appear in the ranked queue."
@@ -13842,20 +14147,80 @@ function repairPaidPdpExactSpecCard(html: string, pathname: string): { html: str
 async function storefrontPassThrough(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const upstreamUrl = new URL(request.url);
+  const shouldBypass4Vs6PageCache =
+    request.method === "GET" &&
+    url.hostname === "packrift.com" &&
+    url.pathname === "/pages/4-vs-6-mil-poly-bags" &&
+    !url.searchParams.has("view");
   const shouldBypass36x16x16PageCache =
     request.method === "GET" &&
     url.hostname === "packrift.com" &&
     url.pathname === "/pages/36x16x16-boxes" &&
     !url.searchParams.has("view");
+  const shouldBypassLabelsBakeriesPageCache =
+    request.method === "GET" &&
+    url.hostname === "packrift.com" &&
+    url.pathname === "/pages/labels-for-bakeries" &&
+    !url.searchParams.has("view");
+  const shouldBypassFinal9EcommercePageCache =
+    request.method === "GET" &&
+    url.hostname === "packrift.com" &&
+    url.pathname === "/pages/best-boxes-for-ecommerce-shipments" &&
+    !url.searchParams.has("view");
+  if (shouldBypass4Vs6PageCache) {
+    upstreamUrl.searchParams.set("view", "sw9p4v6r2");
+  }
   if (shouldBypass36x16x16PageCache) {
     upstreamUrl.searchParams.set("view", "default");
   }
-  const upstreamRequest = shouldBypass36x16x16PageCache ? new Request(upstreamUrl.toString(), request) : request;
+  if (shouldBypassLabelsBakeriesPageCache) {
+    upstreamUrl.searchParams.set("view", "default");
+  }
+  if (shouldBypassFinal9EcommercePageCache) {
+    upstreamUrl.searchParams.set("view", "programmatic-generic-final9");
+  }
+  const upstreamRequest =
+    shouldBypass4Vs6PageCache ||
+    shouldBypass36x16x16PageCache ||
+    shouldBypassLabelsBakeriesPageCache ||
+    shouldBypassFinal9EcommercePageCache
+      ? new Request(upstreamUrl.toString(), request)
+      : request;
   const response = await fetch(upstreamRequest);
   await maybeRecordRouteLandingTelemetry(env, request, url, response);
+  if (shouldBypass4Vs6PageCache && response.status === 200) {
+    const headers = new Headers(response.headers);
+    headers.set("x-packrift-page-cache-bypass", SITEWIDE_4VS6_PAGE_CACHE_BYPASS_RELEASE);
+    headers.delete("content-length");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
   if (shouldBypass36x16x16PageCache && response.status === 200) {
     const headers = new Headers(response.headers);
     headers.set("x-packrift-page-cache-bypass", SEMRUSH_36X16X16_PAGE_CACHE_BYPASS_RELEASE);
+    headers.delete("content-length");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+  if (shouldBypassLabelsBakeriesPageCache && response.status === 200) {
+    const headers = new Headers(response.headers);
+    headers.set("x-packrift-page-cache-bypass", LABELS_BAKERIES_PAGE_CACHE_BYPASS_RELEASE);
+    headers.delete("content-length");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+  if (shouldBypassFinal9EcommercePageCache && response.status === 200) {
+    const headers = new Headers(response.headers);
+    headers.set("x-packrift-page-cache-bypass", FINAL9_ECOMMERCE_PAGE_CACHE_BYPASS_RELEASE);
     headers.delete("content-length");
     return new Response(response.body, {
       status: response.status,
@@ -13890,13 +14255,30 @@ async function storefrontPassThrough(request: Request, env: Env): Promise<Respon
     headers.delete("content-length");
     headers.set("x-packrift-owned-page-product-links", html.includes(OWNED_PAGE_PRODUCT_LINKS_RELEASE) ? "origin" : "edge");
     if (html.includes(OWNED_PAGE_PRODUCT_LINKS_RELEASE)) {
-      return new Response(html, { status: response.status, statusText: response.statusText, headers });
+      const ctaRepair = injectPackagingFinderCta(html, packagingFinderCtaContext(url.pathname));
+      if (ctaRepair.repaired) {
+        headers.set("x-packrift-packaging-finder-cta", PACKRIFT_PACKAGING_FINDER_CTA_RELEASE);
+      }
+      return new Response(ctaRepair.html, { status: response.status, statusText: response.statusText, headers });
     }
     const injection = buildOwnedPageProductLinks(ownedPageBlock);
     const updated = html.includes("</rte-formatter>")
       ? html.replace("</rte-formatter>", `${injection}</rte-formatter>`)
       : html.replace("</main>", `${injection}</main>`);
-    return new Response(updated, { status: response.status, statusText: response.statusText, headers });
+    const ctaRepair = injectPackagingFinderCta(updated, packagingFinderCtaContext(url.pathname));
+    if (ctaRepair.repaired) {
+      headers.set("x-packrift-packaging-finder-cta", PACKRIFT_PACKAGING_FINDER_CTA_RELEASE);
+    }
+    return new Response(ctaRepair.html, { status: response.status, statusText: response.statusText, headers });
+  }
+  const finderCtaContext = packagingFinderCtaContext(url.pathname);
+  if (finderCtaContext && isHtmlGet && !url.pathname.startsWith("/products/") && !url.pathname.endsWith(".js")) {
+    const html = await response.text();
+    const ctaRepair = injectPackagingFinderCta(html, finderCtaContext);
+    const headers = new Headers(response.headers);
+    headers.delete("content-length");
+    headers.set("x-packrift-packaging-finder-cta", ctaRepair.repaired ? PACKRIFT_PACKAGING_FINDER_CTA_RELEASE : "present-or-unmatched");
+    return new Response(ctaRepair.html, { status: response.status, statusText: response.statusText, headers });
   }
   if (
     !isHtmlGet ||
@@ -13925,11 +14307,17 @@ async function storefrontPassThrough(request: Request, env: Env): Promise<Respon
   }
   const addToCartListener = ensureAiSalesAddToCartListener(html);
   if (html.includes(PDP_PROCUREMENT_RELEASE) || !html.includes('class="ph__sidebar-inner"')) {
-    if (addToCartListener.added) {
+    const ctaRepair = injectPackagingFinderCta(addToCartListener.html, finderCtaContext);
+    if (addToCartListener.added || ctaRepair.repaired) {
       passThroughHeaders.delete("content-length");
+    }
+    if (addToCartListener.added) {
       passThroughHeaders.set("x-packrift-ai-sales-add-to-cart", AI_SALES_ADD_TO_CART_RELEASE);
     }
-    return new Response(addToCartListener.html, {
+    if (ctaRepair.repaired) {
+      passThroughHeaders.set("x-packrift-packaging-finder-cta", PACKRIFT_PACKAGING_FINDER_CTA_RELEASE);
+    }
+    return new Response(ctaRepair.html, {
       status: response.status,
       statusText: response.statusText,
       headers: passThroughHeaders,
@@ -13941,16 +14329,20 @@ async function storefrontPassThrough(request: Request, env: Env): Promise<Respon
   const updated = html.includes(insertionPoint)
     ? html.replace(insertionPoint, `</form>${injection}<!-- Trust Badges -->`)
     : html.replace("</div><!-- /.ph__sidebar-inner -->", `${injection}</div><!-- /.ph__sidebar-inner -->`);
+  const ctaRepair = injectPackagingFinderCta(updated, finderCtaContext);
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   headers.set("x-packrift-product-edge-release", "PACKRIFT-PRODUCT-EDGE-2026-05-16-R01");
   headers.set("x-packrift-product-edge-paid-pdp", PAID_PDP_EXACT_SPEC_CARDS[url.pathname] ? "true" : "false");
   headers.set("x-packrift-product-edge-exact-spec-pdp", PDP_EXACT_SPEC_CARDS[url.pathname] ? "true" : "false");
   headers.set("x-packrift-pdp-procurement-handoff", PDP_PROCUREMENT_RELEASE);
+  if (ctaRepair.repaired) {
+    headers.set("x-packrift-packaging-finder-cta", PACKRIFT_PACKAGING_FINDER_CTA_RELEASE);
+  }
   if (paidSkuRepair.repaired) {
     headers.set("x-packrift-paid-sku-note-repair", PAID_SKU_NOTE_REPAIR_RELEASE);
   }
-  return new Response(updated, { status: response.status, statusText: response.statusText, headers });
+  return new Response(ctaRepair.html, { status: response.status, statusText: response.statusText, headers });
 }
 
 const AI_CORPUS_ROUTES: Record<string, { key: string; contentType: string; bodyType?: "text" | "arrayBuffer" }> = {
@@ -14227,6 +14619,8 @@ const MCP_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/ai-plugin.json";
 const MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL = "https://mcp.packrift.com/.well-known/ai-plugin.json";
 const MCP_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/.well-known/agent.json";
 const MCP_ROOT_AGENT_WEB_MANIFEST_URL = "https://mcp.packrift.com/agent.json";
+const MCP_AGENT_MANIFEST_PROTOCOL_URL = "https://mcp.packrift.com/.well-known/agent-manifest.json";
+const MCP_ROOT_AGENT_MANIFEST_PROTOCOL_URL = "https://mcp.packrift.com/agent-manifest.json";
 const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability-card.json";
 const MCP_SOURCE_ACTIVATION_SITEMAP_URL = "https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml";
 const MCP_SOURCE_ACTIVATION_PACKET_RELEASE = "PACKRIFT-MCP-SOURCE-ACTIVATION-PACKET-R05";
@@ -14387,6 +14781,8 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/llms-full.txt",
   MCP_ROOT_AGENT_WEB_MANIFEST_URL,
   MCP_AGENT_WEB_MANIFEST_URL,
+  MCP_ROOT_AGENT_MANIFEST_PROTOCOL_URL,
+  MCP_AGENT_MANIFEST_PROTOCOL_URL,
   "https://mcp.packrift.com/mcp.json",
   MCP_OPENAPI_JSON_URL,
   MCP_WELL_KNOWN_OPENAPI_JSON_URL,
@@ -14508,6 +14904,117 @@ const AI_DISCOVERY_URLS = [
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.md",
   "https://mcp.packrift.com/ai/mcp-buyer-use-cases.html",
+  "https://mcp.packrift.com/ai/packrift-ai-packaging-finder.json",
+  "https://mcp.packrift.com/ai/packrift-ai-packaging-finder.md",
+  "https://mcp.packrift.com/ai/packrift-ai-packaging-finder.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json",
+  "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.md",
+  "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json",
+  "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.md",
+  "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.jsonl",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.csv",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.md",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.md",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js?source=curated_ucp_storefront&limit=12",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js?source=stack412_style_storefront&limit=12",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js?source=plugthatshop_style_embed&limit=12",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js?source=open_scout_shopping_agent&limit=12",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js?source=upsonic_ucp_agent_framework&limit=12",
+  "https://mcp.packrift.com/ai/packrift-ucp-shelf.js?source=agorio_shopping_agent_sdk&limit=12",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.md",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json",
+  "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.md",
+  "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.html",
+  "https://mcp.packrift.com/ai/packrift-uline-alternatives-authority-source.json",
+  "https://mcp.packrift.com/ai/packrift-uline-alternatives-authority-source.md",
+  "https://mcp.packrift.com/ai/packrift-uline-alternatives-authority-source.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/curated_ucp_storefront.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/curated_ucp_storefront.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/curated_ucp_storefront.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/curated_ucp_storefront.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/curated_ucp_storefront.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/curated_ucp_storefront.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/stack412_style_storefront.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/stack412_style_storefront.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/stack412_style_storefront.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/stack412_style_storefront.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/stack412_style_storefront.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/stack412_style_storefront.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/plugthatshop_style_embed.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/plugthatshop_style_embed.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/plugthatshop_style_embed.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/plugthatshop_style_embed.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/plugthatshop_style_embed.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/plugthatshop_style_embed.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/open_scout_shopping_agent.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/open_scout_shopping_agent.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/open_scout_shopping_agent.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/open_scout_shopping_agent.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/open_scout_shopping_agent.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/open_scout_shopping_agent.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/upsonic_ucp_agent_framework.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/upsonic_ucp_agent_framework.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/upsonic_ucp_agent_framework.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/upsonic_ucp_agent_framework.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/upsonic_ucp_agent_framework.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/upsonic_ucp_agent_framework.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/agorio_shopping_agent_sdk.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/agorio_shopping_agent_sdk.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/agorio_shopping_agent_sdk.html",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.json",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.md",
+  "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/curated_ucp_storefront.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/plugthatshop_style_embed.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/open_scout_shopping_agent.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/upsonic_ucp_agent_framework.html",
+  "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html",
   "https://mcp.packrift.com/ai/mcp-cart-activation.json",
   "https://mcp.packrift.com/ai/mcp-cart-activation.md",
   "https://mcp.packrift.com/ai/mcp-cart-activation.html",
@@ -14578,6 +15085,8 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/llms-full.txt": "Dense Packrift agent reference for packaging categories, tools, guides, and discovery links.",
   "/agent.json": "Agent Web Protocol manifest for Packrift's public MCP and exact-spec packaging procurement actions.",
   "/.well-known/agent.json": "Well-known Agent Web Protocol manifest for Packrift's public MCP and exact-spec packaging procurement actions.",
+  "/agent-manifest.json": "Agent Manifest Protocol manifest for Packrift MCP exact-spec packaging procurement.",
+  "/.well-known/agent-manifest.json": "Well-known Agent Manifest Protocol manifest for Packrift MCP exact-spec packaging procurement.",
   "/mcp.json": "Copy-ready remote MCP client config for installing Packrift MCP in common agent hosts.",
   "/openapi.json": "OpenAPI discovery adapter for legacy AI agents and crawlers that probe REST manifests before MCP.",
   "/.well-known/openapi.json": "Well-known OpenAPI discovery adapter for legacy AI agents and crawlers.",
@@ -14694,6 +15203,111 @@ const RESOURCE_DESCRIPTIONS: Record<string, string> = {
   "/ai/mcp-buyer-use-cases.json": "Machine-readable buyer-facing Packrift MCP use cases for exact SKU reorder, fit-by-dimensions, mailer selection, labels, no-match quote recovery, and procurement handoff.",
   "/ai/mcp-buyer-use-cases.md": "Crawler-readable buyer-facing Packrift MCP use-case map and starter prompts for qualified AI-commerce demand.",
   "/ai/mcp-buyer-use-cases.html": "Human-facing and browser-agent-readable Packrift MCP buyer use-case guide for qualified AI-commerce demand.",
+  "/ai/packrift-ai-packaging-finder.json": "Machine-readable Packrift AI Packaging Finder that maps buyer item dimensions and shipping use cases to source-attributed cart handoffs.",
+  "/ai/packrift-ai-packaging-finder.md": "Crawler-readable Packrift AI Packaging Finder instructions for dimension-fit recommendations, MCP live checks, and buyer-confirmed cart handoff.",
+  "/ai/packrift-ai-packaging-finder.html": "Human-facing Packrift AI Packaging Finder for turning item dimensions into measured Packrift cart handoffs.",
+  "/ai/mcp-ucp-starter-catalog.json": "Machine-readable Packrift starter catalog for curated UCP storefronts and shipping-supplies agentic storefront builders.",
+  "/ai/mcp-ucp-starter-catalog.md": "Crawler-readable Packrift starter catalog with UCP query recipes, source-aware MCP install links, and curated packaging bundles.",
+  "/ai/mcp-ucp-starter-catalog.html": "Human-facing Packrift UCP starter catalog for curated storefront builders and agentic-commerce shelf curators.",
+  "/ai/mcp-ucp-builder-kit.json": "Machine-readable Packrift UCP storefront builder integration kit with shelf placement rules, source-aware recipes, and MCP handoff sequences.",
+  "/ai/mcp-ucp-builder-kit.md": "Crawler-readable Packrift UCP storefront builder kit for making Packrift the default packaging shelf in curated storefronts and embeds.",
+  "/ai/mcp-ucp-builder-kit.html": "Human-facing Packrift UCP storefront builder kit for integrating packaging shelves, contextual embeds, and measured MCP cart handoff.",
+  "/ai/mcp-ucp-storefront-import.json": "Flat machine-readable Packrift UCP storefront import feed for adding packaging shelves to curated storefronts and embeds.",
+  "/ai/mcp-ucp-storefront-import.jsonl": "Flat JSONL Packrift UCP storefront import feed with one source-aware shelf/SKU row per line.",
+  "/ai/mcp-ucp-storefront-import.csv": "Spreadsheet-friendly Packrift UCP storefront import feed for no-code builders, storefront operators, and directory reviewers.",
+  "/ai/mcp-ucp-storefront-import.md": "Crawler-readable Packrift UCP storefront import feed with sample shelf rows and import rules.",
+  "/ai/mcp-ucp-storefront-import.html": "Human-facing Packrift UCP storefront import feed for builders adding Packrift as a packaging aisle.",
+  "/ai/mcp-ucp-storefront-shelf.json": "Copy-paste Packrift UCP storefront shelf payload with source-aware product cards and embed instructions.",
+  "/ai/mcp-ucp-storefront-shelf.md": "Crawler-readable Packrift UCP storefront shelf renderer guide with copy-paste embed snippets.",
+  "/ai/mcp-ucp-storefront-shelf.html": "Human-facing Packrift UCP storefront shelf preview for builders adding a packaging aisle.",
+  "/ai/packrift-ucp-shelf.js": "Copy-paste JavaScript renderer that adds a Packrift packaging shelf to curated UCP storefronts and embeds.",
+  "/ai/mcp-ucp-storefront-adoption.json": "Machine-readable source-aware Packrift UCP shelf adoption kit with demo URLs, one-line snippets, and attribution gates.",
+  "/ai/mcp-ucp-storefront-adoption.md": "Crawler-readable Packrift UCP shelf adoption kit for builders copying source-aware packaging shelves.",
+  "/ai/mcp-ucp-storefront-adoption.html": "Human-facing Packrift UCP shelf adoption kit with source-specific demos, snippets, and handoff links.",
+  "/ai/mcp-ucp-builder-activation-handoff.json": "Machine-readable Packrift UCP builder activation handoff with target-specific source slugs, one-line shelf scripts, approval-needed messages, and proof gates.",
+  "/ai/mcp-ucp-builder-activation-handoff.md": "Crawler-readable Packrift UCP builder activation handoff for curated storefront and embedded-shop operators.",
+  "/ai/mcp-ucp-builder-activation-handoff.html": "Human-facing Packrift UCP builder activation handoff with source-aware start links, demos, and outreach copy that requires owner approval before sending.",
+  "/ai/packrift-ucp-builder-launchpad.json": "Machine-readable self-serve Packrift UCP builder launchpad with source-specific embed, import, install, first-run, and order-handoff actions.",
+  "/ai/packrift-ucp-builder-launchpad.md": "Crawler-readable Packrift UCP builder launchpad for adding Packrift as the default source-aware packaging shelf.",
+  "/ai/packrift-ucp-builder-launchpad.html": "Human-facing Packrift UCP builder launchpad with copy-ready source-specific embed scripts, MCP first runs, and order handoffs.",
+  "/ai/packrift-ucp-builder-approval-packet.json": "Machine-readable owner-approval packet for turning Packrift UCP builder assets into source-specific external inclusion attempts.",
+  "/ai/packrift-ucp-builder-approval-packet.md": "Crawler-readable Packrift UCP builder approval packet with target copy, source-specific embed snippets, and proof gates.",
+  "/ai/packrift-ucp-builder-approval-packet.html": "Human-facing Packrift UCP builder approval packet for approving target-specific outreach and embed activation.",
+  "/ai/packrift-ucp-builder-integration-pack.json": "Machine-readable source-specific Packrift UCP builder integration pack with patch points, JSON-RPC first runs, source-aware MCP endpoints, and buyer-confirmed handoff templates.",
+  "/ai/packrift-ucp-builder-integration-pack.md": "Crawler-readable Packrift UCP builder integration pack for adding Packrift as the packaging source in curated storefronts, embeds, and shopping agents.",
+  "/ai/packrift-ucp-builder-integration-pack.html": "Human-facing Packrift UCP builder integration pack with copy-ready patch blocks, MCP smoke tests, and proof gates.",
+  "/ai/packrift-ucp-builder-pr-activation-pack.json": "Machine-readable public PR and discussion activation pack for adding Packrift to UCP builder repos, examples, and curated storefront discussions.",
+  "/ai/packrift-ucp-builder-pr-activation-pack.md": "Crawler-readable public PR and discussion activation pack for Packrift UCP builder inclusion requests.",
+  "/ai/packrift-ucp-builder-pr-activation-pack.html": "Human-facing public PR and discussion activation pack for getting Packrift pulled into UCP storefront and shopping-agent ecosystems.",
+  "/ai/packrift-ucp-shipping-supplies-starter-kit.json": "Machine-readable Packrift UCP shipping-supplies starter kit for copying Packrift into curated storefronts, agent SDKs, and embedded commerce examples.",
+  "/ai/packrift-ucp-shipping-supplies-starter-kit.md": "Crawler-readable Packrift UCP shipping-supplies starter kit with source slugs, copy blocks, first-run links, distribution targets, and proof gates.",
+  "/ai/packrift-ucp-shipping-supplies-starter-kit.html": "Human-facing Packrift UCP shipping-supplies starter kit for builders making Packrift the default packaging source.",
+  "/ai/packrift-ucp-shipping-supplies-storefront-template.json": "Machine-readable copy-ready shipping-supplies storefront template that uses Packrift as the source-aware packaging catalog.",
+  "/ai/packrift-ucp-shipping-supplies-storefront-template.md": "Crawler-readable Packrift shipping-supplies storefront template with standalone HTML, one-line shelf script, MCP first run, and buyer-confirmed handoff template.",
+  "/ai/packrift-ucp-shipping-supplies-storefront-template.html": "Live copy-ready Packrift shipping-supplies storefront scaffold for curated UCP and agentic storefront builders.",
+  "/ai/packrift-ucp-shipping-supplies-collection-map.json": "Machine-readable Packrift shipping-supplies collection route map for UCP and agentic storefront builders.",
+  "/ai/packrift-ucp-shipping-supplies-collection-map.md": "Crawler-readable Packrift shipping-supplies collection route map with live routes and approval-required collection gaps.",
+  "/ai/packrift-ucp-shipping-supplies-collection-map.html": "Human-facing Packrift shipping-supplies collection route map for adding Packrift shelves to curated storefronts.",
+  "/ai/packrift-uline-alternatives-authority-source.json": "Machine-readable Packrift Uline alternatives authority source pack with GSC opportunity data, buyer routes, and backlink count boundaries.",
+  "/ai/packrift-uline-alternatives-authority-source.md": "Crawler-readable Packrift Uline alternatives authority source pack for legitimate citations to the live comparison cluster.",
+  "/ai/packrift-uline-alternatives-authority-source.html": "Human-facing Packrift Uline alternatives authority source pack with current GSC demand and sales routes.",
+  "/ai/packrift-ucp-builder-sales-loop.json": "Machine-readable Packrift UCP builder sales loop that connects source selection, starter shelf adoption, MCP first run, buyer-confirmed handoff, and proof gates.",
+  "/ai/packrift-ucp-builder-sales-loop.md": "Crawler-readable Packrift UCP builder sales loop for making Packrift the default packaging source and proving external cart/order movement.",
+  "/ai/packrift-ucp-builder-sales-loop.html": "Human-facing Packrift UCP builder sales loop for curated storefront and shopping-agent builders.",
+  "/ai/packrift-ucp-stack412-shipping-supplies-aisle.json": "Machine-readable target-specific Packrift shipping-supplies aisle for Stack412-style curated UCP storefront operators.",
+  "/ai/packrift-ucp-stack412-shipping-supplies-aisle.md": "Crawler-readable Stack412-style Packrift shipping-supplies aisle with import filter, source-aware shelf script, MCP first run, and proof boundary.",
+  "/ai/packrift-ucp-stack412-shipping-supplies-aisle.html": "Human-facing Stack412-style Packrift shipping-supplies aisle for curated UCP storefront operators.",
+  "/ai/packrift-ucp-plugthatshop-contextual-shelf.json": "Machine-readable target-specific Packrift contextual shipping-supplies shelf for PlugThatShop-style embedded-shop builders.",
+  "/ai/packrift-ucp-plugthatshop-contextual-shelf.md": "Crawler-readable PlugThatShop-style Packrift contextual shipping shelf with import filter, source-aware shelf script, MCP first run, and proof boundary.",
+  "/ai/packrift-ucp-plugthatshop-contextual-shelf.html": "Human-facing PlugThatShop-style Packrift contextual shipping-supplies shelf for embedded-shop builders.",
+  "/ai/packrift-ucp-open-scout-shopping-agent-path.json": "Machine-readable target-specific Packrift packaging-source route for Open Scout-style shopping agents.",
+  "/ai/packrift-ucp-open-scout-shopping-agent-path.md": "Crawler-readable Open Scout-style Packrift packaging-source route with routing rule, MCP first run, and proof boundary.",
+  "/ai/packrift-ucp-open-scout-shopping-agent-path.html": "Human-facing Open Scout-style Packrift packaging-source route for shopping-agent builders.",
+  "/ai/packrift-ucp-upsonic-agent-workflow.json": "Machine-readable target-specific Packrift packaging workflow for Upsonic-style Shopify UCP agent frameworks.",
+  "/ai/packrift-ucp-upsonic-agent-workflow.md": "Crawler-readable Upsonic-style Packrift packaging workflow with agent chain, MCP first run, and proof boundary.",
+  "/ai/packrift-ucp-upsonic-agent-workflow.html": "Human-facing Upsonic-style Packrift packaging workflow for Shopify UCP agent-framework builders.",
+  "/ai/packrift-ucp-builder-approval-packet/curated_ucp_storefront.json": "Machine-readable approval packet for generic curated UCP storefront builders.",
+  "/ai/packrift-ucp-builder-approval-packet/curated_ucp_storefront.md": "Crawler-readable approval packet for generic curated UCP storefront builders.",
+  "/ai/packrift-ucp-builder-approval-packet/curated_ucp_storefront.html": "Human-facing approval packet for generic curated UCP storefront builders.",
+  "/ai/packrift-ucp-builder-integration-pack/curated_ucp_storefront.json": "Machine-readable integration pack for generic curated UCP storefront builders.",
+  "/ai/packrift-ucp-builder-integration-pack/curated_ucp_storefront.md": "Crawler-readable integration pack for generic curated UCP storefront builders.",
+  "/ai/packrift-ucp-builder-integration-pack/curated_ucp_storefront.html": "Human-facing integration pack for generic curated UCP storefront builders.",
+  "/ai/packrift-ucp-builder-approval-packet/stack412_style_storefront.json": "Machine-readable approval packet for Stack412-style curated storefront operators.",
+  "/ai/packrift-ucp-builder-approval-packet/stack412_style_storefront.md": "Crawler-readable approval packet for Stack412-style curated storefront operators.",
+  "/ai/packrift-ucp-builder-approval-packet/stack412_style_storefront.html": "Human-facing approval packet for Stack412-style curated storefront operators.",
+  "/ai/packrift-ucp-builder-integration-pack/stack412_style_storefront.json": "Machine-readable integration pack for Stack412-style curated storefront operators.",
+  "/ai/packrift-ucp-builder-integration-pack/stack412_style_storefront.md": "Crawler-readable integration pack for Stack412-style curated storefront operators.",
+  "/ai/packrift-ucp-builder-integration-pack/stack412_style_storefront.html": "Human-facing integration pack for Stack412-style curated storefront operators.",
+  "/ai/packrift-ucp-builder-approval-packet/plugthatshop_style_embed.json": "Machine-readable approval packet for PlugThatShop-style contextual embedded shop builders.",
+  "/ai/packrift-ucp-builder-approval-packet/plugthatshop_style_embed.md": "Crawler-readable approval packet for PlugThatShop-style contextual embedded shop builders.",
+  "/ai/packrift-ucp-builder-approval-packet/plugthatshop_style_embed.html": "Human-facing approval packet for PlugThatShop-style contextual embedded shop builders.",
+  "/ai/packrift-ucp-builder-integration-pack/plugthatshop_style_embed.json": "Machine-readable integration pack for PlugThatShop-style contextual embedded shop builders.",
+  "/ai/packrift-ucp-builder-integration-pack/plugthatshop_style_embed.md": "Crawler-readable integration pack for PlugThatShop-style contextual embedded shop builders.",
+  "/ai/packrift-ucp-builder-integration-pack/plugthatshop_style_embed.html": "Human-facing integration pack for PlugThatShop-style contextual embedded shop builders.",
+  "/ai/packrift-ucp-builder-approval-packet/open_scout_shopping_agent.json": "Machine-readable approval packet for Open Scout-style shopping agents that should route packaging intents to Packrift.",
+  "/ai/packrift-ucp-builder-approval-packet/open_scout_shopping_agent.md": "Crawler-readable approval packet for Open Scout-style shopping agents that should route packaging intents to Packrift.",
+  "/ai/packrift-ucp-builder-approval-packet/open_scout_shopping_agent.html": "Human-facing approval packet for Open Scout-style shopping agents that should route packaging intents to Packrift.",
+  "/ai/packrift-ucp-builder-integration-pack/open_scout_shopping_agent.json": "Machine-readable integration pack for Open Scout-style shopping agents routing packaging intents to Packrift.",
+  "/ai/packrift-ucp-builder-integration-pack/open_scout_shopping_agent.md": "Crawler-readable integration pack for Open Scout-style shopping agents routing packaging intents to Packrift.",
+  "/ai/packrift-ucp-builder-integration-pack/open_scout_shopping_agent.html": "Human-facing integration pack for Open Scout-style shopping agents routing packaging intents to Packrift.",
+  "/ai/packrift-ucp-builder-approval-packet/upsonic_ucp_agent_framework.json": "Machine-readable approval packet for Upsonic-style Shopify UCP agent frameworks using Packrift as a packaging workflow example.",
+  "/ai/packrift-ucp-builder-approval-packet/upsonic_ucp_agent_framework.md": "Crawler-readable approval packet for Upsonic-style Shopify UCP agent frameworks using Packrift as a packaging workflow example.",
+  "/ai/packrift-ucp-builder-approval-packet/upsonic_ucp_agent_framework.html": "Human-facing approval packet for Upsonic-style Shopify UCP agent frameworks using Packrift as a packaging workflow example.",
+  "/ai/packrift-ucp-builder-integration-pack/upsonic_ucp_agent_framework.json": "Machine-readable integration pack for Upsonic-style Shopify UCP agent frameworks using Packrift as a packaging workflow example.",
+  "/ai/packrift-ucp-builder-integration-pack/upsonic_ucp_agent_framework.md": "Crawler-readable integration pack for Upsonic-style Shopify UCP agent frameworks using Packrift as a packaging workflow example.",
+  "/ai/packrift-ucp-builder-integration-pack/upsonic_ucp_agent_framework.html": "Human-facing integration pack for Upsonic-style Shopify UCP agent frameworks using Packrift as a packaging workflow example.",
+  "/ai/packrift-ucp-builder-approval-packet/agorio_shopping_agent_sdk.json": "Machine-readable approval packet for Agorio shopping-agent SDK builders using Packrift as a packaging source example.",
+  "/ai/packrift-ucp-builder-approval-packet/agorio_shopping_agent_sdk.md": "Crawler-readable approval packet for Agorio shopping-agent SDK builders using Packrift as a packaging source example.",
+  "/ai/packrift-ucp-builder-approval-packet/agorio_shopping_agent_sdk.html": "Human-facing approval packet for Agorio shopping-agent SDK builders using Packrift as a packaging source example.",
+  "/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.json": "Machine-readable integration pack for Agorio ShoppingAgent and McpClient flows routing packaging intent to Packrift.",
+  "/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.md": "Crawler-readable integration pack for Agorio ShoppingAgent and McpClient flows routing packaging intent to Packrift.",
+  "/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.html": "Human-facing integration pack for Agorio ShoppingAgent and McpClient flows routing packaging intent to Packrift.",
+  "/ai/mcp-ucp-storefront-shelf-demo/curated_ucp_storefront.html": "Live source-aware Packrift UCP shelf demo for curated UCP storefronts.",
+  "/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html": "Live source-aware Packrift UCP shelf demo for Stack412-style storefronts.",
+  "/ai/mcp-ucp-storefront-shelf-demo/plugthatshop_style_embed.html": "Live source-aware Packrift UCP shelf demo for PlugThatShop-style embeds.",
+  "/ai/mcp-ucp-storefront-shelf-demo/open_scout_shopping_agent.html": "Live source-aware Packrift UCP shelf demo for Open Scout-style shopping agents.",
+  "/ai/mcp-ucp-storefront-shelf-demo/upsonic_ucp_agent_framework.html": "Live source-aware Packrift UCP shelf demo for Upsonic-style Shopify UCP agent frameworks.",
+  "/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html": "Live source-aware Packrift UCP shelf demo for Agorio shopping-agent SDK builders.",
   "/ai/mcp-cart-activation.json": "Machine-readable Packrift MCP cart activation playbook for turning exact buyer intent into measured /r/cart landings after live checks.",
   "/ai/mcp-cart-activation.md": "Crawler-readable Packrift MCP cart activation playbook with buyer prompts, JSON-RPC sequences, and measured cart landing rules.",
   "/ai/mcp-cart-activation.html": "Human-facing and browser-agent-readable Packrift MCP cart activation guide with live-check and measured handoff rules.",
@@ -15099,6 +15713,9 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/llms.txt") return llmsTxt;
   if (pathname === "/llms-full.txt") return llmsFullTxt;
   if (pathname === "/agent.json" || pathname === "/.well-known/agent.json") return JSON.stringify(agentWebManifest, null, 2);
+  if (pathname === "/agent-manifest.json" || pathname === "/.well-known/agent-manifest.json") {
+    return JSON.stringify(agentManifestProtocolManifest, null, 2);
+  }
   if (pathname === "/mcp.json") return JSON.stringify(mcpClientConfigPayload(clientConfigRuntime()).config, null, 2);
   if (pathname === "/openapi.json" || pathname === "/.well-known/openapi.json") {
     return JSON.stringify(mcpOpenApiPayload(), null, 2);
@@ -15275,6 +15892,108 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
   if (pathname === "/ai/mcp-buyer-use-cases.json") return JSON.stringify(mcpBuyerUseCasesPayload(buyerUseCasesRuntime()), null, 2);
   if (pathname === "/ai/mcp-buyer-use-cases.md") return mcpBuyerUseCasesMarkdown(buyerUseCasesRuntime());
   if (pathname === "/ai/mcp-buyer-use-cases.html") return mcpBuyerUseCasesHtml(buyerUseCasesRuntime());
+  if (pathname === "/ai/packrift-ai-packaging-finder.json") return JSON.stringify(packriftAiPackagingFinderPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ai-packaging-finder.md") return packriftAiPackagingFinderMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ai-packaging-finder.html") return packriftAiPackagingFinderHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-starter-catalog.json") return JSON.stringify(mcpUcpStarterCatalogPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/mcp-ucp-starter-catalog.md") return mcpUcpStarterCatalogMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-starter-catalog.html") return mcpUcpStarterCatalogHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-builder-kit.json") return JSON.stringify(mcpUcpBuilderKitPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/mcp-ucp-builder-kit.md") return mcpUcpBuilderKitMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-builder-kit.html") return mcpUcpBuilderKitHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-import.json") return JSON.stringify(mcpUcpStorefrontImportPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/mcp-ucp-storefront-import.jsonl") return mcpUcpStorefrontImportJsonl(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-import.csv") return mcpUcpStorefrontImportCsv(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-import.md") return mcpUcpStorefrontImportMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-import.html") return mcpUcpStorefrontImportHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-shelf.json") return JSON.stringify(mcpUcpStorefrontShelfPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/mcp-ucp-storefront-shelf.md") return mcpUcpStorefrontShelfMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-shelf.html") return mcpUcpStorefrontShelfHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-adoption.json") return JSON.stringify(mcpUcpStorefrontShelfAdoptionPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/mcp-ucp-storefront-adoption.md") return mcpUcpStorefrontShelfAdoptionMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-storefront-adoption.html") return mcpUcpStorefrontShelfAdoptionHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-builder-activation-handoff.json") return JSON.stringify(mcpUcpBuilderActivationHandoffPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/mcp-ucp-builder-activation-handoff.md") return mcpUcpBuilderActivationHandoffMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/mcp-ucp-builder-activation-handoff.html") return mcpUcpBuilderActivationHandoffHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-builder-launchpad.json") return JSON.stringify(packriftUcpBuilderLaunchpadPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-builder-launchpad.md") return packriftUcpBuilderLaunchpadMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-builder-launchpad.html") return packriftUcpBuilderLaunchpadHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-builder-approval-packet.json") return JSON.stringify(packriftUcpBuilderApprovalPacketPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-builder-approval-packet.md") return packriftUcpBuilderApprovalPacketMarkdown(ucpStarterCatalogRuntime()) ?? "";
+  if (pathname === "/ai/packrift-ucp-builder-approval-packet.html") return packriftUcpBuilderApprovalPacketHtml(ucpStarterCatalogRuntime()) ?? "";
+  if (pathname === "/ai/packrift-ucp-builder-integration-pack.json") return JSON.stringify(packriftUcpBuilderIntegrationPackPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-builder-integration-pack.md") return packriftUcpBuilderIntegrationPackMarkdown(ucpStarterCatalogRuntime()) ?? "";
+  if (pathname === "/ai/packrift-ucp-builder-integration-pack.html") return packriftUcpBuilderIntegrationPackHtml(ucpStarterCatalogRuntime()) ?? "";
+  if (pathname === "/ai/packrift-ucp-builder-pr-activation-pack.json") return JSON.stringify(packriftUcpBuilderPrActivationPackPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-builder-pr-activation-pack.md") return packriftUcpBuilderPrActivationPackMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-builder-pr-activation-pack.html") return packriftUcpBuilderPrActivationPackHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-starter-kit.json") return JSON.stringify(packriftUcpShippingSuppliesStarterKitPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-starter-kit.md") return packriftUcpShippingSuppliesStarterKitMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-starter-kit.html") return packriftUcpShippingSuppliesStarterKitHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-storefront-template.json") return JSON.stringify(packriftUcpShippingSuppliesStorefrontTemplatePayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-storefront-template.md") return packriftUcpShippingSuppliesStorefrontTemplateMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-storefront-template.html") return packriftUcpShippingSuppliesStorefrontTemplateHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-collection-map.json") return JSON.stringify(packriftUcpShippingSuppliesCollectionMapPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-collection-map.md") return packriftUcpShippingSuppliesCollectionMapMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-shipping-supplies-collection-map.html") return packriftUcpShippingSuppliesCollectionMapHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-uline-alternatives-authority-source.json") return JSON.stringify(packriftUlineAuthoritySourcePayload(), null, 2);
+  if (pathname === "/ai/packrift-uline-alternatives-authority-source.md") return packriftUlineAuthoritySourceMarkdown();
+  if (pathname === "/ai/packrift-uline-alternatives-authority-source.html") return packriftUlineAuthoritySourceHtml();
+  if (pathname === "/ai/packrift-ucp-builder-sales-loop.json") return JSON.stringify(packriftUcpBuilderSalesLoopPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-builder-sales-loop.md") return packriftUcpBuilderSalesLoopMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-builder-sales-loop.html") return packriftUcpBuilderSalesLoopHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-stack412-shipping-supplies-aisle.json") return JSON.stringify(packriftUcpStack412ShippingSuppliesAislePayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-stack412-shipping-supplies-aisle.md") return packriftUcpStack412ShippingSuppliesAisleMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-stack412-shipping-supplies-aisle.html") return packriftUcpStack412ShippingSuppliesAisleHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-plugthatshop-contextual-shelf.json") return JSON.stringify(packriftUcpPlugThatShopContextualShelfPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-plugthatshop-contextual-shelf.md") return packriftUcpPlugThatShopContextualShelfMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-plugthatshop-contextual-shelf.html") return packriftUcpPlugThatShopContextualShelfHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-open-scout-shopping-agent-path.json") return JSON.stringify(packriftUcpOpenScoutShoppingAgentPathPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-open-scout-shopping-agent-path.md") return packriftUcpOpenScoutShoppingAgentPathMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-open-scout-shopping-agent-path.html") return packriftUcpOpenScoutShoppingAgentPathHtml(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-upsonic-agent-workflow.json") return JSON.stringify(packriftUcpUpsonicAgentWorkflowPayload(ucpStarterCatalogRuntime()), null, 2);
+  if (pathname === "/ai/packrift-ucp-upsonic-agent-workflow.md") return packriftUcpUpsonicAgentWorkflowMarkdown(ucpStarterCatalogRuntime());
+  if (pathname === "/ai/packrift-ucp-upsonic-agent-workflow.html") return packriftUcpUpsonicAgentWorkflowHtml(ucpStarterCatalogRuntime());
+  const approvalPacketMatch = pathname.match(/^\/ai\/packrift-ucp-builder-approval-packet\/([a-z0-9_]+)\.(json|md|html)$/);
+  if (approvalPacketMatch?.[1]) {
+    const source = approvalPacketMatch[1];
+    const format = approvalPacketMatch[2] ?? "json";
+    if (format === "json") {
+      const payload = packriftUcpBuilderApprovalPacketPayload(ucpStarterCatalogRuntime(), source);
+      if (payload) return JSON.stringify(payload, null, 2);
+    }
+    if (format === "md") {
+      const body = packriftUcpBuilderApprovalPacketMarkdown(ucpStarterCatalogRuntime(), source);
+      if (body) return body;
+    }
+    if (format === "html") {
+      const body = packriftUcpBuilderApprovalPacketHtml(ucpStarterCatalogRuntime(), source);
+      if (body) return body;
+    }
+  }
+  const integrationPackMatch = pathname.match(/^\/ai\/packrift-ucp-builder-integration-pack\/([a-z0-9_]+)\.(json|md|html)$/);
+  if (integrationPackMatch?.[1]) {
+    const source = integrationPackMatch[1];
+    const format = integrationPackMatch[2] ?? "json";
+    if (format === "json") {
+      const payload = packriftUcpBuilderIntegrationPackPayload(ucpStarterCatalogRuntime(), source);
+      if (payload) return JSON.stringify(payload, null, 2);
+    }
+    if (format === "md") {
+      const body = packriftUcpBuilderIntegrationPackMarkdown(ucpStarterCatalogRuntime(), source);
+      if (body) return body;
+    }
+    if (format === "html") {
+      const body = packriftUcpBuilderIntegrationPackHtml(ucpStarterCatalogRuntime(), source);
+      if (body) return body;
+    }
+  }
+  const shelfDemoMatch = pathname.match(/^\/ai\/mcp-ucp-storefront-shelf-demo\/([a-z0-9_]+)\.html$/);
+  if (shelfDemoMatch?.[1]) {
+    const body = mcpUcpStorefrontShelfDemoHtml(ucpStarterCatalogRuntime(), shelfDemoMatch[1]);
+    if (body) return body;
+  }
+  if (pathname === "/ai/packrift-ucp-shelf.js") return mcpUcpStorefrontShelfEmbedJs(ucpStarterCatalogRuntime());
   if (pathname === "/ai/mcp-cart-activation.json") return JSON.stringify(mcpCartActivationPayload(cartActivationRuntime()), null, 2);
   if (pathname === "/ai/mcp-cart-activation.md") return mcpCartActivationMarkdown(cartActivationRuntime());
   if (pathname === "/ai/mcp-cart-activation.html") return mcpCartActivationHtml(cartActivationRuntime());
@@ -15775,6 +16494,24 @@ function mcpOpenApiPayload() {
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       agent_adoption_progress: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      ucp_starter_catalog: "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json",
+      ucp_builder_kit: "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json",
+      ucp_storefront_import: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json",
+      ucp_storefront_shelf: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json",
+      ucp_storefront_shelf_embed_js: "https://mcp.packrift.com/ai/packrift-ucp-shelf.js",
+      ucp_storefront_adoption: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json",
+      ucp_builder_activation_handoff: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json",
+      ucp_builder_launchpad: "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json",
+      ucp_builder_approval_packet: "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json",
+      ucp_builder_integration_pack: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json",
+      ucp_shipping_supplies_starter_kit: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json",
+      ucp_shipping_supplies_storefront_template: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json",
+      ucp_builder_sales_loop: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json",
+      ucp_stack412_shipping_supplies_aisle: "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.json",
+      ucp_plugthatshop_contextual_shelf: "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.json",
+      ucp_open_scout_shopping_agent_path: "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.json",
+      ucp_upsonic_agent_workflow: "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.json",
+      ucp_storefront_shelf_demo_template: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/{source}.html",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       ga4_funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
@@ -15873,6 +16610,149 @@ function mcpOpenApiPayload() {
           operationId: "getPackriftMcpBuyerUseCases",
           summary: "Read buyer-facing Packrift MCP use cases",
           responses: { "200": openApiJsonResponse("Buyer intent workflows for exact SKU, fit, labels, mailers, and no-match recovery") },
+        },
+      },
+      "/ai/mcp-ucp-starter-catalog.json": {
+        get: {
+          operationId: "getPackriftMcpUcpStarterCatalog",
+          summary: "Read Packrift UCP storefront starter catalog",
+          responses: { "200": openApiJsonResponse("Curated UCP storefront packaging bundles, source-aware install links, UCP query recipes, and purchase-ready starter SKUs") },
+        },
+      },
+      "/ai/mcp-ucp-builder-kit.json": {
+        get: {
+          operationId: "getPackriftMcpUcpBuilderKit",
+          summary: "Read Packrift UCP storefront builder integration kit",
+          responses: { "200": openApiJsonResponse("Builder-facing shelf placement rules, source-aware integration recipes, import contract, and MCP activation sequences") },
+        },
+      },
+      "/ai/mcp-ucp-storefront-import.json": {
+        get: {
+          operationId: "getPackriftMcpUcpStorefrontImport",
+          summary: "Read flat Packrift UCP storefront import feed",
+          responses: { "200": openApiJsonResponse("Flat source-aware shelf/SKU rows for curated UCP storefronts, embeds, and no-code import workflows") },
+        },
+      },
+      "/ai/mcp-ucp-storefront-shelf.json": {
+        get: {
+          operationId: "getPackriftMcpUcpStorefrontShelf",
+          summary: "Read Packrift UCP storefront shelf renderer payload",
+          responses: { "200": openApiJsonResponse("Copy-paste source-aware Packrift shelf payload, embed snippet, and product-card groups for curated UCP storefronts") },
+        },
+      },
+      "/ai/mcp-ucp-storefront-adoption.json": {
+        get: {
+          operationId: "getPackriftMcpUcpStorefrontAdoptionKit",
+          summary: "Read Packrift UCP storefront adoption kit",
+          responses: { "200": openApiJsonResponse("Source-aware shelf adoption snippets, demo URLs, and attribution gates for curated UCP storefront builders") },
+        },
+      },
+      "/ai/mcp-ucp-builder-activation-handoff.json": {
+        get: {
+          operationId: "getPackriftMcpUcpBuilderActivationHandoff",
+          summary: "Read Packrift UCP builder activation handoff",
+          responses: { "200": openApiJsonResponse("Target-specific UCP builder handoff with source slugs, one-line shelf scripts, approval-needed messages, and proof gates") },
+        },
+      },
+      "/ai/packrift-ucp-builder-launchpad.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderLaunchpad",
+          summary: "Read Packrift UCP builder launchpad",
+          responses: { "200": openApiJsonResponse("Source-specific embed, import, install, first-run, and order-handoff actions for UCP storefront builders") },
+        },
+      },
+      "/ai/packrift-ucp-builder-approval-packet.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderApprovalPacket",
+          summary: "Read Packrift UCP builder approval packet",
+          responses: { "200": openApiJsonResponse("Owner-approval packet with target-specific send copy, source-aware embed snippets, first-run links, order handoffs, and proof gates") },
+        },
+      },
+      "/ai/packrift-ucp-builder-integration-pack.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderIntegrationPack",
+          summary: "Read Packrift UCP builder integration pack",
+          responses: { "200": openApiJsonResponse("Source-specific patch blocks, MCP smoke tests, source-aware endpoints, and buyer-confirmed handoff templates for UCP builder adoption") },
+        },
+      },
+      "/ai/packrift-ucp-builder-pr-activation-pack.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderPrActivationPack",
+          summary: "Read Packrift UCP builder PR activation pack",
+          responses: { "200": openApiJsonResponse("Public PR, listing, issue-comment, and direct-builder activation targets for getting Packrift pulled into UCP storefront and shopping-agent ecosystems") },
+        },
+      },
+      "/ai/packrift-ucp-shipping-supplies-starter-kit.json": {
+        get: {
+          operationId: "getPackriftUcpShippingSuppliesStarterKit",
+          summary: "Read Packrift UCP shipping-supplies starter kit",
+          responses: { "200": openApiJsonResponse("Copy-ready starter kit with source slugs, embed snippets, import feed, first-run links, distribution targets, and proof gates for making Packrift the default packaging source") },
+        },
+      },
+      "/ai/packrift-ucp-shipping-supplies-storefront-template.json": {
+        get: {
+          operationId: "getPackriftUcpShippingSuppliesStorefrontTemplate",
+          summary: "Read Packrift UCP shipping-supplies storefront template",
+          responses: { "200": openApiJsonResponse("Copy-ready shipping-supplies storefront scaffold with Packrift shelf embed, MCP first run, and buyer-confirmed handoff template") },
+        },
+      },
+      "/ai/packrift-ucp-builder-sales-loop.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderSalesLoop",
+          summary: "Read Packrift UCP builder sales loop",
+          responses: { "200": openApiJsonResponse("Source-specific adoption loop that connects Packrift starter shelves, MCP first runs, buyer-confirmed handoff templates, and source-attributed sales proof gates") },
+        },
+      },
+      "/ai/packrift-ucp-stack412-shipping-supplies-aisle.json": {
+        get: {
+          operationId: "getPackriftUcpStack412ShippingSuppliesAisle",
+          summary: "Read Stack412-style Packrift UCP shipping-supplies aisle",
+          responses: { "200": openApiJsonResponse("Target-specific shipping-supplies aisle with import filter, source-aware shelf script, MCP first run, and buyer-confirmed handoff template") },
+        },
+      },
+      "/ai/packrift-ucp-plugthatshop-contextual-shelf.json": {
+        get: {
+          operationId: "getPackriftUcpPlugThatShopContextualShelf",
+          summary: "Read PlugThatShop-style Packrift contextual shipping-supplies shelf",
+          responses: { "200": openApiJsonResponse("Target-specific contextual embedded shelf with import filter, source-aware shelf script, MCP first run, and buyer-confirmed handoff template") },
+        },
+      },
+      "/ai/packrift-ucp-open-scout-shopping-agent-path.json": {
+        get: {
+          operationId: "getPackriftUcpOpenScoutShoppingAgentPath",
+          summary: "Read Open Scout-style Packrift shopping-agent packaging route",
+          responses: { "200": openApiJsonResponse("Target-specific shopping-agent route with packaging intent policy, source-aware MCP endpoint, first-run calls, and buyer-confirmed handoff template") },
+        },
+      },
+      "/ai/packrift-ucp-upsonic-agent-workflow.json": {
+        get: {
+          operationId: "getPackriftUcpUpsonicAgentWorkflow",
+          summary: "Read Upsonic-style Packrift packaging agent workflow",
+          responses: { "200": openApiJsonResponse("Target-specific UCP agent-framework workflow with intent analysis, exact-spec filtering, live checks, and buyer-confirmed handoff template") },
+        },
+      },
+      "/ai/packrift-ucp-builder-approval-packet/{source}.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderApprovalPacketBySource",
+          summary: "Read one source-specific Packrift UCP builder approval packet",
+          parameters: [sourceParam],
+          responses: { "200": openApiJsonResponse("One source-specific owner-approval packet for a curated UCP storefront or embedded-shop builder") },
+        },
+      },
+      "/ai/packrift-ucp-builder-integration-pack/{source}.json": {
+        get: {
+          operationId: "getPackriftUcpBuilderIntegrationPackBySource",
+          summary: "Read one source-specific Packrift UCP builder integration pack",
+          parameters: [sourceParam],
+          responses: { "200": openApiJsonResponse("One source-specific integration pack for a curated UCP storefront, embedded-shop builder, or shopping-agent framework") },
+        },
+      },
+      "/ai/mcp-ucp-storefront-shelf-demo/{source}.html": {
+        get: {
+          operationId: "getPackriftMcpUcpStorefrontShelfDemo",
+          summary: "Read source-aware Packrift UCP storefront shelf demo",
+          parameters: [sourceParam],
+          responses: { "200": openApiJsonResponse("Live source-aware Packrift shelf demo page with copy-ready embed snippet") },
         },
       },
       "/ai/mcp-cart-activation.json": {
@@ -16039,6 +16919,20 @@ function mcpAiPluginDiscoveryPayload() {
       tool_discovery: MCP_TOOL_DISCOVERY_JSON_URL,
       client_config: "https://mcp.packrift.com/ai/mcp-client-config.json",
       buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      ucp_starter_catalog: "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json",
+      ucp_builder_kit: "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json",
+      ucp_storefront_import: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json",
+      ucp_storefront_shelf: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json",
+      ucp_storefront_shelf_embed_js: "https://mcp.packrift.com/ai/packrift-ucp-shelf.js",
+      ucp_storefront_adoption: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json",
+      ucp_builder_activation_handoff: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json",
+      ucp_builder_launchpad: "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json",
+      ucp_builder_approval_packet: "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json",
+      ucp_builder_integration_pack: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json",
+      ucp_shipping_supplies_starter_kit: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json",
+      ucp_shipping_supplies_storefront_template: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json",
+      ucp_builder_sales_loop: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json",
+      ucp_storefront_shelf_demo_template: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/{source}.html",
       cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       funnel_proof: "https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json",
       agent_adoption_progress: "https://mcp.packrift.com/ai/mcp-agent-adoption-progress.json",
@@ -16151,6 +17045,65 @@ function mcpManifestPayload() {
       mcp_external_activation_brief_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
       mcp_activation_command_center: "https://mcp.packrift.com/r/activate",
     mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+    mcp_ucp_starter_catalog: "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json",
+    mcp_ucp_starter_catalog_markdown: "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.md",
+    mcp_ucp_starter_catalog_html: "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.html",
+    mcp_ucp_builder_kit: "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json",
+    mcp_ucp_builder_kit_markdown: "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.md",
+    mcp_ucp_builder_kit_html: "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.html",
+    mcp_ucp_storefront_import: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json",
+    mcp_ucp_storefront_import_jsonl: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.jsonl",
+    mcp_ucp_storefront_import_csv: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.csv",
+    mcp_ucp_storefront_import_markdown: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.md",
+    mcp_ucp_storefront_import_html: "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.html",
+    mcp_ucp_storefront_shelf: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json",
+    mcp_ucp_storefront_shelf_markdown: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.md",
+    mcp_ucp_storefront_shelf_html: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.html",
+    mcp_ucp_storefront_shelf_embed_js: "https://mcp.packrift.com/ai/packrift-ucp-shelf.js",
+    mcp_ucp_storefront_adoption: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json",
+    mcp_ucp_storefront_adoption_markdown: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.md",
+    mcp_ucp_storefront_adoption_html: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.html",
+    mcp_ucp_builder_activation_handoff: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json",
+    mcp_ucp_builder_activation_handoff_markdown: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.md",
+    mcp_ucp_builder_activation_handoff_html: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.html",
+    packrift_ucp_builder_launchpad: "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json",
+    packrift_ucp_builder_launchpad_markdown: "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.md",
+    packrift_ucp_builder_launchpad_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.html",
+    packrift_ucp_builder_approval_packet: "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json",
+    packrift_ucp_builder_approval_packet_markdown: "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.md",
+    packrift_ucp_builder_approval_packet_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.html",
+    packrift_ucp_builder_approval_packet_template: "https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet/{source}.html",
+    packrift_ucp_builder_integration_pack: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json",
+    packrift_ucp_builder_integration_pack_markdown: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.md",
+    packrift_ucp_builder_integration_pack_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.html",
+    packrift_ucp_builder_integration_pack_template: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/{source}.html",
+    packrift_ucp_builder_pr_activation_pack: "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json",
+    packrift_ucp_builder_pr_activation_pack_markdown: "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.md",
+    packrift_ucp_builder_pr_activation_pack_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.html",
+    packrift_ucp_shipping_supplies_starter_kit: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json",
+    packrift_ucp_shipping_supplies_starter_kit_markdown: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.md",
+    packrift_ucp_shipping_supplies_starter_kit_html: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.html",
+    packrift_ucp_shipping_supplies_storefront_template: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json",
+    packrift_ucp_shipping_supplies_storefront_template_markdown: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.md",
+    packrift_ucp_shipping_supplies_storefront_template_html: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.html",
+    packrift_ucp_builder_sales_loop: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json",
+    packrift_ucp_builder_sales_loop_markdown: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.md",
+    packrift_ucp_builder_sales_loop_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.html",
+    packrift_ucp_stack412_shipping_supplies_aisle: "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.json",
+    packrift_ucp_stack412_shipping_supplies_aisle_markdown: "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.md",
+    packrift_ucp_stack412_shipping_supplies_aisle_html: "https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.html",
+    packrift_ucp_plugthatshop_contextual_shelf: "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.json",
+    packrift_ucp_plugthatshop_contextual_shelf_markdown: "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.md",
+    packrift_ucp_plugthatshop_contextual_shelf_html: "https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.html",
+    packrift_ucp_open_scout_shopping_agent_path: "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.json",
+    packrift_ucp_open_scout_shopping_agent_path_markdown: "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.md",
+    packrift_ucp_open_scout_shopping_agent_path_html: "https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.html",
+    packrift_ucp_upsonic_agent_workflow: "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.json",
+    packrift_ucp_upsonic_agent_workflow_markdown: "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.md",
+    packrift_ucp_upsonic_agent_workflow_html: "https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.html",
+    mcp_ucp_storefront_shelf_demo_template: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/{source}.html",
+    mcp_ucp_storefront_shelf_demo_stack412: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html",
+    mcp_ucp_storefront_shelf_demo_agorio: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html",
     mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
     mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
     mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
@@ -16361,6 +17314,15 @@ function buyerUseCasesRuntime() {
 }
 
 function cartActivationRuntime() {
+  return {
+    serverVersion: serverCard.version,
+    toolsCount: TOOLS.length,
+    resourcesCount: MCP_RESOURCES.length,
+    promptsCount: PROMPTS.length,
+  };
+}
+
+function ucpStarterCatalogRuntime() {
   return {
     serverVersion: serverCard.version,
     toolsCount: TOOLS.length,
@@ -16963,6 +17925,21 @@ function mcpMarketplaceDiscoveryPayload() {
       mcp_external_activation_brief_tasks_compact_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
       mcp_external_activation_brief_tasks_compact_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
       mcp_buyer_use_cases: "https://mcp.packrift.com/ai/mcp-buyer-use-cases.json",
+      mcp_ucp_storefront_adoption: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json",
+      mcp_ucp_storefront_adoption_html: "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.html",
+      mcp_ucp_builder_activation_handoff: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json",
+      mcp_ucp_builder_activation_handoff_html: "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.html",
+      packrift_ucp_builder_integration_pack: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json",
+      packrift_ucp_builder_integration_pack_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.html",
+      packrift_ucp_builder_pr_activation_pack: "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json",
+      packrift_ucp_builder_pr_activation_pack_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.html",
+      packrift_ucp_shipping_supplies_starter_kit: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json",
+      packrift_ucp_shipping_supplies_starter_kit_html: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.html",
+      packrift_ucp_shipping_supplies_storefront_template: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json",
+      packrift_ucp_shipping_supplies_storefront_template_html: "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.html",
+      packrift_ucp_builder_sales_loop: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json",
+      packrift_ucp_builder_sales_loop_html: "https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.html",
+      mcp_ucp_storefront_shelf_demo_template: "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/{source}.html",
       mcp_cart_activation: "https://mcp.packrift.com/ai/mcp-cart-activation.json",
       mcp_first_run_proof: "https://mcp.packrift.com/ai/mcp-first-run-proof.json",
       mcp_workflow_gallery: "https://mcp.packrift.com/ai/mcp-workflow-gallery.json",
@@ -18004,6 +18981,36 @@ app.get("/.well-known/agent.json", async (c) => {
   );
 });
 
+app.get("/agent-manifest.json", async (c) => {
+  await recordGeneratedAiResourceFetch(
+    c,
+    "/agent-manifest.json",
+    "agent_manifest_protocol_manifest",
+    jsonByteSize(agentManifestProtocolManifest)
+  );
+  return cachedStaticTextResponse(
+    c,
+    "agent-manifest.json",
+    JSON.stringify(agentManifestProtocolManifest, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
+app.get("/.well-known/agent-manifest.json", async (c) => {
+  await recordGeneratedAiResourceFetch(
+    c,
+    "/.well-known/agent-manifest.json",
+    "agent_manifest_protocol_manifest",
+    jsonByteSize(agentManifestProtocolManifest)
+  );
+  return cachedStaticTextResponse(
+    c,
+    "agent-manifest.json",
+    JSON.stringify(agentManifestProtocolManifest, null, 2),
+    "application/json; charset=utf-8"
+  );
+});
+
 app.get("/.well-known/mcp/server-card.json", (c) =>
   cachedStaticTextResponse(
     c,
@@ -18999,6 +20006,683 @@ app.get("/ai/mcp-buyer-use-cases.html", async (c) => {
   });
 });
 
+app.get("/ai/packrift-ai-packaging-finder.json", async (c) => {
+  const payload = packriftAiPackagingFinderPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ai-packaging-finder.json", "packrift_ai_packaging_finder", jsonByteSize(payload), {
+    sourceSlug: "owned_packrift_finder",
+    utmMedium: "owned_agentic_finder",
+    utmCampaign: "packrift_ai_packaging_finder_20260627",
+    utmContent: "json_resource",
+    mcpKeyPrefix: "ai_packaging_finder",
+  });
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ai-packaging-finder.md", async (c) => {
+  const body = packriftAiPackagingFinderMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ai-packaging-finder.md", "packrift_ai_packaging_finder", jsonByteSize(body), {
+    sourceSlug: "owned_packrift_finder",
+    utmMedium: "owned_agentic_finder",
+    utmCampaign: "packrift_ai_packaging_finder_20260627",
+    utmContent: "markdown_resource",
+    mcpKeyPrefix: "ai_packaging_finder",
+  });
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ai-packaging-finder.html", async (c) => {
+  const body = packriftAiPackagingFinderHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ai-packaging-finder.html", "packrift_ai_packaging_finder", jsonByteSize(body), {
+    sourceSlug: "owned_packrift_finder",
+    utmMedium: "owned_agentic_finder",
+    utmCampaign: "packrift_ai_packaging_finder_20260627",
+    utmContent: "html_resource",
+    mcpKeyPrefix: "ai_packaging_finder",
+  });
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-starter-catalog.json", async (c) => {
+  const payload = mcpUcpStarterCatalogPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-starter-catalog.json", "mcp_ucp_starter_catalog", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ucp-starter-catalog.md", async (c) => {
+  const body = mcpUcpStarterCatalogMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-starter-catalog.md", "mcp_ucp_starter_catalog", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-starter-catalog.html", async (c) => {
+  const body = mcpUcpStarterCatalogHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-starter-catalog.html", "mcp_ucp_starter_catalog", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-builder-kit.json", async (c) => {
+  const payload = mcpUcpBuilderKitPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-builder-kit.json", "mcp_ucp_builder_kit", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ucp-builder-kit.md", async (c) => {
+  const body = mcpUcpBuilderKitMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-builder-kit.md", "mcp_ucp_builder_kit", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-builder-kit.html", async (c) => {
+  const body = mcpUcpBuilderKitHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-builder-kit.html", "mcp_ucp_builder_kit", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-import.json", async (c) => {
+  const payload = mcpUcpStorefrontImportPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-import.json", "mcp_ucp_storefront_import", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ucp-storefront-import.jsonl", async (c) => {
+  const body = mcpUcpStorefrontImportJsonl(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-import.jsonl", "mcp_ucp_storefront_import", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-import.csv", async (c) => {
+  const body = mcpUcpStorefrontImportCsv(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-import.csv", "mcp_ucp_storefront_import", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/csv; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-import.md", async (c) => {
+  const body = mcpUcpStorefrontImportMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-import.md", "mcp_ucp_storefront_import", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-import.html", async (c) => {
+  const body = mcpUcpStorefrontImportHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-import.html", "mcp_ucp_storefront_import", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-shelf.json", async (c) => {
+  const payload = mcpUcpStorefrontShelfPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-shelf.json", "mcp_ucp_storefront_shelf", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ucp-storefront-shelf.md", async (c) => {
+  const body = mcpUcpStorefrontShelfMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-shelf.md", "mcp_ucp_storefront_shelf", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-shelf.html", async (c) => {
+  const body = mcpUcpStorefrontShelfHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-shelf.html", "mcp_ucp_storefront_shelf", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-adoption.json", async (c) => {
+  const payload = mcpUcpStorefrontShelfAdoptionPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-adoption.json", "mcp_ucp_storefront_adoption", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ucp-storefront-adoption.md", async (c) => {
+  const body = mcpUcpStorefrontShelfAdoptionMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-adoption.md", "mcp_ucp_storefront_adoption", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-adoption.html", async (c) => {
+  const body = mcpUcpStorefrontShelfAdoptionHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-storefront-adoption.html", "mcp_ucp_storefront_adoption", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-builder-activation-handoff.json", async (c) => {
+  const payload = mcpUcpBuilderActivationHandoffPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-builder-activation-handoff.json", "mcp_ucp_builder_activation_handoff", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/mcp-ucp-builder-activation-handoff.md", async (c) => {
+  const body = mcpUcpBuilderActivationHandoffMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-builder-activation-handoff.md", "mcp_ucp_builder_activation_handoff", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-builder-activation-handoff.html", async (c) => {
+  const body = mcpUcpBuilderActivationHandoffHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/mcp-ucp-builder-activation-handoff.html", "mcp_ucp_builder_activation_handoff", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-launchpad.json", async (c) => {
+  const payload = packriftUcpBuilderLaunchpadPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-launchpad.json", "packrift_ucp_builder_launchpad", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-builder-launchpad.md", async (c) => {
+  const body = packriftUcpBuilderLaunchpadMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-launchpad.md", "packrift_ucp_builder_launchpad", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-launchpad.html", async (c) => {
+  const body = packriftUcpBuilderLaunchpadHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-launchpad.html", "packrift_ucp_builder_launchpad", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-approval-packet.json", async (c) => {
+  const payload = packriftUcpBuilderApprovalPacketPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-approval-packet.json", "packrift_ucp_builder_approval_packet", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-builder-approval-packet.md", async (c) => {
+  const body = packriftUcpBuilderApprovalPacketMarkdown(ucpStarterCatalogRuntime()) ?? "";
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-approval-packet.md", "packrift_ucp_builder_approval_packet", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-approval-packet.html", async (c) => {
+  const body = packriftUcpBuilderApprovalPacketHtml(ucpStarterCatalogRuntime()) ?? "";
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-approval-packet.html", "packrift_ucp_builder_approval_packet", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-integration-pack.json", async (c) => {
+  const payload = packriftUcpBuilderIntegrationPackPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-integration-pack.json", "packrift_ucp_builder_integration_pack", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-builder-integration-pack.md", async (c) => {
+  const body = packriftUcpBuilderIntegrationPackMarkdown(ucpStarterCatalogRuntime()) ?? "";
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-integration-pack.md", "packrift_ucp_builder_integration_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-integration-pack.html", async (c) => {
+  const body = packriftUcpBuilderIntegrationPackHtml(ucpStarterCatalogRuntime()) ?? "";
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-integration-pack.html", "packrift_ucp_builder_integration_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-pr-activation-pack.json", async (c) => {
+  const payload = packriftUcpBuilderPrActivationPackPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-pr-activation-pack.json", "packrift_ucp_builder_pr_activation_pack", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-builder-pr-activation-pack.md", async (c) => {
+  const body = packriftUcpBuilderPrActivationPackMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-pr-activation-pack.md", "packrift_ucp_builder_pr_activation_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-pr-activation-pack.html", async (c) => {
+  const body = packriftUcpBuilderPrActivationPackHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-pr-activation-pack.html", "packrift_ucp_builder_pr_activation_pack", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-starter-kit.json", async (c) => {
+  const payload = packriftUcpShippingSuppliesStarterKitPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-starter-kit.json", "packrift_ucp_shipping_supplies_starter_kit", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-starter-kit.md", async (c) => {
+  const body = packriftUcpShippingSuppliesStarterKitMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-starter-kit.md", "packrift_ucp_shipping_supplies_starter_kit", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-starter-kit.html", async (c) => {
+  const body = packriftUcpShippingSuppliesStarterKitHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-starter-kit.html", "packrift_ucp_shipping_supplies_starter_kit", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-storefront-template.json", async (c) => {
+  const payload = packriftUcpShippingSuppliesStorefrontTemplatePayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-storefront-template.json", "packrift_ucp_shipping_supplies_storefront_template", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-storefront-template.md", async (c) => {
+  const body = packriftUcpShippingSuppliesStorefrontTemplateMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-storefront-template.md", "packrift_ucp_shipping_supplies_storefront_template", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-storefront-template.html", async (c) => {
+  const body = packriftUcpShippingSuppliesStorefrontTemplateHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-storefront-template.html", "packrift_ucp_shipping_supplies_storefront_template", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-collection-map.json", async (c) => {
+  const payload = packriftUcpShippingSuppliesCollectionMapPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-collection-map.json", "packrift_ucp_shipping_supplies_collection_map", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-collection-map.md", async (c) => {
+  const body = packriftUcpShippingSuppliesCollectionMapMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-collection-map.md", "packrift_ucp_shipping_supplies_collection_map", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shipping-supplies-collection-map.html", async (c) => {
+  const body = packriftUcpShippingSuppliesCollectionMapHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shipping-supplies-collection-map.html", "packrift_ucp_shipping_supplies_collection_map", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-uline-alternatives-authority-source.json", async (c) => {
+  const payload = packriftUlineAuthoritySourcePayload();
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-uline-alternatives-authority-source.json", "packrift_uline_authority_source", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-uline-alternatives-authority-source.md", async (c) => {
+  const body = packriftUlineAuthoritySourceMarkdown();
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-uline-alternatives-authority-source.md", "packrift_uline_authority_source", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-uline-alternatives-authority-source.html", async (c) => {
+  const body = packriftUlineAuthoritySourceHtml();
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-uline-alternatives-authority-source.html", "packrift_uline_authority_source", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-sales-loop.json", async (c) => {
+  const payload = packriftUcpBuilderSalesLoopPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-sales-loop.json", "packrift_ucp_builder_sales_loop", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-builder-sales-loop.md", async (c) => {
+  const body = packriftUcpBuilderSalesLoopMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-sales-loop.md", "packrift_ucp_builder_sales_loop", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-sales-loop.html", async (c) => {
+  const body = packriftUcpBuilderSalesLoopHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-builder-sales-loop.html", "packrift_ucp_builder_sales_loop", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-stack412-shipping-supplies-aisle.json", async (c) => {
+  const payload = packriftUcpStack412ShippingSuppliesAislePayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-stack412-shipping-supplies-aisle.json", "packrift_ucp_stack412_shipping_supplies_aisle", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-stack412-shipping-supplies-aisle.md", async (c) => {
+  const body = packriftUcpStack412ShippingSuppliesAisleMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-stack412-shipping-supplies-aisle.md", "packrift_ucp_stack412_shipping_supplies_aisle", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-stack412-shipping-supplies-aisle.html", async (c) => {
+  const body = packriftUcpStack412ShippingSuppliesAisleHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-stack412-shipping-supplies-aisle.html", "packrift_ucp_stack412_shipping_supplies_aisle", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-plugthatshop-contextual-shelf.json", async (c) => {
+  const payload = packriftUcpPlugThatShopContextualShelfPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-plugthatshop-contextual-shelf.json", "packrift_ucp_plugthatshop_contextual_shelf", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-plugthatshop-contextual-shelf.md", async (c) => {
+  const body = packriftUcpPlugThatShopContextualShelfMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-plugthatshop-contextual-shelf.md", "packrift_ucp_plugthatshop_contextual_shelf", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-plugthatshop-contextual-shelf.html", async (c) => {
+  const body = packriftUcpPlugThatShopContextualShelfHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-plugthatshop-contextual-shelf.html", "packrift_ucp_plugthatshop_contextual_shelf", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-open-scout-shopping-agent-path.json", async (c) => {
+  const payload = packriftUcpOpenScoutShoppingAgentPathPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-open-scout-shopping-agent-path.json", "packrift_ucp_open_scout_shopping_agent_path", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-open-scout-shopping-agent-path.md", async (c) => {
+  const body = packriftUcpOpenScoutShoppingAgentPathMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-open-scout-shopping-agent-path.md", "packrift_ucp_open_scout_shopping_agent_path", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-open-scout-shopping-agent-path.html", async (c) => {
+  const body = packriftUcpOpenScoutShoppingAgentPathHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-open-scout-shopping-agent-path.html", "packrift_ucp_open_scout_shopping_agent_path", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-upsonic-agent-workflow.json", async (c) => {
+  const payload = packriftUcpUpsonicAgentWorkflowPayload(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-upsonic-agent-workflow.json", "packrift_ucp_upsonic_agent_workflow", jsonByteSize(payload));
+  return c.json(payload, 200, RAW_HEADERS);
+});
+
+app.get("/ai/packrift-ucp-upsonic-agent-workflow.md", async (c) => {
+  const body = packriftUcpUpsonicAgentWorkflowMarkdown(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-upsonic-agent-workflow.md", "packrift_ucp_upsonic_agent_workflow", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-upsonic-agent-workflow.html", async (c) => {
+  const body = packriftUcpUpsonicAgentWorkflowHtml(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-upsonic-agent-workflow.html", "packrift_ucp_upsonic_agent_workflow", jsonByteSize(body));
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-approval-packet/:source", async (c) => {
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").trim();
+  const match = /^([a-z0-9_]+)\.(json|md|html)$/i.exec(rawSource);
+  const source = normalizeMcpRuntimeSlug(match?.[1]);
+  const format = match?.[2]?.toLowerCase() ?? "";
+  if (!source || !format) {
+    return c.json(
+      {
+        error: "invalid_ucp_builder_approval_packet_source",
+        message: "Use /ai/packrift-ucp-builder-approval-packet/{source}.json, .md, or .html with a Packrift UCP storefront source slug.",
+        valid_sources: UCP_STARTER_CATALOG_SOURCE_SLUGS,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+  const payload = packriftUcpBuilderApprovalPacketPayload(ucpStarterCatalogRuntime(), source);
+  if (!payload) {
+    return c.json(
+      {
+        error: "unknown_ucp_builder_approval_packet_source",
+        valid_sources: UCP_STARTER_CATALOG_SOURCE_SLUGS,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+  const resourcePath = `/ai/packrift-ucp-builder-approval-packet/${source}.${format}`;
+  if (format === "json") {
+    await recordGeneratedAiResourceFetch(c, resourcePath, "packrift_ucp_builder_approval_packet", jsonByteSize(payload), {
+      sourceSlug: source,
+      utmMedium: "ucp_builder_approval_packet",
+      utmCampaign: "packrift_ucp_builder_activation",
+      utmContent: "source_specific_json",
+      mcpKeyPrefix: "ucp_builder_approval",
+    });
+    return c.json(payload, 200, RAW_HEADERS);
+  }
+  const body =
+    format === "md"
+      ? packriftUcpBuilderApprovalPacketMarkdown(ucpStarterCatalogRuntime(), source)
+      : packriftUcpBuilderApprovalPacketHtml(ucpStarterCatalogRuntime(), source);
+  if (!body) {
+    return c.json({ error: "invalid_ucp_builder_approval_packet_format" }, 404, RAW_HEADERS);
+  }
+  await recordGeneratedAiResourceFetch(c, resourcePath, "packrift_ucp_builder_approval_packet", jsonByteSize(body), {
+    sourceSlug: source,
+    utmMedium: "ucp_builder_approval_packet",
+    utmCampaign: "packrift_ucp_builder_activation",
+    utmContent: format === "md" ? "source_specific_markdown" : "source_specific_html",
+    mcpKeyPrefix: "ucp_builder_approval",
+  });
+  return c.body(body, 200, {
+    "Content-Type": format === "md" ? "text/markdown; charset=utf-8" : "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-builder-integration-pack/:source", async (c) => {
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").trim();
+  const match = /^([a-z0-9_]+)\.(json|md|html)$/i.exec(rawSource);
+  const source = normalizeMcpRuntimeSlug(match?.[1]);
+  const format = match?.[2]?.toLowerCase() ?? "";
+  if (!source || !format) {
+    return c.json(
+      {
+        error: "invalid_ucp_builder_integration_pack_source",
+        message: "Use /ai/packrift-ucp-builder-integration-pack/{source}.json, .md, or .html with a Packrift UCP storefront source slug.",
+        valid_sources: UCP_STARTER_CATALOG_SOURCE_SLUGS,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+  const payload = packriftUcpBuilderIntegrationPackPayload(ucpStarterCatalogRuntime(), source);
+  if (!payload) {
+    return c.json(
+      {
+        error: "unknown_ucp_builder_integration_pack_source",
+        valid_sources: UCP_STARTER_CATALOG_SOURCE_SLUGS,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+  const resourcePath = `/ai/packrift-ucp-builder-integration-pack/${source}.${format}`;
+  if (format === "json") {
+    await recordGeneratedAiResourceFetch(c, resourcePath, "packrift_ucp_builder_integration_pack", jsonByteSize(payload), {
+      sourceSlug: source,
+      utmMedium: "ucp_builder_integration_pack",
+      utmCampaign: "packrift_ucp_builder_activation",
+      utmContent: "source_specific_json",
+      mcpKeyPrefix: "ucp_builder_integration",
+    });
+    return c.json(payload, 200, RAW_HEADERS);
+  }
+  const body =
+    format === "md"
+      ? packriftUcpBuilderIntegrationPackMarkdown(ucpStarterCatalogRuntime(), source)
+      : packriftUcpBuilderIntegrationPackHtml(ucpStarterCatalogRuntime(), source);
+  if (!body) {
+    return c.json({ error: "invalid_ucp_builder_integration_pack_format" }, 404, RAW_HEADERS);
+  }
+  await recordGeneratedAiResourceFetch(c, resourcePath, "packrift_ucp_builder_integration_pack", jsonByteSize(body), {
+    sourceSlug: source,
+    utmMedium: "ucp_builder_integration_pack",
+    utmCampaign: "packrift_ucp_builder_activation",
+    utmContent: format === "md" ? "source_specific_markdown" : "source_specific_html",
+    mcpKeyPrefix: "ucp_builder_integration",
+  });
+  return c.body(body, 200, {
+    "Content-Type": format === "md" ? "text/markdown; charset=utf-8" : "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/mcp-ucp-storefront-shelf-demo/:source", async (c) => {
+  const rawSource = decodeURIComponent(c.req.param("source") ?? "").replace(/\.html$/i, "").trim();
+  const source = normalizeMcpRuntimeSlug(rawSource);
+  const body = source ? mcpUcpStorefrontShelfDemoHtml(ucpStarterCatalogRuntime(), source) : null;
+  if (!body) {
+    return c.json(
+      {
+        error: "invalid_ucp_storefront_shelf_demo_source",
+        message: "Use /ai/mcp-ucp-storefront-shelf-demo/{source}.html with a Packrift UCP storefront source slug.",
+        valid_sources: UCP_STARTER_CATALOG_SOURCE_SLUGS,
+      },
+      404,
+      RAW_HEADERS
+    );
+  }
+  await recordGeneratedAiResourceFetch(c, `/ai/mcp-ucp-storefront-shelf-demo/${source}.html`, "mcp_ucp_storefront_adoption", jsonByteSize(body), {
+    sourceSlug: source,
+    utmMedium: "ucp_storefront_demo",
+    utmCampaign: "packrift_ucp_storefront_adoption",
+    utmContent: "source_aware_shelf_demo",
+    mcpKeyPrefix: "ucp_shelf_demo",
+  });
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
+app.get("/ai/packrift-ucp-shelf.js", async (c) => {
+  const requestUrl = new URL(c.req.url);
+  const source = normalizeMcpRuntimeSlug(requestUrl.searchParams.get("source"));
+  const body = mcpUcpStorefrontShelfEmbedJs(ucpStarterCatalogRuntime());
+  await recordGeneratedAiResourceFetch(c, "/ai/packrift-ucp-shelf.js", "mcp_ucp_storefront_shelf", jsonByteSize(body), {
+    sourceSlug: source || undefined,
+    utmMedium: source ? "ucp_storefront_embed" : undefined,
+    utmCampaign: source ? "packrift_ucp_storefront_adoption" : undefined,
+    utmContent: source ? "source_aware_embed_js" : undefined,
+    mcpKeyPrefix: "ucp_shelf_embed",
+  });
+  return c.body(body, 200, {
+    "Content-Type": "application/javascript; charset=utf-8",
+    ...RAW_HEADERS,
+  });
+});
+
 app.get("/ai/mcp-cart-activation.json", async (c) => {
   const payload = mcpCartActivationPayload(cartActivationRuntime());
   await recordGeneratedAiResourceFetch(c, "/ai/mcp-cart-activation.json", "mcp_cart_activation", jsonByteSize(payload));
@@ -19367,6 +21051,40 @@ app.get("/resources", (c) => {
   );
 });
 
+app.get("/tools/packaging-finder", async (c) => {
+  const url = new URL(c.req.url);
+  if (url.hostname !== "packrift.com" && url.hostname !== "www.packrift.com") {
+    url.protocol = "https:";
+    url.hostname = "packrift.com";
+    return c.redirect(url.toString(), 302);
+  }
+  if (url.hostname === "www.packrift.com") {
+    url.hostname = "packrift.com";
+    return c.redirect(url.toString(), 301);
+  }
+  const body = packriftAiPackagingFinderSiteHtml();
+  await recordGeneratedAiResourceFetch(c, "/tools/packaging-finder", "packrift_ai_packaging_finder_site", jsonByteSize(body), {
+    sourceSlug: "owned_packrift_finder",
+    utmMedium: "owned_site_tool",
+    utmCampaign: "packrift_ai_packaging_finder_20260627",
+    utmContent: "first_party_site_route",
+    mcpKeyPrefix: "ai_packaging_finder",
+  });
+  return c.body(body, 200, {
+    "Content-Type": "text/html; charset=utf-8",
+    ...RAW_HEADERS,
+    "x-packrift-packaging-finder-site-route": PACKRIFT_PACKAGING_FINDER_SITE_ROUTE_RELEASE,
+  });
+});
+
+app.get("/pages/packaging-finder", (c) => {
+  const url = new URL(c.req.url);
+  url.protocol = "https:";
+  url.hostname = "packrift.com";
+  url.pathname = "/tools/packaging-finder";
+  return c.redirect(url.toString(), 301);
+});
+
 app.get("/pages/mcp-cart/:sku", async (c) => {
   const requestUrl = new URL(c.req.url);
   if (requestUrl.hostname !== "packrift.com") {
@@ -19543,6 +21261,29 @@ app.get("/ai/*", async (c) => {
 
   const userAgent = c.req.header("User-Agent") ?? "";
   const botFamily = classifyAgentFamily(userAgent);
+  const preferredFeedFormat = openAiPreferredDirectFeedFormat(pathname);
+  if (preferredFeedFormat && shouldRecordConversionRouteResourceTelemetry(c.env, userAgent)) {
+    const day = compactDate();
+    await recordAiSalesEvent(c.env, {
+      event: "ai_corpus_click",
+      source: "openai_preferred_direct_feed",
+      corpus_url: `https://mcp.packrift.com${pathname}`,
+      format: preferredFeedFormat,
+      bot_family: botFamily,
+      packrift_ai_id: `${OPENAI_PREF_DIRECT_TOPSKU_UTM_ID}_${day}_${preferredFeedFormat}_fetch`,
+      ai_commerce_id: `${OPENAI_PREF_DIRECT_TOPSKU_UTM_ID}_${day}_${preferredFeedFormat}_fetch`,
+      mcp_key: "openai_preferred_direct_feed",
+      mcp_journey: `openai_preferred_direct_feed:resource_fetch:${preferredFeedFormat}`,
+      mcp_result_set: OPENAI_PREF_DIRECT_TOPSKU_UTM_ID,
+      utm_source: "openai_preferred_direct_feed",
+      utm_medium: "ai_retrieval",
+      utm_campaign: "packrift_chatgpt_product_feed",
+      utm_content: `preferred_direct_${preferredFeedFormat}`,
+      page_url: c.req.url,
+      source_url: `https://mcp.packrift.com${pathname}`,
+      referrer: c.req.header("Referer") ?? "",
+    });
+  }
   const routeSurface = conversionRouteTelemetrySurface(pathname);
   if (routeSurface && shouldRecordConversionRouteResourceTelemetry(c.env, userAgent)) {
     const format = pathname.split(".").pop() ?? "";

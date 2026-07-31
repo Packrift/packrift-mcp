@@ -84,48 +84,56 @@ const snapshot = {
 };
 
 try {
+  console.log("[funnel-snapshot] building first_party_mcp");
   snapshot.first_party_mcp = await buildFirstPartyMcpSummary();
 } catch (error) {
   snapshot.first_party_mcp = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  console.log("[funnel-snapshot] building first_party_orders");
   snapshot.first_party_orders = await buildFirstPartyOrderSummary();
 } catch (error) {
   snapshot.first_party_orders = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  if (!args["skip-ga4"]) console.log("[funnel-snapshot] pulling ga4");
   if (!args["skip-ga4"]) snapshot.ga4 = runGa4Pull();
 } catch (error) {
   snapshot.ga4 = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  if (!args["skip-distribution"]) console.log("[funnel-snapshot] checking distribution");
   if (!args["skip-distribution"]) snapshot.distribution = runDistributionCheck();
 } catch (error) {
   snapshot.distribution = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  if (!args["skip-live-discovery"]) console.log("[funnel-snapshot] checking live discovery");
   if (!args["skip-live-discovery"]) snapshot.live_discovery = await buildLiveDiscoverySummary();
 } catch (error) {
   snapshot.live_discovery = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  if (!args["skip-root-shopify-cart-activation"]) console.log("[funnel-snapshot] checking root_shopify_cart_activation");
   if (!args["skip-root-shopify-cart-activation"]) snapshot.root_shopify_cart_activation_live = await buildRootShopifyCartActivationSummary();
 } catch (error) {
   snapshot.root_shopify_cart_activation_live = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  if (!args["skip-static-availability"]) console.log("[funnel-snapshot] checking static availability");
   if (!args["skip-static-availability"]) snapshot.static_availability = runStaticAvailabilityCheck();
 } catch (error) {
   snapshot.static_availability = { ok: false, error: error.message || String(error) };
 }
 
 try {
+  if (!args["skip-indexnow"]) console.log("[funnel-snapshot] checking indexnow");
   if (!args["skip-indexnow"]) snapshot.indexnow = buildIndexNowSummary();
 } catch (error) {
   snapshot.indexnow = { ok: false, error: error.message || String(error) };
@@ -818,7 +826,7 @@ function matchesInternalSynthetic(text) {
 }
 
 function matchesSelfGeneratedDistribution(text) {
-  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
+  return /(mcp_ai_corpus|mcp_sku_page|conversion_route|conversion_starter|measured_handoff|ai_commerce_id_stitching|directory|submission|outreach|indexnow|sitemap|llms|resource_read|resources\/list|browser_agent_bridge|browserbase_browse_skill_pack|mcp_buyer_use_cases|mcp_ucp_starter_catalog|mcp_ucp_builder_kit|mcp_ucp_storefront_import|mcp_ucp_storefront_shelf|mcp_ucp_storefront_adoption|mcp_ucp_builder_activation_handoff|packrift_ucp_builder_launchpad|packrift_ucp_builder_approval_packet|packrift_ucp_shelf|mcp_usage_snapshot|mcp_funnel_snapshot|mcp_ga4_funnel_proof|mcp_install_matrix|mcp_install_actions|mcp_first_run_actions|mcp_client_config|mcp_adoption_kit|all_agent_capture|mcp[-_]agent[-_]host[-_]rollout|mcp_directory_refresh|mcp_directory_submit_actions|mcp_reviewer_activation|mcp_activation_experiments|mcp_activation_wave|mcp_activation_wave_runner|mcp_source_activation_queue|mcp_source_activation_packet|mcp_order_handoff|mcp_cart_activation|mcp_first_run_proof|mcp_workflow_gallery|mcp_eval_pack|mcp_cart_handoff_candidates|claude_connector_submission|agent_capture_outreach|generated_ai_resource)/i.test(text);
 }
 
 function matchesExternalQualifiedDemand(text) {

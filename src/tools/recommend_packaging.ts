@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Env, shopifyQuery, variantIdToNumeric } from "../shopify.js";
 import { extractDimensions, fitScore, parseDimensions } from "../dimensions.js";
 import { approvalForHandle, approvalForVariantId, approvalStatus } from "../approval.js";
-import { APPROVED_CATALOG } from "../approved-catalog.js";
+import { APPROVED_CATALOG } from "../effective-approved-catalog.js";
 import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildProductCard, buildTrackingContext } from "../conversion.js";
 
 export const recommendPackagingSchema = {
@@ -31,7 +31,13 @@ export const recommendPackagingSchema = {
 
 const USE_CASE_VALUES = ["mailer", "box", "fragile", "apparel", "ecommerce"] as const;
 
-function coerceUseCase(value: unknown): string {
+/**
+ * Buying agents routinely pass free text ("shipping ceramic mugs") instead of
+ * a canonical enum value. Map free text to the closest canonical use_case
+ * instead of hard-erroring; unknown contexts default to "ecommerce" (the
+ * broadest collection fan-out).
+ */
+export function coerceUseCase(value: unknown): string {
   const text = String(value ?? "").trim().toLowerCase();
   if ((USE_CASE_VALUES as readonly string[]).includes(text)) return text;
   if (/\b(fragile|glass(?:ware|es)?|ceramics?|breakables?|dish(?:es)?|dinnerware|delicate|mugs?|porcelain|china)\b/.test(text)) return "fragile";
@@ -70,7 +76,7 @@ const QUERY = `
             handle
             title
             onlineStoreUrl
-            metafields(first: 30) { edges { node { namespace key value type } } }
+            metafields(first: 100) { edges { node { namespace key value type } } }
             variants(first: 1) {
               edges {
                 node {
@@ -94,7 +100,7 @@ const PRODUCT_BY_HANDLE_QUERY = `
       handle
       title
       onlineStoreUrl
-      metafields(first: 30) { edges { node { namespace key value type } } }
+      metafields(first: 100) { edges { node { namespace key value type } } }
       variants(first: 1) {
         edges {
           node {
@@ -132,7 +138,8 @@ export async function recommendPackagingHandler(env: Env, raw: unknown) {
   const handles = COLLECTIONS_BY_USE_CASE[input.use_case]!;
 
   // Fan out across collections, take first 50 products from each, dedupe.
-  const seen = new Set<string>();
+  const scanned = new Set<string>();
+  const candidateHandles = new Set<string>();
   const candidates: Array<{
     variant_id: string;
     handle: string;
@@ -154,8 +161,8 @@ export async function recommendPackagingHandler(env: Env, raw: unknown) {
     if (!col) continue;
 
     for (const { node: p } of col.products.edges) {
-      if (seen.has(p.handle)) continue;
-      seen.add(p.handle);
+      if (scanned.has(p.handle)) continue;
+      scanned.add(p.handle);
       const v = p.variants.edges[0]?.node;
       if (!v) continue;
       if (!v.availableForSale) continue;
@@ -193,6 +200,7 @@ export async function recommendPackagingHandler(env: Env, raw: unknown) {
         score,
         approval,
       });
+      candidateHandles.add(p.handle);
     }
   }
 
@@ -201,8 +209,7 @@ export async function recommendPackagingHandler(env: Env, raw: unknown) {
     let fallbackAdded = 0;
     for (const handle of fallbackHandles) {
       if (fallbackAdded >= 12) break;
-      if (seen.has(handle)) continue;
-      seen.add(handle);
+      if (candidateHandles.has(handle)) continue;
       try {
         const data = await shopifyQuery<{ productByHandle: ProductNode | null }>(
           env,
@@ -245,6 +252,7 @@ export async function recommendPackagingHandler(env: Env, raw: unknown) {
           score,
           approval,
         });
+        candidateHandles.add(p.handle);
         fallbackAdded += 1;
       } catch {
         // Stale catalog handles should not break the fallback path.

@@ -82,6 +82,16 @@ export function mcpCartActivationPayload(runtime: CartActivationRuntime) {
       "Do not present direct Shopify cart URLs as the primary agent handoff when an MCP cart landing URL is available. Keep the final Shopify cart URL only as the forwarded destination and fallback evidence.",
     qualified_cart_landing_definition:
       "A qualified MCP cart landing is an external buyer or agent reaching a URL with utm_source=chatgpt-mcp, utm_medium=mcp_tool, utm_campaign=create_cart_url, and the /r/cart/{SKU} landing path before Shopify checkout.",
+    native_ucp_cart_context_rule: {
+      rule:
+        "When an agent bypasses the measured MCP /r/cart handoff and calls Shopify native UCP create_cart, include the buyer's real market context. At minimum pass context.address_country=US and context.currency=USD; include address_region and postal_code when known.",
+      failure_mode:
+        "A context-free Packrift UCP cart can return merchandise_out_of_stock for variants that Global Catalog and Shopify Admin both report available.",
+      verified_recovery:
+        "Retrying with US country, region, postal code, currency USD, and language en-US produced a clean four-line cart and checkout handoff with preserved ChatGPT/feed attribution.",
+      attribution_rule:
+        "Pass referring_domain and UTM fields in create_cart attribution so the source survives into checkout.",
+    },
     required_live_confirmation: [
       "exact SKU or exact dimensions selected by buyer",
       "prepare_purchase_handoff may collapse product, price, and inventory checks for known exact SKUs",

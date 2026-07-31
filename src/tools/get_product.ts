@@ -36,7 +36,7 @@ const QUERY = `
         minVariantPrice { amount currencyCode }
         maxVariantPrice { amount currencyCode }
       }
-      metafields(first: 50) { edges { node { namespace key value type } } }
+      metafields(first: 250) { edges { node { namespace key value type } } }
       variants(first: 100) {
         edges {
           node {

@@ -1,4 +1,4 @@
-import { APPROVED_CATALOG, ApprovedCatalogItem } from "./approved-catalog.js";
+import { APPROVED_CATALOG, ApprovedCatalogItem } from "./effective-approved-catalog.js";
 
 function numericId(idOrGid: string): string {
   const match = idOrGid.match(/(\d+)$/);

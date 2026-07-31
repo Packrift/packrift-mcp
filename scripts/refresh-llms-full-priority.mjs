@@ -161,9 +161,12 @@ async function verifyTargets(targets) {
         },
       });
       const text = await response.text();
+      const isCanonicalCorpus = text.includes("## Priority exact-spec SKUs for agent lookup");
+      const isRootDiscoveryAlias = text.includes("## Current Retrieval Rule")
+        && text.includes("https://mcp.packrift.com/llms-full.txt");
       const ok =
         response.ok &&
-        text.includes("## Priority exact-spec SKUs for agent lookup") &&
+        (isCanonicalCorpus || isRootDiscoveryAlias) &&
         text.includes("https://mcp.packrift.com/ai/sku/") &&
         !/(\/Users\/farhan|Downloads|env-shopify|campaign sub-bucket|paid-search)/i.test(text);
       results.push({

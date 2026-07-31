@@ -405,6 +405,7 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - CapIndex capability card: https://mcp.packrift.com/.well-known/capability-card.json
 - llms.txt: https://mcp.packrift.com/llms.txt
 - llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
+- 2026 Agentic Packaging Commerce Index: https://packrift.com/pages/agentic-packaging-commerce-index — Packrift's transparent 48-query benchmark for exact-spec and natural-language packaging visibility in Shopify Global Catalog
 - Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
 - MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
 - MCP agent host rollout: https://mcp.packrift.com/ai/mcp-agent-host-rollout.json
@@ -456,6 +457,29 @@ After a live confirmation tool runs, the response includes \`post_confirmation_h
 - OpenAI preferred direct product feed GZIP, compressed 4,847-row direct handoff for approved file-upload, SFTP, or API ingestion: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz
 - Exact-spec catalog overview: https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md
 - Shopify native UCP commerce surface: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
+- UCP starter catalog for curated storefront builders: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json
+- UCP storefront and agent builder kit for Stack412-style UCP storefronts, contextual embeds, Open Scout-style shopping agents, and Upsonic-style UCP agent frameworks: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json
+- UCP storefront import feed with flat JSON, JSONL, CSV, Markdown, and HTML rows for packaging shelves: https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json
+- UCP storefront shelf renderer with copy-paste JavaScript embed and source-aware product cards: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json
+- UCP storefront adoption kit with source-aware one-line snippets, live demos, and attribution gates: https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json
+- UCP builder activation handoff with source slugs, one-line scripts, approval-needed copy, and proof gates for PlugThatShop-style embeds, Stack412-style storefronts, Open Scout-style shopping agents, Upsonic-style UCP agent frameworks, and curated UCP builders: https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json
+- Packrift UCP builder launchpad with source-specific embed, import, install, first-run, and order-handoff actions for UCP storefront builders: https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json
+- Packrift UCP builder approval packet with exact target copy, source-specific embed blocks, contact-route status, first-run links, and proof gates: https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json
+- Packrift UCP builder integration pack with source-specific patch blocks, MCP smoke tests, buyer-confirmed handoff templates, and proof gates for real storefront or agent inclusion: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json
+- Packrift UCP builder PR activation pack with public PR, listing, issue-comment, and direct-builder activation targets for UCP repos, shipping-supplies storefront examples, and shopping-agent demos: https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json
+- Packrift UCP shipping-supplies starter kit for making Packrift the default packaging catalog inside curated UCP storefronts, shopping-agent SDK examples, contextual embeds, and shipping-supplies aggregators: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json
+- Packrift UCP shipping-supplies storefront template with standalone HTML, source-aware shelf embed, MCP first run, and buyer-confirmed handoff template: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json
+- Packrift UCP shipping-supplies collection map with live Packrift collection routes and approval-required collection gaps for builder category routing: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.json
+- Packrift UCP builder sales loop connecting source selection, starter shelf adoption, MCP first runs, buyer-confirmed handoff templates, and source-attributed cart/order proof gates: https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json
+- Packrift Stack412-style shipping-supplies aisle with import filter, one-line shelf script, MCP first run, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.json
+- Packrift PlugThatShop-style contextual shipping shelf with import filter, one-line shelf script, MCP first run, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.json
+- Packrift Open Scout-style shopping-agent packaging path with routing rule, source-aware MCP endpoint, first-run calls, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.json
+- Packrift Upsonic-style UCP agent workflow with intent analysis, exact-spec filtering, live price/inventory checks, source-aware MCP endpoint, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.json
+- Packrift Agorio-style shopping-agent SDK integration pack with source-aware MCP endpoint, patch block, first-run calls, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.json
+- Stack412-style UCP shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html
+- Open Scout-style shopping-agent shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/open_scout_shopping_agent.html
+- Upsonic-style UCP agent framework shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/upsonic_ucp_agent_framework.html
+- Agorio-style shopping-agent SDK shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html
 - Agent endpoints status: https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json
 - Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
 - Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md

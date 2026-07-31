@@ -147,6 +147,42 @@ export const AGENT_HOST_FAST_PATHS: AgentHostFastPath[] = [
     audience: "OpenAI and ChatGPT-style agents that can call a remote Streamable HTTP MCP endpoint.",
   }),
   hostFastPath({
+    source: "curated_ucp_storefront",
+    target: "generic_streamable_http",
+    host: "Curated UCP storefronts",
+    audience: "Builders of curated Shopify UCP storefronts that need Packrift as the packaging and shipping-supplies merchant.",
+  }),
+  hostFastPath({
+    source: "stack412_style_storefront",
+    target: "generic_streamable_http",
+    host: "Stack412-style storefronts",
+    audience: "Automated storefront builders aggregating Shopify global-catalog products into shipping-supplies or fulfillment shelves.",
+  }),
+  hostFastPath({
+    source: "plugthatshop_style_embed",
+    target: "generic_streamable_http",
+    host: "PlugThatShop-style embeds",
+    audience: "Contextual shoppable embed builders that need a Packrift packaging shelf or packaging upsell path.",
+  }),
+  hostFastPath({
+    source: "open_scout_shopping_agent",
+    target: "generic_streamable_http",
+    host: "Open Scout-style shopping agents",
+    audience: "Shopping-agent builders routing packaging intents from chat, web, SMS, or WhatsApp into exact Packrift SKUs and measured cart handoff.",
+  }),
+  hostFastPath({
+    source: "upsonic_ucp_agent_framework",
+    target: "generic_streamable_http",
+    host: "Upsonic-style UCP agent frameworks",
+    audience: "Multi-agent UCP framework builders using Packrift as the packaging workflow example for discovery, filtering, live checks, and cart handoff.",
+  }),
+  hostFastPath({
+    source: "agorio_shopping_agent_sdk",
+    target: "generic_streamable_http",
+    host: "Agorio shopping-agent SDK",
+    audience: "UCP/ACP shopping-agent SDK builders using Packrift as the packaging merchant example for exact-spec MCP search and buyer-confirmed handoff.",
+  }),
+  hostFastPath({
     source: "langchain_agent",
     target: "generic_streamable_http",
     host: "LangChain",

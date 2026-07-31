@@ -79,6 +79,8 @@ export const PURCHASE_READY_SKUS = [
   "PS1217",
   "G10051",
   "BD1212AS",
+  "BL4024",
+  "IB12BPD",
   "PL19",
   "1094",
   "B807SS25PK",

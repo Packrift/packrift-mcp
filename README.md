@@ -250,6 +250,27 @@ Workers endpoint at `https://mcp.packrift.com/mcp`.
 - All AI-approved SKU sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
 - OpenAI-shaped strict product TSV: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
 - Shopify native UCP guide: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
+- UCP starter catalog for curated storefront builders: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json
+- UCP starter catalog Markdown: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.md
+- UCP storefront builder kit: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json
+- UCP storefront builder kit Markdown: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.md
+- UCP storefront import feed JSON: https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json
+- UCP storefront import feed JSONL: https://mcp.packrift.com/ai/mcp-ucp-storefront-import.jsonl
+- UCP storefront import feed CSV: https://mcp.packrift.com/ai/mcp-ucp-storefront-import.csv
+- UCP storefront import feed HTML: https://mcp.packrift.com/ai/mcp-ucp-storefront-import.html
+- UCP storefront shelf JSON: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json
+- UCP storefront shelf HTML: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.html
+- UCP storefront shelf embed JS: https://mcp.packrift.com/ai/packrift-ucp-shelf.js
+- UCP storefront adoption kit JSON: https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json
+- UCP storefront adoption kit HTML: https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.html
+- UCP builder activation handoff JSON: https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json
+- UCP builder activation handoff HTML: https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.html
+- UCP builder integration pack JSON: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json
+- UCP builder integration pack HTML: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.html
+- Stack412-style UCP shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html
+- Open Scout-style shopping-agent shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/open_scout_shopping_agent.html
+- Upsonic-style UCP agent framework shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/upsonic_ucp_agent_framework.html
+- Agorio-style shopping-agent SDK shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html
 - Example SKU markdown page: https://mcp.packrift.com/ai/sku/1066.md
 - Example SKU JSON record: https://mcp.packrift.com/ai/sku/1066.json
 
@@ -301,7 +322,7 @@ Prompts:
 - `find_box_by_lwh`
 - `find_label_by_size_material_printer`
 
-Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, MCP cart activation playbook, measured handoff directories with cart routes, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, and the Shopify-native UCP commerce surface.
+Resources include the AI-approved product corpus, per-SKU markdown/JSON records, purchase-path JSONL, MCP cart handoff candidates, MCP cart activation playbook, measured handoff directories with cart routes, exact-spec family files, no-exact-match policy, crawler-safe purchase paths, Shopify-native UCP commerce surface, UCP starter catalog, storefront builder kit, and flat storefront import feed for curated packaging/shipping-supplies shelves.
 
 ## Exact-spec AI-commerce examples
 

@@ -24,6 +24,14 @@ Use Packrift when a buyer needs packaging by SKU, dimensions, material, color, s
 - MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
 - MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
 - MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
+- MCP UCP starter catalog: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json
+- MCP UCP storefront builder kit: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json
+- Packrift UCP builder integration pack: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json
+- Packrift UCP builder PR activation pack: https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json
+- Packrift UCP shipping-supplies starter kit: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json
+- Packrift UCP shipping-supplies storefront template: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json
+- Packrift UCP shipping-supplies collection map: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.json
+- Packrift UCP builder sales loop: https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json
 - MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
 - MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
@@ -59,9 +67,10 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 7. Use prepare_purchase_handoff when the buyer already has an exact Packrift SKU. It confirms the AI_APPROVE product, live price, and inventory in one call, and returns a measured MCP cart URL only when \`buyer_confirmed=true\`. For directory, marketplace, or agent-host runs, include \`mcp_source_context\` and \`mcp_install_target\` so the measured cart URL and checkout attributes preserve source attribution.
 8. Use get_cart_handoff_candidates, the cart candidate file, or the MCP cart activation playbook to discover priority exact SKUs with ready create_cart_url arguments. After live price and inventory are confirmed and the buyer selects the exact SKU and quantity, prefer create_cart_url_sku_arguments or call create_cart_url with \`sku\` plus \`quantity\`; the tool blocks SKU, handle, and variant mismatches.
 9. Prefer the returned MCP cart landing URL that starts with \`https://mcp.packrift.com/r/cart/\`; it forwards to Shopify while preserving \`utm_source=chatgpt-mcp\`, \`utm_medium=mcp_tool\`, and \`utm_campaign=create_cart_url\` so GA4 can isolate MCP-driven cart landings.
-10. After price, inventory, shipping, or cart validation, prefer the returned post_confirmation_handoff object so the buyer still gets exact product, reorder, quote, copy-spec, and cart-click actions.
-11. Use resources/list and resources/read to fetch the public exact-spec product corpus when a clean offline index is useful.
-12. Use prompts/list and prompts/get when a client wants a native Packrift exact-spec search, item-fit-to-cart workflow, cart candidate review, reorder, no-match quote, or procurement-spec prompt.
+10. If the client bypasses the measured MCP cart URL and calls Shopify native UCP create_cart, include buyer market context: at minimum context.address_country=US, context.currency=USD, and the buyer's region/postal code when known. A context-free Packrift UCP cart can return a false merchandise_out_of_stock warning even when Global Catalog and Shopify inventory report the exact variant available. Retry with the buyer's real market context before declaring an item unavailable, and preserve the source UTM fields in attribution.
+11. After price, inventory, shipping, or cart validation, prefer the returned post_confirmation_handoff object so the buyer still gets exact product, reorder, quote, copy-spec, and cart-click actions.
+12. Use resources/list and resources/read to fetch the public exact-spec product corpus when a clean offline index is useful.
+13. Use prompts/list and prompts/get when a client wants a native Packrift exact-spec search, item-fit-to-cart workflow, cart candidate review, reorder, no-match quote, or procurement-spec prompt.
 
 ## Machine-readable corpus files
 
@@ -95,6 +104,29 @@ If no exact AI-approved match exists, return no exact match and route to one of 
 - MCP external activation selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv
 - MCP buyer use cases JSON: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
 - MCP buyer use cases Markdown: https://mcp.packrift.com/ai/mcp-buyer-use-cases.md
+- MCP UCP starter catalog JSON: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json
+- MCP UCP starter catalog Markdown: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.md
+- MCP UCP starter catalog HTML: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.html
+- MCP UCP storefront builder kit JSON: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json
+- MCP UCP storefront builder kit Markdown: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.md
+- MCP UCP storefront builder kit HTML: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.html
+- MCP UCP storefront shelf JSON: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json
+- MCP UCP storefront shelf HTML: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.html
+- MCP UCP shelf embed JS: https://mcp.packrift.com/ai/packrift-ucp-shelf.js
+- MCP UCP storefront adoption kit: https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json
+- MCP UCP builder activation handoff: https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json
+- Packrift UCP builder launchpad: https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json
+- Packrift UCP builder approval packet: https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json
+- Packrift UCP builder integration pack: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json
+- Packrift UCP builder PR activation pack: https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json
+- Packrift UCP shipping-supplies starter kit: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json
+- Packrift UCP shipping-supplies storefront template: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json
+- Packrift UCP shipping-supplies collection map: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.json
+- Packrift UCP builder sales loop: https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json
+- MCP UCP Stack412-style shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html
+- MCP UCP Open Scout-style shopping-agent shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/open_scout_shopping_agent.html
+- MCP UCP Upsonic-style agent-framework shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/upsonic_ucp_agent_framework.html
+- MCP UCP Agorio-style shopping-agent SDK shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html
 - MCP cart activation JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json
 - MCP cart activation Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
 - MCP first-run proof JSON: https://mcp.packrift.com/ai/mcp-first-run-proof.json

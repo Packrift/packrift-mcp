@@ -26,6 +26,15 @@ const MCP_PAGE_ANALYTICS_RELEASE = "PACKRIFT-MCP-PAGE-ANALYTICS-R02";
 const MCP_COMMERCE_HELD_SKUS = new Set(["12104", "CRR40W", "FWUPS116S24P"]);
 const FETCH_TIMEOUT_MS = 90000;
 const execFileAsync = promisify(execFile);
+let FETCH_COUNT = 0;
+
+function logFetch(kind, url, attempt) {
+  FETCH_COUNT += 1;
+  if (FETCH_COUNT === 1 || FETCH_COUNT % 25 === 0) {
+    // Keep at least occasional stdout so automation runners don't kill long checks.
+    console.log(`[dist-check] ${kind} #${FETCH_COUNT} attempt=${attempt} url=${url}`);
+  }
+}
 
 const SURFACE_GUIDANCE = {
   official_registry: {
@@ -334,6 +343,7 @@ async function fetchText(url) {
   const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) || url.startsWith(PACKRIFT_BRAND_ORIGIN) ? 3 : 1;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
+      if (attempt === 1) logFetch("fetchText", url, attempt);
       const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       const text = await response.text();
       lastResult = { ok: response.ok, status: response.status, url: response.url, text, attempts: attempt };
@@ -351,6 +361,7 @@ async function fetchRedirect(url) {
   const maxAttempts = url.startsWith(PACKRIFT_ORIGIN) ? 3 : 1;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
+      if (attempt === 1) logFetch("fetchRedirect", url, attempt);
       const response = await fetch(cacheBustedUrl(url), { headers: TEXT_HEADERS, redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       lastResult = {
         ok: response.status >= 300 && response.status < 400,
@@ -374,6 +385,7 @@ async function fetchMcp(method, params = undefined) {
   let lastResult = { ok: false, status: 0, url: MCP_ENDPOINT, value: null, error: "not attempted" };
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
+      if (attempt === 1) logFetch(`fetchMcp:${method}`, MCP_ENDPOINT, attempt);
       const response = await fetch(MCP_ENDPOINT, {
         method: "POST",
         headers: {
@@ -1340,6 +1352,61 @@ async function liveMcpCheck() {
     visitor_growth_queue_html: hasMcpPageAnalytics(visitorGrowthQueueHtmlResult.text, "mcp_visitor_growth_queue"),
   };
   const mcpPageAnalyticsOk = Object.values(mcpPageAnalyticsDiagnostics).every(Boolean);
+  const matureRevenueSources = revenueConversionRows.map((row) => row.source);
+  const matureBuyerHandoffRowsOk = matureRevenueSources.every((source) =>
+    buyerOrderHandoffRows.some(
+      (row) =>
+        row.source === source &&
+        row.status === "buyer_checkout_needed" &&
+        row.buyer_handoff_url === `https://mcp.packrift.com/r/order/${source}?format=html` &&
+        row.buyer_handoff_html_url === `https://mcp.packrift.com/r/order/${source}?format=html` &&
+        row.order_handoff_shell_url === `https://mcp.packrift.com/r/order/${source}?format=sh` &&
+        row.source_preserving_cart_url?.includes(`mcp_source_context=${source}`) &&
+        row.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
+        row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_source_context === source &&
+        row.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval?.includes(
+          "prepare_purchase_handoff"
+        ) &&
+        row.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
+        row.buyer_checkout_review_contract?.cart_open_event === "mcp_order_handoff_checkout_review_click" &&
+        row.copy_ready_buyer_request?.includes("only place the order if it is actually approved") &&
+        row.suppression_rule?.includes("Do not count synthetic proof")
+    )
+  );
+  const matureBuyerCheckoutTasksOk = matureRevenueSources.every((source) =>
+    buyerOrderHandoffs?.buyer_checkout_tasks?.some(
+      (task) =>
+        task.task_id === `mcp_buyer_checkout_${source}` &&
+        task.source === source &&
+        task.target_event_to_watch === "mcp_attributed_order" &&
+        task.buyer_handoff_url === `https://mcp.packrift.com/r/order/${source}?format=html` &&
+        task.order_handoff_shell_url === `https://mcp.packrift.com/r/order/${source}?format=sh` &&
+        task.no_order_created_by_this_task === true &&
+        task.buyer_confirmation_required === true
+    )
+  );
+  const matureBuyerCheckoutTaskExportsOk = matureRevenueSources.every((source) =>
+    buyerOrderHandoffTaskRows.some(
+      (task) =>
+        task.task_id === `mcp_buyer_checkout_${source}` &&
+        task.source === source &&
+        task.buyer_handoff_url === `https://mcp.packrift.com/r/order/${source}?format=html` &&
+        task.order_handoff_shell_one_liner?.includes(`/r/order/${source}?format=sh`) &&
+        task.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
+        task.no_order_created_by_this_task === true
+    )
+  );
+  const matureBuyerCheckoutTaskCsvOk =
+    buyerOrderHandoffsTasksCsvResult.ok &&
+    buyerOrderHandoffTaskCsvLines.length === buyerOrderHandoffTaskRows.length + 1 &&
+    buyerOrderHandoffTaskCsvLines[0]?.startsWith("task_id,rank,source,status,target_event_to_watch") &&
+    matureRevenueSources.every(
+      (source) =>
+        buyerOrderHandoffTaskCsvLines.some((line) => line.includes(`mcp_buyer_checkout_${source}`)) &&
+        buyerOrderHandoffTaskCsvLines.some((line) => line.includes(`https://mcp.packrift.com/r/order/${source}?format=sh`))
+    ) &&
+    buyerOrderHandoffTaskCsvLines.some((line) => line.includes("https://mcp.packrift.com/r/cart/1066")) &&
+    buyerOrderHandoffTaskCsvLines.some((line) => line.includes("prepare_purchase_handoff"));
   const buyerOrderHandoffsDiagnostics = {
     json_ok: buyerOrderHandoffsResult.ok,
     markdown_ok: buyerOrderHandoffsMarkdownResult.ok,
@@ -1353,7 +1420,7 @@ async function liveMcpCheck() {
     tasks_jsonl_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_tasks_jsonl === MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
     tasks_csv_link: buyerOrderHandoffs?.links?.buyer_order_handoffs_tasks_csv === MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
     revenue_queue_link: buyerOrderHandoffs?.links?.revenue_conversion_queue_json === MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
-    handoff_rows_present: buyerOrderHandoffsNoMatureSources || buyerOrderHandoffRows.length >= 1,
+    handoff_rows_present: buyerOrderHandoffsNoMatureSources || matureBuyerHandoffRowsOk,
     mature_source_coverage:
       buyerOrderHandoffs?.row_count === buyerOrderHandoffRows.length &&
       buyerOrderHandoffs?.buyer_handoff_count === buyerOrderHandoffRows.length &&
@@ -1364,27 +1431,12 @@ async function liveMcpCheck() {
       Array.isArray(buyerOrderHandoffs?.source_coverage?.missing_handoff_sources) &&
       buyerOrderHandoffs.source_coverage.missing_handoff_sources.length === 0,
     mcp_so_handoff:
-      buyerOrderHandoffsNoMatureSources ||
+      !matureRevenueSources.includes("mcp_so") ||
       buyerOrderHandoffRows.some(
         (row) =>
           row.source === "mcp_so" &&
-          row.status === "buyer_checkout_needed" &&
           row.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-          row.primary_buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-          row.buyer_handoff_html_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-          row.source_preserving_cart_url?.includes("mcp_source_context=mcp_so") &&
-          row.source_preserving_cart_url?.includes("mcp_install_target=generic_streamable_http") &&
-          row.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
-          row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_source_context === "mcp_so" &&
-          row.source_preserving_prepare_purchase_handoff?.confirmed_arguments_after_buyer_approval?.mcp_install_target ===
-            "generic_streamable_http" &&
-          row.source_preserving_prepare_purchase_handoff?.copy_ready_confirmed_json_rpc_after_buyer_approval?.includes(
-            "prepare_purchase_handoff"
-          ) &&
-          row.buyer_checkout_review_contract?.release === "PACKRIFT-MCP-BUYER-CHECKOUT-REVIEW-R01" &&
-          row.buyer_checkout_review_contract?.cart_open_event === "mcp_order_handoff_checkout_review_click" &&
-          row.copy_ready_buyer_request?.includes("only place the order if it is actually approved") &&
-          row.suppression_rule?.includes("Do not count synthetic proof")
+          row.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh"
       ),
     cline_handoff:
       !revenueConversionClineRow ||
@@ -1403,7 +1455,10 @@ async function liveMcpCheck() {
       ),
     markdown_title: buyerOrderHandoffsMarkdownResult.text.includes("Packrift MCP Buyer Order Handoffs"),
     markdown_checkout_tasks: buyerOrderHandoffsNoMatureSources || buyerOrderHandoffsMarkdownResult.text.includes("Buyer Checkout Tasks"),
-    markdown_mcp_so: buyerOrderHandoffsNoMatureSources || buyerOrderHandoffsMarkdownResult.text.includes("mcp_so"),
+    markdown_mcp_so:
+      buyerOrderHandoffsNoMatureSources ||
+      !matureRevenueSources.includes("mcp_so") ||
+      buyerOrderHandoffsMarkdownResult.text.includes("mcp_so"),
     markdown_cline: !revenueConversionClineRow || buyerOrderHandoffsMarkdownResult.text.includes("cline_mcp_marketplace"),
     markdown_checkout_review_contract:
       buyerOrderHandoffsNoMatureSources || buyerOrderHandoffsMarkdownResult.text.includes("Checkout Review Contracts"),
@@ -1416,41 +1471,23 @@ async function liveMcpCheck() {
       buyerOrderHandoffsNoMatureSources || buyerOrderHandoffsHtmlResult.text.includes("Prepare purchase shortcut"),
     html_checkout_review_contract:
       buyerOrderHandoffsNoMatureSources || buyerOrderHandoffsHtmlResult.text.includes("Checkout review contract"),
-    html_mcp_so: buyerOrderHandoffsNoMatureSources || buyerOrderHandoffsHtmlResult.text.includes("mcp_so"),
+    html_mcp_so:
+      buyerOrderHandoffsNoMatureSources ||
+      !matureRevenueSources.includes("mcp_so") ||
+      buyerOrderHandoffsHtmlResult.text.includes("mcp_so"),
     html_cline: !revenueConversionClineRow || buyerOrderHandoffsHtmlResult.text.includes("cline_mcp_marketplace"),
     html_analytics: mcpPageAnalyticsDiagnostics.buyer_order_handoffs_html,
     buyer_checkout_tasks:
       buyerOrderHandoffsNoMatureSources ||
       (buyerOrderHandoffs?.buyer_checkout_task_count === buyerOrderHandoffs?.buyer_checkout_tasks?.length &&
         buyerOrderHandoffTaskRows.length === buyerOrderHandoffs?.buyer_checkout_task_count &&
-        buyerOrderHandoffs?.buyer_checkout_tasks?.some(
-          (task) =>
-            task.task_id === "mcp_buyer_checkout_mcp_so" &&
-            task.target_event_to_watch === "mcp_attributed_order" &&
-            task.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-            task.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
-            task.no_order_created_by_this_task === true &&
-            task.buyer_confirmation_required === true
-        )),
+        matureBuyerCheckoutTasksOk),
     buyer_checkout_task_export:
       buyerOrderHandoffsNoMatureSources ||
-      buyerOrderHandoffTaskRows.some(
-        (task) =>
-          task.task_id === "mcp_buyer_checkout_mcp_so" &&
-          task.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
-          task.order_handoff_shell_one_liner?.includes("/r/order/mcp_so?format=sh") &&
-          task.source_preserving_prepare_purchase_handoff?.tool_name === "prepare_purchase_handoff" &&
-          task.no_order_created_by_this_task === true
-      ),
+      matureBuyerCheckoutTaskExportsOk,
     buyer_checkout_task_csv_export:
       buyerOrderHandoffsNoMatureSources ||
-      (buyerOrderHandoffsTasksCsvResult.ok &&
-        buyerOrderHandoffTaskCsvLines.length === buyerOrderHandoffTaskRows.length + 1 &&
-        buyerOrderHandoffTaskCsvLines[0]?.startsWith("task_id,rank,source,status,target_event_to_watch") &&
-        buyerOrderHandoffTaskCsvLines.some((line) => line.includes("mcp_buyer_checkout_mcp_so")) &&
-        buyerOrderHandoffTaskCsvLines.some((line) => line.includes("https://mcp.packrift.com/r/order/mcp_so?format=sh")) &&
-        buyerOrderHandoffTaskCsvLines.some((line) => line.includes("https://mcp.packrift.com/r/cart/1066")) &&
-        buyerOrderHandoffTaskCsvLines.some((line) => line.includes("prepare_purchase_handoff"))),
+      matureBuyerCheckoutTaskCsvOk,
   };
   const buyerOrderHandoffsOk = Object.values(buyerOrderHandoffsDiagnostics).every(Boolean);
   const visitorGrowthDiagnostics = {
@@ -1658,6 +1695,17 @@ async function liveMcpCheck() {
   });
   const sourceActivationMcpSoExternalOk = sourceActivationQueue?.queue?.some((row) => {
     if (row.source !== "mcp_so" || row.external_activation_required !== true) return false;
+    if (row.target_event_to_watch === "mcp_install_intent" && row.current_counts?.install_intents === 0) {
+      return (
+        row.primary_action_url === "https://mcp.packrift.com/r/install/mcp_so/generic_streamable_http?format=html" &&
+        row.tracked_first_run_shell_url === "https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=sh" &&
+        row.source_order_handoff?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
+        row.source_order_handoff?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
+        row.copy_ready_host_configs?.generic_mcp_json?.includes('"mcpServers"') &&
+        row.fast_activation_path?.required_final_tool === "create_cart_url" &&
+        row.recommended_action?.includes("tracked install")
+      );
+    }
     if (row.current_counts?.first_run_actions > 0 && row.current_counts?.mcp_tool_calls === 0) {
       return row.recommended_action?.includes("first-run");
     }
@@ -1842,14 +1890,15 @@ async function liveMcpCheck() {
       agentHostRolloutTaskRows.some(
         (row) =>
           row.source === "mcp_so" &&
-          (row.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" ||
+          (row.primary_action_url === "https://mcp.packrift.com/r/install/mcp_so/generic_streamable_http?format=html" ||
+            row.primary_action_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" ||
             row.primary_action_url === "https://mcp.packrift.com/r/run/mcp_so/generic_streamable_http?format=html" ||
             row.primary_action_url?.startsWith("https://mcp.packrift.com/r/cart/"))
       ) &&
       agentHostRolloutMcpSo?.buyer_handoff_url === "https://mcp.packrift.com/r/order/mcp_so?format=html" &&
       agentHostRolloutMcpSo?.order_handoff_shell_url === "https://mcp.packrift.com/r/order/mcp_so?format=sh" &&
       agentHostRolloutMcpSo?.order_handoff_shell_one_liner?.includes("curl -sS") &&
-      ["mcp_first_run_execution", "mcp_tool_call", "mcp_cart_landing", "mcp_attributed_order"].includes(agentHostRolloutMcpSo?.target_event_to_watch) &&
+      ["mcp_install_intent", "mcp_first_run_execution", "mcp_tool_call", "mcp_cart_landing", "mcp_attributed_order"].includes(agentHostRolloutMcpSo?.target_event_to_watch) &&
       agentHostRolloutGlamaOk,
     commerce_hold_guard:
       cartHandoffExcludesHeldSkus &&

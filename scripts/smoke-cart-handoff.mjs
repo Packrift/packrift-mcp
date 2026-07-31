@@ -6,11 +6,16 @@ import { resolve } from "node:path";
 const DEFAULT_ENDPOINT = "https://mcp.packrift.com/mcp";
 const DEFAULT_SKU = "1066";
 const DEFAULT_QTY = 1;
+const DEFAULT_SOURCE = "smoke_cart_handoff";
+const DEFAULT_TARGET = "generic_streamable_http";
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-cart-handoff-smoke");
 const HELD_SKUS = ["12104", "CRR40W", "FWUPS116S24P"];
 
 const args = parseArgs(process.argv.slice(2));
-const endpoint = stringArg("endpoint") ?? process.env.MCP_ENDPOINT ?? DEFAULT_ENDPOINT;
+const endpointInput = stringArg("endpoint") ?? process.env.MCP_ENDPOINT ?? DEFAULT_ENDPOINT;
+const source = normalizedSlug(stringArg("source") ?? process.env.MCP_SOURCE ?? DEFAULT_SOURCE);
+const target = normalizedSlug(stringArg("target") ?? process.env.MCP_TARGET ?? DEFAULT_TARGET);
+const endpoint = sourceAwareEndpoint(endpointInput, source, target);
 const sku = stringArg("sku") ?? DEFAULT_SKU;
 const qty = intArg("qty") ?? DEFAULT_QTY;
 const verifyFinalCart = Boolean(args.flags["verify-final-cart"]);
@@ -47,6 +52,40 @@ function intArg(name) {
   return parsed;
 }
 
+function normalizedSlug(value) {
+  const slug = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+  if (!slug || !/^[a-z0-9_]{2,80}$/.test(slug)) {
+    throw new Error(`Invalid source/target slug: ${value}`);
+  }
+  return slug;
+}
+
+function sourceAwareEndpoint(value, sourceSlug, targetSlug) {
+  const url = new URL(value);
+  if (!url.searchParams.get("packrift_mcp_source") && !url.searchParams.get("mcp_source")) {
+    url.searchParams.set("packrift_mcp_source", sourceSlug);
+  }
+  if (!url.searchParams.get("packrift_mcp_target") && !url.searchParams.get("mcp_target")) {
+    url.searchParams.set("packrift_mcp_target", targetSlug);
+  }
+  return url.toString();
+}
+
+function sourceAwareToolArgs(toolArgs) {
+  return {
+    ...toolArgs,
+    ...(!toolArgs.mcp_source_context && !toolArgs.packrift_mcp_source && !toolArgs.mcp_source && !toolArgs.source_slug
+      ? { mcp_source_context: source }
+      : {}),
+    ...(!toolArgs.mcp_install_target && !toolArgs.packrift_mcp_target && !toolArgs.mcp_target ? { mcp_install_target: target } : {}),
+  };
+}
+
 async function rpc(method, params = undefined) {
   const response = await fetch(endpoint, {
     method: "POST",
@@ -70,7 +109,7 @@ async function callTool(name, toolArgs) {
   const response = await rpc("tools/call", {
     name,
     arguments: {
-      ...toolArgs,
+      ...sourceAwareToolArgs(toolArgs),
       suppress_analytics: true,
       analytics_context: { synthetic: true, source: "mcp_cart_handoff_smoke" },
     },
@@ -153,17 +192,17 @@ async function main() {
     sku,
     quantity: qty,
     buyer_confirmed: false,
-    source_context: "smoke_cart_handoff",
-    mcp_source_context: "smoke_cart_handoff",
-    mcp_install_target: "generic_streamable_http",
+    source_context: `${source}_smoke_cart_handoff`.slice(0, 80),
+    mcp_source_context: source,
+    mcp_install_target: target,
   });
   const preparedConfirmed = await callTool("prepare_purchase_handoff", {
     sku,
     quantity: qty,
     buyer_confirmed: true,
-    source_context: "smoke_cart_handoff",
-    mcp_source_context: "smoke_cart_handoff",
-    mcp_install_target: "generic_streamable_http",
+    source_context: `${source}_smoke_cart_handoff`.slice(0, 80),
+    mcp_source_context: source,
+    mcp_install_target: target,
   });
   const cart = cartArguments
     ? await callTool("create_cart_url", {
@@ -227,8 +266,8 @@ async function main() {
           !preparedUnconfirmed.isToolError &&
           preparedUnconfirmed.structured?.status === "live_confirmed_awaiting_buyer_confirmation" &&
           preparedUnconfirmed.structured?.cart === null &&
-          preparedUnconfirmed.structured?.cart_arguments_if_buyer_confirms?.mcp_source_context === "smoke_cart_handoff" &&
-          preparedUnconfirmed.structured?.cart_arguments_if_buyer_confirms?.mcp_install_target === "generic_streamable_http"
+          preparedUnconfirmed.structured?.cart_arguments_if_buyer_confirms?.mcp_source_context === source &&
+          preparedUnconfirmed.structured?.cart_arguments_if_buyer_confirms?.mcp_install_target === target
       ),
       {
         status: preparedUnconfirmed?.status ?? null,
@@ -245,9 +284,10 @@ async function main() {
           preparedConfirmed.structured?.status === "cart_handoff_ready" &&
           preparedConfirmed.structured?.cart?.url?.startsWith("https://mcp.packrift.com/r/cart/") &&
           preparedConfirmed.structured?.cart_handoff?.primary_url === preparedConfirmed.structured?.cart?.url &&
-          preparedConfirmed.structured?.cart?.url?.includes("mcp_source_context=smoke_cart_handoff") &&
-          preparedConfirmed.structured?.cart?.url?.includes("mcp_install_target=generic_streamable_http") &&
-          preparedConfirmed.structured?.cart_handoff?.attribution_required?.mcp_source_context === "smoke_cart_handoff"
+          preparedConfirmed.structured?.cart?.url?.includes(`mcp_source_context=${source}`) &&
+          preparedConfirmed.structured?.cart?.url?.includes(`mcp_install_target=${target}`) &&
+          preparedConfirmed.structured?.cart_handoff?.attribution_required?.mcp_source_context === source &&
+          preparedConfirmed.structured?.cart_handoff?.attribution_required?.mcp_install_target === target
       ),
       {
         status: preparedConfirmed?.status ?? null,
@@ -262,6 +302,32 @@ async function main() {
       url: cartUrl,
       final_cart_url: finalCartUrl,
     }),
+    check(
+      "cart_url_source_attribution_ok",
+      Boolean(
+        cartUrl?.includes(`mcp_source_context=${source}`) &&
+          cartUrl?.includes(`mcp_install_target=${target}`) &&
+          cart?.structured?.cart_tracking?.mcp_source_context === source &&
+          cart?.structured?.cart_tracking?.mcp_install_target === target &&
+          cart?.structured?.cart_handoff?.attribution_required?.mcp_source_context === source &&
+          cart?.structured?.cart_handoff?.attribution_required?.mcp_install_target === target
+      ),
+      {
+        source,
+        target,
+        cart_url: cartUrl,
+        cart_tracking: cart?.structured?.cart_tracking ?? null,
+        attribution_required: cart?.structured?.cart_handoff?.attribution_required ?? null,
+      }
+    ),
+    check(
+      "final_cart_source_attributes_ok",
+      Boolean(
+        cartAttributePresent(finalCartUrl, "packrift_mcp_source_context") &&
+          cartAttributePresent(finalCartUrl, "packrift_mcp_install_target")
+      ),
+      { source, target, final_cart_url: finalCartUrl }
+    ),
     check(
       "final_cart_ai_commerce_attributes_ok",
       Boolean(
@@ -341,6 +407,9 @@ async function main() {
   const output = {
     created_at: startedAt,
     endpoint,
+    endpoint_input: endpointInput,
+    source,
+    target,
     mode: "synthetic_read_only_cart_handoff_smoke",
     live_endpoint_checked: true,
     live_systems_mutated: false,
@@ -373,6 +442,8 @@ async function main() {
       "# MCP Cart Handoff Smoke",
       "",
       `- Endpoint: \`${endpoint}\``,
+      `- Source: \`${source}\``,
+      `- Target: \`${target}\``,
       `- SKU: \`${sku}\``,
       `- Quantity: \`${qty}\``,
       `- Pass: \`${pass}\``,

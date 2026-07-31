@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tolerantLineItemZod } from "../line-items.js";
 import { Env, shopifyQuery, numericToVariantGid } from "../shopify.js";
 import { assertApprovedVariantIds } from "../approval.js";
 import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
@@ -28,7 +29,7 @@ export const getShippingEstimateSchema = {
               type: "string",
               description: "Numeric Shopify variant ID as a string, not a number. Example: \"53475949216112\".",
             },
-            qty: { type: "integer", minimum: 1, description: "Quantity for this line item." },
+            qty: { type: "integer", minimum: 1, description: "Quantity for this line item. The alias key quantity is also accepted." },
           },
           required: ["variant_id", "qty"],
         },
@@ -48,14 +49,7 @@ export const getShippingEstimateSchema = {
 export const getShippingEstimateZod = z.object({
   destination_postal_code: z.string().min(3),
   country: z.enum(["US", "CA"]),
-  items: z
-    .array(
-      z.object({
-        variant_id: z.string(),
-        qty: z.number().int().min(1),
-      })
-    )
-    .min(1),
+  items: z.array(tolerantLineItemZod).min(1),
   journey_id: z.string().min(1).max(120).optional(),
   result_set_id: z.string().min(1).max(120).optional(),
   selected_sku: z.string().min(1).max(80).optional(),

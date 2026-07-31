@@ -5,7 +5,14 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_ROOT = resolve(REPO_ROOT, "outputs/static-availability");
-const DEFAULT_URLS = ["https://mcp.packrift.com/llms-full.txt"];
+const DEFAULT_URLS = [
+  "https://packrift.com/llms.txt",
+  "https://packrift.com/llms-full.txt",
+  "https://packrift.com/agents.md",
+  "https://mcp.packrift.com/llms.txt",
+  "https://mcp.packrift.com/llms-full.txt",
+  "https://mcp.packrift.com/agents.md",
+];
 const DEFAULT_USER_AGENTS = [
   "ChatGPT-User",
   "GPTBot",
@@ -106,10 +113,27 @@ async function checkOne(job) {
 
 function validateContent(url, text) {
   const pathname = new URL(url).pathname;
+  const lower = text.toLowerCase();
+  const isShopifyErrorShell = lower.includes("source of truth for this generic error page")
+    || lower.includes("<title>something went wrong</title>");
+
+  if (isShopifyErrorShell || !lower.includes("packrift")) return false;
+
   if (pathname === "/llms-full.txt") {
-    return text.includes("## Priority exact-spec SKUs for agent lookup")
+    const isCanonicalCorpus = text.includes("## Priority exact-spec SKUs for agent lookup");
+    const isRootDiscoveryAlias = text.includes("## Current Retrieval Rule")
+      && text.includes("https://mcp.packrift.com/llms-full.txt");
+    return (isCanonicalCorpus || isRootDiscoveryAlias)
       && text.includes("https://mcp.packrift.com/ai/sku/")
       && !/(\/Users\/farhan|Downloads|env-shopify|campaign sub-bucket|paid-search)/i.test(text);
+  }
+  if (pathname === "/llms.txt") {
+    return text.trimStart().startsWith("#")
+      && lower.includes("https://mcp.packrift.com/mcp");
+  }
+  if (pathname === "/agents.md") {
+    return lower.includes("mcp.packrift.com")
+      && lower.includes("agent");
   }
   return text.length > 0;
 }
@@ -138,9 +162,18 @@ function summarize(results, meta) {
   const latency = results.map((row) => row.latency_ms).sort((a, b) => a - b);
   const byUserAgent = groupStats(results, "user_agent");
   const byUrl = groupStats(results, "url");
+  const everyUrlHealthy = byUrl.every((row) =>
+    row.failed_fetch_rate < 0.01
+      && row.status_5xx_rate < 0.01
+      && row.content_fail === 0
+  );
   return {
     ...meta,
-    ok: total > 0 && rate(failed, total) < 0.01 && rate(status_5xx, total) < 0.01 && content_fail === 0,
+    ok: total > 0
+      && rate(failed, total) < 0.01
+      && rate(status_5xx, total) < 0.01
+      && content_fail === 0
+      && everyUrlHealthy,
     total_fetches: total,
     ok_fetches: ok,
     failed_fetches: failed,
@@ -192,6 +225,7 @@ function groupStats(results, key) {
       total_fetches: rows.length,
       ok_fetches: rows.filter((row) => row.ok).length,
       failed_fetches: rows.filter((row) => !row.ok).length,
+      failed_fetch_rate: rate(rows.filter((row) => !row.ok).length, rows.length),
       status_5xx: rows.filter((row) => row.status >= 500 && row.status <= 599).length,
       status_5xx_rate: rate(rows.filter((row) => row.status >= 500 && row.status <= 599).length, rows.length),
       content_fail: rows.filter((row) => row.http_ok && !row.content_ok).length,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { APPROVED_CATALOG, ApprovedCatalogItem } from "../approved-catalog.js";
+import { APPROVED_CATALOG, ApprovedCatalogItem } from "../effective-approved-catalog.js";
 import { approvalStatus } from "../approval.js";
 import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildProductCard } from "../conversion.js";
 import { parseDimensions, Dimensions } from "../dimensions.js";

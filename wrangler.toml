@@ -8,6 +8,12 @@ SHOPIFY_API_VERSION = "2025-04"
 STOREFRONT_DOMAIN = "packrift.com"
 INDEXNOW_ROOT_KEY = "5050e763abb8dafdc736a5971e107171"
 AI_SALES_SKU_PAGE_TELEMETRY = "enabled"
+GOOGLE_RETAIL_PROJECT_ID = "packrift-merchant-api"
+GOOGLE_RETAIL_LOCATION = "global"
+GOOGLE_RETAIL_CATALOG = "default_catalog"
+GOOGLE_RETAIL_SERVING_CONFIG = "default_search"
+GOOGLE_RETAIL_BRANCH = "0"
+GOOGLE_RETAIL_AI_FINDER_DAILY_LIMIT = "25"
 
 # KV for catalog list cache (5-min TTL).
 # Before first deploy: `wrangler kv namespace create CATALOG_CACHE` and paste the
@@ -61,6 +67,10 @@ zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
 
 [[routes]]
 pattern = "packrift.com/5050e763abb8dafdc736a5971e107171.txt*"
+zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
+
+[[routes]]
+pattern = "packrift.com/tools/packaging-finder*"
 zone_id = "5d812b06aa1f24d2e71c6647a05c8b6b"
 
 [[routes]]

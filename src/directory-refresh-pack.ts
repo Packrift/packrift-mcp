@@ -41,6 +41,28 @@ const MCP_CAPABILITY_CARD_URL = "https://mcp.packrift.com/.well-known/capability
 const MCP_MARKETPLACE_MANIFEST_URL = "https://mcp.packrift.com/.well-known/mcp-marketplace.json";
 const MCP_TOOL_DISCOVERY_URL = "https://mcp.packrift.com/ai/mcp-tools.json";
 const MCP_TOOL_DISCOVERY_MARKDOWN_URL = "https://mcp.packrift.com/ai/spec-finder-tools.md";
+const MCP_UCP_STARTER_CATALOG_URL = "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json";
+const MCP_UCP_STARTER_CATALOG_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.md";
+const MCP_UCP_STARTER_CATALOG_HTML_URL = "https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.html";
+const MCP_UCP_BUILDER_KIT_URL = "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json";
+const MCP_UCP_BUILDER_KIT_MARKDOWN_URL = "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.md";
+const MCP_UCP_BUILDER_KIT_HTML_URL = "https://mcp.packrift.com/ai/mcp-ucp-builder-kit.html";
+const MCP_UCP_STOREFRONT_IMPORT_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json";
+const MCP_UCP_STOREFRONT_IMPORT_JSONL_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.jsonl";
+const MCP_UCP_STOREFRONT_IMPORT_CSV_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.csv";
+const MCP_UCP_STOREFRONT_IMPORT_HTML_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-import.html";
+const MCP_UCP_STOREFRONT_SHELF_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json";
+const MCP_UCP_STOREFRONT_SHELF_HTML_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.html";
+const MCP_UCP_STOREFRONT_SHELF_EMBED_JS_URL = "https://mcp.packrift.com/ai/packrift-ucp-shelf.js";
+const MCP_UCP_STOREFRONT_ADOPTION_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json";
+const MCP_UCP_STOREFRONT_ADOPTION_HTML_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.html";
+const MCP_UCP_BUILDER_ACTIVATION_HANDOFF_URL = "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json";
+const MCP_UCP_BUILDER_ACTIVATION_HANDOFF_HTML_URL = "https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.html";
+const PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_URL = "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json";
+const PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_HTML_URL = "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.html";
+const PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_URL = "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json";
+const PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_HTML_URL = "https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.html";
+const MCP_UCP_STOREFRONT_SHELF_DEMO_STACK412_URL = "https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html";
 const OFFICIAL_REGISTRY_URL = "https://registry.modelcontextprotocol.io/v0/servers/io.github.Packrift%2Fpackrift-mcp/versions/0.2.13";
 const OFFICIAL_REGISTRY_SEARCH_URL = "https://registry.modelcontextprotocol.io/v0/servers?search=Packrift";
 const SOURCE_README_URL = "https://github.com/Packrift/packrift-mcp/blob/main/README.md";
@@ -57,6 +79,28 @@ const PUBLIC_DOCS_HYGIENE = {
     marketplace_manifest: MCP_MARKETPLACE_MANIFEST_URL,
     tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
     tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+    ucp_starter_catalog_json: MCP_UCP_STARTER_CATALOG_URL,
+    ucp_starter_catalog_markdown: MCP_UCP_STARTER_CATALOG_MARKDOWN_URL,
+    ucp_starter_catalog_html: MCP_UCP_STARTER_CATALOG_HTML_URL,
+    ucp_builder_kit_json: MCP_UCP_BUILDER_KIT_URL,
+    ucp_builder_kit_markdown: MCP_UCP_BUILDER_KIT_MARKDOWN_URL,
+    ucp_builder_kit_html: MCP_UCP_BUILDER_KIT_HTML_URL,
+    ucp_storefront_import_json: MCP_UCP_STOREFRONT_IMPORT_URL,
+    ucp_storefront_import_jsonl: MCP_UCP_STOREFRONT_IMPORT_JSONL_URL,
+    ucp_storefront_import_csv: MCP_UCP_STOREFRONT_IMPORT_CSV_URL,
+    ucp_storefront_import_html: MCP_UCP_STOREFRONT_IMPORT_HTML_URL,
+    ucp_storefront_shelf_json: MCP_UCP_STOREFRONT_SHELF_URL,
+    ucp_storefront_shelf_html: MCP_UCP_STOREFRONT_SHELF_HTML_URL,
+    ucp_storefront_shelf_embed_js: MCP_UCP_STOREFRONT_SHELF_EMBED_JS_URL,
+    ucp_storefront_adoption_json: MCP_UCP_STOREFRONT_ADOPTION_URL,
+    ucp_storefront_adoption_html: MCP_UCP_STOREFRONT_ADOPTION_HTML_URL,
+    ucp_builder_activation_handoff_json: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_URL,
+    ucp_builder_activation_handoff_html: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_HTML_URL,
+    ucp_shipping_supplies_starter_kit_json: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_URL,
+    ucp_shipping_supplies_starter_kit_html: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_HTML_URL,
+    ucp_shipping_supplies_storefront_template_json: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_URL,
+    ucp_shipping_supplies_storefront_template_html: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_HTML_URL,
+    ucp_storefront_shelf_demo_stack412: MCP_UCP_STOREFRONT_SHELF_DEMO_STACK412_URL,
   },
 };
 const MCP_TRACKED_START_SOURCE_POLICY = {
@@ -342,9 +386,9 @@ const DIRECTORY_TARGETS = [
 
 export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
   const genericFirstUsefulRun = mcpFirstUsefulRun("generic", "generic_streamable_http");
-  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, Agent Web manifest, CapIndex capability card, live tool discovery JSON and Markdown, legacy OpenAPI discovery, AI plugin-style discovery manifests, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
+  const proofSummary = `${runtime.toolsCount} tools, ${runtime.promptsCount} prompts, ${runtime.resourcesCount} resources, hosted Streamable HTTP endpoint, public start page, public server card, Agent Web manifest, CapIndex capability card, live tool discovery JSON and Markdown, builder-ready UCP starter catalog, storefront integration kit, flat import feed, and copy-paste shelf renderer for curated storefront shelves, legacy OpenAPI discovery, AI plugin-style discovery manifests, copy-ready MCP client config, copy-ready first-useful-run agent prompt, source-attributed /r/config/{source} config links, tracked /r/install/{source}/{target} install-action links, browser-executable /r/run/{source}/{target} first-run proof, reviewer-to-real-MCP /r/activate/{source} handoffs, browser runner /r/activate/{source}?format=html, source activation queue, activation wave, official registry entry, install matrix, workflow gallery, browser-agent bridge, Browserbase Browse SKILL.md, Browserbase Browse skill pack, usage snapshot, and MCP-attributed cart handoff candidates.`;
   return {
-    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R32",
+    release: "PACKRIFT-MCP-DIRECTORY-REFRESH-R34",
     generated_at: new Date().toISOString(),
     purpose:
       "Single public recrawl pack for MCP directories, marketplaces, and agent indexes that need current Packrift MCP listing fields and live proof URLs.",
@@ -417,6 +461,28 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       marketplace_manifest_url: MCP_MARKETPLACE_MANIFEST_URL,
       tool_discovery_json_url: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown_url: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      ucp_starter_catalog_json_url: MCP_UCP_STARTER_CATALOG_URL,
+      ucp_starter_catalog_markdown_url: MCP_UCP_STARTER_CATALOG_MARKDOWN_URL,
+      ucp_starter_catalog_html_url: MCP_UCP_STARTER_CATALOG_HTML_URL,
+      ucp_builder_kit_json_url: MCP_UCP_BUILDER_KIT_URL,
+      ucp_builder_kit_markdown_url: MCP_UCP_BUILDER_KIT_MARKDOWN_URL,
+      ucp_builder_kit_html_url: MCP_UCP_BUILDER_KIT_HTML_URL,
+      ucp_storefront_import_json_url: MCP_UCP_STOREFRONT_IMPORT_URL,
+      ucp_storefront_import_jsonl_url: MCP_UCP_STOREFRONT_IMPORT_JSONL_URL,
+      ucp_storefront_import_csv_url: MCP_UCP_STOREFRONT_IMPORT_CSV_URL,
+      ucp_storefront_import_html_url: MCP_UCP_STOREFRONT_IMPORT_HTML_URL,
+      ucp_storefront_shelf_json_url: MCP_UCP_STOREFRONT_SHELF_URL,
+      ucp_storefront_shelf_html_url: MCP_UCP_STOREFRONT_SHELF_HTML_URL,
+      ucp_storefront_shelf_embed_js_url: MCP_UCP_STOREFRONT_SHELF_EMBED_JS_URL,
+      ucp_storefront_adoption_json_url: MCP_UCP_STOREFRONT_ADOPTION_URL,
+      ucp_storefront_adoption_html_url: MCP_UCP_STOREFRONT_ADOPTION_HTML_URL,
+      ucp_builder_activation_handoff_json_url: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_URL,
+      ucp_builder_activation_handoff_html_url: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_HTML_URL,
+      ucp_shipping_supplies_starter_kit_json_url: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_URL,
+      ucp_shipping_supplies_starter_kit_html_url: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_HTML_URL,
+      ucp_shipping_supplies_storefront_template_json_url: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_URL,
+      ucp_shipping_supplies_storefront_template_html_url: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_HTML_URL,
+      ucp_storefront_shelf_demo_stack412_url: MCP_UCP_STOREFRONT_SHELF_DEMO_STACK412_URL,
       root_mcp_json: ROOT_MCP_JSON_URL,
       well_known_mcp_json: WELL_KNOWN_MCP_JSON_URL,
       openapi_json: MCP_OPENAPI_JSON_URL,
@@ -464,6 +530,28 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       marketplace_manifest: MCP_MARKETPLACE_MANIFEST_URL,
       tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
       tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+      ucp_starter_catalog_json: MCP_UCP_STARTER_CATALOG_URL,
+      ucp_starter_catalog_markdown: MCP_UCP_STARTER_CATALOG_MARKDOWN_URL,
+      ucp_starter_catalog_html: MCP_UCP_STARTER_CATALOG_HTML_URL,
+      ucp_builder_kit_json: MCP_UCP_BUILDER_KIT_URL,
+      ucp_builder_kit_markdown: MCP_UCP_BUILDER_KIT_MARKDOWN_URL,
+      ucp_builder_kit_html: MCP_UCP_BUILDER_KIT_HTML_URL,
+      ucp_storefront_import_json: MCP_UCP_STOREFRONT_IMPORT_URL,
+      ucp_storefront_import_jsonl: MCP_UCP_STOREFRONT_IMPORT_JSONL_URL,
+      ucp_storefront_import_csv: MCP_UCP_STOREFRONT_IMPORT_CSV_URL,
+      ucp_storefront_import_html: MCP_UCP_STOREFRONT_IMPORT_HTML_URL,
+      ucp_storefront_shelf_json: MCP_UCP_STOREFRONT_SHELF_URL,
+      ucp_storefront_shelf_html: MCP_UCP_STOREFRONT_SHELF_HTML_URL,
+      ucp_storefront_shelf_embed_js: MCP_UCP_STOREFRONT_SHELF_EMBED_JS_URL,
+      ucp_storefront_adoption_json: MCP_UCP_STOREFRONT_ADOPTION_URL,
+      ucp_storefront_adoption_html: MCP_UCP_STOREFRONT_ADOPTION_HTML_URL,
+      ucp_builder_activation_handoff_json: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_URL,
+      ucp_builder_activation_handoff_html: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_HTML_URL,
+      ucp_shipping_supplies_starter_kit_json: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_URL,
+      ucp_shipping_supplies_starter_kit_html: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_HTML_URL,
+      ucp_shipping_supplies_storefront_template_json: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_URL,
+      ucp_shipping_supplies_storefront_template_html: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_HTML_URL,
+      ucp_storefront_shelf_demo_stack412: MCP_UCP_STOREFRONT_SHELF_DEMO_STACK412_URL,
       tools_list: `${MCP_ENDPOINT} via JSON-RPC tools/list`,
       resources_list: `${MCP_ENDPOINT} via JSON-RPC resources/list`,
       prompts_list: `${MCP_ENDPOINT} via JSON-RPC prompts/list`,
@@ -538,6 +626,25 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         marketplace_manifest: MCP_MARKETPLACE_MANIFEST_URL,
         tool_discovery_json: MCP_TOOL_DISCOVERY_URL,
         tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
+        ucp_starter_catalog_json: MCP_UCP_STARTER_CATALOG_URL,
+        ucp_starter_catalog_html: MCP_UCP_STARTER_CATALOG_HTML_URL,
+        ucp_builder_kit_json: MCP_UCP_BUILDER_KIT_URL,
+        ucp_builder_kit_html: MCP_UCP_BUILDER_KIT_HTML_URL,
+        ucp_storefront_import_json: MCP_UCP_STOREFRONT_IMPORT_URL,
+        ucp_storefront_import_csv: MCP_UCP_STOREFRONT_IMPORT_CSV_URL,
+        ucp_storefront_import_html: MCP_UCP_STOREFRONT_IMPORT_HTML_URL,
+        ucp_storefront_shelf_json: MCP_UCP_STOREFRONT_SHELF_URL,
+        ucp_storefront_shelf_html: MCP_UCP_STOREFRONT_SHELF_HTML_URL,
+        ucp_storefront_shelf_embed_js: MCP_UCP_STOREFRONT_SHELF_EMBED_JS_URL,
+        ucp_storefront_adoption_json: MCP_UCP_STOREFRONT_ADOPTION_URL,
+        ucp_storefront_adoption_html: MCP_UCP_STOREFRONT_ADOPTION_HTML_URL,
+        ucp_builder_activation_handoff_json: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_URL,
+        ucp_builder_activation_handoff_html: MCP_UCP_BUILDER_ACTIVATION_HANDOFF_HTML_URL,
+        ucp_shipping_supplies_starter_kit_json: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_URL,
+        ucp_shipping_supplies_starter_kit_html: PACKRIFT_UCP_SHIPPING_SUPPLIES_STARTER_KIT_HTML_URL,
+        ucp_shipping_supplies_storefront_template_json: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_URL,
+        ucp_shipping_supplies_storefront_template_html: PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_HTML_URL,
+        ucp_storefront_shelf_demo_stack412: MCP_UCP_STOREFRONT_SHELF_DEMO_STACK412_URL,
         openapi_json: MCP_OPENAPI_JSON_URL,
         well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
         ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
@@ -550,7 +657,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
         "Paste the source-specific agent prompt into the MCP host and require tools/list, get_cart_handoff_candidates, get_pricing, check_inventory, and create_cart_url before treating this source as activated.",
     })),
     recrawl_request:
-      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use ${MCP_MARKETPLACE_MANIFEST_URL} as the compact marketplace manifest, ${MCP_AGENT_WEB_MANIFEST_URL} for Agent Web discovery, ${MCP_CAPABILITY_CARD_URL} for capability-card discovery, ${MCP_OPENAPI_JSON_URL} or ${MCP_WELL_KNOWN_OPENAPI_JSON_URL} for legacy OpenAPI discovery, ${MCP_AI_PLUGIN_JSON_URL} or ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL} for AI plugin-style discovery, use ${MCP_TOOL_DISCOVERY_URL} or ${MCP_TOOL_DISCOVERY_MARKDOWN_URL} for the current live ${runtime.toolsCount}-tool surface, use ${MCP_SOURCE_ACTIVATION_SITEMAP_URL} as the source-specific activation sitemap, use ${MCP_ACTIVATION_WAVE_URL} as the current non-duplicative activation wave for real host-side tool calls, use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup, use browser proof links like ${trackedRunUrl("generic", "generic_streamable_http")}&execute=1 when validating the first useful run, use the Copy agent prompt button at ${trackedRunUrl("generic", "generic_streamable_http")}&format=html, use ${REVIEWER_ACTIVATION_URL} plus /r/activate/{source}?format=html to convert proof clicks into real MCP client calls, and use ${MCP_SOURCE_ACTIVATION_QUEUE_URL} to pick the next source-specific activation run. Current proof: ${proofSummary}`,
+      `Please recrawl Packrift MCP as a hosted no-auth Streamable HTTP MCP server at ${MCP_ENDPOINT}. Use ${MCP_MARKETPLACE_MANIFEST_URL} as the compact marketplace manifest, ${MCP_AGENT_WEB_MANIFEST_URL} for Agent Web discovery, ${MCP_CAPABILITY_CARD_URL} for capability-card discovery, ${MCP_UCP_STARTER_CATALOG_HTML_URL} or ${MCP_UCP_STARTER_CATALOG_URL} for the curated-UCP storefront starter catalog, ${MCP_UCP_BUILDER_KIT_HTML_URL} or ${MCP_UCP_BUILDER_KIT_URL} for the storefront integration kit, ${MCP_UCP_STOREFRONT_IMPORT_HTML_URL}, ${MCP_UCP_STOREFRONT_IMPORT_URL}, or ${MCP_UCP_STOREFRONT_IMPORT_CSV_URL} for flat import rows that add Packrift as a packaging shelf, ${MCP_UCP_STOREFRONT_SHELF_HTML_URL} or ${MCP_UCP_STOREFRONT_SHELF_EMBED_JS_URL} for copy-paste shelf rendering, ${PACKRIFT_UCP_SHIPPING_SUPPLIES_STOREFRONT_TEMPLATE_HTML_URL} for a copy-ready shipping-supplies storefront scaffold, ${MCP_OPENAPI_JSON_URL} or ${MCP_WELL_KNOWN_OPENAPI_JSON_URL} for legacy OpenAPI discovery, ${MCP_AI_PLUGIN_JSON_URL} or ${MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL} for AI plugin-style discovery, use ${MCP_TOOL_DISCOVERY_URL} or ${MCP_TOOL_DISCOVERY_MARKDOWN_URL} for the current live ${runtime.toolsCount}-tool surface, use ${MCP_SOURCE_ACTIVATION_SITEMAP_URL} as the source-specific activation sitemap, use ${MCP_ACTIVATION_WAVE_URL} as the current non-duplicative activation wave for real host-side tool calls, use tracked install-action links like ${trackedInstallUrl("generic", "codex")} when linking to client-specific setup, use browser proof links like ${trackedRunUrl("generic", "generic_streamable_http")}&execute=1 when validating the first useful run, use the Copy agent prompt button at ${trackedRunUrl("generic", "generic_streamable_http")}&format=html, use ${REVIEWER_ACTIVATION_URL} plus /r/activate/{source}?format=html to convert proof clicks into real MCP client calls, and use ${MCP_SOURCE_ACTIVATION_QUEUE_URL} to pick the next source-specific activation run. Current proof: ${proofSummary}`,
     operating_rules: [
       "The hosted endpoint is the primary listing target; do not require users to self-host or provide a Shopify token for normal MCP use.",
       "Use the official registry name io.github.Packrift/packrift-mcp and the remote endpoint https://mcp.packrift.com/mcp.",
@@ -623,6 +730,22 @@ export function mcpDirectoryRefreshMarkdown(runtime: DirectoryRefreshRuntime): s
     `Marketplace manifest: ${payload.canonical_listing.marketplace_manifest_url}`,
     `Live tool discovery JSON: ${payload.canonical_listing.tool_discovery_json_url}`,
     `Live tool discovery Markdown: ${payload.canonical_listing.tool_discovery_markdown_url}`,
+    `UCP starter catalog JSON: ${payload.canonical_listing.ucp_starter_catalog_json_url}`,
+    `UCP starter catalog HTML: ${payload.canonical_listing.ucp_starter_catalog_html_url}`,
+    `UCP builder kit JSON: ${payload.canonical_listing.ucp_builder_kit_json_url}`,
+    `UCP builder kit HTML: ${payload.canonical_listing.ucp_builder_kit_html_url}`,
+    `UCP storefront import JSON: ${payload.canonical_listing.ucp_storefront_import_json_url}`,
+    `UCP storefront import JSONL: ${payload.canonical_listing.ucp_storefront_import_jsonl_url}`,
+    `UCP storefront import CSV: ${payload.canonical_listing.ucp_storefront_import_csv_url}`,
+    `UCP storefront import HTML: ${payload.canonical_listing.ucp_storefront_import_html_url}`,
+    `UCP storefront shelf JSON: ${payload.canonical_listing.ucp_storefront_shelf_json_url}`,
+    `UCP storefront shelf HTML: ${payload.canonical_listing.ucp_storefront_shelf_html_url}`,
+    `UCP storefront shelf embed JS: ${payload.canonical_listing.ucp_storefront_shelf_embed_js_url}`,
+    `UCP storefront adoption JSON: ${payload.canonical_listing.ucp_storefront_adoption_json_url}`,
+    `UCP storefront adoption HTML: ${payload.canonical_listing.ucp_storefront_adoption_html_url}`,
+    `UCP builder activation handoff JSON: ${payload.canonical_listing.ucp_builder_activation_handoff_json_url}`,
+    `UCP builder activation handoff HTML: ${payload.canonical_listing.ucp_builder_activation_handoff_html_url}`,
+    `Stack412-style shelf demo: ${payload.canonical_listing.ucp_storefront_shelf_demo_stack412_url}`,
     `OpenAPI discovery adapter: ${payload.canonical_listing.openapi_json}`,
     `Well-known OpenAPI discovery adapter: ${payload.canonical_listing.well_known_openapi_json}`,
     `AI plugin-style manifest: ${payload.canonical_listing.ai_plugin_json}`,

@@ -28,6 +28,8 @@
   "scripts": {
     "prebuild": "node scripts/check-public-doc-hygiene.mjs",
     "build": "tsc -p tsconfig.build.json",
+    "test": "tsc -p tsconfig.build.json && node --test scripts/test-search-ranking.mjs scripts/test-experiment-approved-catalog.mjs scripts/test-query-alias-overrides.mjs scripts/test-input-coercion.mjs",
+    "eval:ranking": "tsc -p tsconfig.build.json && node scripts/eval-search-ranking.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "start": "node dist/node.js",
