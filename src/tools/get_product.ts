@@ -6,6 +6,7 @@ import { buildConversionActions, buildMatchSummary, buildProductCard } from "../
 
 export const getProductSchema = {
   name: "get_product",
+  title: "Get product details",
   description:
     "Use after find_packaging_for_item or search_products to pull full detail for a handle: all variants, SKUs, dimensions, weight, stock. Input: handle. Call before building a cart to map qty to the right variant.",
   inputSchema: {

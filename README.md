@@ -275,13 +275,13 @@ Tools are framed around exact-spec procurement, not generic browsing. Use `find_
 | `get_pricing(variant_ids[], quantity?)` | Live unit price and line total before purchase handoff. `variant_ids` must be numeric Shopify variant IDs encoded as strings. Never cached. |
 | `check_inventory(variant_ids[])` | Live inventory check before recommending or building a cart. `variant_ids` must be numeric Shopify variant IDs encoded as strings. Never cached. |
 | `get_shipping_estimate(zip, country, items[])` | Carrier rates for a chosen cart via Shopify `draftOrderCalculate`. |
-| `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority AI-approved SKUs with ready `create_cart_url` arguments, measured SKU/product/reorder/quote/cart links, and required live-confirmation sequence. |
+| `get_cart_handoff_candidates(limit?, family?, sku?)` | Priority curated SKUs with ready `create_cart_url` arguments, SKU/product/reorder/quote/cart links, and required live-confirmation sequence. |
 | `create_cart_url(items[], discount_code?, ref?)` | Final cart handoff. Builds a GA4-visible Packrift cart landing URL plus the final `packrift.com/cart/...` permalink with `ref=mcp` and AI-commerce attribution fields. |
-| `prepare_purchase_handoff(sku, quantity?, buyer_confirmed?)` | Fast exact-SKU path. Confirms the AI_APPROVE product, live price, and inventory, then returns a measured MCP cart URL only when `buyer_confirmed=true`. |
-| `compare_alternatives(requested_spec, family?, competitor_reference?, limit?)` | Ranks AI-approved Packrift alternatives for open-ended buyer requests, including competitor-style packaging specs. |
+| `prepare_purchase_handoff(sku, quantity?, buyer_confirmed?)` | Fast exact-SKU path. Confirms the product, live price, and inventory, then returns a tracked cart URL only when `buyer_confirmed=true`. |
+| `compare_alternatives(requested_spec, family?, competitor_reference?, limit?)` | Ranks curated Packrift alternatives for open-ended buyer requests, including competitor-style packaging specs. |
 | `pack_calculator(item, padding?, use_case?, limit?)` | Calculates protected inside dimensions and returns fitted box or mailer candidates with void-fill guidance. |
 | `inventory_status(variant_ids?, sku?, handle?, quantity?)` | Live total and location-level Shopify inventory status for exact SKUs, handles, or variant IDs. |
-| `get_reorder_link(sku, handle?)` | Reorder URL, product URL, and copy-procurement-spec text for an AI-approved SKU or handle. |
+| `get_reorder_link(sku, handle?)` | Reorder URL, product URL, and copy-procurement-spec text for a catalog SKU or handle. |
 | `get_bulk_quote_link(requested_spec, family?, sku?, quantity?)` | Tracked bulk quote URL for no-exact-match, large-volume, or procurement-review workflows. |
 | `explain_no_exact_match(requested_spec, missing_or_mismatched_fields?)` | Explains why a nearby product should not be presented as exact, then routes to safe next actions and quote recovery. |
 

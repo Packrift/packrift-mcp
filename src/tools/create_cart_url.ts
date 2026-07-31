@@ -16,8 +16,9 @@ type CreateCartUrlContext = {
 
 export const createCartUrlSchema = {
   name: "create_cart_url",
+  title: "Create cart handoff URL",
   description:
-    "Final checkout handoff after live product, price, inventory, and buyer confirmation. For most agents, use exact AI_APPROVE sku plus quantity. Use items only when you already have variant IDs as strings. Returns a measured Packrift /r/cart URL with MCP attribution and a Shopify cart permalink; it does not place an order.",
+    "Build the checkout handoff URL once the buyer has confirmed an exact product, quantity, live price, and stock. Preferred input is sku plus quantity; use items only when you already hold variant IDs as strings. Returns a tracked packrift.com cart URL plus a Shopify cart permalink; it never places an order.",
   inputSchema: {
     type: "object",
     properties: {
@@ -48,53 +49,36 @@ export const createCartUrlSchema = {
           required: ["variant_id", "qty"],
         },
       },
-      discount_code: { type: "string" },
-      ref: { type: "string", default: "mcp" },
+      discount_code: { type: "string", description: "Optional discount code to apply to the cart." },
       source_context: {
         type: "string",
-        description: "Optional short context for analytics, such as exact_match, reorder, quote_followup, or ai_agent.",
+        description: "Optional short context label for the handoff, such as exact_match, reorder, or quote_followup.",
       },
-      journey_id: { type: "string" },
-      packrift_ai_id: { type: "string" },
-      ai_commerce_id: { type: "string" },
-      result_set_id: { type: "string" },
+      journey_id: {
+        type: "string",
+        description: "Optional continuity ID echoed from an earlier search or pricing result in this conversation.",
+      },
+      result_set_id: {
+        type: "string",
+        description: "Optional continuity ID echoed from the result set the buyer chose from.",
+      },
       selected_sku: {
         type: "string",
-        description: "Buyer-confirmed SKU. When provided, it must resolve to the same AI_APPROVE item as the cart variant.",
+        description: "Buyer-confirmed SKU. When provided, it must resolve to the same catalog item as the cart variant.",
       },
       selected_handle: {
         type: "string",
-        description: "Buyer-confirmed product handle. When provided, it must resolve to the same AI_APPROVE item as the cart variant.",
+        description: "Buyer-confirmed product handle. When provided, it must resolve to the same catalog item as the cart variant.",
       },
-      match_type: { type: "string" },
-      reorder_source: { type: "string" },
-      utm_term: { type: "string" },
-      mcp_source_context: {
+      match_type: {
         type: "string",
-        description: "Optional source slug for source-aware MCP installs, such as cline_mcp_marketplace or mcp_so.",
-      },
-      packrift_mcp_source: { type: "string" },
-      mcp_source: { type: "string" },
-      source_slug: { type: "string" },
-      mcp_install_target: {
-        type: "string",
-        description: "Optional install target for source-aware MCP installs, such as cline, codex, or generic_streamable_http.",
-      },
-      packrift_mcp_target: { type: "string" },
-      mcp_target: { type: "string" },
-      suppress_analytics: {
-        type: "boolean",
-        description: "Internal QA flag. When true, do not record an AI-sales cart event.",
-      },
-      analytics_context: {
-        type: "object",
-        description: "Internal QA context for synthetic evals.",
+        description: "Optional continuity label describing how the product was matched, echoed from earlier results.",
       },
     },
     anyOf: [{ required: ["items"] }, { required: ["sku"] }],
   },
 
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
 };
 
 export const createCartUrlZod = z.object({
@@ -131,7 +115,7 @@ export const createCartUrlZod = z.object({
   suppress_analytics: z.boolean().optional(),
   analytics_context: z.record(z.unknown()).optional(),
 }).refine((value) => Boolean(value.items?.length || value.sku), {
-  message: "create_cart_url requires either items[{variant_id, qty}] or an exact AI_APPROVE sku.",
+  message: "create_cart_url requires either items[{variant_id, qty}] or an exact catalog sku.",
 });
 
 function normalizedSku(value: string | undefined): string | null {
@@ -150,7 +134,7 @@ function sameVariant(left: string | null | undefined, right: string | null | und
 
 function cartContinuityError(message: string): never {
   throw new Error(
-    `AI_APPROVE cart continuity blocked: ${message}. Use get_cart_handoff_candidates, search_products, or get_product to choose one exact approved Packrift SKU before create_cart_url.`
+    `Cart continuity check failed: ${message}. Use get_cart_handoff_candidates, search_products, or get_product to choose one exact catalog SKU before create_cart_url.`
   );
 }
 

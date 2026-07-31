@@ -1,6 +1,6 @@
 {
   "name": "packrift-mcp-server",
-  "version": "0.2.13",
+  "version": "0.3.0",
   "description": "MCP server for Packrift exact-spec packaging procurement, live pricing, inventory, reorder, quote, and cart handoff.",
   "private": true,
   "license": "MIT",
@@ -50,7 +50,9 @@
     "build:llms-full": "node scripts/build-llms-full-from-ga4.mjs",
     "refresh:llms-full": "node scripts/refresh-llms-full-priority.mjs",
     "purge:cache": "node scripts/purge-cloudflare-cache.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:directory-surface": "node scripts/check-directory-surface.mjs",
+    "check:directory-surface:live": "node scripts/check-directory-surface.mjs --live"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.2",

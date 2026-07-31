@@ -5,6 +5,7 @@ import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversio
 
 export const checkInventorySchema = {
   name: "check_inventory",
+  title: "Check inventory",
   description:
     "Use to confirm stock before recommending a SKU or building a cart. Required argument: variant_ids as an array of numeric Shopify variant IDs encoded as strings, for example [\"53475949216112\"]. Never send variant_ids as numbers. Live, never cached.",
   inputSchema: {

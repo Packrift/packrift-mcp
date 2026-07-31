@@ -6,6 +6,7 @@ import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildP
 
 export const searchProductsSchema = {
   name: "search_products",
+  title: "Search products",
   description:
     "Use when the user names a category by keyword (e.g. 'kraft tape', 'bubble mailer', 'starter kit') with no dimensions. For dimension-based fit, prefer find_packaging_for_item. Returns products with price, stock, URL.",
   inputSchema: {

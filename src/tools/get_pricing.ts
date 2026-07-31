@@ -5,6 +5,7 @@ import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversio
 
 export const getPricingSchema = {
   name: "get_pricing",
+  title: "Get live pricing",
   description:
     "Use to confirm live unit price and line total before cart handoff. Required argument: variant_ids as an array of numeric Shopify variant IDs encoded as strings, for example [\"53475949216112\"]. Optional quantity defaults to 1. Never send variant_ids as numbers. Never cached.",
   inputSchema: {

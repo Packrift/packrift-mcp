@@ -9,31 +9,25 @@ const AI_SALES_EVENT_TTL_SECONDS = 60 * 60 * 24 * 90;
 
 export const getReorderLinkSchema = {
   name: "get_reorder_link",
+  title: "Get reorder link",
   description:
-    "Return the Packrift reorder URL, product URL, and copy-procurement-spec text for one AI_APPROVE SKU or handle. Use for repeat-buy and procurement handoff workflows.",
+    "Return the reorder URL, product URL, and a copyable procurement spec for one catalog SKU or handle. Use for repeat-buy and procurement handoff workflows.",
   inputSchema: {
     type: "object",
     properties: {
       sku: { type: "string", description: "Packrift SKU such as 1066, MFL1295, or LL251WR." },
       handle: { type: "string", description: "Packrift product handle if SKU is unknown." },
-      source_context: { type: "string", description: "Optional analytics context, e.g. ai_agent_reorder or mcp_reorder." },
-      suppress_analytics: {
-        type: "boolean",
-        description: "Internal QA flag. When true, do not record an AI-sales reorder event.",
-      },
-      analytics_context: {
-        type: "object",
-        description: "Internal QA context for synthetic evals.",
-      },
+      source_context: { type: "string", description: "Optional short context label, such as reorder or procurement." },
     },
   },
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
 };
 
 export const getBulkQuoteLinkSchema = {
   name: "get_bulk_quote_link",
+  title: "Get bulk quote link",
   description:
-    "Return a tracked Packrift bulk quote URL for an exact requested packaging spec or SKU. Use when there is no exact match or the buyer needs bulk/procurement review.",
+    "Return a quote-request URL for an exact packaging spec or SKU. Use when no exact match exists or the buyer needs bulk or procurement review.",
   inputSchema: {
     type: "object",
     properties: {
@@ -42,24 +36,17 @@ export const getBulkQuoteLinkSchema = {
       family: { type: "string", description: "Optional product family such as boxes, labels, mailers, tape, or poly_bags." },
       quantity: { type: "string", description: "Optional buyer quantity." },
       reason: { type: "string", description: "Optional reason for quote handoff." },
-      suppress_analytics: {
-        type: "boolean",
-        description: "Internal QA flag. When true, do not record an AI-sales quote event.",
-      },
-      analytics_context: {
-        type: "object",
-        description: "Internal QA context for synthetic evals.",
-      },
     },
     required: ["requested_spec"],
   },
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
 };
 
 export const explainNoExactMatchSchema = {
   name: "explain_no_exact_match",
+  title: "Explain no exact match",
   description:
-    "Explain why Packrift should not present a nearby product as an exact match, then return safe next actions and a tracked bulk quote URL.",
+    "Explain why a nearby product should not be presented as an exact match for the buyer's spec, then return safe next actions and a quote-request URL.",
   inputSchema: {
     type: "object",
     properties: {
@@ -71,18 +58,10 @@ export const explainNoExactMatchSchema = {
         description: "Required fields that were unavailable or different, such as length, material, color, or pack_count.",
       },
       reason: { type: "string", description: "Optional short explanation from the caller." },
-      suppress_analytics: {
-        type: "boolean",
-        description: "Internal QA flag. When true, do not record an AI-sales no-match event.",
-      },
-      analytics_context: {
-        type: "object",
-        description: "Internal QA context for synthetic evals.",
-      },
     },
     required: ["requested_spec"],
   },
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
 };
 
 const getReorderLinkZod = z

@@ -146,8 +146,9 @@ const CART_HANDOFF_FAMILY_ALIASES: Record<string, string> = {
 
 const getCartHandoffCandidatesSchema = {
   name: "get_cart_handoff_candidates",
+  title: "Get cart handoff candidates",
   description:
-    "Returns priority AI-approved Packrift SKUs that are ready for MCP cart handoff exploration, including create_cart_url arguments, SKU records, measured product/reorder/quote links, and the required live-confirmation sequence.",
+    "Returns curated Packrift SKUs that are ready for cart handoff, including create_cart_url arguments, SKU records, product/reorder/quote links, and the required live-confirmation sequence.",
   inputSchema: {
     type: "object",
     properties: {
@@ -176,7 +177,7 @@ interface PromptDef {
   template: string;
 }
 
-const TOOLS: ToolDef[] = [
+export const TOOLS: ToolDef[] = [
   { schema: searchProductsSchema, handler: searchProductsHandler },
   { schema: getProductSchema, handler: getProductHandler },
   { schema: getPricingSchema, handler: getPricingHandler },
@@ -194,23 +195,26 @@ const TOOLS: ToolDef[] = [
   { schema: explainNoExactMatchSchema, handler: explainNoExactMatchHandler },
 ];
 
-const PROMPTS: PromptDef[] = [
+export const SERVER_INSTRUCTIONS =
+  "Packrift is a US packaging-supplies store (boxes, mailers, tape, labels, poly bags, stretch film). These tools search a curated in-stock catalog, confirm live price and inventory, estimate shipping, and hand the buyer off to checkout on packrift.com; no tool places an order. Typical flow: (1) discover — find_packaging_for_item when the buyer has item dimensions or a shipping context, search_products for keyword lookups, compare_alternatives or pack_calculator for exploration, get_cart_handoff_candidates for ready-to-buy SKUs; (2) confirm — get_product for full detail, get_pricing and check_inventory (or inventory_status) for live confirmation, get_shipping_estimate for rates; (3) hand off — prepare_purchase_handoff for the exact-SKU path (it returns a checkout URL only after buyer_confirmed=true), or create_cart_url once the buyer confirms product and quantity; get_reorder_link and get_bulk_quote_link cover repeat-buy and quote workflows. If nothing matches the buyer's exact spec, call explain_no_exact_match rather than presenting a near-match as exact.";
+
+export const PROMPTS: PromptDef[] = [
   {
     name: "find_exact_packaging_spec",
-    description: "Find an AI-approved Packrift product by exact dimensions, material, color, count, or SKU.",
+    description: "Find a Packrift catalog product by exact dimensions, material, color, count, or SKU.",
     arguments: [
       { name: "spec", description: "Exact buyer request such as 10 x 6 x 6 ECT 32 kraft boxes, 25 bundle.", required: true },
       { name: "family", description: "Optional product family such as boxes, labels, mailers, tape, poly bags, or stretch film." },
     ],
     template:
-      "Find an exact Packrift packaging match for: {{spec}}. Product family: {{family}}. Use only AI_APPROVE products. Confirm SKU, dimensions, material, color, pack or case count, product URL, live price, and inventory before purchase handoff. If any required field differs, return no exact match and route to bulk quote.",
+      "Find an exact Packrift packaging match for: {{spec}}. Product family: {{family}}. Use only exact catalog matches. Confirm SKU, dimensions, material, color, pack or case count, product URL, live price, and inventory before purchase handoff. If any required field differs, return no exact match and route to bulk quote.",
   },
   {
     name: "reorder_packrift_sku",
     description: "Reorder a known Packrift SKU with exact product continuity.",
     arguments: [{ name: "sku", description: "Packrift SKU to reorder.", required: true }],
     template:
-      "Reorder Packrift SKU {{sku}}. First call get_cart_handoff_candidates with the SKU, then get_product, get_pricing, and check_inventory. After the exact SKU, live facts, and buyer quantity are confirmed, call create_cart_url with the candidate's create_cart_url_sku_arguments or create_cart_url_arguments. Return the MCP /r/cart URL as the primary handoff; keep product, reorder, quote, and copy-procurement-spec actions as fallbacks. If the SKU is not an exact AI_APPROVE match, do not create a cart URL.",
+      "Reorder Packrift SKU {{sku}}. First call get_cart_handoff_candidates with the SKU, then get_product, get_pricing, and check_inventory. After the exact SKU, live facts, and buyer quantity are confirmed, call create_cart_url with the candidate's create_cart_url_sku_arguments or create_cart_url_arguments. Return the /r/cart URL as the primary handoff; keep product, reorder, quote, and copy-procurement-spec actions as fallbacks. If the SKU is not an exact catalog match, do not create a cart URL.",
   },
   {
     name: "prepare_cart_handoff",
@@ -220,7 +224,7 @@ const PROMPTS: PromptDef[] = [
       { name: "quantity", description: "Buyer-selected quantity. Default to 1 when not provided." },
     ],
     template:
-      "Prepare a Packrift MCP cart handoff for SKU {{sku}} and quantity {{quantity}}. First call get_cart_handoff_candidates with the exact SKU to retrieve the approved variant and create_cart_url arguments. Then call get_product, get_pricing, and check_inventory for live confirmation. Only after the exact SKU, variant, live price, inventory, and buyer-selected quantity are confirmed, call create_cart_url with MCP attribution. Return the stamped cart URL plus the measured product, reorder, quote, and copy-procurement-spec fallback actions. If the requested SKU is not an exact AI_APPROVE match, do not create a cart URL; call explain_no_exact_match or get_bulk_quote_link instead.",
+      "Prepare a Packrift MCP cart handoff for SKU {{sku}} and quantity {{quantity}}. First call get_cart_handoff_candidates with the exact SKU to retrieve the approved variant and create_cart_url arguments. Then call get_product, get_pricing, and check_inventory for live confirmation. Only after the exact SKU, variant, live price, inventory, and buyer-selected quantity are confirmed, call create_cart_url. Return the cart URL plus the product, reorder, quote, and copy-procurement-spec fallback actions. If the requested SKU is not an exact catalog match, do not create a cart URL; call explain_no_exact_match or get_bulk_quote_link instead.",
   },
   {
     name: "fit_item_then_prepare_cart",
@@ -232,17 +236,17 @@ const PROMPTS: PromptDef[] = [
       { name: "quantity", description: "Buyer-selected quantity. Default to 1 until confirmed." },
     ],
     template:
-      "Find packaging for an item with dimensions {{item_dimensions}}, weight {{weight}}, use case {{use_case}}, and desired quantity {{quantity}}. Start with find_packaging_for_item using the item dimensions and use case. For the top AI_APPROVE fit, call get_product, get_pricing, check_inventory, and get_shipping_estimate when destination data is available. If the buyer confirms the exact SKU and quantity, call create_cart_url so the returned URL includes ref=mcp plus chatgpt-mcp / mcp_tool / create_cart_url attribution. If no exact safe fit exists, call explain_no_exact_match and get_bulk_quote_link instead of forcing a substitute.",
+      "Find packaging for an item with dimensions {{item_dimensions}}, weight {{weight}}, use case {{use_case}}, and desired quantity {{quantity}}. Start with find_packaging_for_item using the item dimensions and use case. For the top fit, call get_product, get_pricing, check_inventory, and get_shipping_estimate when destination data is available. If the buyer confirms the exact SKU and quantity, call create_cart_url; the returned URL carries Packrift's standard attribution parameters automatically. If no exact safe fit exists, call explain_no_exact_match and get_bulk_quote_link instead of forcing a substitute.",
   },
   {
     name: "review_cart_handoff_candidates",
-    description: "Explore priority SKUs that already have ready create_cart_url arguments for measured MCP cart testing.",
+    description: "Explore priority SKUs that already have ready create_cart_url arguments for cart handoff.",
     arguments: [
       { name: "family", description: "Optional family filter such as boxes, mailers, labels, tape, poly_bags, stretch_film, strapping, tags, void_fill, or envelopes." },
       { name: "limit", description: "Number of candidates to review. Default to 10." },
     ],
     template:
-      "Review Packrift MCP cart handoff candidates for family {{family}} with limit {{limit}}. Call get_cart_handoff_candidates, choose one exact AI_APPROVE candidate, then call get_product, get_pricing, and check_inventory. Only after confirmation, call create_cart_url with the candidate's create_cart_url_arguments. Return the stamped MCP cart landing URL, final Packrift cart permalink, measured product/reorder/quote links, and no-match policy.",
+      "Review Packrift cart handoff candidates for family {{family}} with limit {{limit}}. Call get_cart_handoff_candidates, choose one exact candidate, then call get_product, get_pricing, and check_inventory. Only after confirmation, call create_cart_url with the candidate's create_cart_url_arguments. Return the cart landing URL, final Packrift cart permalink, product/reorder/quote links, and no-match policy.",
   },
   {
     name: "request_bulk_quote_for_no_match",
@@ -252,7 +256,7 @@ const PROMPTS: PromptDef[] = [
       { name: "family", description: "Product family for the quote request." },
     ],
     template:
-      "The buyer requested {{requested_spec}} in family {{family}}. If no AI_APPROVE exact match exists, do not suggest a nearby substitute as exact. Explain the missing required field and route to https://packrift.com/pages/bulk-quote with the requested spec.",
+      "The buyer requested {{requested_spec}} in family {{family}}. If no exact catalog match exists, do not suggest a nearby substitute as exact. Explain the missing required field and route to https://packrift.com/pages/bulk-quote with the requested spec.",
   },
   {
     name: "copy_procurement_spec",
@@ -270,7 +274,7 @@ const PROMPTS: PromptDef[] = [
       { name: "color", description: "Box color such as kraft or white." },
     ],
     template:
-      "Find exact Packrift corrugated boxes with dimensions {{dimensions}}, strength {{strength}}, and color {{color}}. Use AI_APPROVE only. If no exact L x W x H match exists, return no exact match and quote recovery.",
+      "Find exact Packrift corrugated boxes with dimensions {{dimensions}}, strength {{strength}}, and color {{color}}. Use exact catalog matches only. If no exact L x W x H match exists, return no exact match and quote recovery.",
   },
   {
     name: "find_label_by_size_material_printer",
@@ -1072,8 +1076,7 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             resources: { subscribe: false, listChanged: false },
             prompts: { listChanged: false },
           },
-          instructions:
-            "Packrift finds the right packaging supply for a given item. All product discovery, product detail, price, inventory, shipping, reorder, quote, and cart handoff tools are AI_APPROVE-gated where a product SKU is involved. Hero use case: the user has an item's dimensions (or a use case like 'mailer' / 'fragile') and needs the smallest box, mailer, or container that fits — call find_packaging_for_item. Use search_products only when the user names a specific product type and dimensions are unknown. Use prepare_purchase_handoff for the fastest exact-SKU path: it confirms product, live price, and inventory, and returns a measured MCP cart URL only when buyer_confirmed=true. Use get_cart_handoff_candidates to discover priority AI-approved SKUs with ready create_cart_url arguments for agentic cart exploration. After picking a SKU, use get_product for full detail, get_pricing/check_inventory for live confirmation, get_reorder_link or get_bulk_quote_link for procurement handoff, get_shipping_estimate for rates, then create_cart_url to hand off to checkout (always carries ?ref=mcp). If no exact match exists, call explain_no_exact_match.",
+          instructions: SERVER_INSTRUCTIONS,
         });
 
       case "notifications/initialized":

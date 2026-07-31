@@ -7,8 +7,9 @@ import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildP
 
 export const recommendPackagingSchema = {
   name: "find_packaging_for_item",
+  title: "Find packaging for an item",
   description:
-    "Use when the buyer has item dimensions and needs a fitting box or mailer. Required arguments are item_length_in, item_width_in, item_depth_in, item_weight_lb, and use_case (mailer|box|fragile|apparel|ecommerce). Returns up to 5 AI_APPROVE SKUs ranked by fit with price, stock, URL, and cart-continuity fields.",
+    "Use when the buyer has item dimensions and needs a fitting box or mailer. Required arguments are item_length_in, item_width_in, item_depth_in, item_weight_lb, and use_case. Canonical use_case values are mailer|box|fragile|apparel|ecommerce; free text such as 'shipping ceramic mugs' is accepted and mapped to the closest canonical context. Returns up to 5 curated SKUs ranked by fit with price, stock, URL, and cart-continuity fields.",
   inputSchema: {
     type: "object",
     properties: {
@@ -18,22 +19,34 @@ export const recommendPackagingSchema = {
       item_weight_lb: { type: "number", minimum: 0, description: "Packed item weight in pounds; use 0 when unknown." },
       use_case: {
         type: "string",
-        enum: ["mailer", "box", "fragile", "apparel", "ecommerce"],
-        description: "Packaging context that guides fit ranking.",
+        description:
+          "Packaging context that guides fit ranking. Canonical values: mailer, box, fragile, apparel, ecommerce. Free text (e.g. 'shipping ceramic mugs') is accepted and mapped to the closest canonical context.",
       },
     },
     required: ["item_length_in", "item_width_in", "item_depth_in", "item_weight_lb", "use_case"],
   },
 
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
 };
+
+const USE_CASE_VALUES = ["mailer", "box", "fragile", "apparel", "ecommerce"] as const;
+
+function coerceUseCase(value: unknown): string {
+  const text = String(value ?? "").trim().toLowerCase();
+  if ((USE_CASE_VALUES as readonly string[]).includes(text)) return text;
+  if (/\b(fragile|glass(?:ware|es)?|ceramics?|breakables?|dish(?:es)?|dinnerware|delicate|mugs?|porcelain|china)\b/.test(text)) return "fragile";
+  if (/\b(apparel|cloth(?:ing|es)?|t?-?shirts?|garments?|hoodies?|dress(?:es)?|jeans|leggings?|textiles?|fabrics?)\b/.test(text)) return "apparel";
+  if (/\b(mailers?|envelopes?|documents?|flats?|books?|photos?)\b/.test(text)) return "mailer";
+  if (/\b(box(?:es)?|cartons?|corrugated|heavy|warehouse|pallets?|storage|moving)\b/.test(text)) return "box";
+  return "ecommerce";
+}
 
 export const recommendPackagingZod = z.object({
   item_length_in: z.number().min(0.1),
   item_width_in: z.number().min(0.1),
   item_depth_in: z.number().min(0.1),
   item_weight_lb: z.number().min(0),
-  use_case: z.enum(["mailer", "box", "fragile", "apparel", "ecommerce"]),
+  use_case: z.preprocess(coerceUseCase, z.enum(USE_CASE_VALUES)),
 });
 
 const AI_SALES_EVENT_PREFIX = "events/ai-sales";

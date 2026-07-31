@@ -3,7 +3,7 @@
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
   "description": "Hosted no-auth MCP for exact-spec packaging search, live price, stock, cart handoff, and no-match.",
-  "version": "0.2.13",
+  "version": "0.3.0",
   "websiteUrl": "https://packrift.com/pages/packrift-ai-agent-instructions",
   "repository": {
     "url": "https://github.com/Packrift/packrift-mcp",

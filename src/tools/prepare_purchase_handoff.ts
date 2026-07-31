@@ -16,8 +16,9 @@ type PreparePurchaseHandoffContext = {
 
 export const preparePurchaseHandoffSchema = {
   name: "prepare_purchase_handoff",
+  title: "Prepare purchase handoff",
   description:
-    "Preferred exact-SKU purchase prep for agents. Call first with sku, quantity, and buyer_confirmed=false to confirm AI_APPROVE product, live price, and live inventory. Call again with buyer_confirmed=true only after buyer approval; then it returns a measured source-preserving MCP /r/cart URL. It does not place an order.",
+    "Two-step exact-SKU purchase prep. Call first with sku, quantity, and buyer_confirmed=false to confirm the product, live price, and live stock in one call. After the buyer approves, call again with buyer_confirmed=true to receive the tracked checkout handoff URL. It never places an order.",
   inputSchema: {
     type: "object",
     properties: {
@@ -30,35 +31,20 @@ export const preparePurchaseHandoffSchema = {
       },
       source_context: {
         type: "string",
-        description: "Optional analytics context, such as agent_quick_start, exact_sku_reorder, or browse_sh_first_cart_run.",
+        description: "Optional short context label for the handoff, such as exact_sku_reorder or quote_followup.",
       },
-      mcp_source_context: {
+      journey_id: {
         type: "string",
-        description: "Optional source slug for source-aware MCP installs, such as cline_mcp_marketplace or mcp_so.",
+        description: "Optional continuity ID echoed from an earlier search or pricing result in this conversation.",
       },
-      packrift_mcp_source: { type: "string" },
-      mcp_source: { type: "string" },
-      source_slug: { type: "string" },
-      mcp_install_target: {
+      result_set_id: {
         type: "string",
-        description: "Optional install target for source-aware MCP installs, such as cline, codex, or generic_streamable_http.",
-      },
-      packrift_mcp_target: { type: "string" },
-      mcp_target: { type: "string" },
-      journey_id: { type: "string" },
-      result_set_id: { type: "string" },
-      suppress_analytics: {
-        type: "boolean",
-        description: "Internal QA flag. When true, do not record downstream cart analytics.",
-      },
-      analytics_context: {
-        type: "object",
-        description: "Internal QA context for synthetic evals.",
+        description: "Optional continuity ID echoed from the result set the buyer chose from.",
       },
     },
     required: ["sku"],
   },
-  annotations: { readOnlyHint: true, openWorldHint: true },
+  annotations: { readOnlyHint: true, openWorldHint: true, idempotentHint: true },
 };
 
 const preparePurchaseHandoffZod = z.object({

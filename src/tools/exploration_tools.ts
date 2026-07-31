@@ -7,8 +7,9 @@ import { Env, numericToVariantGid, variantIdToNumeric, shopifyQuery } from "../s
 
 export const compareAlternativesSchema = {
   name: "compare_alternatives",
+  title: "Compare alternatives",
   description:
-    "Exploration tool for buyers comparing a packaging spec, competitor-style item, or Uline-style request against Packrift AI_APPROVE products. Returns ranked Packrift candidates plus a plain-language comparison summary.",
+    "Exploration tool for buyers comparing a packaging spec, competitor-style item, or catalog-number request against Packrift's curated catalog. Returns ranked Packrift candidates plus a plain-language comparison summary.",
   inputSchema: {
     type: "object",
     properties: {
@@ -33,6 +34,7 @@ export const compareAlternativesSchema = {
 
 export const packCalculatorSchema = {
   name: "pack_calculator",
+  title: "Pack calculator",
   description:
     "Exploration tool for item dimensions and weight. Calculates required inside dimensions, ranks Packrift box/mailer candidates, and gives void-fill guidance before live price/inventory confirmation.",
   inputSchema: {
@@ -57,8 +59,9 @@ export const packCalculatorSchema = {
 
 export const inventoryStatusSchema = {
   name: "inventory_status",
+  title: "Inventory status",
   description:
-    "Live inventory exploration for one or more AI_APPROVE variants. Returns Shopify total quantity, available-for-sale state, location-level BOX warehouse quantities where available, and a plain-language fulfillment summary.",
+    "Live inventory exploration for one or more catalog variants. Returns total quantity, available-for-sale state, warehouse-level quantities where available, and a plain-language fulfillment summary.",
   inputSchema: {
     type: "object",
     properties: {
