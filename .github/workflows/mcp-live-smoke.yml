@@ -35,13 +35,22 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Directory surface lint (local build)
+        run: npm run check:directory-surface
+
       - name: Smoke test box handoff
         run: npm run smoke:cart-handoff -- --sku 1066 --qty 1
 
       - name: Smoke test label handoff
         run: npm run smoke:cart-handoff -- --sku LL251WR --qty 1
 
+      - name: Directory surface parity (live server)
+        run: npm run check:directory-surface:live
+
+      # Marketing-data quality checks depend on live GA4-derived payloads and
+      # flap independently of server health; report, don't gate.
       - name: Check all-agent capture hub
+        continue-on-error: true
         run: npm run check:agent-capture
 
       - name: Upload smoke evidence
