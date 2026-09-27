@@ -252,6 +252,13 @@ app.get("/llms.txt", async (c, next) => {
   return v1Text(c, LLMS_TXT, "text/plain; charset=utf-8");
 });
 app.get("/guides/packaging.md", (c) => v1Text(c, PACKAGING_GUIDE_MD, "text/markdown; charset=utf-8"));
+// OpenAI plugin directory domain verification: the portal issues a token that is
+// stored in KV under "openai-apps-challenge" and served here as plain text.
+app.get("/.well-known/openai-apps-challenge", async (c) => {
+  const token = await bestEffort(() => c.env.CATALOG_CACHE.get("openai-apps-challenge", "text"), null, 1500);
+  if (!token) return c.text("Not configured", 404, { "Cache-Control": "no-store" });
+  return c.text(token.trim(), 200, { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" });
+});
 app.get("/privacy", (c) => v1Text(c, privacyPageHtml(), "text/html; charset=utf-8"));
 app.get("/privacy.md", (c) => v1Text(c, PRIVACY_MD, "text/markdown; charset=utf-8"));
 app.get("/SKILL.md", (c) => v1Text(c, SKILL_MD, "text/markdown; charset=utf-8"));

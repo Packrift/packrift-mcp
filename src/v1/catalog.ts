@@ -56,11 +56,13 @@ export function colorsIn(text: string): string[] {
 const SENSITIVE = /\b(hazmat|haz\s*mat|un\s*certified|fda|medical|food[-\s]*(?:safe|grade)|aircraft|anti[-\s]*static|vci|corrosion|conductive|esd)\b/i;
 const NOT_A_SHIPPING_CONTAINER = /\b(bins?|inserts?|foam|totes?|displays?|folding cartons?|tuck|gift box(?:es)?|jewelry|paint cans?|jars?|bottles?|vials?|dividers?|partitions?|pads?|trays?|lids?|sleeves?|liners?|labels?|tags?|envelopes? only)\b/i;
 
-export function classifyKind(title: string, family: string): PackagingKind {
+export function classifyKind(title: string, family: string, handle = ""): PackagingKind {
   const t = title.toLowerCase();
+  // Shopping bags with handles are sometimes titled as mailers; the handle keeps the true product type.
+  if (/shopping[- ]bags?|twist[- ]handles?|handle[- ]bags?/.test(`${t} ${handle.toLowerCase()}`)) return "other";
   if (/\btubes?\b/.test(t) && /mail|ship|spiral|kraft/.test(t)) return "mailing_tube";
+  if (/bubble[- ]lined|bubble mailers?|padded mailers?|bubble envelopes?|padded envelopes?|poly bubble|bubble poly/.test(t)) return "bubble_mailer";
   if (/poly mailers?|poly bag mailers?|polyethylene mailers?/.test(t)) return "poly_mailer";
-  if (/bubble mailers?|padded mailers?|bubble envelopes?|padded envelopes?|poly bubble/.test(t)) return "bubble_mailer";
   if (/rigid mailers?|stay[- ]flat|photo mailers?|kraft (?:paper )?mailers?|paperboard mailers?|expansion mailers?/.test(t) && !/corrugated/.test(t)) {
     return "paper_mailer";
   }
@@ -111,7 +113,7 @@ function fmt(n: number): string {
 
 function buildEntry(item: EffectiveApprovedCatalogItem): CatalogEntry {
   const parsed = parseDimensions(item.title);
-  const kind = classifyKind(item.title, item.family);
+  const kind = classifyKind(item.title, item.family, item.handle);
   let dims: [number, number, number] | null = null;
   let flat: [number, number] | null = null;
   if (parsed) {
@@ -193,6 +195,21 @@ export function maxWeightForEct(ect: number | null, doubleWall: boolean): number
   ];
   const double: Array<[number, number]> = [
     [42, 80], [48, 100], [51, 120], [61, 140], [71, 160], [82, 180],
+  ];
+  const table = doubleWall || ect >= 48 ? double : single;
+  let best: number | null = null;
+  for (const [rating, limit] of table) if (ect >= rating) best = limit;
+  return best ?? table[0]![1];
+}
+
+/** Largest outside size (length + width + height, inches) a box may have and carry its ECT certificate. */
+export function maxSizeForEct(ect: number | null, doubleWall: boolean): number | null {
+  if (!ect) return null;
+  const single: Array<[number, number]> = [
+    [23, 50], [26, 60], [29, 65], [32, 75], [40, 85], [44, 95], [55, 105],
+  ];
+  const double: Array<[number, number]> = [
+    [42, 85], [48, 95], [51, 105], [61, 110], [71, 115], [82, 120],
   ];
   const table = doubleWall || ect >= 48 ? double : single;
   let best: number | null = null;

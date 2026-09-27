@@ -63,8 +63,33 @@ export function itemLine(item: CompactItem, index?: number): string {
       : item.pack && item.pack > 1
         ? `${money(item.price)} per pack of ${item.pack.toLocaleString("en-US")}${item.unit_price !== null ? ` (${unitPriceText(item.unit_price)})` : ""}`
         : money(item.price);
-  const match = item.match === "close" ? " [close size, not exact]" : "";
+  const match = item.match === "close" ? " [close size, not exact]" : item.match === "related" ? " [related item, not an exact match]" : "";
   return `${prefix}SKU ${item.sku}: ${item.title}${match} | ${price} | ${item.in_stock ? "in stock" : "out of stock"} | ${item.url}`;
+}
+
+// UTF-8 text that was decoded as Mac Roman or Windows-1252 somewhere upstream (for example 9‚Ä≥ for 9″).
+const MOJIBAKE: Array<[RegExp, string]> = [
+  [/‚Ä≥|â€³/g, "″"],
+  [/‚Ä≤|â€²/g, "′"],
+  [/‚Äù|â€\u009d/g, "”"],
+  [/‚Äú|â€œ/g, "“"],
+  [/‚Äô|â€™/g, "’"],
+  [/‚Äò|â€˜/g, "‘"],
+  [/‚Äì|â€“/g, "–"],
+  [/‚Äî|â€”/g, "—"],
+  [/‚Ä¢|â€¢/g, "•"],
+  [/¬∞|Â°/g, "°"],
+  [/√ó|Ã—/g, "×"],
+  [/¬Ω|Â½/g, "½"],
+  [/¬º|Â¼/g, "¼"],
+  [/¬æ|Â¾/g, "¾"],
+  [/¬†|Â /g, " "],
+];
+
+export function fixMojibake(text: string): string {
+  let out = text;
+  for (const [pattern, replacement] of MOJIBAKE) out = out.replace(pattern, replacement);
+  return out;
 }
 
 export function toolResult(text: string, structured: Record<string, unknown>) {

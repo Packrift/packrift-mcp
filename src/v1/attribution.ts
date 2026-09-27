@@ -56,7 +56,7 @@ export function productLink(url: string, clientSlug: string | null | undefined, 
   try {
     const parsed = new URL(url);
     parsed.searchParams.set("utm_source", utmSourceForClient(clientSlug));
-    parsed.searchParams.set("utm_medium", "mcp");
+    parsed.searchParams.set("utm_medium", "mcp_tool");
     parsed.searchParams.set("utm_campaign", "packrift_mcp");
     if (content) parsed.searchParams.set("utm_content", content.slice(0, 40));
     return parsed.toString();

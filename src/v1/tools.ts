@@ -23,10 +23,22 @@ import {
   type CatalogEntry,
   type PackagingKind,
 } from "./catalog.js";
-import { coerceFitUseCase, findFits, type FitCandidate } from "./fit.js";
-import { deliveredQuote, discountRules, discountSummary, freeShippingGap, liveVariants, round2 } from "./live.js";
+import { billableWeight, coerceFitUseCase, cushioningLb, findFits, packedSize, sizeKey, type FitCandidate } from "./fit.js";
+import {
+  basketPricing,
+  deliveredQuote,
+  discountLadder,
+  discountRules,
+  freeShippingNote,
+  liveVariants,
+  percentAtQuantity,
+  round2,
+  tiersForProduct,
+  volumePricingLine,
+  type LiveVariant,
+} from "./live.js";
 import { clientSlugFromName, clientSlugFromSessionId, productLink, utmSourceForClient } from "./attribution.js";
-import { compactItem, itemLine, money, toolResult, unitPrice, unitPriceText, type CompactItem, type V1ToolResult } from "./format.js";
+import { compactItem, fixMojibake, itemLine, money, toolResult, unitPrice, unitPriceText, type CompactItem, type V1ToolResult } from "./format.js";
 
 export interface V1Context {
   sessionId?: string;
@@ -46,6 +58,12 @@ const RESPONSE_FORMAT = {
   description: "concise (default) returns the essentials. detailed returns the full catalog record; use it only when a field you need is missing.",
 } as const;
 
+// Output schemas are deliberately permissive: every field is optional and extra
+// fields are allowed, so the detailed payload validates too.
+const STR = { type: "string" } as const;
+const ARR = { type: "array" } as const;
+const outputSchema = (properties: Record<string, unknown>) => ({ type: "object", properties, additionalProperties: true });
+
 const ANNOTATIONS = (title: string) => ({
   title,
   readOnlyHint: true,
@@ -64,6 +82,28 @@ function withoutFormat(raw: unknown): Record<string, unknown> {
   return args;
 }
 
+/**
+ * Detailed responses come from the earlier tool layer. Keep their attribution on the calling
+ * assistant and drop hints that name tools this server no longer lists.
+ */
+export function sanitizeDetailed(value: unknown, client: string | null): unknown {
+  const source = utmSourceForClient(client);
+  const walk = (node: unknown): unknown => {
+    if (typeof node === "string") return node.replace(/([?&]utm_source=)chatgpt(?:-mcp)?(?=&|$)/g, `$1${encodeURIComponent(source)}`);
+    if (Array.isArray(node)) return node.map(walk);
+    if (node && typeof node === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
+        if (key === "required_before_presenting") continue;
+        out[key] = walk(child);
+      }
+      return out;
+    }
+    return node;
+  };
+  return walk(value);
+}
+
 const QUOTE_PAGE = "https://packrift.com/pages/bulk-quote";
 
 export function quoteLink(spec: string, opts: { sku?: string | null; quantity?: string | number | null; family?: string | null }, client: string | null): string {
@@ -73,7 +113,7 @@ export function quoteLink(spec: string, opts: { sku?: string | null; quantity?: 
   if (opts.family) url.searchParams.set("family", opts.family);
   if (opts.quantity !== undefined && opts.quantity !== null && String(opts.quantity).trim()) url.searchParams.set("quantity", String(opts.quantity));
   url.searchParams.set("utm_source", utmSourceForClient(client));
-  url.searchParams.set("utm_medium", "mcp");
+  url.searchParams.set("utm_medium", "mcp_tool");
   url.searchParams.set("utm_campaign", "packrift_mcp");
   url.searchParams.set("utm_content", "bulk_quote");
   return url.toString();
@@ -99,6 +139,7 @@ export const searchSchemaV1 = {
     additionalProperties: false,
   },
   annotations: ANNOTATIONS("Search Packrift packaging"),
+  outputSchema: outputSchema({ query: STR, results: ARR, closest_sizes: ARR, quote_url: STR }),
 };
 
 const searchZod = z.object({
@@ -163,6 +204,25 @@ export function nearestSizes(query: string, dims: number[], count = 3): CatalogE
 
 const HEAVY_INTENT = /heavy[- ]?duty|double[- ]?wall|triple[- ]?wall|ect[- ]?(4[4-9]|[5-9]\d)|\b(275|350|400|500|600)#/i;
 
+/** The packaging style a query asks for, when it names one. */
+export function styleForQuery(query: string): PackagingKind[] | null {
+  const q = query.toLowerCase();
+  if (/mailer box|corrugated mailer|literature mailer/.test(q)) return ["mailer_box"];
+  if (/bubble|padded/.test(q)) return ["bubble_mailer"];
+  if (/poly mailer/.test(q)) return ["poly_mailer"];
+  if (/\bbox(es)?\b|carton|corrugated/.test(q) && !/mailer/.test(q)) return ["corrugated_box", "heavy_duty_box"];
+  return null;
+}
+
+/** An exact size in the wrong style (a shipping box for "mailer box", a liner for "boxes") is related, not exact. */
+export function refineMatch(entry: CatalogEntry, query: string, match: CompactItem["match"]): CompactItem["match"] {
+  if (match !== "exact") return match;
+  if (entry.kind === "other" && /\bbox(es)?\b|\bmailers?\b/i.test(query) && !/liner|insert|bin|tote|bag/i.test(query)) return "related";
+  const style = styleForQuery(query);
+  if (style && entry.kind !== "other" && !style.includes(entry.kind)) return "related";
+  return match;
+}
+
 /** Order results the way a buyer would: exact size first, then the strength and color asked for, then price per unit. */
 export function rankSearchItems(items: CompactItem[], query: string, hasDims: boolean): void {
   const wantsHeavy = HEAVY_INTENT.test(query);
@@ -184,6 +244,7 @@ export function rankSearchItems(items: CompactItem[], query: string, hasDims: bo
       if (entry.specialty && !query.toLowerCase().includes(entry.specialty.split(/[- ]/)[0]!)) p += 25;
       if (entry.kind === "other" && /\bbox(es)?\b|\bmailers?\b/i.test(query) && !/liner|insert|bin|tote/i.test(query)) p += 60;
     }
+    if (item.match === "related") p += 40;
     if (!item.in_stock) p += 50;
     return p;
   };
@@ -213,7 +274,7 @@ export async function searchProductsV1(env: Env, raw: unknown, context: V1Contex
   for (const row of rows) {
     const entry = entryBySku(row.approved_sku) ?? entryByHandle(row.handle);
     if (!entry || entry.held) continue;
-    const match = queryDims ? (sameDims(queryDims, entryDims(entry)) ? "exact" : "close") : undefined;
+    const match = queryDims ? refineMatch(entry, input.query, sameDims(queryDims, entryDims(entry)) ? "exact" : "close") : undefined;
     items.push(
       compactItem(
         entry,
@@ -229,18 +290,21 @@ export async function searchProductsV1(env: Env, raw: unknown, context: V1Contex
     );
   }
   rankSearchItems(items, input.query, queryDims !== null);
+  const exactTotal = items.filter((item) => item.match === "exact").length;
   items.splice(input.limit);
-  const discountLine = discountSummary(rules);
+  const discountLine = volumePricingLine(rules, items.map((item) => ({ sku: item.sku, productId: entryBySku(item.sku)?.productId ?? null })));
   if (items.length) {
-    const exactCount = items.filter((item) => item.match === "exact").length;
+    const exactShown = items.filter((item) => item.match === "exact").length;
     const header = queryDims
-      ? `${exactCount ? `${exactCount} exact-size match${exactCount === 1 ? "" : "es"}` : "No exact size"} for "${input.query}" (live price and stock):`
+      ? exactShown
+        ? `${exactTotal > exactShown ? `Top ${exactShown} of ${exactTotal}` : exactShown} exact-size match${exactTotal === 1 ? "" : "es"} for "${input.query}" (live price and stock):`
+        : `No exact match for "${input.query}". Nearest items (live price and stock):`
       : `${items.length} match${items.length === 1 ? "" : "es"} for "${input.query}" (live price and stock):`;
     const text = [
       header,
       ...items.map((item, index) => itemLine(item, index)),
       discountLine,
-      "Next: when the buyer picks an item and quantity, call create_cart_url. For a delivered total to a ZIP code, call get_shipping_estimate.",
+      "Next: when the buyer confirms an item and quantity (in packs), call create_cart_url. For a delivered total to a ZIP code, call get_shipping_estimate.",
     ].filter(Boolean).join("\n");
     return toolResult(text, { query: input.query, results: items, pricing_note: discountLine || null });
   }
@@ -293,6 +357,7 @@ export const fitSchemaV1 = {
     additionalProperties: false,
   },
   annotations: ANNOTATIONS("Find packaging that fits an item"),
+  outputSchema: outputSchema({ required_inside_in: ARR, advice: STR, results: ARR, quote_url: STR }),
 };
 
 const fitZod = z.object({
@@ -305,22 +370,28 @@ const fitZod = z.object({
   limit: z.coerce.number().int().min(1).max(5).default(3),
 });
 
-function fitLine(candidate: FitCandidate, item: CompactItem, index: number): string {
+interface PricedFit {
+  candidate: FitCandidate;
+  item: CompactItem;
+  live: LiveVariant;
+  value: number;
+  packedLb: number | null;
+  billable: { upsFedexLb: number; uspsLb: number } | null;
+}
+
+function fitLine(fit: PricedFit, index: number): string {
+  const { candidate, item } = fit;
   const parts = [`${index + 1}. SKU ${item.sku}: ${item.title}`];
   if (candidate.fitKind === "box") {
-    const c = candidate.clearancePerSide;
-    parts.push(`inside ${candidate.entry.sizeLabel}, about ${formatClearance(c)} per side (${candidate.fitLabel} fit)`);
+    parts.push(`inside ${candidate.entry.sizeLabel}, about ${formatClearance(candidate.clearancePerSide)} per side (${candidate.fitLabel} fit)`);
   } else if (candidate.fitKind === "flat") {
     parts.push(`${candidate.entry.sizeLabel} ${kindLabel(candidate.entry.kind)} (${candidate.fitLabel} fit)`);
   } else {
     parts.push(`${candidate.entry.sizeLabel} tube (${candidate.fitLabel} fit)`);
   }
   if (candidate.strengthNote) parts.push(candidate.strengthNote);
-  if (candidate.billable && candidate.fitKind === "box") {
-    const b = candidate.billable;
-    parts.push(`bills about ${b.upsFedexLb} lb UPS/FedEx, ${b.uspsLb} lb USPS`);
-  }
-  const price = item.price === null ? "price at checkout" : item.pack && item.pack > 1 ? `${money(item.price)} per pack of ${item.pack}${item.unit_price !== null ? ` (${unitPriceText(item.unit_price)})` : ""}` : money(item.price);
+  if (fit.billable) parts.push(`bills about ${fit.billable.upsFedexLb} lb UPS/FedEx, ${fit.billable.uspsLb} lb USPS`);
+  const price = item.price === null ? "price at checkout" : item.pack && item.pack > 1 ? `${money(item.price)} per pack of ${item.pack.toLocaleString("en-US")}${item.unit_price !== null ? ` (${unitPriceText(item.unit_price)})` : ""}` : money(item.price);
   parts.push(price, item.in_stock ? "in stock" : "out of stock", item.url);
   return parts.join(" | ");
 }
@@ -332,16 +403,75 @@ function formatClearance(values: number[]): string {
   return Math.abs(max - min) < 0.13 ? f(min) : `${f(min)} to ${f(max)}`;
 }
 
+/**
+ * Rank priced fits: fit score first, then price within the same packaging type (a 2x pricier
+ * option of the same fit costs about 1.4 points), a penalty near the rated weight limit, billable
+ * weight, and stock. One product per size: rotated listings (9x8x8 and 8x8x9) and color or pack
+ * variants keep only the better value.
+ */
+export function rankFits<T extends { candidate: FitCandidate; item: CompactItem; value: number; billable: { upsFedexLb: number } | null }>(priced: T[], weightLb: number, limit: number): T[] {
+  const unitCost = (p: T) => p.item.unit_price ?? p.item.price ?? null;
+  // Price is compared within a packaging type: a poly mailer is always cheaper than a box, and the
+  // fit score already says which type suits the item.
+  const cheapestByKind = new Map<string, number>();
+  for (const p of priced) {
+    const cost = unitCost(p);
+    if (cost && cost > 0) cheapestByKind.set(p.candidate.fitKind, Math.min(cheapestByKind.get(p.candidate.fitKind) ?? Infinity, cost));
+  }
+  for (const p of priced) {
+    p.value = p.candidate.score;
+    const cost = unitCost(p);
+    const cheapest = cheapestByKind.get(p.candidate.fitKind);
+    if (cost && cheapest && Number.isFinite(cheapest)) p.value += 2 * Math.log(cost / cheapest);
+    const rated = ratedLimit(p.candidate);
+    if (rated !== null && weightLb > 0.7 * rated) p.value += 2;
+    if (p.billable) p.value += 0.1 * p.billable.upsFedexLb;
+    if (!p.item.in_stock) p.value += 100;
+  }
+  const sorted = [...priced].sort((a, b) => a.value - b.value);
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const p of sorted) {
+    const key = sizeKey(p.candidate.entry);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function ratedLimit(candidate: FitCandidate): number | null {
+  const match = candidate.strengthNote ? /rated to (\d+) lb/.exec(candidate.strengthNote) : null;
+  return match ? Number(match[1]) : null;
+}
+
+/** Outer box for double boxing a fragile item: about 2.5 in of cushioning around the inner box on every side. */
+function doubleBoxOuter(inner: CatalogEntry, weightLb: number): CatalogEntry | null {
+  if (!inner.dims) return null;
+  const need = inner.dims.map((n) => n + 0.25 + 5) as [number, number, number];
+  let best: { entry: CatalogEntry; excess: number } | null = null;
+  for (const entry of catalogIndex()) {
+    if (entry.held || entry.sensitive || entry.specialty || !entry.dims) continue;
+    if (entry.kind !== "corrugated_box" && entry.kind !== "heavy_duty_box") continue;
+    if (entry.dims.some((n, i) => n < need[i]! - 1e-6)) continue;
+    const excess = entry.dims.reduce((sum, n, i) => sum + (n - need[i]!), 0);
+    if (excess > 6) continue;
+    if (!best || excess < best.excess || (excess === best.excess && entry.kind === "corrugated_box" && best.entry.kind !== "corrugated_box")) best = { entry, excess };
+  }
+  return best && weightLb <= 60 ? best.entry : null;
+}
+
 export async function findPackagingV1(env: Env, raw: unknown, context: V1Context = {}): Promise<V1ToolResult | unknown> {
+  const client = resolveClient(context);
   if (wantsDetailed(raw)) {
     const args = withoutFormat(raw);
-    return recommendPackagingHandler(env, { item_weight_lb: 1, use_case: "ecommerce", ...args });
+    return sanitizeDetailed(await recommendPackagingHandler(env, { item_weight_lb: 1, use_case: "ecommerce", ...args }), client);
   }
   const args = withoutFormat(raw);
   if (args.item_depth_in === undefined && args.item_height_in !== undefined) args.item_depth_in = args.item_height_in;
   delete args.item_height_in;
   const input = fitZod.parse(args);
-  const client = resolveClient(context);
   const weight = input.item_weight_lb ?? 1;
   const useCase = coerceFitUseCase(input.use_case, weight);
   const itemLabel = `${fmt(input.item_length_in)} x ${fmt(input.item_width_in)} x ${fmt(input.item_depth_in)} in, ${fmt(weight)} lb${input.use_case ? ` (${input.use_case.slice(0, 60)})` : ""}`;
@@ -364,9 +494,12 @@ export async function findPackagingV1(env: Env, raw: unknown, context: V1Context
     limit: input.limit,
     requestText: input.use_case ?? "",
   });
-  const live = fit.candidates.length ? await liveVariants(env, fit.candidates.map((c) => c.entry.variantId)) : new Map();
-  const available: Array<{ candidate: FitCandidate; item: CompactItem }> = [];
-  const unavailable: Array<{ candidate: FitCandidate; item: CompactItem }> = [];
+  const item3 = [input.item_length_in, input.item_width_in, input.item_depth_in].sort((a, b) => b - a) as [number, number, number];
+  const [rules, live] = await Promise.all([
+    discountRules(env),
+    fit.candidates.length ? liveVariants(env, fit.candidates.map((c) => c.entry.variantId)) : Promise.resolve(new Map<string, LiveVariant>()),
+  ]);
+  const priced: PricedFit[] = [];
   for (const candidate of fit.candidates) {
     const facts = live.get(candidate.entry.variantId);
     if (!facts || !facts.active) continue;
@@ -377,19 +510,16 @@ export async function findPackagingV1(env: Env, raw: unknown, context: V1Context
       title: facts.title,
       imageUrl: facts.imageUrl,
     });
-    (facts.available ? available : unavailable).push({ candidate, item });
+    // Packed weight: the item, one unit of the packaging, and cushioning.
+    const unitLb = facts.packWeightLb !== null && candidate.entry.pack ? facts.packWeightLb / candidate.entry.pack : null;
+    const packedLb = weight + (unitLb ?? 0) + cushioningLb(useCase, candidate);
+    const b = billableWeight(packedSize(candidate, item3), packedLb);
+    priced.push({ candidate, item, live: facts, value: candidate.score, packedLb: unitLb === null ? null : Math.round(packedLb * 100) / 100, billable: { upsFedexLb: b.upsFedexLb, uspsLb: b.uspsLb } });
   }
-  const tier = { snug: 0, good: 1, roomy: 2 } as const;
-  const nearLimit = (candidate: FitCandidate) => Boolean(candidate.strengthNote && /rated to (\d+) lb/.exec(candidate.strengthNote) && weight > 0.7 * Number(/rated to (\d+) lb/.exec(candidate.strengthNote)![1]));
-  const byValue = (a: { candidate: FitCandidate; item: CompactItem }, b: { candidate: FitCandidate; item: CompactItem }) =>
-    tier[a.candidate.fitLabel] - tier[b.candidate.fitLabel] ||
-    Number(nearLimit(a.candidate)) - Number(nearLimit(b.candidate)) ||
-    (a.item.unit_price ?? a.item.price ?? Infinity) - (b.item.unit_price ?? b.item.price ?? Infinity);
-  available.sort(byValue);
-  unavailable.sort(byValue);
-  const picked = [...available, ...unavailable].slice(0, input.limit);
+  const picked = rankFits(priced, weight, input.limit);
   for (const { candidate } of picked) {
-    if (nearLimit(candidate) && candidate.strengthNote) candidate.strengthNote += " (close to its rated limit; a stronger box adds margin)";
+    const limit = ratedLimit(candidate);
+    if (limit !== null && weight > 0.7 * limit && candidate.strengthNote) candidate.strengthNote += " (close to its rated limit; a stronger box adds headroom)";
   }
   const required = fit.requiredInside.map((n) => fmt(n)).join(" x ");
   if (!picked.length) {
@@ -403,26 +533,32 @@ export async function findPackagingV1(env: Env, raw: unknown, context: V1Context
       { item: itemLabel, use_case: useCase, required_inside_in: fit.requiredInside, results: [], quote_url: quote }
     );
   }
-  const rules = await discountRules(env);
-  const lines = picked.map(({ candidate, item }, index) => fitLine(candidate, item, index));
+  const outer = useCase === "fragile" && picked[0]!.candidate.fitKind === "box" ? doubleBoxOuter(picked[0]!.candidate.entry, weight) : null;
+  const lines = picked.map((p, index) => fitLine(p, index));
+  const pricing = volumePricingLine(rules, picked.map((p) => ({ sku: p.item.sku, productId: p.live.productId ?? p.candidate.entry.productId })));
   const text = [
     `Item ${itemLabel}. Treated as ${useCase === "general" ? "a general ecommerce item" : `${useCase}`}; needs at least ${required} in inside.`,
     fit.advice,
     ...lines,
-    discountSummary(rules),
-    "Next: when the buyer picks one and a quantity, call create_cart_url. get_shipping_estimate gives the delivered total to their ZIP code.",
+    outer ? `To double box option 1, an outer box such as SKU ${outer.sku} (${outer.sizeLabel}) leaves about 2.5 in of cushioning around it.` : "",
+    "Billable weight counts the item, the packaging and cushioning; USPS bills actual weight up to one cubic foot.",
+    pricing,
+    "Next: when the buyer confirms one and a quantity (in packs), call create_cart_url. get_shipping_estimate gives the delivered total to their ZIP code.",
   ].filter(Boolean).join("\n");
   return toolResult(text, {
     item: { length_in: input.item_length_in, width_in: input.item_width_in, height_in: input.item_depth_in, weight_lb: weight, use_case: useCase },
     required_inside_in: fit.requiredInside,
     advice: fit.advice,
-    results: picked.map(({ candidate, item }) => ({
-      ...item,
-      fit: candidate.fitLabel,
-      clearance_per_side_in: candidate.clearancePerSide,
-      strength: candidate.strengthNote,
-      billable_weight_lb: candidate.billable ? { ups_fedex: candidate.billable.upsFedexLb, usps: candidate.billable.uspsLb } : null,
+    results: picked.map((p) => ({
+      ...p.item,
+      fit: p.candidate.fitLabel,
+      clearance_per_side_in: p.candidate.clearancePerSide,
+      strength: p.candidate.strengthNote,
+      packed_weight_lb: p.packedLb,
+      billable_weight_lb: p.billable ? { ups_fedex: p.billable.upsFedexLb, usps: p.billable.uspsLb } : null,
     })),
+    double_box_outer: outer ? { sku: outer.sku, size: outer.sizeLabel, title: outer.title } : null,
+    pricing_note: pricing || null,
   });
 }
 
@@ -450,6 +586,7 @@ export const productSchemaV1 = {
     additionalProperties: false,
   },
   annotations: ANNOTATIONS("Get Packrift product details"),
+  outputSchema: outputSchema({ sku: STR, title: STR, url: STR, specs: ARR, nearby_sizes: ARR }),
 };
 
 const productZod = z.object({
@@ -507,8 +644,8 @@ export async function getProductV1(env: Env, raw: unknown, context: V1Context = 
   if (!input.sku && !input.handle && input.variant_id === undefined) throw new Error("Provide a sku (preferred) or a handle.");
   const entry = resolveEntry(input);
   if (!entry) notInCatalogError(input.sku ? `SKU ${input.sku}` : `Product ${input.handle ?? input.variant_id}`);
-  if (wantsDetailed(raw)) return getProductHandler(env, { handle: entry.handle });
   const client = resolveClient(context);
+  if (wantsDetailed(raw)) return sanitizeDetailed(await getProductHandler(env, { handle: entry.handle }), client);
   const [data, rules] = await Promise.all([
     shopifyQuery<{ productByHandle: ProductV1Node | null }>(env, PRODUCT_QUERY, { handle: entry.handle }, { timeoutMs: 6000 }),
     discountRules(env),
@@ -520,11 +657,11 @@ export async function getProductV1(env: Env, raw: unknown, context: V1Context = 
   const mf = new Map(p.metafields.edges.map((e) => [e.node.key, e.node.value]));
   const specs: Array<{ name: string; value: string }> = [];
   for (let i = 1; i <= 8; i += 1) {
-    const name = mf.get(`spec${i}_name`)?.trim();
-    const value = mf.get(`spec${i}_value`)?.trim();
+    const name = fixMojibake(mf.get(`spec${i}_name`) ?? "").trim();
+    const value = fixMojibake(mf.get(`spec${i}_value`) ?? "").replace(/\s+/g, " ").trim();
     if (name && value) specs.push({ name, value: value.slice(0, 120) });
   }
-  const summary = cleanSummary(mf.get("catalog_description") ?? mf.get("ai_summary") ?? "");
+  const summary = cleanSummary(fixMojibake(mf.get("catalog_description") ?? mf.get("ai_summary") ?? ""));
   const nearby = (mf.get("ux_substitute_handles") ?? "")
     .split(",")
     .map((handle) => entryByHandle(handle.trim()))
@@ -553,11 +690,17 @@ export async function getProductV1(env: Env, raw: unknown, context: V1Context = 
   if (specs.length) lines.push(`Specs: ${specs.map((s) => `${s.name}: ${s.value}`).join("; ")}`);
   if (summary) lines.push(summary);
   if (Number.isFinite(multiples) && multiples > 1 && (!item.pack || multiples !== item.pack)) lines.push(`Sold in multiples of ${multiples}.`);
-  const discountLine = discountSummary(rules);
+  const discountLine = volumePricingLine(rules, [{ sku: entry.sku, productId: entry.productId }]);
   if (discountLine) lines.push(discountLine);
+  const ladder = discountLadder(tiersForProduct(rules, entry.productId));
+  const pct = input.quantity !== undefined ? percentAtQuantity(ladder, input.quantity) : 0;
+  if (input.quantity !== undefined && pct > 0 && Number.isFinite(price)) {
+    const perPack = round2(price - Math.floor(price * pct + 1e-9) / 100);
+    lines.push(`At ${input.quantity} packs checkout takes ${pct}% off: about ${money(perPack)} per pack, ${money(round2(perPack * input.quantity))} before shipping and tax.`);
+  }
   if (nearby.length) lines.push(`Nearby sizes: ${nearby.map((e) => `SKU ${e.sku} (${e.sizeLabel ?? e.title})`).join(", ")}.`);
   lines.push(`Product page: ${url}`);
-  lines.push("Next: create_cart_url with this sku and the buyer's quantity, or get_shipping_estimate for a delivered total.");
+  lines.push("Next: after the buyer confirms a quantity, create_cart_url with this SKU; get_shipping_estimate gives a delivered total.");
   return toolResult(lines.join("\n"), {
     ...item,
     specs,
@@ -566,6 +709,7 @@ export async function getProductV1(env: Env, raw: unknown, context: V1Context = 
     quantity_requested: input.quantity ?? null,
     can_ship_quantity_now: canShip,
     nearby_sizes: nearby.map((e) => ({ sku: e.sku, size: e.sizeLabel, title: e.title })),
+    volume_pricing: ladder.map((step) => ({ min_packs: step.minQuantity, percent_off: step.percentOff })),
     pricing_note: discountLine || null,
   });
 }
@@ -583,9 +727,9 @@ function cleanSummary(value: string): string {
 
 export const shippingSchemaV1 = {
   name: "get_shipping_estimate",
-  title: "Estimate delivered cost",
+  title: "Estimate delivered cost of a Packrift order",
   description:
-    "Estimate the delivered cost of a Packrift order to a US ZIP code, using the same shipping rates and automatic volume discounts as Packrift checkout. Give the items as SKU and quantity (number of packs). Returns the subtotal after discounts, shipping options (free shipping applied when eligible), the delivered total and the delivered cost per unit. Tax is not included; checkout shows the final amount.",
+    "Estimate the delivered cost of a Packrift order to a US ZIP code, using the same shipping rates and automatic volume discounts as Packrift checkout. Give the items as SKU and quantity (number of packs). Returns the subtotal after discounts, the shipping charge (free only when the order qualifies), the delivered total and the delivered cost per unit. Tax is not included; checkout shows the final amount. Not for carrier rate shopping or postage.",
   inputSchema: {
     type: "object",
     properties: {
@@ -610,7 +754,8 @@ export const shippingSchemaV1 = {
     required: ["destination_postal_code", "items"],
     additionalProperties: false,
   },
-  annotations: ANNOTATIONS("Estimate delivered cost"),
+  annotations: ANNOTATIONS("Estimate delivered cost of a Packrift order"),
+  outputSchema: outputSchema({ items: ARR, shipping_options: ARR }),
 };
 
 const shippingLineZod = z.preprocess(
@@ -629,7 +774,10 @@ const shippingLineZod = z.preprocess(
 );
 
 const shippingZod = z.object({
-  destination_postal_code: z.string().trim().min(3).max(12),
+  destination_postal_code: z
+    .string()
+    .trim()
+    .regex(/^\d{5}(?:-\d{4})?$/, "Packrift ships within the United States; use a 5-digit US ZIP code"),
   country: z.preprocess((value) => (typeof value === "string" ? value.trim().toUpperCase() : value), z.literal("US", { errorMap: () => ({ message: "Packrift ships within the United States only" }) })).default("US"),
   destination_state: z.string().trim().min(2).max(3).optional(),
   destination_address: z.object({ address1: z.string().optional(), city: z.string().optional(), province_code: z.string().optional() }).partial().optional(),
@@ -648,41 +796,60 @@ function resolveLines(lines: Array<{ sku?: string; variant_id?: string; quantity
 }
 
 export async function getShippingEstimateV1(env: Env, raw: unknown, context: V1Context = {}): Promise<V1ToolResult | unknown> {
-  if (wantsDetailed(raw)) return getShippingEstimateHandler(env, withoutFormat(raw));
-  const input = shippingZod.parse(withoutFormat(raw));
   const client = resolveClient(context);
+  const input = shippingZod.parse(withoutFormat(raw));
   const lines = resolveLines(input.items);
-  const quote = await deliveredQuote(
-    env,
-    lines.map((line) => ({ variantId: line.entry.variantId, quantity: line.quantity })),
-    {
-      postalCode: input.destination_postal_code,
+  if (wantsDetailed(raw)) {
+    const legacyArgs: Record<string, unknown> = {
+      destination_postal_code: input.destination_postal_code,
       country: input.country,
-      provinceCode: input.destination_state ?? input.destination_address?.province_code ?? null,
-      city: input.destination_address?.city ?? null,
-      address1: input.destination_address?.address1 ?? null,
+      items: lines.map((line) => ({ variant_id: line.entry.variantId, qty: line.quantity })),
+    };
+    const address = input.destination_address;
+    if (address?.address1 && address.city && (address.province_code || input.destination_state)) {
+      legacyArgs.destination_address = { address1: address.address1, city: address.city, province_code: address.province_code ?? input.destination_state };
     }
-  );
+    return sanitizeDetailed(await getShippingEstimateHandler(env, legacyArgs), client);
+  }
+  const [quote, rules, live] = await Promise.all([
+    deliveredQuote(
+      env,
+      lines.map((line) => ({ variantId: line.entry.variantId, quantity: line.quantity })),
+      {
+        postalCode: input.destination_postal_code,
+        country: input.country,
+        provinceCode: input.destination_state ?? input.destination_address?.province_code ?? null,
+        city: input.destination_address?.city ?? null,
+        address1: input.destination_address?.address1 ?? null,
+      }
+    ),
+    discountRules(env),
+    bestEffort(() => liveVariants(env, lines.map((line) => line.entry.variantId)), new Map<string, LiveVariant>(), 2500),
+  ]);
+  const titleOf = (entry: CatalogEntry) => live.get(entry.variantId)?.title ?? entry.title;
   const units = lines.length === 1 && lines[0]!.entry.pack ? lines[0]!.quantity * lines[0]!.entry.pack! : null;
   const perUnit = units && quote.total !== null ? round2Unit(quote.total / units) : null;
-  const itemText = lines.map((line) => `${line.quantity} x SKU ${line.entry.sku} (${line.entry.title})`).join("; ");
+  const itemText = lines.map((line) => `${line.quantity} x SKU ${line.entry.sku} (${titleOf(line.entry)})`).join("; ");
+  const singlePct =
+    lines.length === 1 && quote.discounts > 0 ? percentAtQuantity(discountLadder(tiersForProduct(rules, lines[0]!.entry.productId)), lines[0]!.quantity) : 0;
   const rateText = quote.rates.length
-    ? quote.rates.map((rate) => `${rate.title}: ${rate.free ? `free (was ${money(rate.price)})` : money(rate.price)}`).join("; ")
+    ? quote.rates.map((rate) => `${rate.title === "Freight Shipping" ? "standard shipping" : rate.title} ${rate.free ? `free (was ${money(rate.price)})` : money(rate.price)}`).join("; ")
     : "no parcel rate available for this destination; request a freight quote";
   const text = [
-    `Delivered estimate to ${input.destination_postal_code} ${input.country}: ${itemText}.`,
-    `Subtotal ${money(quote.subtotal)}${quote.discounts > 0 ? ` after ${money(quote.discounts)} volume discount (was ${money(quote.subtotalBeforeDiscounts)})` : ""}.`,
-    `Shipping: ${rateText}.`,
+    `Delivered estimate to ${input.destination_postal_code}: ${itemText}.`,
+    `Subtotal ${money(quote.subtotal)}${quote.discounts > 0 ? ` after ${singlePct ? `${singlePct}% ` : ""}volume discount of ${money(quote.discounts)} (was ${money(quote.subtotalBeforeDiscounts)})` : ""}.`,
+    `Shipping: ${rateText}.${quote.rates.some((rate) => rate.title === "Freight Shipping") ? " Checkout names this rate \"Freight Shipping\"; it is Packrift's standard rate for parcel orders too." : ""}`,
     quote.total !== null ? `Delivered total ${money(quote.total)} before tax${perUnit !== null ? `, about ${perUnit >= 1 ? money(perUnit) : `$${perUnit.toFixed(3)}`} per unit` : ""}.` : "",
-    freeShippingGap(quote, await discountRules(env)),
+    freeShippingNote(quote, rules),
     "Estimate from Packrift's checkout rates; tax and the final amount are shown at checkout.",
-    quote.total === null ? `Freight quote: ${quoteLink(itemText, {}, client)}` : "Next: create_cart_url with the same items to get the checkout link.",
+    quote.total === null ? `Freight quote: ${quoteLink(itemText, {}, client)}` : "Next: after the buyer confirms, create_cart_url with the same items gives the checkout link.",
   ].filter(Boolean).join("\n");
   return toolResult(text, {
     destination: { postal_code: input.destination_postal_code, country: input.country },
-    items: lines.map((line) => ({ sku: line.entry.sku, quantity: line.quantity, title: line.entry.title })),
+    items: lines.map((line) => ({ sku: line.entry.sku, quantity: line.quantity, title: titleOf(line.entry) })),
     subtotal_before_discounts: quote.subtotalBeforeDiscounts,
     volume_discount: quote.discounts,
+    volume_discount_percent: singlePct || null,
     subtotal: quote.subtotal,
     shipping_options: quote.rates.map((rate) => ({ title: rate.title, price: rate.price, free: rate.free, charged: rate.charged })),
     delivered_total_before_tax: quote.total,
@@ -702,7 +869,7 @@ export const cartSchemaV1 = {
   name: "create_cart_url",
   title: "Create Packrift checkout link",
   description:
-    "Create a checkout link on packrift.com for items the buyer has chosen. Give each item as SKU and quantity (number of packs); up to 25 lines. The link opens the buyer's cart with those items and automatic volume discounts; the buyer reviews and pays on packrift.com. This tool never places an order or charges anyone. Call it only after the buyer confirms the items and quantities.",
+    "Create a checkout link on packrift.com for items the buyer has chosen. Give each item as SKU and quantity (number of packs); up to 25 lines. The link opens packrift.com checkout with those items and automatic volume discounts applied; the buyer adds their address and pays there. Returns the subtotal after volume discounts. This tool never places an order or charges anyone. Call it only after the buyer confirms the items and quantities.",
   inputSchema: {
     type: "object",
     properties: {
@@ -726,6 +893,7 @@ export const cartSchemaV1 = {
     additionalProperties: false,
   },
   annotations: ANNOTATIONS("Create Packrift checkout link"),
+  outputSchema: outputSchema({ checkout_url: STR, cart_url: STR, lines: ARR }),
 };
 
 const cartZod = z.object({
@@ -765,7 +933,7 @@ export async function createCartUrlV1(env: Env, raw: unknown, context: V1Context
     sourceSlug: client ?? context.sourceSlug ?? null,
     installTarget: context.installTarget ?? null,
   })) as Record<string, any>;
-  if (wantsDetailed(raw)) return legacy;
+  if (wantsDetailed(raw)) return sanitizeDetailed(legacy, client);
   const finalUrl = String(legacy.final_cart_url ?? legacy.url);
   const utmSource = String(legacy.utm?.source ?? utmSourceForClient(client));
   const checkoutUrl = checkoutLink(
@@ -773,24 +941,38 @@ export async function createCartUrlV1(env: Env, raw: unknown, context: V1Context
     utmSource,
     typeof legacy.mcp_handoff_id === "string" ? legacy.mcp_handoff_id : null
   );
-  const live = await bestEffort(() => liveVariants(env, lines.map((line) => line.entry.variantId)), new Map(), 2500);
+  const basket = lines.map((line) => ({ variantId: line.entry.variantId, quantity: line.quantity }));
+  const [live, pricing] = await Promise.all([
+    bestEffort(() => liveVariants(env, lines.map((line) => line.entry.variantId)), new Map<string, LiveVariant>(), 2500),
+    bestEffort(() => basketPricing(env, basket), null, 4000),
+  ]);
   const priced = lines.map((line) => {
     const facts = live.get(line.entry.variantId);
     const price = facts ? facts.price : null;
     return { sku: line.entry.sku, title: facts?.title ?? line.entry.title, quantity: line.quantity, price_per_pack: price, line_total: price === null ? null : round2(price * line.quantity), in_stock: facts?.available ?? null };
   });
   const listTotal = priced.every((line) => line.line_total !== null) ? round2(priced.reduce((sum, line) => sum + (line.line_total ?? 0), 0)) : null;
+  const subtotalText = pricing
+    ? pricing.discounts > 0
+      ? `Subtotal ${money(pricing.subtotal)} after the automatic volume discount of ${money(pricing.discounts)} (list ${money(pricing.subtotalBeforeDiscounts)}).`
+      : `Subtotal ${money(pricing.subtotal)}.`
+    : listTotal !== null
+      ? `List total ${money(listTotal)} before automatic volume discounts.`
+      : "";
   const text = [
     `Checkout link: ${checkoutUrl}`,
     ...priced.map((line) => `- ${line.quantity} x SKU ${line.sku}: ${line.title}${line.price_per_pack !== null ? ` at ${money(line.price_per_pack)} = ${money(line.line_total)}` : ""}${line.in_stock === false ? " (currently out of stock)" : ""}`),
-    listTotal !== null ? `List total ${money(listTotal)} before automatic volume discounts, shipping and tax.` : "",
-    "The link opens the buyer's cart on packrift.com; they review and pay there. Nothing is ordered until they check out.",
+    subtotalText,
+    "Shipping and tax are added at checkout; get_shipping_estimate gives the delivered total to a ZIP code.",
+    "The link opens packrift.com checkout with these items; the buyer adds their address and pays there. Nothing is ordered until they pay.",
   ].filter(Boolean).join("\n");
   return toolResult(text, {
     checkout_url: checkoutUrl,
     cart_url: finalUrl,
     lines: priced,
     list_total: listTotal,
+    volume_discount: pricing?.discounts ?? null,
+    subtotal_after_discounts: pricing?.subtotal ?? null,
     places_order: false,
   });
 }
@@ -803,34 +985,82 @@ export const quoteSchemaV1 = {
   name: "get_bulk_quote_link",
   title: "Request a bulk or custom quote",
   description:
-    "Get a pre-filled quote request link for pallet or recurring quantities, custom sizes, printed packaging, freight orders, or any spec Packrift does not stock exactly. The buyer submits the form on packrift.com and Packrift replies by email with pricing. Returns the link and what to include.",
+    "Get a pre-filled quote request link for pallet or recurring quantities, custom sizes, printed or branded packaging, freight orders, or any spec Packrift does not stock exactly. Put everything the buyer told you in the fields: the spec, quantity, delivery ZIP and need-by date travel with the request. The buyer adds their email and submits the form on packrift.com; Packrift replies by email with pricing. Returns the link and what the buyer still needs to add.",
   inputSchema: {
     type: "object",
     properties: {
-      requested_spec: { type: "string", description: "What the buyer needs, e.g. \"2,000 18x12x12 ECT-44 boxes, printed 1 color\"." },
-      quantity: { type: "string", description: "Quantity in units or packs, if known." },
-      sku: { type: "string", description: "Related Packrift SKU, if any." },
+      requested_spec: {
+        type: "string",
+        description: "What the buyer needs, e.g. \"18x12x12 ECT-44 kraft boxes, printed 1 color on 2 sides\". Include size, strength or thickness, color and any printing.",
+      },
+      quantity: { type: "string", description: "Quantity per order and how often, e.g. \"5,000 per quarter\"." },
+      delivery_zip: { type: "string", description: "US delivery ZIP code, if known." },
+      needed_by: { type: "string", description: "Date the buyer needs delivery, if known." },
+      sku: { type: "string", description: "A stocked Packrift SKU the request is for. Leave empty for custom, printed or branded packaging." },
       response_format: RESPONSE_FORMAT,
     },
     required: ["requested_spec"],
     additionalProperties: false,
   },
   annotations: ANNOTATIONS("Request a bulk or custom quote"),
+  outputSchema: outputSchema({ quote_url: STR, requested_spec: STR }),
 };
+
+/** Custom, printed or branded work needs a person to quote it, never a stock-SKU match. */
+export const CUSTOM_WORK = /\b(custom(?:i[sz]ed)?|printed|print(?:ing)?|imprint(?:ed|ing)?|logos?|brand(?:ed|ing)?|artwork|private[- ]label|pantone|pms|full[- ]colou?r|one[- ]colou?r|two[- ]colou?r|\d[- ]colou?rs?|die[- ]cut|embossed|foil[- ]stamp(?:ed|ing)?)\b/i;
+
+const QUOTE_SPEC_LIMIT = 220;
+
+/** The form carries one short request line; put quantity, ZIP and date in it when the spec does not already say them. */
+export function composeQuoteSpec(input: { requested_spec: string; quantity?: string | null; delivery_zip?: string | null; needed_by?: string | null }): { spec: string; shortened: boolean } {
+  const base = input.requested_spec.replace(/\s+/g, " ").trim();
+  const extras: string[] = [];
+  const quantity = input.quantity?.trim();
+  if (quantity && !base.includes(quantity.replace(/\s+/g, " "))) extras.push(`qty ${quantity}`);
+  const zip = input.delivery_zip?.trim();
+  if (zip && !base.includes(zip)) extras.push(`ship to ${zip}`);
+  const date = input.needed_by?.trim();
+  if (date && !base.toLowerCase().includes(date.toLowerCase())) extras.push(`need by ${date}`);
+  const tail = extras.length ? `; ${extras.join("; ")}` : "";
+  if (base.length + tail.length <= QUOTE_SPEC_LIMIT) return { spec: base + tail, shortened: false };
+  const room = Math.max(40, QUOTE_SPEC_LIMIT - tail.length - 3);
+  const cut = base.slice(0, room).replace(/[\s,;:]+\S*$/, "");
+  return { spec: `${cut}...${tail}`.slice(0, QUOTE_SPEC_LIMIT), shortened: true };
+}
+
+const quoteZod = z.object({
+  requested_spec: z.string().trim().min(3).max(2000),
+  quantity: z.union([z.string(), z.number()]).transform((value) => String(value).trim()).optional(),
+  delivery_zip: z.string().trim().max(20).optional(),
+  needed_by: z.string().trim().max(60).optional(),
+  sku: z.string().trim().max(80).optional(),
+});
 
 export async function getBulkQuoteLinkV1(env: Env, raw: unknown, context: V1Context = {}): Promise<V1ToolResult | unknown> {
   const args = withoutFormat(raw);
-  const legacy = (await getBulkQuoteLinkHandler(env, args)) as Record<string, any>;
-  if (wantsDetailed(raw)) return legacy;
+  const input = quoteZod.parse(args);
   const client = resolveClient(context);
-  const spec = String(args.requested_spec ?? "");
-  const url = quoteLink(spec, { sku: legacy.sku ?? null, quantity: (args.quantity as string | number | undefined) ?? null, family: legacy.family ?? null }, client);
+  const custom = CUSTOM_WORK.test(input.requested_spec);
+  const stocked = !custom && input.sku ? entryBySku(input.sku) : null;
+  const { spec, shortened } = composeQuoteSpec(input);
+  // The earlier layer records the quote-link event; its own URL is replaced below.
+  const legacy = (await getBulkQuoteLinkHandler(env, {
+    requested_spec: spec,
+    ...(stocked ? { sku: stocked.sku } : {}),
+    ...(input.quantity ? { quantity: input.quantity } : {}),
+  })) as Record<string, any>;
+  const url = quoteLink(spec, { sku: stocked?.sku ?? null, quantity: input.quantity ?? null, family: stocked?.family ?? null }, client);
+  if (wantsDetailed(raw)) return sanitizeDetailed({ ...legacy, quote_url: url, requested_spec: spec }, client);
   const text = [
     `Quote request link: ${url}`,
-    "The form is pre-filled with the spec. The buyer adds their email, delivery ZIP, quantity and timing, and Packrift replies with pricing by email.",
-    "Helpful details: inside dimensions, board strength or thickness, color or print, quantity per order and how often they reorder.",
-  ].join("\n");
-  return toolResult(text, { quote_url: url, requested_spec: spec, sku: legacy.sku ?? null });
+    stocked
+      ? `The form opens with SKU ${stocked.sku} (${stocked.title}) as the item and this request attached. The buyer sets the quantity on the form, adds their email and delivery ZIP, and submits.`
+      : `The form opens with this request in the items box: "${spec}". The buyer adds their email and delivery ZIP and submits; Packrift's team reviews it.`,
+    shortened ? "The request was shortened to fit the form; the buyer can add the rest in the notes box." : "",
+    custom ? "For printed or branded packaging, the buyer can email artwork to support@packrift.com after submitting." : "",
+    "Packrift replies by email with pricing; do not promise prices, lead times or minimums.",
+  ].filter(Boolean).join("\n");
+  return toolResult(text, { quote_url: url, requested_spec: spec, sku: stocked?.sku ?? null, custom_work: custom, spec_shortened: shortened });
 }
 
 // ---------------------------------------------------------------------------
@@ -838,7 +1068,7 @@ export async function getBulkQuoteLinkV1(env: Env, raw: unknown, context: V1Cont
 // ---------------------------------------------------------------------------
 
 export interface V1ToolDef {
-  schema: { name: string; title: string; description: string; inputSchema: unknown; annotations: Record<string, unknown> };
+  schema: { name: string; title: string; description: string; inputSchema: unknown; annotations: Record<string, unknown>; outputSchema?: unknown };
   handler: (env: Env, args: unknown, context?: V1Context) => Promise<unknown>;
 }
 
@@ -854,4 +1084,4 @@ export const V1_TOOLS: V1ToolDef[] = [
 export const V1_TOOL_NAMES = new Set(V1_TOOLS.map((tool) => tool.schema.name));
 
 export const V1_SERVER_INSTRUCTIONS =
-  "Packrift sells packaging supplies in the United States: corrugated shipping boxes, mailer boxes, poly and bubble mailers, poly bags, labels, packing tape, stretch film and void fill. Use search_products when the buyer names a product, size or SKU, and find_packaging_for_item when they describe the item they ship. Results include live price and stock, so after the buyer confirms an item and quantity you can call create_cart_url directly; it returns a packrift.com checkout link and never places an order. get_product gives specs, volume pricing and whether a quantity can ship now. get_shipping_estimate gives a delivered total to a ZIP code with automatic volume discounts and free shipping applied. Use get_bulk_quote_link for pallet quantities, custom or printed packaging, freight, or when nothing matches exactly. Never present a different size as an exact match.";
+  "Packrift sells packaging supplies in the United States: corrugated shipping boxes, mailer boxes, poly and bubble mailers, poly bags, labels, packing tape, stretch film and void fill. Use search_products when the buyer names a product, size or SKU, and find_packaging_for_item when they describe the item they ship. Results include live price and stock, so after the buyer confirms an item and quantity you can call create_cart_url directly; it returns a packrift.com checkout link and never places an order. get_product gives specs, volume pricing and whether a quantity can ship now. get_shipping_estimate gives a delivered total to a ZIP code with automatic volume discounts applied, and free shipping only when the order qualifies. Use get_bulk_quote_link for pallet quantities, custom or printed packaging, freight, or when nothing matches exactly. Quantities are in packs. Never present a different size as an exact match, and never call shipping free unless an estimate shows it.";

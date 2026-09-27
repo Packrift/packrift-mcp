@@ -55,9 +55,10 @@ Practical rules for choosing and sizing shipping packaging. Packrift's tools app
 
 The edge crush test (ECT) rating sets how much weight a box is rated to carry, per the standard box maker's certificate:
 
-| Board | Rated load | Max size (length + width + height) |
+| Board | Max weight (box and contents) | Max outside size (length + width + height) |
 |---|---|---|
 | ECT-32 single wall | 65 lb | 75 in |
+| ECT-40 single wall | 80 lb | 85 in |
 | ECT-44 single wall | 95 lb | 95 in |
 | ECT-48 double wall | 100 lb | 95 in |
 | ECT-51 double wall | 120 lb | 105 in |
@@ -70,10 +71,10 @@ Stay well under the rating when boxes are stacked, shipped by freight or packed 
 
 Carriers bill the greater of actual weight and dimensional weight:
 
-- UPS and FedEx: length x width x height in inches, each rounded up, divided by 139.
-- USPS: the same measurement divided by 166, for packages over one cubic foot (1,728 cubic inches).
+- UPS and FedEx: the outside length x width x height in inches, each side rounded up to the next inch, divided by 139. This applies to every package, including filled poly mailers.
+- USPS: the same calculation (divide by 139, each side rounded up, since July 12, 2026), but only for packages over one cubic foot (1,728 cubic inches). Smaller USPS packages bill by actual weight.
 
-A 12 x 12 x 12 in box bills as 13 lb with UPS or FedEx even when it weighs 3 lb; a 10 x 8 x 6 in box bills as 4 lb. Right-sizing the box is usually the biggest shipping saving.
+Box sizes are listed as inside dimensions, so measure the outside: add about 1/4 in to each side of a corrugated box. A listed 12 x 12 x 12 box is about 12.25 in outside, rounds up to 13 x 13 x 13 and bills as 16 lb with UPS, FedEx and USPS even when it weighs 3 lb. A listed 10 x 8 x 6 box rounds up to 11 x 9 x 7 and bills as 5 lb with UPS or FedEx; with USPS it bills its actual weight. Right-sizing the box is usually the biggest shipping saving.
 
 ## Tape
 
@@ -88,6 +89,12 @@ A 12 x 12 x 12 in box bills as 13 lb with UPS or FedEx even when it weighs 3 lb;
 - Bubble wrap: 3/16 in for surface protection, 1/2 in for cushioning.
 - Foam: the most protection for fragile items.
 
+## Heat-sensitive items
+
+- Candles, chocolate, cosmetics and some adhesives soften in summer heat; many container candle waxes soften around 115 to 125°F, which a delivery truck can exceed.
+- Ship early in the week so parcels do not sit in a truck or depot over the weekend, and use faster services during heat waves.
+- Insulated mailers or box liners with cold packs protect chocolate and other goods that melt at lower temperatures.
+
 ## Stretch film
 
 - Hand film around 60 to 70 gauge suits light, stable loads; 80 gauge suits most pallets; 90 to 120 gauge suits heavy or sharp-edged loads.
@@ -96,7 +103,7 @@ A 12 x 12 x 12 in box bills as 13 lb with UPS or FedEx even when it weighs 3 lb;
 ## Ordering from Packrift
 
 - Prices are per pack, and each product title states the pack count.
-- Volume discounts and free-shipping thresholds apply automatically at checkout; Packrift's tools show the current tiers.
+- Volume discounts apply automatically at checkout, and so does free shipping when an order qualifies; Packrift's tools show the current tiers and whether an order qualifies.
 - For pallet quantities, custom sizes or printing, request a quote at https://packrift.com/pages/bulk-quote.
 `;
 
@@ -349,6 +356,10 @@ Usage records for up to 90 days: the tool used, the time, search text, the SKUs 
 ## How we use it
 
 To answer requests, to measure and improve search and sizing results, and to understand which assistants send shoppers to packrift.com. We do not sell this information or share it with advertisers.
+
+## Your choices
+
+Packrift's tools run only when you ask your assistant for help with packaging. Disconnecting the Packrift connector or uninstalling the plugin stops all requests. To ask about or delete usage records, email support@packrift.com. The service is intended for adults and businesses.
 
 ## Service providers
 

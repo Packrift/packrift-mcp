@@ -44,9 +44,9 @@ Every tool is read-only (`readOnlyHint: true`, `destructiveHint: false`) and nev
 ## How it works
 
 - **Live data.** Prices, stock and shipping rates come from Packrift's Shopify store at request time.
-- **Fit.** Inside dimensions plus cushioning by item type (about 1/2 in per side for sturdy items, 1 to 2 in for electronics, 2 in for fragile items), box strength by ECT rating against the item's weight, flat-mailer and tube fits, and billable weight (UPS/FedEx divide by 139; USPS divides by 166 above one cubic foot).
+- **Fit.** Inside dimensions plus cushioning by item type (about 1/2 in per side for sturdy items, 1 to 2 in for electronics, 2 in for fragile items), box strength by ECT rating against the item's weight, flat-mailer and tube fits, and billable weight including the packaging (UPS and FedEx divide by 139; USPS also divides by 139 since July 12, 2026, but only above one cubic foot).
 - **Delivered price.** Checkout shipping rates with automatic volume discounts and free-shipping thresholds applied. Tax is excluded; checkout shows the final amount.
-- **Checkout.** `create_cart_url` returns a `https://mcp.packrift.com/c/...` link that opens the buyer's cart on packrift.com with the chosen items.
+- **Checkout.** `create_cart_url` returns a `https://mcp.packrift.com/c/...` link that opens packrift.com checkout with the chosen items and automatic volume discounts; it also returns the discounted subtotal.
 - **Exact matches only.** A different size, strength, thickness or pack count is never presented as an exact match.
 - **Resources and prompts.** `resources/list` offers a packaging guide, an overview of Packrift, tool guidance, setup and the privacy notice. `prompts/list` offers five starter prompts.
 
