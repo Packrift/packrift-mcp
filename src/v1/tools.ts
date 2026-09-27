@@ -95,6 +95,12 @@ export function sanitizeDetailed(value: unknown, client: string | null): unknown
       const out: Record<string, unknown> = {};
       for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
         if (key === "required_before_presenting") continue;
+        // Shipping-rate handles are signed carrier tokens, not buyer information.
+        if (key === "handle" && typeof child === "string" && child.startsWith("eyJ")) continue;
+        if (key === "utm_source" && typeof child === "string" && /^chatgpt(?:-mcp)?$/.test(child)) {
+          out[key] = source;
+          continue;
+        }
         out[key] = walk(child);
       }
       return out;

@@ -208,7 +208,9 @@ test("custom and printed quote requests never carry a stock SKU; the spec carrie
 });
 
 test("detailed responses keep attribution on the calling assistant and drop removed-tool hints", () => {
-  const out = sanitizeDetailed({ url: "https://packrift.com/products/x?utm_source=chatgpt&utm_medium=mcp", nested: [{ u: "https://packrift.com/?a=1&utm_source=chatgpt-mcp" }], required_before_presenting: ["get_pricing"] }, "claude_code");
+  const out = sanitizeDetailed({ url: "https://packrift.com/products/x?utm_source=chatgpt&utm_medium=mcp", nested: [{ u: "https://packrift.com/?a=1&utm_source=chatgpt-mcp", handle: "eyJhbGciOiJIUzI1NiJ9.eyJjb2RlIjoieCJ9.sig", tracking: { utm_source: "chatgpt" } }], required_before_presenting: ["get_pricing"] }, "claude_code");
+  assert.equal("handle" in out.nested[0], false);
+  assert.equal(out.nested[0].tracking.utm_source, "claude");
   assert.equal(out.url, "https://packrift.com/products/x?utm_source=claude&utm_medium=mcp");
   assert.equal(out.nested[0].u, "https://packrift.com/?a=1&utm_source=claude");
   assert.equal("required_before_presenting" in out, false);
