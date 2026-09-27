@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// Retired in Packrift MCP 1.0 (2026-09-27): llms-full.txt no longer publishes GA4
+// activity or a KV override. Edit src/llms-full-content.ts and deploy instead.
+console.error("refresh-llms-full is retired: edit src/llms-full-content.ts and deploy. See git log for b4cc450.");
+process.exit(1);
+
+/* Original implementation kept for reference:
+#!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
@@ -398,3 +405,5 @@ function loadEnv(path) {
   }
   return env;
 }
+
+*/

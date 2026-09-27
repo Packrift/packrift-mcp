@@ -221,3 +221,8 @@ test("catalog index covers the approved catalog", () => {
   assert.ok(isInternalRoute("/ai/mcp-activation-wave.json"));
   assert.ok(!isInternalRoute("/ai/sku/1066.md"));
 });
+
+test("the public product corpus carries no cost or margin fields", async () => {
+  const { aiApprovedProductsJsonl } = await import("../dist/ai-corpus-content.js");
+  assert.ok(!/current_margin|\bcogs\b|markup/i.test(aiApprovedProductsJsonl));
+});

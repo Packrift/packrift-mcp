@@ -7,9 +7,12 @@ import { homedir } from "node:os";
 import app from "../dist/index.js";
 
 const QUIET = process.argv.includes("--quiet");
-const envFile = readFileSync(`${homedir()}/Downloads/env-shopify-packrift.txt`, "utf8");
-const token = envFile.match(/^\s*SHOPIFY_PACKRIFT_TOKEN\s*=\s*"?([^"\n]+)"?/m)?.[1];
-if (!token) throw new Error("SHOPIFY_PACKRIFT_TOKEN not found");
+// Token: SHOPIFY_PACKRIFT_TOKEN, or an env file named by SHOPIFY_ENV_FILE.
+const envFilePath = process.env.SHOPIFY_ENV_FILE ?? `${homedir()}/Downloads/env-shopify-packrift.txt`;
+const token =
+  process.env.SHOPIFY_PACKRIFT_TOKEN ??
+  readFileSync(envFilePath, "utf8").match(/^\s*SHOPIFY_PACKRIFT_TOKEN\s*=\s*"?([^"\n]+)"?/m)?.[1];
+if (!token) throw new Error("Set SHOPIFY_PACKRIFT_TOKEN (or SHOPIFY_ENV_FILE) to run the live smoke test.");
 
 const store = new Map();
 const kv = {

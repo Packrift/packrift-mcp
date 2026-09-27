@@ -1,6 +1,6 @@
-# Packrift MCP Server Install
+# Install Packrift MCP
 
-Packrift MCP Server is a hosted remote MCP endpoint for Packrift's packaging-supplies catalog. No local package, API key, or checkout account is required for the public catalog tools.
+Packrift MCP is a hosted remote MCP server for Packrift's packaging-supplies catalog. There is nothing to install locally and no API key: add the endpoint to your MCP client.
 
 ## Endpoint
 
@@ -8,152 +8,11 @@ Packrift MCP Server is a hosted remote MCP endpoint for Packrift's packaging-sup
 https://mcp.packrift.com/mcp
 ```
 
-## Start Page
+Transport: Streamable HTTP. Authentication: none.
 
-Use this as the shortest public handoff for developers, agents, and directory reviewers. It includes install snippets, the first exact-SKU flow, buyer prompts, and proof URLs:
+## Client configuration
 
-- HTML: https://mcp.packrift.com/start
-- Source-aware HTML template: https://mcp.packrift.com/start?utm_source={source}
-- JSON: https://mcp.packrift.com/ai/mcp-start.json
-- Markdown: https://mcp.packrift.com/ai/mcp-start.md
-
-The source-aware page shows the matching tracked config URL and copy-ready install controls for the supplied source slug.
-Source-attributed config fetches are counted as `mcp_tracked_config_fetches`, tracked install-action opens are counted as `mcp_install_intent`, and copy interactions are counted as `mcp_install_copy` events, so a directory or partner source can be measured before real buyer workflows arrive.
-
-## Hosted Adoption Kit
-
-Use this when you want a fast, copy-ready first test after installing Packrift MCP:
-
-- JSON: https://mcp.packrift.com/ai/mcp-adoption-kit.json
-- Markdown: https://mcp.packrift.com/ai/mcp-adoption-kit.md
-
-The adoption kit includes remote MCP config, Claude/Codex install commands, first-five-minute JSON-RPC calls, demo SKUs, useful workflows, proof URLs, and exact-match rules.
-
-## Install Matrix
-
-Use this when an agent host, directory, or developer needs copy-ready setup paths for common MCP clients plus smoke-test requests:
-
-- JSON: https://mcp.packrift.com/ai/mcp-install-matrix.json
-- Markdown: https://mcp.packrift.com/ai/mcp-install-matrix.md
-
-The install matrix keeps remote HTTP, stdio bridge, Claude, Codex, IDE hosts, Glama, marketplace, browser-agent bridge, and optional container paths tied to the same hosted endpoint: `https://mcp.packrift.com/mcp`.
-
-## Client Config
-
-Use this when a host, IDE, or directory reviewer wants the smallest copy-ready MCP JSON instead of the larger install matrix:
-
-- JSON bundle: https://mcp.packrift.com/ai/mcp-client-config.json
-- Markdown: https://mcp.packrift.com/ai/mcp-client-config.md
-- Root alias: https://mcp.packrift.com/mcp.json
-- Well-known alias: https://mcp.packrift.com/.well-known/mcp.json
-- Source-attributed config template: https://mcp.packrift.com/r/config/{source}
-- Generic source-attributed config: https://mcp.packrift.com/r/config/generic
-
-The root, well-known, and source-attributed aliases return the minimal `mcpServers.packrift` config pointed at `https://mcp.packrift.com/mcp`. Use `/r/config/{source}` for directories and partner handoffs that need install-intent attribution in the public usage snapshot.
-
-## Tracked Install Actions
-
-Use this when a directory, partner, or agent host needs one target-specific install command or config URL:
-
-```text
-https://mcp.packrift.com/r/install/{source}/{target}
-```
-
-Common targets are `generic_streamable_http`, `stdio_mcp_remote`, `claude_code`, `codex`, `claude_desktop`, `cursor_windsurf_vscode`, and `cline`. The install-action index is available at https://mcp.packrift.com/ai/mcp-install-actions.json.
-
-## Claude Connector Submission
-
-Use this when submitting or reviewing Packrift for Claude connector discovery:
-
-- JSON: https://mcp.packrift.com/ai/claude-connector-submission.json
-- Markdown: https://mcp.packrift.com/ai/claude-connector-submission.md
-- Tracked Claude start: https://mcp.packrift.com/r/start/anthropic_connectors_directory?utm_source=anthropic_connectors_directory&utm_medium=directory_recrawl&utm_campaign=packrift_mcp_start&utm_content=claude_connector_submission
-- Tracked Claude config: https://mcp.packrift.com/r/config/anthropic_connectors_directory?utm_source=anthropic_connectors_directory&utm_medium=directory_config&utm_campaign=packrift_mcp_install&utm_content=claude_connector_submission
-
-The packet includes form-ready fields, no-auth endpoint proof, legal/support links, allowed redirect hosts, and buyer safety rules.
-
-## Agent Capture Outreach Packet
-
-Use this when a reviewer, partner, or agent host needs one combined distribution handoff:
-
-- JSON: https://mcp.packrift.com/ai/agent-capture-outreach.json
-- Markdown: https://mcp.packrift.com/ai/agent-capture-outreach.md
-
-The outreach packet combines install snippets, proof links, tracked start/config URLs, directory recrawl messages, browser-assisted MCP.so and Claude submission payloads, and the Browserbase Browse candidate brief while keeping the runtime endpoint fixed at `https://mcp.packrift.com/mcp`.
-
-## First-Run Proof
-
-Use this when a developer, agent platform, or directory reviewer wants the shortest live proof before installing or recrawling:
-
-- JSON: https://mcp.packrift.com/ai/mcp-first-run-proof.json
-- Markdown: https://mcp.packrift.com/ai/mcp-first-run-proof.md
-
-The first-run proof runs a synthetic SKU `1066` sequence against live product, price, inventory, and cart-handoff code with analytics suppressed. It shows the same JSON-RPC calls an external agent should make against `https://mcp.packrift.com/mcp`.
-
-## Workflow Gallery
-
-Use this when an agent host or developer needs copy-ready buyer prompts and JSON-RPC sequences for demos or evals:
-
-- JSON: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
-- Markdown: https://mcp.packrift.com/ai/mcp-workflow-gallery.md
-
-The workflow gallery covers exact SKU reorder, label reorder, literature mailer cart handoff, fit-by-dimensions discovery, and no-exact-match quote recovery.
-
-## Eval Pack
-
-Use this when an MCP host, marketplace, or directory reviewer needs acceptance-test cases for a real Packrift MCP install:
-
-- JSON: https://mcp.packrift.com/ai/mcp-eval-pack.json
-- Markdown: https://mcp.packrift.com/ai/mcp-eval-pack.md
-
-The eval pack includes source-aware install/run URLs, host configs, required JSON-RPC requests, expected assertions, and report fields for proving `tools/list`, `prompts/list`, live price, live inventory, and measured cart handoff through the real host.
-
-## Source Activation Packets
-
-Use this when a source already has proof-page or cart-landing signal but still needs a real MCP host run:
-
-- Template: https://mcp.packrift.com/ai/mcp-source-activation/{source}.json
-- Cline packet: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json
-- Cline Markdown: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.md
-- Cline HTML: https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.html
-
-The packet gives one source-specific config, prompt, acceptance gate, and measurement path. For Cline, it is the fastest handoff from marketplace/browser proof into actual `tools/list`, `get_cart_handoff_candidates`, `get_pricing`, `check_inventory`, and `create_cart_url` telemetry.
-
-## Activation Wave
-
-Use this when the material tool-call gate is still open and the next move should be a coordinated set of real MCP host runs:
-
-- JSON: https://mcp.packrift.com/ai/mcp-activation-wave.json
-- Markdown: https://mcp.packrift.com/ai/mcp-activation-wave.md
-- HTML: https://mcp.packrift.com/ai/mcp-activation-wave.html
-
-The wave groups the highest-leverage sources, gives copy-ready host configs and shell runners, and keeps the work on `https://mcp.packrift.com/mcp` instead of creating a duplicate CLI or buyer surface.
-
-## Cart Activation
-
-Use this when an agent has exact buyer intent and needs the guarded sequence from live checks to a measured MCP cart landing:
-
-- JSON: https://mcp.packrift.com/ai/mcp-cart-activation.json
-- Markdown: https://mcp.packrift.com/ai/mcp-cart-activation.md
-
-The cart activation playbook gives buyer prompts, JSON-RPC sequences, and the rule to present the `https://mcp.packrift.com/r/cart/` landing URL before the forwarded Shopify cart URL.
-
-## Browser-Agent Bridge
-
-Use this when an agent can read public URLs with a browser but cannot install MCP directly:
-
-- JSON: https://mcp.packrift.com/ai/browser-agent-bridge.json
-- Markdown: https://mcp.packrift.com/ai/browser-agent-bridge.md
-- Root SKILL.md: https://mcp.packrift.com/SKILL.md
-- Browse skill pack JSON: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
-- Browse skill pack Markdown: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.md
-- Canonical Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
-
-The bridge and SKILL.md are read-first and MCP-confirmed. Browser agents can crawl Packrift resources for discovery, but live price, inventory, shipping, exact product detail, and cart handoff should still come from `https://mcp.packrift.com/mcp`.
-
-## Remote MCP Config
-
-Use this configuration in MCP clients that support remote HTTP or Streamable HTTP servers:
+Most clients accept this JSON:
 
 ```json
 {
@@ -166,80 +25,25 @@ Use this configuration in MCP clients that support remote HTTP or Streamable HTT
 }
 ```
 
-If your client uses a UI instead of JSON, add a remote MCP server named `packrift` with URL `https://mcp.packrift.com/mcp`.
+Command-line clients:
 
-For clients that only support local stdio MCP commands, use `mcp-remote` as a thin bridge. This is not a Packrift CLI; every call still reaches the hosted Packrift MCP endpoint:
-
-```json
-{
-  "mcpServers": {
-    "packrift": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.packrift.com/mcp"]
-    }
-  }
-}
+```bash
+claude mcp add --transport http packrift https://mcp.packrift.com/mcp
+codex mcp add packrift --url https://mcp.packrift.com/mcp
+code --add-mcp '{"name":"packrift","type":"http","url":"https://mcp.packrift.com/mcp"}'
 ```
 
-## Hosted Connector Listings
+## Verify
 
-- Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
-- MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
-- Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
-- Source repository: https://github.com/Packrift/packrift-mcp
-
-## What It Provides
-
-- Search Packrift packaging supplies by product, use case, or packaging need.
-- Retrieve pricing and inventory context for selected variants.
-- Recommend packaging options from item dimensions, weight, and shipping use case.
-- Create Packrift cart URLs for agent-assisted purchasing workflows.
-
-## First Tool Calls To Try
-
-Use these after adding the remote MCP server. They are designed to exercise the measured path from discovery to a stamped cart handoff.
-
-1. List tools and prompts:
+After connecting, `tools/list` returns six tools: `search_products`, `find_packaging_for_item`, `get_product`, `get_shipping_estimate`, `create_cart_url` and `get_bulk_quote_link`. A good first call:
 
 ```json
-{"jsonrpc":"2.0","id":"tools","method":"tools/list"}
+{"name": "find_packaging_for_item", "arguments": {"item_length_in": 9, "item_width_in": 6, "item_depth_in": 4, "item_weight_lb": 2, "use_case": "ceramic mug"}}
 ```
 
-```json
-{"jsonrpc":"2.0","id":"prompts","method":"prompts/list"}
-```
+## Notes
 
-2. Review a ready cart candidate:
-
-```json
-{"jsonrpc":"2.0","id":"candidates","method":"tools/call","params":{"name":"get_cart_handoff_candidates","arguments":{"sku":"1066","limit":1}}}
-```
-
-3. Confirm live facts before cart handoff:
-
-```json
-{"jsonrpc":"2.0","id":"price","method":"tools/call","params":{"name":"get_pricing","arguments":{"variant_ids":["53472879935856"],"quantity":1}}}
-```
-
-```json
-{"jsonrpc":"2.0","id":"inventory","method":"tools/call","params":{"name":"check_inventory","arguments":{"variant_ids":["53472879935856"]}}}
-```
-
-4. Create the measured cart landing URL only after the buyer confirms exact SKU and quantity:
-
-```json
-{"jsonrpc":"2.0","id":"cart","method":"tools/call","params":{"name":"create_cart_url","arguments":{"items":[{"variant_id":"53472879935856","qty":1}],"selected_sku":"1066","selected_handle":"10x6x6-ect-32-kraft-long-corrugated-boxes-25-bundle","match_type":"cart_handoff_candidate","source_context":"exact_spec_ai_agent","journey_id":"mcp_1066_53472879935856","result_set_id":"mcp_cart_handoff_candidates","utm_term":"1066"}}}
-```
-
-The returned `url` is the MCP cart landing shim. It carries `ref=mcp`, `utm_source=chatgpt-mcp`, `utm_medium=mcp_tool`, and `utm_campaign=create_cart_url`, then redirects to the final Packrift cart.
-
-## Public Links
-
-- Documentation: https://packrift.com/pages/packrift-ai-agent-instructions
-- Source: https://github.com/Packrift/packrift-mcp
-- Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
-- Client config: https://mcp.packrift.com/ai/mcp-client-config.json
-- Root MCP JSON config: https://mcp.packrift.com/mcp.json
-- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
-- Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
-- MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
+- All tools are read-only and never place orders; `create_cart_url` returns a packrift.com checkout link for the buyer.
+- Setup for more clients: https://mcp.packrift.com/start
+- Privacy notice: https://mcp.packrift.com/privacy
+- Support: support@packrift.com
