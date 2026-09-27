@@ -84,12 +84,17 @@ function sessionAssistant(event) {
  * explained: activation-link runs, automation, directory probes, crawlers, people or crawlers
  * opening Packrift links on web pages, and unidentified clients.
  */
+const SESSION_BUCKET = new Map();
+
 function bucketOf(event) {
+  const inherited = SESSION_BUCKET.get(String(event.mcp_session_id ?? ""));
+  if (inherited && event.event !== "mcp_initialize") return inherited;
   const ua = String(event.user_agent ?? "");
   const tags = `${event.utm_medium ?? ""} ${event.utm_campaign ?? ""} ${event.source ?? ""} ${event.mcp_source_context ?? ""}`;
   const name = String(event.client_name ?? "");
   if (/first_run|activation|synthetic|tracked-run/i.test(`${tags} ${event.mcp_session_id ?? ""}`)) return "activation";
   if (/packrift_plugin_sim|e2e|smoke/i.test(`${tags} ${event.utm_source ?? ""} ${event.mcp_session_id ?? ""}`)) return "automation";
+  if (DIRECTORY.test(name)) return "directory";
   if (sessionAssistant(event)) return "assistant";
   if (CRAWLER.test(ua) || (event.bot_family && !["browser_or_unknown", "generic_mcp_client"].includes(event.bot_family))) return "crawler";
   if (DIRECTORY.test(name) || DIRECTORY.test(ua) || event.bot_family === "generic_mcp_client" || /collector|monitor|oracle|beat|audit/i.test(`${name} ${ua}`)) return "directory";
@@ -113,6 +118,8 @@ for (let d = 0; d < days; d += 1) {
   dayKeys.push(...(await listKeys(`events/ai-sales/${day}/`)));
 }
 const events = (await mapLimit(dayKeys, 40, getValue)).filter((e) => e && EVENT_TYPES.has(e.event));
+// Sessions take the bucket of their initialize event (a directory scout stays a directory scout).
+for (const e of events) if (e.event === "mcp_initialize" && e.mcp_session_id) SESSION_BUCKET.set(String(e.mcp_session_id), bucketOf(e));
 const buckets = counter();
 const bucketCalls = counter();
 for (const e of events) {
