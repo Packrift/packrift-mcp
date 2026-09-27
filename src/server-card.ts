@@ -6,7 +6,7 @@ export const serverCard = {
   title: "Packrift packaging supplies",
   description:
     "Find, size, price and order packaging supplies from Packrift: corrugated shipping boxes, mailer boxes, poly and bubble mailers, poly bags, labels, packing tape, stretch film and void fill, with live price and stock across 20,000+ products. Fits items to boxes and mailers with cushioning, strength and dimensional-weight checks, prices delivery to US ZIP codes with automatic volume discounts, and creates packrift.com checkout links. Read-only; it never places orders.",
-  version: "1.0.0",
+  version: "1.1.0",
   protocol: "mcp",
   transport: "streamable-http",
   endpoint: "/mcp",

@@ -3,7 +3,7 @@
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
   "description": "Find, size, price and order packaging: boxes, mailers, poly bags, tape. Live price and stock.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "websiteUrl": "https://mcp.packrift.com/start",
   "repository": {
     "url": "https://github.com/Packrift/packrift-mcp",

@@ -243,7 +243,7 @@ app.get("/", async (c, next) => {
   if (isStorefrontHost(url.hostname)) return next();
   const accept = (c.req.header("Accept") ?? "").toLowerCase();
   if (accept.includes("application/json") && !accept.includes("text/html")) {
-    return c.json({ status: "ok", server: "Packrift MCP", version: "1.0.0", mcp_endpoint: "https://mcp.packrift.com/mcp", start_url: "https://mcp.packrift.com/start" }, 200, V1_PAGE_HEADERS);
+    return c.json({ status: "ok", server: "Packrift MCP", version: "1.1.0", mcp_endpoint: "https://mcp.packrift.com/mcp", start_url: "https://mcp.packrift.com/start" }, 200, V1_PAGE_HEADERS);
   }
   return v1Text(c, startPageHtml(), "text/html; charset=utf-8");
 });

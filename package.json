@@ -1,6 +1,6 @@
 {
   "name": "packrift-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Packrift MCP server: find, size, price and order packaging supplies with live price and stock, fit checks, delivered pricing and checkout links.",
   "private": true,
   "license": "MIT",

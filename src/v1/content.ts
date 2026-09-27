@@ -4,7 +4,7 @@
 // that help them; nothing here describes Packrift's internal operations.
 
 export const MCP_URL = "https://mcp.packrift.com/mcp";
-export const MCP_VERSION = "1.0.0";
+export const MCP_VERSION = "1.1.0";
 export const PLUGIN_REPO = "Packrift/claude-plugin";
 
 export const TOOL_SUMMARIES: Array<{ name: string; summary: string }> = [
