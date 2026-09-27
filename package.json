@@ -1,7 +1,7 @@
 {
   "name": "packrift-mcp-server",
-  "version": "0.3.0",
-  "description": "MCP server for Packrift exact-spec packaging procurement, live pricing, inventory, reorder, quote, and cart handoff.",
+  "version": "1.0.0",
+  "description": "Packrift MCP server: find, size, price and order packaging supplies with live price and stock, fit checks, delivered pricing and checkout links.",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -28,7 +28,7 @@
   "scripts": {
     "prebuild": "node scripts/check-public-doc-hygiene.mjs",
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsc -p tsconfig.build.json && node --test scripts/test-search-ranking.mjs scripts/test-experiment-approved-catalog.mjs scripts/test-query-alias-overrides.mjs scripts/test-input-coercion.mjs scripts/test-quote-context.mjs scripts/test-search-constraints.mjs scripts/test-search-hydration.mjs scripts/test-muse-attribution.mjs scripts/test-search-evidence.mjs scripts/test-shopify-deadline.mjs scripts/test-best-effort.mjs scripts/test-cpu-equivalence.mjs",
+    "test": "tsc -p tsconfig.build.json && node --test scripts/test-search-ranking.mjs scripts/test-experiment-approved-catalog.mjs scripts/test-query-alias-overrides.mjs scripts/test-input-coercion.mjs scripts/test-quote-context.mjs scripts/test-search-constraints.mjs scripts/test-search-hydration.mjs scripts/test-muse-attribution.mjs scripts/test-search-evidence.mjs scripts/test-shopify-deadline.mjs scripts/test-best-effort.mjs scripts/test-cpu-equivalence.mjs scripts/test-v1.mjs",
     "eval:ranking": "tsc -p tsconfig.build.json && node scripts/eval-search-ranking.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
@@ -54,7 +54,8 @@
     "purge:cache": "node scripts/purge-cloudflare-cache.mjs",
     "typecheck": "tsc --noEmit",
     "check:directory-surface": "node scripts/check-directory-surface.mjs",
-    "check:directory-surface:live": "node scripts/check-directory-surface.mjs --live"
+    "check:directory-surface:live": "node scripts/check-directory-surface.mjs --live",
+    "smoke:v1": "npm run build --silent && node scripts/v1-live-smoke.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.2",

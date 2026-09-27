@@ -3,7 +3,7 @@ import type { ApprovedCatalogItem } from "./approved-catalog.js";
 export const MCP_COMMERCE_HELD_SKUS = ["12104", "CRR40W", "FWUPS116S24P"] as const;
 
 export const MCP_COMMERCE_HOLD_REASON =
-  "SKU is held from MCP AI-commerce cart handoff pending explicit margin, LTL, and spec-conflict approval.";
+  "This item ships by freight or needs a spec check, so it is quoted rather than sold through a checkout link.";
 
 const heldSkuSet = new Set<string>(MCP_COMMERCE_HELD_SKUS.map((sku) => sku.toUpperCase()));
 
@@ -23,7 +23,7 @@ export function isMcpCommerceHeldItem(item: ApprovedCatalogItem | null | undefin
 
 export function mcpCommerceHoldErrorMessage(sku: string | null | undefined): string {
   const normalizedSku = normalizeCommerceSku(sku) ?? "requested SKU";
-  return `MCP commerce hold blocked ${normalizedSku}: ${MCP_COMMERCE_HOLD_REASON} Use get_bulk_quote_link or request operator review instead of create_cart_url.`;
+  return `SKU ${normalizedSku}: ${MCP_COMMERCE_HOLD_REASON} Use get_bulk_quote_link for a quote.`;
 }
 
 export function assertMcpCommerceSkuAllowed(sku: string | null | undefined): void {

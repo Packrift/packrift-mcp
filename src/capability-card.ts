@@ -41,7 +41,7 @@ export const capabilityCard = {
   operator: {
     name: "Packrift",
     website: "https://packrift.com",
-    contact_email: "farhan@packrift.com",
+    contact_email: "support@packrift.com",
   },
   connection_policy: {
     can_execute_orders: false,

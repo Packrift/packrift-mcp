@@ -3,6 +3,7 @@ import { Env, shopifyQuery, variantIdToNumeric } from "../shopify.js";
 import { extractDimensions } from "../dimensions.js";
 import { approvalForHandle, approvalForVariantId, approvalStatus } from "../approval.js";
 import { buildConversionActions, buildMatchSummary, buildProductCard } from "../conversion.js";
+import { PUBLIC_METAFIELD_KEY } from "../public-hygiene.js";
 
 export const getProductSchema = {
   name: "get_product",
@@ -164,7 +165,7 @@ export async function getProductHandler(env: Env, raw: unknown) {
           raw: dims.raw,
         }
       : null,
-    metafields: metafields.map((m) => ({
+    metafields: metafields.filter((m) => m.namespace === "custom" && PUBLIC_METAFIELD_KEY.test(m.key)).map((m) => ({
       namespace: m.namespace,
       key: m.key,
       value: m.value,

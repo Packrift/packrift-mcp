@@ -130,6 +130,21 @@ import { agentCaptureOutreachHtml, agentCaptureOutreachMarkdown, agentCaptureOut
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./effective-approved-catalog.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 import { isMcpCommerceHeldSku, MCP_COMMERCE_HELD_SKUS, MCP_COMMERCE_HOLD_REASON } from "./mcp-commerce-holds.js";
+import { V1_SERVER_INSTRUCTIONS, V1_TOOLS } from "./v1/tools.js";
+import { isV1ToolResult } from "./v1/format.js";
+import { clientSlugFromName, clientSlugFromSessionId, sessionIdForClient } from "./v1/attribution.js";
+import { hasStatsToken, isInternalRoute, scrubLegacyPayload } from "./public-hygiene.js";
+import { entryByVariantId } from "./v1/catalog.js";
+import { AGENT_INSTRUCTIONS_MD, LLMS_TXT, PACKAGING_GUIDE_MD, PRIVACY_MD, SKILL_MD, START_MD, privacyPageHtml, startPageHtml } from "./v1/content.js";
+
+// The resources an MCP client lists. Older resource URIs remain readable.
+const V1_RESOURCES: Array<{ uri: string; name: string; title: string; description: string; mimeType: string; text: () => string }> = [
+  { uri: "https://mcp.packrift.com/guides/packaging.md", name: "packaging-guide", title: "Packaging guide", description: "How to choose and size boxes and mailers: cushioning, box strength, dimensional weight, tape, void fill and stretch film.", mimeType: "text/markdown", text: () => PACKAGING_GUIDE_MD },
+  { uri: "https://mcp.packrift.com/llms.txt", name: "about-packrift", title: "About Packrift", description: "What Packrift sells, how it ships, product collections and policies.", mimeType: "text/plain", text: () => LLMS_TXT },
+  { uri: "https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md", name: "agent-instructions", title: "Using Packrift tools", description: "Which Packrift tool to use for each buyer request, and the rules for exact matches and checkout links.", mimeType: "text/markdown", text: () => AGENT_INSTRUCTIONS_MD },
+  { uri: "https://mcp.packrift.com/start?format=md", name: "connect", title: "Connect Packrift", description: "Setup for Claude, Claude Code, ChatGPT, Cursor, VS Code and Codex.", mimeType: "text/markdown", text: () => START_MD },
+  { uri: "https://mcp.packrift.com/privacy.md", name: "privacy", title: "MCP privacy notice", description: "What the Packrift MCP server receives, keeps and uses.", mimeType: "text/markdown", text: () => PRIVACY_MD },
+];
 
 import { searchProductsSchema, searchProductsHandler } from "./tools/search_products.js";
 import { getProductSchema, getProductHandler } from "./tools/get_product.js";
@@ -162,7 +177,6 @@ type Bindings = Env;
 type AppContext = Context<{ Bindings: Bindings }>;
 
 const app = new Hono<{ Bindings: Bindings }>();
-let workerStartedAtMs: number | null = null;
 
 function isStorefrontHost(hostname: string): boolean {
   return hostname === "packrift.com" || hostname === "www.packrift.com";
@@ -194,6 +208,59 @@ app.onError((err, c) => {
   console.error(JSON.stringify({ event: "worker_error", host: url.hostname, path: url.pathname, error: String(err) }));
   return c.text("Internal Server Error", 500);
 });
+
+// Internal growth and operations reports are for Packrift only.
+app.use("*", async (c, next) => {
+  const url = new URL(c.req.url);
+  if (isInternalRoute(url.pathname) && !hasStatsToken(url, c.req.raw.headers, c.env.MCP_STATS_TOKEN)) {
+    return c.json({ error: "not_found", message: "Unknown Packrift MCP endpoint." }, 404, {
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex",
+      "Access-Control-Allow-Origin": "*",
+    });
+  }
+  await next();
+});
+let workerStartedAtMs: number | null = null;
+
+// Public pages for buyers, developers and directory reviewers (v1).
+const V1_PAGE_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+};
+function v1Text(c: AppContext, body: string, contentType: string): Response {
+  return c.body(body, 200, { ...V1_PAGE_HEADERS, "Content-Type": contentType });
+}
+for (const path of ["/start", "/install"]) {
+  app.get(path, async (c, next) => {
+    if (isStorefrontHost(new URL(c.req.url).hostname)) return next();
+    if (new URL(c.req.url).searchParams.get("format") === "md") return v1Text(c, START_MD, "text/markdown; charset=utf-8");
+    return v1Text(c, startPageHtml(), "text/html; charset=utf-8");
+  });
+}
+app.get("/", async (c, next) => {
+  const url = new URL(c.req.url);
+  if (isStorefrontHost(url.hostname)) return next();
+  const accept = (c.req.header("Accept") ?? "").toLowerCase();
+  if (accept.includes("application/json") && !accept.includes("text/html")) {
+    return c.json({ status: "ok", server: "Packrift MCP", version: "1.0.0", mcp_endpoint: "https://mcp.packrift.com/mcp", start_url: "https://mcp.packrift.com/start" }, 200, V1_PAGE_HEADERS);
+  }
+  return v1Text(c, startPageHtml(), "text/html; charset=utf-8");
+});
+app.get("/llms.txt", async (c, next) => {
+  if (isStorefrontHost(new URL(c.req.url).hostname)) return next();
+  return v1Text(c, LLMS_TXT, "text/plain; charset=utf-8");
+});
+app.get("/guides/packaging.md", (c) => v1Text(c, PACKAGING_GUIDE_MD, "text/markdown; charset=utf-8"));
+app.get("/privacy", (c) => v1Text(c, privacyPageHtml(), "text/html; charset=utf-8"));
+app.get("/privacy.md", (c) => v1Text(c, PRIVACY_MD, "text/markdown; charset=utf-8"));
+app.get("/SKILL.md", (c) => v1Text(c, SKILL_MD, "text/markdown; charset=utf-8"));
+for (const path of ["/ai/packrift-ai-agent-instructions.md", "/agents.md", "/ai/mcp-start.md"]) {
+  app.get(path, async (c, next) => {
+    if (isStorefrontHost(new URL(c.req.url).hostname)) return next();
+    return v1Text(c, path === "/ai/mcp-start.md" ? START_MD : AGENT_INSTRUCTIONS_MD, "text/markdown; charset=utf-8");
+  });
+}
 
 function workerUptimeSeconds(): number {
   const now = Date.now();
@@ -275,7 +342,10 @@ interface PromptDef {
   template: string;
 }
 
-export const TOOLS: ToolDef[] = [
+// Earlier tool names stay callable for existing integrations (for example
+// the WebMCP tools on packrift.com) but are no longer listed. New clients see
+// the v1 surface below.
+export const LEGACY_TOOLS: ToolDef[] = [
   { schema: searchProductsSchema, handler: searchProductsHandler },
   { schema: getProductSchema, handler: getProductHandler },
   { schema: getPricingSchema, handler: getPricingHandler },
@@ -293,97 +363,61 @@ export const TOOLS: ToolDef[] = [
   { schema: explainNoExactMatchSchema, handler: explainNoExactMatchHandler },
 ];
 
-export const SERVER_INSTRUCTIONS =
-  "Packrift is a US packaging-supplies store (boxes, mailers, tape, labels, poly bags, stretch film). These tools search a curated in-stock catalog, confirm live price and inventory, estimate shipping, and hand the buyer off to checkout on packrift.com; no tool places an order. Typical flow: (1) discover — find_packaging_for_item when the buyer has item dimensions or a shipping context, search_products for keyword lookups, compare_alternatives or pack_calculator for exploration, get_cart_handoff_candidates for ready-to-buy SKUs; (2) confirm — get_product for full detail, get_pricing and check_inventory (or inventory_status) for live confirmation, get_shipping_estimate for rates; (3) hand off — prepare_purchase_handoff for the exact-SKU path (it returns a checkout URL only after buyer_confirmed=true), or create_cart_url once the buyer confirms product and quantity; get_reorder_link and get_bulk_quote_link cover repeat-buy and quote workflows. If nothing matches the buyer's exact spec, call explain_no_exact_match rather than presenting a near-match as exact.";
+/** Public tool surface (tools/list, manifests, directory listings). */
+export const TOOLS: ToolDef[] = V1_TOOLS as unknown as ToolDef[];
+
+export const SERVER_INSTRUCTIONS = V1_SERVER_INSTRUCTIONS;
 
 export const PROMPTS: PromptDef[] = [
   {
-    name: "find_exact_packaging_spec",
-    description: "Find a Packrift catalog product by exact dimensions, material, color, count, or SKU.",
+    name: "find_packaging_for_my_item",
+    description: "Find the right box or mailer for an item you ship, with cushioning, strength and shipping-weight checks.",
     arguments: [
-      { name: "spec", description: "Exact buyer request such as 10 x 6 x 6 ECT 32 kraft boxes, 25 bundle.", required: true },
-      { name: "family", description: "Optional product family such as boxes, labels, mailers, tape, poly bags, or stretch film." },
+      { name: "item_dimensions", description: "Item length x width x height in inches, such as 9 x 6 x 4.", required: true },
+      { name: "weight", description: "Item weight, such as 2 lb." },
+      { name: "what_it_is", description: "What the item is, such as ceramic mug, t-shirt or hardcover book." },
     ],
     template:
-      "Find an exact Packrift packaging match for: {{spec}}. Product family: {{family}}. Use only exact catalog matches. Confirm SKU, dimensions, material, color, pack or case count, product URL, live price, and inventory before purchase handoff. If any required field differs, return no exact match and route to bulk quote.",
+      "I ship an item that is {{item_dimensions}} inches, weighs {{weight}}, and is a {{what_it_is}}. Use find_packaging_for_item to recommend the best Packrift box or mailer, explain the fit and cushioning, and show live price and stock.",
+  },
+  {
+    name: "find_exact_packaging_spec",
+    description: "Find Packrift packaging by exact size, spec or SKU.",
+    arguments: [
+      { name: "spec", description: "Exact request such as 12x12x12 ECT-32 kraft boxes or 10x13 poly mailers.", required: true },
+    ],
+    template:
+      "Find {{spec}} at Packrift with search_products. Show exact-size matches with price per unit and stock. If nothing matches exactly, say so and show the closest sizes as alternatives.",
+  },
+  {
+    name: "delivered_price_to_zip",
+    description: "Get the delivered cost of a Packrift order to a ZIP code, with volume discounts applied.",
+    arguments: [
+      { name: "sku", description: "Packrift SKU.", required: true },
+      { name: "quantity", description: "Number of packs." },
+      { name: "zip", description: "Delivery ZIP or postal code.", required: true },
+    ],
+    template:
+      "What would {{quantity}} packs of Packrift SKU {{sku}} cost delivered to {{zip}}? Use get_shipping_estimate and include the volume discount, shipping and cost per unit.",
   },
   {
     name: "reorder_packrift_sku",
-    description: "Reorder a known Packrift SKU with exact product continuity.",
-    arguments: [{ name: "sku", description: "Packrift SKU to reorder.", required: true }],
-    template:
-      "Reorder Packrift SKU {{sku}}. First call get_cart_handoff_candidates with the SKU, then get_product, get_pricing, and check_inventory. After the exact SKU, live facts, and buyer quantity are confirmed, call create_cart_url with the candidate's create_cart_url_sku_arguments or create_cart_url_arguments. Return the /r/cart URL as the primary handoff; keep product, reorder, quote, and copy-procurement-spec actions as fallbacks. If the SKU is not an exact catalog match, do not create a cart URL.",
-  },
-  {
-    name: "prepare_cart_handoff",
-    description: "Prepare a live-confirmed Packrift cart handoff for a selected exact SKU and quantity.",
+    description: "Reorder a Packrift SKU and get a checkout link.",
     arguments: [
-      { name: "sku", description: "Selected Packrift SKU such as 1066.", required: true },
-      { name: "quantity", description: "Buyer-selected quantity. Default to 1 when not provided." },
+      { name: "sku", description: "Packrift SKU to reorder.", required: true },
+      { name: "quantity", description: "Number of packs." },
     ],
     template:
-      "Prepare a Packrift MCP cart handoff for SKU {{sku}} and quantity {{quantity}}. First call get_cart_handoff_candidates with the exact SKU to retrieve the approved variant and create_cart_url arguments. Then call get_product, get_pricing, and check_inventory for live confirmation. Only after the exact SKU, variant, live price, inventory, and buyer-selected quantity are confirmed, call create_cart_url. Return the cart URL plus the product, reorder, quote, and copy-procurement-spec fallback actions. If the requested SKU is not an exact catalog match, do not create a cart URL; call explain_no_exact_match or get_bulk_quote_link instead.",
+      "Reorder {{quantity}} packs of Packrift SKU {{sku}}. Confirm the product, price and stock with get_product, then create_cart_url for the checkout link.",
   },
   {
-    name: "fit_item_then_prepare_cart",
-    description: "Find packaging for a buyer's item dimensions, confirm live facts, then prepare a stamped cart handoff.",
+    name: "request_bulk_quote",
+    description: "Request a quote for pallet quantities, custom sizes or printed packaging.",
     arguments: [
-      { name: "item_dimensions", description: "Item length x width x height in inches, such as 9 x 4 x 3.", required: true },
-      { name: "weight", description: "Optional item weight and unit, such as 2 lb." },
-      { name: "use_case", description: "Shipping use case such as fragile ecommerce, books, apparel, labels, or long narrow items." },
-      { name: "quantity", description: "Buyer-selected quantity. Default to 1 until confirmed." },
+      { name: "requested_spec", description: "What you need, including size, material and quantity.", required: true },
     ],
     template:
-      "Find packaging for an item with dimensions {{item_dimensions}}, weight {{weight}}, use case {{use_case}}, and desired quantity {{quantity}}. Start with find_packaging_for_item using the item dimensions and use case. For the top fit, call get_product, get_pricing, check_inventory, and get_shipping_estimate when destination data is available. If the buyer confirms the exact SKU and quantity, call create_cart_url; the returned URL carries Packrift's standard attribution parameters automatically. If no exact safe fit exists, call explain_no_exact_match and get_bulk_quote_link instead of forcing a substitute.",
-  },
-  {
-    name: "review_cart_handoff_candidates",
-    description: "Explore priority SKUs that already have ready create_cart_url arguments for cart handoff.",
-    arguments: [
-      { name: "family", description: "Optional family filter such as boxes, mailers, labels, tape, poly_bags, stretch_film, strapping, tags, void_fill, or envelopes." },
-      { name: "limit", description: "Number of candidates to review. Default to 10." },
-    ],
-    template:
-      "Review Packrift cart handoff candidates for family {{family}} with limit {{limit}}. Call get_cart_handoff_candidates, choose one exact candidate, then call get_product, get_pricing, and check_inventory. Only after confirmation, call create_cart_url with the candidate's create_cart_url_arguments. Return the cart landing URL, final Packrift cart permalink, product/reorder/quote links, and no-match policy.",
-  },
-  {
-    name: "request_bulk_quote_for_no_match",
-    description: "Route a buyer to quote recovery when Packrift has no exact approved match.",
-    arguments: [
-      { name: "requested_spec", description: "The exact unavailable spec the buyer requested.", required: true },
-      { name: "family", description: "Product family for the quote request." },
-    ],
-    template:
-      "The buyer requested {{requested_spec}} in family {{family}}. If no exact catalog match exists, do not suggest a nearby substitute as exact. Explain the missing required field and route to https://packrift.com/pages/bulk-quote with the requested spec.",
-  },
-  {
-    name: "copy_procurement_spec",
-    description: "Produce a clean procurement-line item for a selected Packrift SKU.",
-    arguments: [{ name: "sku", description: "Selected Packrift SKU.", required: true }],
-    template:
-      "Create a procurement-ready line item for Packrift SKU {{sku}}. Include SKU, title, dimensions, material, color, strength or closure details where verified, pack or case count, product URL, and reorder URL. Do not add unsupported claims.",
-  },
-  {
-    name: "find_box_by_lwh",
-    description: "Find corrugated boxes by exact length x width x height, strength, color, and bundle count.",
-    arguments: [
-      { name: "dimensions", description: "Box dimensions in L x W x H inches.", required: true },
-      { name: "strength", description: "Strength rating such as ECT 32 or ECT 44." },
-      { name: "color", description: "Box color such as kraft or white." },
-    ],
-    template:
-      "Find exact Packrift corrugated boxes with dimensions {{dimensions}}, strength {{strength}}, and color {{color}}. Use exact catalog matches only. If no exact L x W x H match exists, return no exact match and quote recovery.",
-  },
-  {
-    name: "find_label_by_size_material_printer",
-    description: "Find labels by exact size, material, printer type, adhesive or weather resistance, and case count.",
-    arguments: [
-      { name: "label_size", description: "Label size such as 2 5/8 x 1.", required: true },
-      { name: "material", description: "Label material such as polyester or paper." },
-      { name: "printer_type", description: "Printer type such as laser, inkjet, direct thermal, or thermal transfer." },
-    ],
-    template:
-      "Find exact Packrift labels with size {{label_size}}, material {{material}}, and printer type {{printer_type}}. Confirm adhesive or weather resistance only where verified in the product data. If unavailable, return no exact match.",
+      "I need {{requested_spec}}. Check Packrift's catalog with search_products first; if it isn't stocked or I need a large quantity, use get_bulk_quote_link and tell me what to include in the request.",
   },
 ];
 
@@ -1159,6 +1193,17 @@ function getCartHandoffCandidatesHandler(_env: Env, raw: unknown) {
   };
 }
 
+function friendlyToolError(err: unknown): string {
+  const issues = (err as { issues?: Array<{ path?: Array<string | number>; message?: string }> } | null)?.issues;
+  if (Array.isArray(issues) && issues.length) {
+    return `Invalid arguments: ${issues
+      .slice(0, 5)
+      .map((issue) => `${(issue.path ?? []).join(".") || "input"}: ${issue.message ?? "invalid"}`)
+      .join("; ")}. Check the tool's input schema and try again.`;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
 async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionContext = {}): Promise<unknown | null> {
   const { method, params, id } = req;
   const telemetryContext = rpcContextTelemetry(context);
@@ -1168,6 +1213,13 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
   try {
     switch (method) {
       case "initialize":
+        await recordMcpDiscoveryEvent(env, "mcp_initialize", {
+          mcpMethod: method,
+          ...telemetryContext,
+          clientName: String((params?.["clientInfo"] as Record<string, unknown> | undefined)?.["name"] ?? ""),
+          clientVersion: String((params?.["clientInfo"] as Record<string, unknown> | undefined)?.["version"] ?? ""),
+          ok: true,
+        });
         return rpcResult(id, {
           protocolVersion: PROTOCOL_VERSION,
           serverInfo: { name: serverCard.name, version: serverCard.version },
@@ -1199,18 +1251,19 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
       case "tools/call": {
         const name = (params?.["name"] as string) ?? "";
         const args = (params?.["arguments"] as unknown) ?? {};
-        const tool = TOOLS.find((t) => t.schema.name === name);
+        const tool = TOOLS.find((t) => t.schema.name === name) ?? LEGACY_TOOLS.find((t) => t.schema.name === name);
         if (!tool) {
-          return rpcError(id, -32602, `Unknown tool: ${name}`);
+          return rpcError(id, -32602, `Unknown tool: ${name}. Available tools: ${TOOLS.map((t) => t.schema.name).join(", ")}.`);
         }
         const shouldRecordToolTelemetry = !isSyntheticToolCall(args) && !shouldSkipInternalTelemetry(context.userAgent ?? "");
         const startedAt = Date.now();
         try {
           const out = await tool.handler(env, args, context);
           if (shouldRecordToolTelemetry) {
-            const toolCallEvent = buildMcpToolCallEvent(name, out, {
+            const telemetryOut = isV1ToolResult(out) ? out.structured : out;
+            const toolCallEvent = buildMcpToolCallEvent(name, telemetryOut, {
               latencyMs: Date.now() - startedAt,
-              resultSizeBytes: jsonByteSize(out),
+              resultSizeBytes: jsonByteSize(isV1ToolResult(out) ? { t: out.text, s: out.structured } : out),
               args,
               ...telemetryContext,
               ok: true,
@@ -1219,12 +1272,20 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
             const activationCartReadyEvent = buildMcpActivationCartReadyEvent(toolCallEvent);
             if (activationCartReadyEvent) await recordAiSalesEvent(env, activationCartReadyEvent);
           }
+          if (isV1ToolResult(out)) {
+            return rpcResult(id, {
+              content: [{ type: "text", text: out.text }],
+              structuredContent: out.structured,
+            });
+          }
+          const legacyOut = scrubLegacyPayload(out);
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
-            structuredContent: out,
+            content: [{ type: "text", text: JSON.stringify(legacyOut) }],
+            // structuredContent must be an object; earlier tools that return lists are wrapped.
+            structuredContent: Array.isArray(legacyOut) ? { items: legacyOut } : legacyOut,
           });
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = friendlyToolError(err);
           if (shouldRecordToolTelemetry) {
             await recordAiSalesEvent(
               env,
@@ -1250,12 +1311,14 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
       case "resources/list":
         await recordMcpDiscoveryEvent(env, "mcp_resource_list", {
           mcpMethod: method,
-          resultCount: MCP_RESOURCES.length,
-          resultSizeBytes: jsonByteSize(MCP_RESOURCES),
+          resultCount: V1_RESOURCES.length,
+          resultSizeBytes: jsonByteSize(V1_RESOURCES.map(({ uri, name, description }) => ({ uri, name, description }))),
           ...telemetryContext,
           ok: true,
         });
-        return rpcResult(id, { resources: MCP_RESOURCES });
+        return rpcResult(id, {
+          resources: V1_RESOURCES.map(({ uri, name, title, description, mimeType }) => ({ uri, name, title, description, mimeType })),
+        });
 
       case "resources/templates/list":
         await recordMcpDiscoveryEvent(env, "mcp_resource_templates_list", {
@@ -1270,6 +1333,20 @@ async function handleRpc(env: Env, req: JsonRpcRequest, context: RpcExecutionCon
       case "resources/read": {
         const startedAt = Date.now();
         const uri = (params?.["uri"] as string) ?? "";
+        const v1Resource = V1_RESOURCES.find((item) => item.uri === uri);
+        if (v1Resource) {
+          const text = v1Resource.text();
+          await recordMcpDiscoveryEvent(env, "mcp_resource_read", {
+            mcpMethod: method,
+            resourceUri: uri,
+            format: v1Resource.mimeType,
+            latencyMs: Date.now() - startedAt,
+            resultSizeBytes: jsonByteSize(text),
+            ...telemetryContext,
+            ok: true,
+          });
+          return rpcResult(id, { contents: [{ uri, mimeType: v1Resource.mimeType, text }] });
+        }
         const parsedUri = new URL(uri);
         const pathname = parsedUri.pathname;
         const skuResourceMatch = pathname.match(/^\/ai\/sku\/[^/]+\.(md|json)$/);
@@ -3073,6 +3150,8 @@ async function recordMcpDiscoveryEvent(
     promptName?: string;
     resourceUri?: string;
     format?: string;
+    clientName?: string;
+    clientVersion?: string;
   }
 ): Promise<void> {
   const userAgent = meta.userAgent ?? "";
@@ -3087,6 +3166,9 @@ async function recordMcpDiscoveryEvent(
     prompt_name: safeEventText(meta.promptName, 120),
     resource_uri: safeEventText(meta.resourceUri, 500),
     format: safeEventText(meta.format, 80),
+    client_name: safeEventText(meta.clientName, 80),
+    client_version: safeEventText(meta.clientVersion, 40),
+    client_slug: clientSlugFromSessionId(meta.sessionId) ?? "",
     result_count: typeof meta.resultCount === "number" ? meta.resultCount : null,
     latency_ms: typeof meta.latencyMs === "number" ? meta.latencyMs : null,
     result_size_bytes: typeof meta.resultSizeBytes === "number" ? meta.resultSizeBytes : null,
@@ -15659,7 +15741,13 @@ const AI_SALES_PRIORITY_SKU_RESOURCE_URLS = AI_SALES_PRIORITY_SKUS.flatMap((sku)
   `https://mcp.packrift.com/ai/sku/${sku}.json`,
 ]);
 
-const MCP_RESOURCES = Array.from(new Set([...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_URLS])).map((uri) => {
+const MCP_RESOURCES = Array.from(new Set([...AI_DISCOVERY_URLS, ...AI_SALES_PRIORITY_SKU_RESOURCE_URLS])).filter((uri) => {
+  try {
+    return !isInternalRoute(new URL(uri).pathname);
+  } catch {
+    return false;
+  }
+}).map((uri) => {
   const parsed = new URL(uri);
   const pathname = parsed.pathname;
   const explicitFormat = parsed.searchParams.get("format")?.toLowerCase();
@@ -16518,7 +16606,7 @@ function mcpOpenApiPayload() {
       version: serverCard.version,
       description:
         "REST discovery adapter for Packrift MCP. Use the hosted Streamable HTTP MCP endpoint for live exact-spec packaging search, price, inventory, shipping, and measured cart handoff. These REST paths help legacy AI agents and crawlers discover the MCP surface.",
-      contact: { email: "farhan@packrift.com" },
+      contact: { email: "support@packrift.com" },
     },
     servers: [{ url: "https://mcp.packrift.com" }],
     "x-packrift-mcp": {
@@ -16945,7 +17033,7 @@ function mcpAiPluginDiscoveryPayload() {
       is_user_authenticated: false,
     },
     logo_url: "https://mcp.packrift.com/packrift-mcp-logo.png",
-    contact_email: "farhan@packrift.com",
+    contact_email: "support@packrift.com",
     legal_info_url: "https://packrift.com/policies/terms-of-service",
     mcp: {
       endpoint: "https://mcp.packrift.com/mcp",
@@ -17162,16 +17250,12 @@ function mcpManifestPayload() {
 }
 
 function mcpServerCardPayload() {
+  // Compact discovery card for registries and directories: identity, the
+  // public tools with input schemas, prompts and the listed resources.
   return {
     ...serverCard,
-    serverInfo: {
-      name: serverCard.name,
-      version: serverCard.version,
-    },
-    authentication: {
-      required: false,
-      schemes: [],
-    },
+    serverInfo: { name: serverCard.name, version: serverCard.version },
+    authentication: { required: false, schemes: [] },
     endpoint_url: "https://mcp.packrift.com/mcp",
     transport_url: "https://mcp.packrift.com/mcp",
     resource_links: serverCard.resources,
@@ -17179,100 +17263,7 @@ function mcpServerCardPayload() {
     prompt_names: serverCard.prompts,
     tools: TOOLS.map((tool) => tool.schema),
     prompts: PROMPTS.map(promptListItem),
-    resources: MCP_RESOURCES,
-    resource_templates: MCP_RESOURCE_TEMPLATES,
-    tool_discovery: {
-      release: MCP_TOOL_DISCOVERY_RELEASE,
-      json: MCP_TOOL_DISCOVERY_JSON_URL,
-      markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
-      generated_from: "live_worker_tools_registry",
-    },
-    registry_distribution: {
-      directory_refresh: "https://mcp.packrift.com/ai/mcp-directory-refresh.json",
-      directory_submit_actions: "https://mcp.packrift.com/ai/mcp-directory-submit-actions.json",
-      agent_web_manifest: MCP_AGENT_WEB_MANIFEST_URL,
-      root_agent_web_manifest: MCP_ROOT_AGENT_WEB_MANIFEST_URL,
-      capability_card: MCP_CAPABILITY_CARD_URL,
-      openapi_json: MCP_OPENAPI_JSON_URL,
-      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
-      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
-      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
-      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
-      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
-      reviewer_activation: "https://mcp.packrift.com/ai/mcp-reviewer-activation.json",
-      source_activation_queue: "https://mcp.packrift.com/ai/mcp-source-activation-queue.json",
-      source_activation_queue_html: "https://mcp.packrift.com/ai/mcp-source-activation-queue.html",
-      visitor_growth_queue: MCP_VISITOR_GROWTH_QUEUE_JSON_URL,
-      visitor_growth_queue_html: MCP_VISITOR_GROWTH_QUEUE_HTML_URL,
-      visitor_growth_tasks_jsonl: MCP_VISITOR_GROWTH_QUEUE_TASKS_JSONL_URL,
-      visitor_growth_tasks_csv: MCP_VISITOR_GROWTH_QUEUE_TASKS_CSV_URL,
-      revenue_conversion_queue: MCP_REVENUE_CONVERSION_QUEUE_JSON_URL,
-      revenue_conversion_queue_html: MCP_REVENUE_CONVERSION_QUEUE_HTML_URL,
-      buyer_order_handoffs: MCP_BUYER_ORDER_HANDOFFS_JSON_URL,
-      buyer_order_handoffs_html: MCP_BUYER_ORDER_HANDOFFS_HTML_URL,
-      buyer_order_handoffs_tasks_jsonl: MCP_BUYER_ORDER_HANDOFFS_TASKS_JSONL_URL,
-      buyer_order_handoffs_tasks_csv: MCP_BUYER_ORDER_HANDOFFS_TASKS_CSV_URL,
-      agent_host_rollout: MCP_AGENT_HOST_ROLLOUT_JSON_URL,
-      agent_host_rollout_markdown: MCP_AGENT_HOST_ROLLOUT_MARKDOWN_URL,
-      agent_host_rollout_html: MCP_AGENT_HOST_ROLLOUT_HTML_URL,
-      agent_host_rollout_tasks_jsonl: MCP_AGENT_HOST_ROLLOUT_TASKS_JSONL_URL,
-      agent_host_rollout_tasks_csv: MCP_AGENT_HOST_ROLLOUT_TASKS_CSV_URL,
-      source_activation_sitemap: MCP_SOURCE_ACTIVATION_SITEMAP_URL,
-      source_activation_packet_template: "https://mcp.packrift.com/ai/mcp-source-activation/{source}.json",
-      source_activation_packet_cline: "https://mcp.packrift.com/ai/mcp-source-activation/cline_mcp_marketplace.json",
-      activation_experiments: "https://mcp.packrift.com/ai/mcp-activation-experiments.json",
-      activation_experiments_html: "https://mcp.packrift.com/ai/mcp-activation-experiments.html",
-      activation_wave: MCP_ACTIVATION_WAVE_JSON_URL,
-      activation_wave_html: MCP_ACTIVATION_WAVE_HTML_URL,
-      activation_wave_tasks_jsonl: MCP_ACTIVATION_WAVE_TASKS_JSONL_URL,
-      activation_wave_tasks_csv: MCP_ACTIVATION_WAVE_TASKS_CSV_URL,
-      activation_wave_runner_shell: MCP_ACTIVATION_WAVE_RUNNER_URL,
-      external_activation_brief: MCP_EXTERNAL_ACTIVATION_BRIEF_JSON_URL,
-      external_activation_brief_html: MCP_EXTERNAL_ACTIVATION_BRIEF_HTML_URL,
-      external_activation_brief_tasks_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_JSONL_URL,
-      external_activation_brief_tasks_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_CSV_URL,
-      external_activation_brief_tasks_compact_jsonl: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_JSONL_URL,
-      external_activation_brief_tasks_compact_csv: MCP_EXTERNAL_ACTIVATION_BRIEF_TASKS_COMPACT_CSV_URL,
-      external_activation_brief_runner_shell: MCP_EXTERNAL_ACTIVATION_BRIEF_RUNNER_URL,
-      automation_workflows: MCP_AUTOMATION_WORKFLOWS_JSON_URL,
-      automation_workflows_html: MCP_AUTOMATION_WORKFLOWS_HTML_URL,
-      n8n_workflow_import: MCP_N8N_WORKFLOW_JSON_URL,
-      activation_command_center: "https://mcp.packrift.com/r/activate",
-      tracked_reviewer_activation_template: "https://mcp.packrift.com/r/activate/{source}",
-      tracked_reviewer_activation_html_template: "https://mcp.packrift.com/r/activate/{source}?format=html",
-      tracked_reviewer_activation_html_generic: "https://mcp.packrift.com/r/activate/generic?format=html",
-      tracked_reviewer_activation_shell_template: "https://mcp.packrift.com/r/activate/{source}?format=sh",
-      tracked_reviewer_activation_shell_generic: "https://mcp.packrift.com/r/activate/generic?format=sh",
-      tracked_start_template: "https://mcp.packrift.com/r/start/{source}",
-      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
-      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
-      mcp_eval_pack: "https://mcp.packrift.com/ai/mcp-eval-pack.json",
-      claude_connector_submission: "https://mcp.packrift.com/ai/claude-connector-submission.json",
-      agent_capture_outreach: "https://mcp.packrift.com/ai/agent-capture-outreach.json",
-    },
-    client_config: {
-      root_mcp_json: "https://mcp.packrift.com/mcp.json",
-      well_known_mcp_json: "https://mcp.packrift.com/.well-known/mcp.json",
-      openapi_json: MCP_OPENAPI_JSON_URL,
-      well_known_openapi_json: MCP_WELL_KNOWN_OPENAPI_JSON_URL,
-      ai_plugin_json: MCP_AI_PLUGIN_JSON_URL,
-      well_known_ai_plugin_json: MCP_WELL_KNOWN_AI_PLUGIN_JSON_URL,
-      full_bundle: "https://mcp.packrift.com/ai/mcp-client-config.json",
-      markdown: "https://mcp.packrift.com/ai/mcp-client-config.md",
-      tool_discovery_json: MCP_TOOL_DISCOVERY_JSON_URL,
-      tool_discovery_markdown: MCP_TOOL_DISCOVERY_MARKDOWN_URL,
-      tracked_config_template: "https://mcp.packrift.com/r/config/{source}",
-      tracked_config_generic: "https://mcp.packrift.com/r/config/generic",
-      tracked_install_template: "https://mcp.packrift.com/r/install/{source}/{target}",
-      tracked_install_codex_generic: "https://mcp.packrift.com/r/install/generic/codex",
-      first_run_actions: "https://mcp.packrift.com/ai/mcp-first-run-actions.json",
-      tracked_run_template: "https://mcp.packrift.com/r/run/{source}/{target}",
-    },
-    static_server_card: {
-      well_known_url: "https://mcp.packrift.com/.well-known/mcp/server-card.json",
-      root_url: "https://mcp.packrift.com/server-card.json",
-      compatible_fields: ["serverInfo", "authentication", "tools", "resources", "prompts"],
-    },
+    resources: V1_RESOURCES.map(({ uri, name, title, description, mimeType }) => ({ uri, name, title, description, mimeType })),
   };
 }
 
@@ -17483,7 +17474,7 @@ async function executeFirstRunToolCall(
     method: "tools/call",
     params: {
       name,
-      arguments: args,
+      arguments: { ...args, response_format: "detailed" },
     },
   });
   const structuredContent = result.structuredContent;
@@ -17875,7 +17866,7 @@ function mcpMarketplaceDiscoveryPayload() {
     description:
       "Hosted MCP server for exact-spec packaging search with live price, stock, shipping, and attributed cart handoff.",
     url: "https://mcp.packrift.com",
-    contact_email: "farhan@packrift.com",
+    contact_email: "support@packrift.com",
     mcp_server: {
       name: "packrift",
       version: serverCard.version,
@@ -18457,17 +18448,10 @@ function skuPagePayload(item: ApprovedCatalogItem, cartSource = "mcp_sku_page") 
           recovery_tool: "get_bulk_quote_link",
         }
       : null,
-    paid_chatgpt_family: paidChatgptSignal,
-    ai_commerce_signal: paidChatgptSignal
-      ? {
-          channel: "paid ChatGPT exact-spec procurement",
-          evidence: `Order #${paidChatgptSignal.order}`,
-          source: paidChatgptSignal.source,
-          attribution: paidChatgptSignal.attribution,
-          product_family: paidChatgptSignal.family,
-        }
-      : null,
-    openai_catalog_feed_attribution: paidChatgptSignal?.attribution ?? null,
+    // Order history is not published.
+    paid_chatgpt_family: null,
+    ai_commerce_signal: null,
+    openai_catalog_feed_attribution: null,
     exact_match_rule: exactMatchRule,
     canonical_product_url: canonicalProductUrl,
     product_url: measuredProductUrl,
@@ -18529,10 +18513,7 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     `| SKU | ${escapeMarkdown(payload.sku)} |`,
     `| Variant ID | ${escapeMarkdown(payload.variant_id)} |`,
     `| Product family | ${escapeMarkdown(payload.family)} |`,
-    "| Catalog status | AI_APPROVE |",
-    payload.ai_commerce_signal
-      ? `| AI-commerce signal | paid ChatGPT exact-spec procurement; ${escapeMarkdown(payload.ai_commerce_signal.evidence)}; ${escapeMarkdown(payload.ai_commerce_signal.attribution)} |`
-      : null,
+    "| Catalog status | In catalog |",
     `| Canonical product URL | ${payload.canonical_product_url} |`,
     `| Agent handoff URL | ${payload.agent_handoff_url} |`,
     `| Measured product URL | ${payload.measured_product_url} |`,
@@ -18565,16 +18546,6 @@ function skuPageMarkdown(item: ApprovedCatalogItem): string {
     `Crawler-safe record: ${payload.retrieval_safe_url}`,
     `Crawler-safe JSON: ${payload.retrieval_safe_json_url}`,
     "",
-    payload.ai_commerce_signal
-      ? [
-          "## Paid ChatGPT / OpenAI Catalog Signal",
-          "",
-          `This SKU is a known paid ChatGPT exact-spec procurement family from ${payload.ai_commerce_signal.evidence}.`,
-          `Attribution path: ${payload.ai_commerce_signal.attribution}.`,
-          `Product family: ${payload.ai_commerce_signal.product_family}.`,
-          "",
-        ].join("\n")
-      : null,
     "## Exact-Match Rule",
     "",
     payload.exact_match_rule,
@@ -18957,15 +18928,19 @@ function allAiApprovedSkuSitemapXml(): string {
 }
 
 function robotsTxt(): string {
+  // Redirect and checkout routes are for people following links, not crawlers:
+  // a crawler fetching them would open carts and skew usage figures.
   return [
     "User-agent: *",
     "Allow: /",
+    "Disallow: /r/",
+    "Disallow: /c/",
+    "Disallow: /events/",
+    "Disallow: /admin/",
     "Sitemap: https://mcp.packrift.com/sitemap.xml",
     "Sitemap: https://mcp.packrift.com/ai/sitemap.xml",
     "Sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml",
     "Sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml",
-    "Sitemap: https://mcp.packrift.com/ai/conversion-route-redirect-sitemap.xml",
-    `Sitemap: ${MCP_SOURCE_ACTIVATION_SITEMAP_URL}`,
     "",
   ].join("\n");
 }
@@ -19123,7 +19098,7 @@ app.get("/.well-known/ai-plugin.json", async (c) => {
 function glamaConnectorClaim() {
   return {
     $schema: "https://glama.ai/mcp/schemas/connector.json",
-    maintainers: [{ email: "farhan@packrift.com" }],
+    maintainers: [{ email: "support@packrift.com" }],
   };
 }
 
@@ -21973,6 +21948,56 @@ app.get("/admin/mcp-stats", async (c) => {
   );
 });
 
+// Checkout links from create_cart_url: /c/<variant>:<qty>,...?s=<source>&k=<handoff>.
+// Stateless by design; the link carries the cart and its attribution.
+app.get("/c/:lines", async (c) => {
+  const url = new URL(c.req.url);
+  const parts = c.req.param("lines").split(",").slice(0, 25);
+  const lines = parts.map((part) => {
+    const match = part.match(/^(\d{6,20}):(\d{1,6})$/);
+    return match ? { variantId: match[1]!, quantity: Number(match[2]) } : null;
+  });
+  const valid =
+    lines.length > 0 &&
+    lines.every((line) => {
+      if (!line || line.quantity < 1) return false;
+      const entry = entryByVariantId(line.variantId);
+      return Boolean(entry && !entry.held);
+    });
+  if (!valid) return c.redirect("https://packrift.com/cart", 302);
+  const source = (url.searchParams.get("s") ?? "ai_agent").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 32) || "ai_agent";
+  const handoff = (url.searchParams.get("k") ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 36);
+  const handoffId = handoff ? `mcp_handoff_${handoff}` : "";
+  const params = new URLSearchParams();
+  params.set("ref", "mcp");
+  params.set("utm_source", source);
+  params.set("utm_medium", "mcp_tool");
+  params.set("utm_campaign", "create_cart_url");
+  if (handoffId) params.set("mcp_handoff_id", handoffId);
+  params.set("attributes[packrift_utm_source]", source);
+  params.set("attributes[packrift_utm_medium]", "mcp_tool");
+  params.set("attributes[packrift_utm_campaign]", "create_cart_url");
+  if (handoffId) params.set("attributes[packrift_mcp_handoff_id]", handoffId);
+  const cartPath = lines.map((line) => `${line!.variantId}:${line!.quantity}`).join(",");
+  const destination = `https://${c.env.STOREFRONT_DOMAIN}/cart/${cartPath}?${params.toString()}`;
+  const userAgent = c.req.header("User-Agent") ?? "";
+  if (!shouldSkipInternalTelemetry(userAgent)) {
+    const first = entryByVariantId(lines[0]!.variantId);
+    await recordAiSalesEvent(c.env, {
+      event: "mcp_cart_landing",
+      source: "v1_checkout_link",
+      utm_source: source,
+      mcp_handoff_id: handoffId,
+      line_count: lines.length,
+      sku: first?.sku ?? "",
+      variant_id: lines[0]!.variantId,
+      user_agent: safeEventText(userAgent, 200),
+      bot_family: classifyAgentFamily(userAgent),
+    });
+  }
+  return c.redirect(destination, 302);
+});
+
 // MCP endpoint — Streamable HTTP transport.
 // POST: client sends a JSON-RPC request or batch; server replies once. We do not
 // stream SSE here because none of the tools need server-initiated events.
@@ -21991,8 +22016,15 @@ app.post("/mcp", async (c) => {
     return c.json(rpcError(null, -32700, "Parse error"), 400);
   }
 
-  // Generate / echo session id per MCP transport guidance.
-  const sessionId = c.req.header("Mcp-Session-Id") ?? crypto.randomUUID();
+  // Echo the client's session id. At initialize, issue one that carries the
+  // client slug so later tool calls and checkout links can be attributed.
+  const initializeRequest = (Array.isArray(body) ? body : [body]).find(
+    (req) => req && typeof req === "object" && (req as JsonRpcRequest).method === "initialize"
+  ) as JsonRpcRequest | undefined;
+  const clientName = (initializeRequest?.params?.["clientInfo"] as Record<string, unknown> | undefined)?.["name"];
+  const sessionId =
+    c.req.header("Mcp-Session-Id") ??
+    (initializeRequest ? sessionIdForClient(clientSlugFromName(clientName)) : crypto.randomUUID());
 
   const respond = (payload: unknown, status: number = 200) => {
     const r = new Response(JSON.stringify(payload), {
@@ -22001,6 +22033,7 @@ app.post("/mcp", async (c) => {
         "Content-Type": "application/json",
         "Mcp-Session-Id": sessionId,
         "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Mcp-Session-Id",
       },
     });
     return r;

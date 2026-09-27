@@ -443,7 +443,7 @@ export function mcpDirectoryRefreshPayload(runtime: DirectoryRefreshRuntime) {
       tracked_start_source_policy: MCP_TRACKED_START_SOURCE_POLICY,
       repository_url: "https://github.com/Packrift/packrift-mcp",
       remote_endpoint: MCP_ENDPOINT,
-      contact_email: "farhan@packrift.com",
+      contact_email: "support@packrift.com",
       install_config: {
         mcpServers: {
           packrift: {

@@ -21,20 +21,11 @@ const LIVE_ENDPOINT = "https://mcp.packrift.com/mcp";
 // directory submission, README, and live server must all agree with.
 export const DECLARED_TOOLS = [
   "search_products",
-  "get_product",
-  "get_pricing",
-  "check_inventory",
   "find_packaging_for_item",
+  "get_product",
   "get_shipping_estimate",
-  "get_cart_handoff_candidates",
   "create_cart_url",
-  "prepare_purchase_handoff",
-  "compare_alternatives",
-  "pack_calculator",
-  "inventory_status",
-  "get_reorder_link",
   "get_bulk_quote_link",
-  "explain_no_exact_match",
 ];
 
 // Params that must never appear in a public inputSchema. The server may still
@@ -102,6 +93,8 @@ function checkToolList(sourceLabel, tools) {
     if (!tool.description || tool.description.length < 20) fail(scope, "missing or too-short description");
     if (tool.description && tool.description.length > 900) fail(scope, `description too long (${tool.description.length} chars)`);
     if (!tool.annotations || typeof tool.annotations.readOnlyHint !== "boolean") fail(scope, "missing annotations.readOnlyHint");
+    if (!tool.annotations || typeof tool.annotations.destructiveHint !== "boolean") fail(scope, "missing annotations.destructiveHint");
+    if (!tool.annotations?.title) fail(scope, "missing annotations.title");
     checkText(scope, tool.description);
     checkText(scope, tool.title);
     const properties = tool.inputSchema?.properties ?? {};

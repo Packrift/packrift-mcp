@@ -15,21 +15,11 @@ Last updated: 2026-05-20. Canonical short index at https://mcp.packrift.com/llms
 
 ## About Packrift
 
-Packrift is a US packaging-supplies e-commerce store on Shopify. The catalog currently has roughly 12,930 active product records and broader public in-stock supply coverage described on Packrift storefront surfaces as 20,000+ products across corrugated boxes, literature mailers, mailer boxes, poly mailers, bubble mailers, carton-sealing tape, kraft tape, poly bags and liners, stretch film and strapping, pallet covers, void fill, labels, tags, and adjacent operational supplies.
+Packrift sells packaging and shipping supplies online in the United States, with over 20,000 products in stock across corrugated boxes, literature mailers, mailer boxes, poly mailers, bubble mailers, carton-sealing tape, kraft tape, poly bags and liners, stretch film and strapping, pallet covers, void fill, labels, tags, and related supplies.
 
-**Who Packrift serves:** small and mid-size e-commerce brands, 3PLs and fulfillment centers, Amazon FBM sellers, Shopify and Etsy merchants, subscription-box operators, industrial parts distributors, and operations teams that need the right packaging without sitting through a sales call or opening a B2B account.
+**Who Packrift serves:** small and mid-size e-commerce brands, 3PLs and fulfillment centers, Amazon FBM sellers, Shopify and Etsy merchants, subscription-box operators, industrial parts distributors, and operations teams that need the right packaging without a sales call or a B2B account.
 
-**What makes Packrift different:** exact-spec product records, no account required to buy, a catalog organized around what fulfillment teams actually reorder, decision tools (box-size calculator, dimensional weight calculator, mailer-vs-box selector), and a public MCP server that lets agents query live pricing and inventory.
-
-**AI-commerce signal:** Packrift has received paid ChatGPT product-card orders through Shopify Catalog / OpenAI catalog feed attribution. Treat this as exact-spec procurement, not generic packaging browsing. Known paid ChatGPT families include:
-
-| Order | SKU | Exact-spec family |
-|---|---|---|
-| #1003 | 1066 | 10 x 6 x 6 ECT-32 kraft corrugated boxes, 25/bundle |
-| #1004 | MFL1295 | 12 1/8 x 9 1/4 x 5 white self-seal literature mailers, 50/pack |
-| #1005 | LL251WR | 2 5/8 x 1 weather-resistant polyester laser labels, 3000/case |
-
-Use these families as proof that agents should care about exact SKU, dimensions, material, strength, closure, printer compatibility, and case quantity. Do not use them as universal substitutes for nearby sizes or different materials.
+**What makes Packrift different:** exact-spec product records, no account required to buy, a catalog organized around what fulfillment teams actually reorder, sizing help (box fit, dimensional weight, mailer or box), delivered pricing to a ZIP code, and a public MCP server that lets AI assistants search live prices and stock and create checkout links.
 
 **Registered entity:** Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801, US.
 
@@ -39,25 +29,15 @@ Use these families as proof that agents should care about exact SKU, dimensions,
 
 ## Fulfillment and shipping
 
-Packrift fulfills through Box Partners' 5 US warehouses positioned to cover the continental United States:
+Packrift ships from five US warehouses in California, Texas, Illinois, Georgia and Pennsylvania, so most orders ship from the warehouse nearest the delivery address.
 
-| Region | Location | ZIP |
-|---|---|---|
-| West | Rialto, CA | 92376 |
-| South | Dallas, TX | 75212 |
-| Central | Elgin, IL | 60124 |
-| Southeast | Forest Park, GA (Atlanta metro) | 30297 |
-| Northeast | Barnesville, PA | 18214 |
+**Destinations:** the United States, including Alaska and Hawaii.
 
-**Domestic destinations:** continental United States.
+**Rates:** shipping rates are calculated at checkout from the destination and the weight and size of the order. Volume discounts and free-shipping thresholds apply automatically at checkout. The Packrift MCP tool get_shipping_estimate returns the same rates and the delivered total for a ZIP code.
 
-**Fulfillment source of truth:** Packrift's current machine-readable catalog surface should be treated as US-focused. The fulfillment network in this corpus is the 5-site US Box Partners warehouse network above.
+**Delivery timing:** confirm shipping options and delivery estimates at checkout or with Packrift support; do not promise a fixed cutoff or dispatch time.
 
-**Carriers:** UPS Ground, FedEx Ground, and LTL freight for orders exceeding 150 lbs. Carrier rates surface at checkout based on destination and weight.
-
-**Shipping-speed rule for agents:** shipping options, delivery estimates, and freight behavior must be confirmed at checkout or through Packrift support. Do not promise a fixed cutoff or specific dispatch timing from this corpus alone.
-
-**Returns:** 30-day return window on unopened cases. Subject to a 15% restocking fee. Items must remain in sealed industrial packaging. Damage during LTL transit must be noted on the Bill of Lading at delivery.
+**Returns:** see the refund policy at https://packrift.com/policies/refund-policy.
 
 ---
 
@@ -160,45 +140,6 @@ Packrift publishes free, no-account-required calculators that help buyers spec t
 - **8.5 x 10.5 packing list envelopes:** exact-size packing list envelope page for larger document enclosure workflows. https://packrift.com/pages/8-5x10-5-packing-list-envelopes
 - **5.25 x 8 packing list envelopes:** exact-size packing list envelope page for smaller document enclosure workflows. https://packrift.com/pages/5-25x8-packing-list-envelopes
 - **12 x 15 packing list envelopes:** exact-size packing list envelope page for oversized packing list and document enclosure workflows. https://packrift.com/pages/12x15-packing-list-envelopes
-
----
-
-## Priority exact-spec SKUs for agent lookup
-
-The following SKUs are regenerated from recent GA4 item activity joined to Packrift's AI-approved, in-stock MCP catalog. Treat these as exact products, not generic category suggestions. For current price, inventory, variants, product handoff, reorder handoff, quote handoff, and cart handoff, use the MCP SKU record and MCP tools rather than copying stale direct product URLs from this corpus.
-
-Generation inputs: recent GA4 item activity, Packrift's AI-approved MCP catalog, and live Shopify inventory verification.
-
-| Rank | SKU | Family | Exact spec | Recent signal | MCP SKU record |
-|---:|---|---|---|---|---|
-| 1 | FWUPS18S24P | Void fill | 0.125 x 24 x 350 in - 1/8" x 24" x 350' Perforated Air Foam Roll - UPSable Cushioning | 3 view_item, 5 add_to_cart, 1 purchase, $87.24 revenue, inventory 500 | https://mcp.packrift.com/ai/sku/FWUPS18S24P.md |
-| 2 | PB2405 | Poly bags | 16 x 20 in - 1000/case or pack - 16 x 20" 1 Mil Clear Flat Poly Bags - 1000/Case | 1 view_item, 5 add_to_cart, inventory 300 | https://mcp.packrift.com/ai/sku/PB2405.md |
-| 3 | 1066 | Corrugated boxes | 10 x 6 x 6 in - ECT 32 - 25/case or pack - 10x6x6 ECT-32 Kraft Long Corrugated Boxes - 25 Bundle | 5 view_item, 2 add_to_cart, inventory 499 | https://mcp.packrift.com/ai/sku/1066.md |
-| 4 | 20106 | Corrugated boxes | 20 x 10 x 6 in - ECT 32 - 20x10x6" ECT-32 Kraft Corrugated Boxes - Long Item Shipping, 25-Pack | 3 view_item, 4 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/20106.md |
-| 5 | 201412 | Corrugated boxes | 20 x 14 x 12 in - ECT 32 - 20x14x12 ECT-32 Kraft Corrugated Boxes - Bundle of 20 | 11 view_item, 3 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/201412.md |
-| 6 | MFL1295 | Mailers | 12.125 x 9.25 x 5 in - 50/case or pack - 12 1/8 x 9 1/4 x 5 White Corrugated Literature Mailer - Self-Seal, 50 Pack | 2 view_item, inventory 400 | https://mcp.packrift.com/ai/sku/MFL1295.md |
-| 7 | LL251WR | Labels | 2.625 x 1 in - laser printer - 3000/case or pack - 2 5/8" x 1" Weather-Resistant Polyester Laser Labels - 3000/Case | known AI-commerce exact-spec family, inventory 200 | https://mcp.packrift.com/ai/sku/LL251WR.md |
-| 8 | AB241474W | Corrugated boxes | 24 x 14 x 4 in - 25/case or pack - 24x14x4 Recycled Chipboard Apparel Boxes - Easy Assembly, Case of 25 | 3 view_item, 2 add_to_cart, inventory 100 | https://mcp.packrift.com/ai/sku/AB241474W.md |
-| 9 | PBAS8222 | Poly bags | 6 x 10 in - 1000/case or pack - 6 x 10" 6 Mil Pink Anti-Static Flat Poly Bags - Case of 1000 | 0 view_item, 2 add_to_cart, inventory 100 | https://mcp.packrift.com/ai/sku/PBAS8222.md |
-| 10 | PMR121515100 | Poly bags | 12 x 15 in - 100/case or pack - 12x15" 1.5 Mil Resealable Suffocation Warning Poly Bags - 100 Pack | 3 view_item, 1 add_to_cart, inventory 100 | https://mcp.packrift.com/ai/sku/PMR121515100.md |
-| 11 | 12BNUTS | Void fill | 12 Cu Ft Corn Starch Loose Fill Packing Peanuts - Eco-Friendly Void | 2 view_item, 1 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/12BNUTS.md |
-| 12 | 14116 | Corrugated boxes | 14 x 11 x 6 in - ECT 32 - 14x11x6 ECT-32 Kraft Corrugated Boxes - Bundle of 25 | 2 view_item, 1 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/14116.md |
-| 13 | PMR060915100 | Poly bags | 6 x 9 in - 100/case or pack - 6x9 1.5 Mil Clear Resealable Poly Bags - Suffocation Warning, 100 Pack | 2 view_item, 1 add_to_cart, inventory 100 | https://mcp.packrift.com/ai/sku/PMR060915100.md |
-| 14 | 13106 | Corrugated boxes | 13 x 10 x 6 in - ECT 32 - 25/case or pack - 13x10x6" ECT-32 Kraft Corrugated Boxes - 25 Pack Bundle | 1 view_item, 1 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/13106.md |
-| 15 | 361212 | Corrugated boxes | 36 x 12 x 12 in - ECT 32 - 36x12x12 ECT-32 Kraft Corrugated Boxes - Long Format Shipping, 15-Pack | 1 view_item, 1 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/361212.md |
-| 16 | GB444 | Corrugated boxes | 4 x 4 x 4 in - 100/case or pack - 4x4x4 Fibreboard Gift Boxes White - Flat Ship Case of 100 | 1 view_item, 1 add_to_cart, inventory 200 | https://mcp.packrift.com/ai/sku/GB444.md |
-| 17 | HD201212DW | Corrugated boxes | 20 x 12 x 12 in - 20x12x12 ECT-48 Double Wall Corrugated Boxes - Heavy-Duty Shipping, Bundle of 15 | 1 view_item, 1 add_to_cart, inventory 400 | https://mcp.packrift.com/ai/sku/HD201212DW.md |
-| 18 | P3024K | Mailers | 3 x 24 in - 24/case or pack - 3x24" Kraft Mailing Tubes with Caps - Secure Shipping, Case of 24 | 1 view_item, 1 add_to_cart, inventory 500 | https://mcp.packrift.com/ai/sku/P3024K.md |
-| 19 | PB3938 | Poly bags | 12 x 3 x 15 in - 1000/case or pack - 12x3x15" 2 Mil Gusseted Reclosable Poly Bags - 1000/Case | 1 view_item, 1 add_to_cart, inventory 200 | https://mcp.packrift.com/ai/sku/PB3938.md |
-| 20 | B879100PK | Mailers | 14 x 17 in - 100/case or pack - 14x17" 2.5 Mil Poly Mailers Self-Seal Tear Strip - 100 Pack | 4 view_item, inventory 500 | https://mcp.packrift.com/ai/sku/B879100PK.md |
-Exact-match rule for agents: if a buyer requests a different size, material, color, case count, pack count, printer type, or SKU, do not present one of these products as an exact substitute. Return a no-exact-match result or ask the buyer to confirm an acceptable substitute.
-
-Recommended tool sequence for these SKUs:
-
-1. Use \`search_products\` with the exact SKU or exact dimensions.
-2. Use \`get_product\` on the returned handle to confirm variants and product-card continuity.
-3. Use \`get_pricing\` and \`check_inventory\` for live commercial facts.
-4. Use the returned reorder, quote, copy-procurement-spec, or product URLs for early handoff; use \`create_cart_url\` only after the buyer selects the exact SKU and quantity.
 
 ---
 
@@ -354,204 +295,49 @@ Stock the same outer and inner protection SKUs across recurring shipments so pau
 
 ## Agent integration
 
-Packrift exposes a public MCP server for AI agents that need real-time catalog access:
+Packrift runs a public MCP server for AI assistants:
 
-**Endpoint:** https://mcp.packrift.com/mcp (Streamable HTTP, no auth, read-only)
+**Endpoint:** https://mcp.packrift.com/mcp (Streamable HTTP, no authentication, read-only; it never places orders)
 
-**Add or install Packrift MCP:**
-
-- Glama hosted connector: https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp
-- MCP Marketplace listing: https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp
-- Official MCP Registry search: https://registry.modelcontextprotocol.io/v0/servers?search=Packrift
-- Source repository and install docs: https://github.com/Packrift/packrift-mcp
-- Direct JSON-RPC endpoint for Streamable HTTP clients: https://mcp.packrift.com/mcp
+**Connect:** https://mcp.packrift.com/start has setup for Claude, Claude Code, ChatGPT, Cursor, VS Code and Codex. The Packrift Claude plugin (https://github.com/Packrift/claude-plugin) adds packaging expertise on top of the tools.
 
 **Tools:**
 
-- \`search_products(query, limit)\` — keyword product search
-- \`get_product(handle)\` — full product detail including variants, dimensions, weight, and GTIN
-- \`get_pricing(variant_ids, qty)\` — real-time price for variant ids; send \`variant_ids\` as strings, e.g. \`["53475949216112"]\`
-- \`check_inventory(variant_ids)\` — real-time inventory count; send \`variant_ids\` as strings, e.g. \`["53475949216112"]\`
-- \`find_packaging_for_item(item_length_in, item_width_in, item_depth_in, item_weight_lb, use_case)\` — ranked box and mailer suggestions for an item's dimensions, weight, and use case
-- \`compare_alternatives(requested_spec, family, competitor_reference)\` — ranked Packrift AI_APPROVE alternatives for a buyer's exact spec or competitor-style packaging request
-- \`pack_calculator(item dimensions, weight, padding, use_case)\` — calculated inside dimensions, fitted box/mailer candidates, and void-fill guidance
-- \`inventory_status(variant_ids, sku, handle, quantity)\` — live Shopify total and location-level inventory status where Shopify exposes location quantities
-- \`get_shipping_estimate(zip, country, items)\` — carrier rates and totals for a destination zip and cart contents
-- \`create_cart_url({ sku, quantity })\` or \`create_cart_url({ items })\` — build a measured MCP cart landing plus final packrift.com/cart/... URL with \`?ref=mcp\` and \`utm_source=chatgpt-mcp&utm_medium=mcp_tool&utm_campaign=create_cart_url\` attribution; SKU, handle, and variant metadata are continuity-checked against AI_APPROVE catalog records before hand-off to checkout
-- \`prepare_purchase_handoff(sku, quantity, buyer_confirmed, mcp_source_context, mcp_install_target)\` — one-call exact-SKU prep. Confirms the AI_APPROVE product, live price, and inventory; creates the measured source-preserving MCP cart URL only when \`buyer_confirmed=true\`
+- \`search_products(query, limit)\`: search by product type, exact size or spec, or SKU; returns live price, pack size, price per unit, stock and a product link, and labels close sizes as not exact.
+- \`find_packaging_for_item(item_length_in, item_width_in, item_depth_in, item_weight_lb, use_case)\`: boxes and mailers that fit an item, with cushioning by item type, box strength and billable shipping weight.
+- \`get_product(sku)\`: specs, pack count, live price and stock, whether a quantity can ship now, volume pricing and nearby sizes.
+- \`get_shipping_estimate(destination_postal_code, items)\`: delivered total to a US ZIP code with automatic volume discounts and free shipping applied.
+- \`create_cart_url(items)\`: a packrift.com checkout link for the chosen SKUs and quantities; the buyer reviews and pays on packrift.com.
+- \`get_bulk_quote_link(requested_spec)\`: a pre-filled quote request for pallet quantities, custom sizes, printing or freight.
 
-Cart handoff candidates for priority SKUs are available at https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.json and https://mcp.packrift.com/ai/mcp-cart-handoff-candidates.md. The cart activation playbook is available at https://mcp.packrift.com/ai/mcp-cart-activation.json and https://mcp.packrift.com/ai/mcp-cart-activation.md. Use these as structured examples for the required sequence: exact SKU retrieval, \`get_product\`, \`get_pricing\`, \`check_inventory\`, then \`create_cart_url\`, with the returned MCP \`/r/cart\` landing URL as the primary buyer handoff.
+**Rules for agents:** never present a different size, strength, thickness or pack count as an exact match; prices are per pack; shipping estimates exclude tax and checkout shows the final amount.
 
-MCP product-card outputs include four conversion handoffs for AI-assisted purchasing: a tracked product click URL, a reorder-by-SKU URL, a bulk quote URL, and copy-procurement-spec text. When a verified variant id is available, the response also includes a cart URL candidate, but agents should call \`get_pricing\` and \`check_inventory\` before presenting it as the final handoff.
-
-After a live confirmation tool runs, the response includes \`post_confirmation_handoff\`. Use that object to preserve the exact SKU journey after price, inventory, shipping, or cart validation. It includes \`product_click\`, \`reorder\`, \`quote\`, \`copy_procurement_spec\`, and a normalized \`cart.event = "cart_click"\` handoff when the item remains eligible.
-
-**Discovery surfaces:**
-
-- MCP start page: https://mcp.packrift.com/start
-- Tracked MCP start template: https://mcp.packrift.com/r/start/{source} (use lowercase source slugs such as mcpservers_org, glama_connector, mcp_directory, anthropic_connectors_directory, smithery, cline_mcp_marketplace, mcp_so, mcpmarket_com, cursor_directory, mcpcentral, mcpfinder, pulsemcp_packrift, mcpskills, agentndx, mcpbench, chiark, docker_mcp_catalog, or partner-specific slugs; custom slugs are allowed without pre-registration when they match ^[a-z0-9_]{2,64}$)
-- Tracked MCP config template: https://mcp.packrift.com/r/config/{source} (returns the same no-auth mcpServers.packrift config as /mcp.json while attributing the config fetch to the source slug)
-- MCP start pack JSON: https://mcp.packrift.com/ai/mcp-start.json
-- MCP start pack Markdown: https://mcp.packrift.com/ai/mcp-start.md
-- MCP client config JSON: https://mcp.packrift.com/ai/mcp-client-config.json
-- Generic tracked MCP config: https://mcp.packrift.com/r/config/generic
-- Tracked MCP start template: https://mcp.packrift.com/r/start/{source}
-- Tracked MCP install template: https://mcp.packrift.com/r/install/{source}/{target}
-- Tracked MCP first-run template: https://mcp.packrift.com/r/run/{source}/{target}
-- Root MCP JSON config: https://mcp.packrift.com/mcp.json
-- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
-- Agent Web Protocol manifest: https://mcp.packrift.com/.well-known/agent.json
-- Root Agent Web Protocol manifest: https://mcp.packrift.com/agent.json
-- CapIndex capability card: https://mcp.packrift.com/.well-known/capability-card.json
-- llms.txt: https://mcp.packrift.com/llms.txt
-- llms-full.txt (this corpus): https://mcp.packrift.com/llms-full.txt
-- 2026 Agentic Packaging Commerce Index: https://packrift.com/pages/agentic-packaging-commerce-index — Packrift's transparent 48-query benchmark for exact-spec and natural-language packaging visibility in Shopify Global Catalog
-- Machine-readable AI agent instructions: https://mcp.packrift.com/ai/packrift-ai-agent-instructions.md
-- MCP install matrix: https://mcp.packrift.com/ai/mcp-install-matrix.json
-- MCP agent host rollout: https://mcp.packrift.com/ai/mcp-agent-host-rollout.json
-- MCP agent host rollout task JSONL: https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.jsonl
-- MCP agent host rollout task CSV: https://mcp.packrift.com/ai/mcp-agent-host-rollout-tasks.csv
-- MCP usage snapshot: https://mcp.packrift.com/ai/mcp-usage-snapshot.json
-- MCP GA4 funnel proof: https://mcp.packrift.com/ai/mcp-ga4-funnel-proof.json
-- MCP source activation queue: https://mcp.packrift.com/ai/mcp-source-activation-queue.json
-- MCP source activation queue HTML: https://mcp.packrift.com/ai/mcp-source-activation-queue.html
-- MCP revenue conversion queue: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.json
-- MCP revenue conversion queue HTML: https://mcp.packrift.com/ai/mcp-revenue-conversion-queue.html
-- MCP buyer order handoffs: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.json
-- MCP buyer order handoffs HTML: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs.html
-- MCP buyer order handoff task JSONL: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.jsonl
-- MCP buyer order handoff task CSV: https://mcp.packrift.com/ai/mcp-buyer-order-handoffs-tasks.csv
-- MCP source activation sitemap: https://mcp.packrift.com/ai/mcp-source-activation-sitemap.xml
-- MCP activation experiments: https://mcp.packrift.com/ai/mcp-activation-experiments.json
-- MCP activation experiments HTML: https://mcp.packrift.com/ai/mcp-activation-experiments.html
-- MCP external activation selected-task JSONL: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.jsonl
-- MCP external activation selected-task CSV: https://mcp.packrift.com/ai/mcp-external-activation-brief-tasks.csv
-- MCP buyer use cases: https://mcp.packrift.com/ai/mcp-buyer-use-cases.json
-- MCP cart activation: https://mcp.packrift.com/ai/mcp-cart-activation.json
-- MCP first-run proof: https://mcp.packrift.com/ai/mcp-first-run-proof.json
-- MCP reviewer activation: https://mcp.packrift.com/ai/mcp-reviewer-activation.json
-- Tracked reviewer activation template: https://mcp.packrift.com/r/activate/{source}?format=html
-- Tracked reviewer activation shell template: https://mcp.packrift.com/r/activate/{source}?format=sh
-- MCP workflow gallery: https://mcp.packrift.com/ai/mcp-workflow-gallery.json
-- MCP eval pack: https://mcp.packrift.com/ai/mcp-eval-pack.json
-- Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
-- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
-- Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
-- Canonical Browserbase/Browse SKILL.md: https://mcp.packrift.com/ai/browserbase-browse/SKILL.md
-- MCP directory refresh pack: https://mcp.packrift.com/ai/mcp-directory-refresh.json
-- MCP directory submit actions: https://mcp.packrift.com/ai/mcp-directory-submit-actions.json
-- Claude connector submission packet: https://mcp.packrift.com/ai/claude-connector-submission.json
-- Agent capture outreach packet: https://mcp.packrift.com/ai/agent-capture-outreach.json
-- AI-approved product corpus: https://mcp.packrift.com/ai/packrift-ai-approved-products.jsonl
-- Measured handoff directory JSON: https://mcp.packrift.com/ai/measured-handoffs.json
-- Measured handoff directory Markdown: https://mcp.packrift.com/ai/measured-handoffs.md
-- Measured handoff directory CSV: https://mcp.packrift.com/ai/measured-handoffs.csv
-- Top 1,000 AI-sales SKU index: https://mcp.packrift.com/ai/top-1000-ai-sales-skus.md
-- Top 1,000 AI-sales SKU CSV: https://mcp.packrift.com/ai/top-1000-ai-sales-skus.csv
-- Top 1,000 SKU page sitemap: https://mcp.packrift.com/ai/top-1000-ai-sales-sitemap.xml
-- All AI-approved SKU page sitemap: https://mcp.packrift.com/ai/all-ai-approved-sku-sitemap.xml
-- Example SKU page: https://mcp.packrift.com/ai/sku/1066.md
-- OpenAI strict public product feed TSV, current 3,340-row tracked OpenAI-shaped QA surface: https://mcp.packrift.com/ai/packrift-openai-products-strict-stable-current.tsv
-- OpenAI product feed manifest, current feed URLs, row counts, checksums, validation status, source reality, and official ingestion blocker: https://mcp.packrift.com/ai/openai-product-feed-manifest.json
-- OpenAI preferred direct product feed TSV, current 4,849-row validated direct handoff with 0 simulated rejects or warnings: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv
-- OpenAI preferred direct product feed GZIP, compressed 4,849-row direct handoff for approved file-upload, SFTP, or API ingestion: https://mcp.packrift.com/ai/packrift-openai-products-preferred-direct-current.tsv.gz
-- Exact-spec catalog overview: https://mcp.packrift.com/ai/packrift-exact-spec-packaging-catalog.md
-- Shopify native UCP commerce surface: https://mcp.packrift.com/ai/shopify-native-ucp-commerce-surface.md
-- UCP starter catalog for curated storefront builders: https://mcp.packrift.com/ai/mcp-ucp-starter-catalog.json
-- UCP storefront and agent builder kit for Stack412-style UCP storefronts, contextual embeds, Open Scout-style shopping agents, and Upsonic-style UCP agent frameworks: https://mcp.packrift.com/ai/mcp-ucp-builder-kit.json
-- UCP storefront import feed with flat JSON, JSONL, CSV, Markdown, and HTML rows for packaging shelves: https://mcp.packrift.com/ai/mcp-ucp-storefront-import.json
-- UCP storefront shelf renderer with copy-paste JavaScript embed and source-aware product cards: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf.json
-- UCP storefront adoption kit with source-aware one-line snippets, live demos, and attribution gates: https://mcp.packrift.com/ai/mcp-ucp-storefront-adoption.json
-- UCP builder activation handoff with source slugs, one-line scripts, approval-needed copy, and proof gates for PlugThatShop-style embeds, Stack412-style storefronts, Open Scout-style shopping agents, Upsonic-style UCP agent frameworks, and curated UCP builders: https://mcp.packrift.com/ai/mcp-ucp-builder-activation-handoff.json
-- Packrift UCP builder launchpad with source-specific embed, import, install, first-run, and order-handoff actions for UCP storefront builders: https://mcp.packrift.com/ai/packrift-ucp-builder-launchpad.json
-- Packrift UCP builder approval packet with exact target copy, source-specific embed blocks, contact-route status, first-run links, and proof gates: https://mcp.packrift.com/ai/packrift-ucp-builder-approval-packet.json
-- Packrift UCP builder integration pack with source-specific patch blocks, MCP smoke tests, buyer-confirmed handoff templates, and proof gates for real storefront or agent inclusion: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack.json
-- Packrift UCP builder PR activation pack with public PR, listing, issue-comment, and direct-builder activation targets for UCP repos, shipping-supplies storefront examples, and shopping-agent demos: https://mcp.packrift.com/ai/packrift-ucp-builder-pr-activation-pack.json
-- Packrift UCP shipping-supplies starter kit for making Packrift the default packaging catalog inside curated UCP storefronts, shopping-agent SDK examples, contextual embeds, and shipping-supplies aggregators: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-starter-kit.json
-- Packrift UCP shipping-supplies storefront template with standalone HTML, source-aware shelf embed, MCP first run, and buyer-confirmed handoff template: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-storefront-template.json
-- Packrift UCP shipping-supplies collection map with live Packrift collection routes and approval-required collection gaps for builder category routing: https://mcp.packrift.com/ai/packrift-ucp-shipping-supplies-collection-map.json
-- Packrift UCP builder sales loop connecting source selection, starter shelf adoption, MCP first runs, buyer-confirmed handoff templates, and source-attributed cart/order proof gates: https://mcp.packrift.com/ai/packrift-ucp-builder-sales-loop.json
-- Packrift Stack412-style shipping-supplies aisle with import filter, one-line shelf script, MCP first run, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-stack412-shipping-supplies-aisle.json
-- Packrift PlugThatShop-style contextual shipping shelf with import filter, one-line shelf script, MCP first run, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-plugthatshop-contextual-shelf.json
-- Packrift Open Scout-style shopping-agent packaging path with routing rule, source-aware MCP endpoint, first-run calls, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-open-scout-shopping-agent-path.json
-- Packrift Upsonic-style UCP agent workflow with intent analysis, exact-spec filtering, live price/inventory checks, source-aware MCP endpoint, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-upsonic-agent-workflow.json
-- Packrift Agorio-style shopping-agent SDK integration pack with source-aware MCP endpoint, patch block, first-run calls, and buyer-confirmed handoff policy: https://mcp.packrift.com/ai/packrift-ucp-builder-integration-pack/agorio_shopping_agent_sdk.json
-- Stack412-style UCP shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/stack412_style_storefront.html
-- Open Scout-style shopping-agent shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/open_scout_shopping_agent.html
-- Upsonic-style UCP agent framework shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/upsonic_ucp_agent_framework.html
-- Agorio-style shopping-agent SDK shelf demo: https://mcp.packrift.com/ai/mcp-ucp-storefront-shelf-demo/agorio_shopping_agent_sdk.html
-- Agent endpoints status: https://mcp.packrift.com/ai/packrift-agent-endpoints-status.json
-- Browser-agent bridge: https://mcp.packrift.com/ai/browser-agent-bridge.json
-- Root Browserbase/Browse SKILL.md: https://mcp.packrift.com/SKILL.md
-- Browserbase Browse skill pack: https://mcp.packrift.com/ai/browserbase-browse-skill-pack.json
-- First-20 exact-spec routes JSON: https://mcp.packrift.com/ai/first20-exact-spec-routes.json
-- First-20 exact-spec routes Markdown: https://mcp.packrift.com/ai/first20-exact-spec-routes.md
-- Family corpus files: https://mcp.packrift.com/ai/corrugated-box-sizes.jsonl, https://mcp.packrift.com/ai/mailer-sizes.jsonl, https://mcp.packrift.com/ai/label-sizes.jsonl, https://mcp.packrift.com/ai/tape-sizes.jsonl, https://mcp.packrift.com/ai/poly-bag-sizes.jsonl, https://mcp.packrift.com/ai/stretch-film-sizes.jsonl, https://mcp.packrift.com/ai/strapping-sizes.jsonl, https://mcp.packrift.com/ai/tag-sizes.jsonl, https://mcp.packrift.com/ai/void-fill-sizes.jsonl, https://mcp.packrift.com/ai/packing-list-envelope-sizes.jsonl
-- Procurement prompt files: https://mcp.packrift.com/ai/packaging-procurement-prompts.md, https://mcp.packrift.com/ai/corrugated-box-procurement-prompts.md, https://mcp.packrift.com/ai/mailer-procurement-prompts.md, https://mcp.packrift.com/ai/label-procurement-prompts.md, https://mcp.packrift.com/ai/tape-procurement-prompts.md, https://mcp.packrift.com/ai/poly-bag-procurement-prompts.md, https://mcp.packrift.com/ai/stretch-film-procurement-prompts.md, https://mcp.packrift.com/ai/strapping-procurement-prompts.md, https://mcp.packrift.com/ai/tag-procurement-prompts.md, https://mcp.packrift.com/ai/void-fill-procurement-prompts.md, https://mcp.packrift.com/ai/packing-list-envelope-procurement-prompts.md
-- AI sales critical path: https://mcp.packrift.com/ai/ai-sales-critical-path.md
-- AI corpus sitemap: https://mcp.packrift.com/ai/sitemap.xml
-- MCP robots file: https://mcp.packrift.com/robots.txt
-- Public exact-spec data page: https://packrift.com/pages/packrift-ai-exact-spec-data
-- AI agent instructions: https://packrift.com/pages/packrift-ai-agent-instructions
-- Server card: https://mcp.packrift.com/.well-known/mcp/server-card.json
-- Agent Web Protocol manifest: https://mcp.packrift.com/.well-known/agent.json
-- CapIndex capability card: https://mcp.packrift.com/.well-known/capability-card.json
-- MCP client config: https://mcp.packrift.com/ai/mcp-client-config.json
-- Root MCP JSON config: https://mcp.packrift.com/mcp.json
-- Well-known MCP JSON config: https://mcp.packrift.com/.well-known/mcp.json
-- Glama connector claim: https://mcp.packrift.com/.well-known/glama.json
-- MCP Marketplace discovery manifest: https://mcp.packrift.com/.well-known/mcp-marketplace.json
-- Product feed: https://packrift.com/products.json (paginated)
-- Sitemap: https://packrift.com/sitemap.xml
-
-**Order placement:** Packrift does not currently expose a direct order-create API to agents. Build a cart URL and hand it to the user — they land on a populated cart and check out with their own payment method. This works today with no integration on the buyer's end.
-
-**Cart URL format:**
-\`\`\`
-https://packrift.com/cart/{variant_id}:{quantity},{variant_id}:{quantity}?ref=mcp
-\`\`\`
-
-Example with two line items:
-\`\`\`
-https://packrift.com/cart/44192837465920:50,44192837498688:10?ref=mcp
-\`\`\`
-
-**Trust signals an agent can verify:**
-
-- Product and BreadcrumbList JSON-LD on every product page
-- \`hasMerchantReturnPolicy\` and \`shippingDetails\` populated in product schema
-- Live inventory count in \`offers.availability\`
-- Customer service phone in site footer and Organization schema
-- Cart-URL outputs include \`?ref=mcp\` for attribution
-
-**For agent platform partners** wanting deeper integration (instant checkout, custom rate-limiting, dedicated support): partnerships@packrift.com.
+**Packaging guide:** https://mcp.packrift.com/guides/packaging.md
 
 ---
 
 ## Trust and authority signals
 
-- Domain: packrift.com (DNS managed via Cloudflare; storefront hosted on Shopify; MCP infrastructure on Cloudflare Workers).
-- Source repository for the public MCP server: https://github.com/Packrift/packrift-mcp (MIT licensed).
-- Listed in: Official MCP Registry (\`io.github.Packrift/packrift-mcp\`), Glama hosted connector, MCP Marketplace, Docker MCP Catalog (pending review), awesome-mcp-servers (pending merge), Anthropic Connectors.
-- Connector discovery: Glama hosted connector at https://glama.ai/mcp/connectors/io.github.Packrift/packrift-mcp and MCP Marketplace at https://mcp-marketplace.io/server/io-github-packrift-packrift-mcp.
-- AI crawlers explicitly NOT blocked at the Cloudflare zone — GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and standard search crawlers are all permitted.
+- Domain: packrift.com; storefront and checkout on Shopify.
+- Public MCP server source: https://github.com/Packrift/packrift-mcp (MIT licensed), listed in the official MCP Registry as \`io.github.Packrift/packrift-mcp\`.
+- Claude plugin source: https://github.com/Packrift/claude-plugin.
+- MCP privacy notice: https://mcp.packrift.com/privacy.
 
 ---
 
 ## Compliance and policies
 
-- Returns: 30-day window on unopened cases; 15% restocking fee.
-- LTL freight claims: damage must be noted on the Bill of Lading at delivery; concealed damage reports filed after 3 days may be denied.
-- Shortages: must be reported to claims within 48 hours.
-- International logistics: this machine-readable surface is US-focused. Use the current Shopify checkout and support channel for any non-US request rather than assuming Canadian fulfillment.
+- Shipping policy: https://packrift.com/policies/shipping-policy
+- Refund policy: https://packrift.com/policies/refund-policy
 - Privacy policy: https://packrift.com/policies/privacy-policy
+- MCP privacy notice: https://mcp.packrift.com/privacy
+- Freight deliveries: note any visible damage on the delivery receipt before signing.
 
 ---
 
 ## Contact
 
 - Customer support: support@packrift.com, +1 (302) 216-2975
-- Bulk and contract pricing: support@packrift.com (subject: "Bulk quote request")
-- Agent and partnership integrations: partnerships@packrift.com
+- Bulk and custom pricing: https://packrift.com/pages/bulk-quote
 - Registered office: Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801, US
 `;

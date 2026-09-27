@@ -148,7 +148,7 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
 
   const rankedRows = rows
     .filter((row) => matchesRequiredSearchConstraints(query, toRankableRow(row)))
-    .filter((row) => searchAllowsExactOnlyMarginHold(query, row.approved_sku ?? "", row.approved_risk_flags ?? ""))
+    .filter((row) => searchAllowsRestrictedSku(query, row.approved_sku ?? "", row.approved_risk_flags ?? ""))
     .map((row) => ({ row, ...scoreSearchRow(query, row) }))
     .sort((a, b) => b.score - a.score);
   // Dimension queries: keep only exact-spec candidates (unchanged behavior).
@@ -429,7 +429,7 @@ function catalogFallbackHandles(query: string, limit: number): string[] {
   const scored = catalogSearchCandidates(query).map((item) => {
     if (!matchesRequiredSearchConstraints(query, item)) return { handle: item.handle, score: 0, qualifies: false };
     if (!allowSensitive && isSensitiveProductText(item.title)) return { handle: item.handle, score: 0, qualifies: false };
-    if (!searchAllowsExactOnlyMarginHold(query, item.sku, item.riskFlags)) {
+    if (!searchAllowsRestrictedSku(query, item.sku, item.riskFlags)) {
       return { handle: item.handle, score: 0, qualifies: false };
     }
     const { score, qualifies } = scoreRow(query, item);
@@ -449,9 +449,11 @@ function catalogFallbackHandles(query: string, limit: number): string[] {
   return handles;
 }
 
-function searchAllowsExactOnlyMarginHold(query: string, sku: string, riskFlags: string | null): boolean {
+// SKUs flagged exact-SKU-only or review-required surface only when the buyer
+// names the SKU itself.
+function searchAllowsRestrictedSku(query: string, sku: string, riskFlags: string | null): boolean {
   const flags = String(riskFlags ?? "").toLowerCase();
-  if (!flags.includes("low_margin_exact_sku_only") && !flags.includes("verified_low_margin_review_required")) {
+  if (!flags.includes("exact_sku_only") && !flags.includes("review_required")) {
     return true;
   }
   const queryNorm = normalizeText(query);

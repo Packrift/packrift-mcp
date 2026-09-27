@@ -3,6 +3,7 @@ import { tolerantLineItemZod } from "../line-items.js";
 import { Env, variantIdToNumeric } from "../shopify.js";
 import { approvalForHandle, approvalForSku, approvalForVariantId, assertApprovedVariantIds } from "../approval.js";
 import { addCartPermalinkAttribution, buildPostConfirmationHandoff, buildTrackingContext } from "../conversion.js";
+import { utmSourceForClient } from "../v1/attribution.js";
 import {
   assertMcpCommerceSkuAllowed,
   isMcpCommerceHeldItem,
@@ -148,6 +149,13 @@ function normalizedMcpSlug(value: unknown): string | null {
   return slug && /^[a-z0-9_]{2,80}$/.test(slug) ? slug : null;
 }
 
+function cartUtmSource(sourceContext: string | null): string {
+  if (!sourceContext) return "ai_agent";
+  if (/claude|anthropic/.test(sourceContext)) return "claude";
+  if (/chatgpt|openai/.test(sourceContext)) return "chatgpt";
+  return utmSourceForClient(sourceContext);
+}
+
 export async function createCartUrlHandler(env: Env, raw: unknown, context: CreateCartUrlContext = {}) {
   const input = createCartUrlZod.parse(raw);
   const requestedSku = normalizedSku(input.sku);
@@ -247,7 +255,7 @@ export async function createCartUrlHandler(env: Env, raw: unknown, context: Crea
   const cartUtmContent = selectedSku ?? items[0]?.variant_id ?? input.source_context ?? tracking.utm_content;
   const cartTracking = {
     ...tracking,
-    utm_source: mcpSourceContext === "muse" ? "muse" : "chatgpt-mcp",
+    utm_source: cartUtmSource(mcpSourceContext),
     utm_medium: "mcp_tool",
     utm_campaign: "create_cart_url",
     utm_content: cartUtmContent,

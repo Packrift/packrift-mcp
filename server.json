@@ -2,9 +2,9 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Packrift/packrift-mcp",
   "title": "Packrift MCP",
-  "description": "Hosted no-auth MCP for exact-spec packaging search, live price, stock, cart handoff, and no-match.",
-  "version": "0.3.0",
-  "websiteUrl": "https://packrift.com/pages/packrift-ai-agent-instructions",
+  "description": "Find, size, price and order packaging: boxes, mailers, poly bags, tape. Live price and stock.",
+  "version": "1.0.0",
+  "websiteUrl": "https://mcp.packrift.com/start",
   "repository": {
     "url": "https://github.com/Packrift/packrift-mcp",
     "source": "github",

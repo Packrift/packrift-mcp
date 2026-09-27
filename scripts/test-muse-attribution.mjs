@@ -53,15 +53,23 @@ test("explicit Muse source arguments use the same attribution", async () => {
   assertAttribution(cart, "muse", "muse");
 });
 
-test("existing source precedence and legacy attribution remain unchanged", async () => {
+test("explicit source arguments take precedence and attribute to the named assistant", async () => {
   const cart = await createCartUrlHandler(env, { ...input, mcp_source_context: "claude" }, { sourceSlug: "muse" });
-  assertAttribution(cart, "chatgpt-mcp", "claude");
+  assertAttribution(cart, "claude", "claude");
 });
 
-test("calls without a source retain legacy attribution, including freeform source_context", async () => {
+test("assistant-specific sources map to one utm_source per assistant", async () => {
+  const cases = [["claude_remote_mcp", "claude"], ["claude_code", "claude"], ["openai_chatgpt", "chatgpt"], ["cursor_directory", "cursor_directory"]];
+  for (const [sourceSlug, expected] of cases) {
+    const cart = await createCartUrlHandler(env, input, { sourceSlug });
+    assert.equal(new URL(cart.final_cart_url).searchParams.get("utm_source"), expected, sourceSlug);
+  }
+});
+
+test("calls without a source are attributed to a generic AI agent, including freeform source_context", async () => {
   for (const source_context of [undefined, "muse"]) {
     const cart = await createCartUrlHandler(env, { ...input, source_context });
-    assertAttribution(cart, "chatgpt-mcp", null);
+    assertAttribution(cart, "ai_agent", null);
   }
 });
 
@@ -116,7 +124,7 @@ test("unconfirmed prepare_purchase_handoff still withholds a cart for Muse", asy
 
 test("Muse attribution never bypasses a commerce hold", async () => {
   const held = { ...input, sku: "12104", buyer_confirmed: true };
-  await assert.rejects(createCartUrlHandler(env, held, { sourceSlug: "muse" }), /MCP commerce hold blocked/);
+  await assert.rejects(createCartUrlHandler(env, held, { sourceSlug: "muse" }), /quoted rather than sold through a checkout link/);
   const result = await preparePurchaseHandoffHandler(env, held, { sourceSlug: "muse" });
   assert.equal(result.status, "blocked_by_mcp_commerce_hold");
   assert.equal(result.cart, null);

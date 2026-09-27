@@ -44,7 +44,7 @@ export const agentManifestProtocolManifest = {
         "Download the AI-approved Packrift exact-spec product corpus for retrieval and SKU candidate matching.",
       parameters: [],
       response_description:
-        "JSONL records for public AI_APPROVE products including SKU, title, family, dimensions, material, color, count, and product links.",
+        "JSONL records for Packrift catalog products including SKU, title, family, dimensions, material, color, count, and product links.",
     },
     {
       path: "/ai/sku/1066.json",
@@ -117,9 +117,9 @@ export const agentManifestProtocolManifest = {
     expected_uptime_pct: null,
   },
   agent_notes:
-    "Use Packrift MCP for exact-spec packaging procurement workflows where dimensions, material, color, count, closure, grade, and SKU continuity matter. No Packrift account is required for the public MCP discovery, catalog, pricing, inventory, or guarded cart-handoff checks described in this manifest. Do not invent substitutes or claim a nearby SKU is exact. A Packrift MCP cart handoff only creates a Shopify cart URL after live facts are checked; it never places an order, stores payment data, or completes checkout. Do not enter credentials, tokens, payment details, or buyer secrets through this manifest. Confirm live price, inventory, shipping, and buyer quantity before presenting a cart handoff. If no exact AI_APPROVE match exists, route to Packrift quote/contact paths instead of forcing a product recommendation.",
+    "Use Packrift MCP for exact-spec packaging procurement workflows where dimensions, material, color, count, closure, grade, and SKU continuity matter. No Packrift account is required for the public MCP discovery, catalog, pricing, inventory, or guarded cart-handoff checks described in this manifest. Do not invent substitutes or claim a nearby SKU is exact. A Packrift MCP cart handoff only creates a Shopify cart URL after live facts are checked; it never places an order, stores payment data, or completes checkout. Do not enter credentials, tokens, payment details, or buyer secrets through this manifest. Confirm live price, inventory, shipping, and buyer quantity before presenting a cart handoff. If no exact catalog match exists, route to Packrift quote/contact paths instead of forcing a product recommendation.",
   contact: {
-    email: "farhan@packrift.com",
+    email: "support@packrift.com",
     support_url: "https://packrift.com/pages/contact",
     github: "https://github.com/Packrift/packrift-mcp",
   },

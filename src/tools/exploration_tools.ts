@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRegionalWarehouse, publicLocationName } from "../public-hygiene.js";
 import { APPROVED_CATALOG, ApprovedCatalogItem } from "../effective-approved-catalog.js";
 import { approvalStatus } from "../approval.js";
 import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildProductCard } from "../conversion.js";
@@ -309,14 +310,15 @@ function inventoryRow(env: Env, item: ApprovedCatalogItem, node: InventoryNode |
   const levels = node?.inventoryItem?.inventoryLevels.edges.map(({ node: level }) => {
     const quantities = Object.fromEntries(level.quantities.map((quantity) => [quantity.name, quantity.quantity]));
     return {
-      location: level.location.name,
+      location: publicLocationName(level.location.name),
+      regional_warehouse: isRegionalWarehouse(level.location.name),
       available: Number(quantities.available ?? 0),
       on_hand: Number(quantities.on_hand ?? 0),
     };
   }) ?? [];
-  const boxLevels = levels.filter((level) => /box partners|bp -/i.test(level.location));
-  const boxAvailable = boxLevels.reduce((sum, level) => sum + level.available, 0);
-  const totalAvailable = node?.inventoryQuantity ?? boxAvailable;
+  const warehouseLevels = levels.filter((level) => level.regional_warehouse);
+  const warehouseAvailable = warehouseLevels.reduce((sum, level) => sum + level.available, 0);
+  const totalAvailable = node?.inventoryQuantity ?? warehouseAvailable;
   const availableForSale = Boolean(node?.availableForSale);
   const canFulfillRequestedQuantity = availableForSale && totalAvailable >= requestedQuantity;
   const cardInput = {
@@ -347,9 +349,9 @@ function inventoryRow(env: Env, item: ApprovedCatalogItem, node: InventoryNode |
     can_fulfill_requested_quantity: canFulfillRequestedQuantity,
     inventory_tracked: node?.inventoryItem?.tracked ?? null,
     locations_total: levels.length,
-    box_partners_locations_in_stock: boxLevels.filter((level) => level.available > 0).length,
-    box_partners_available_quantity: boxAvailable,
-    inventory_levels: levels,
+    warehouse_locations_in_stock: warehouseLevels.filter((level) => level.available > 0).length,
+    warehouse_available_quantity: warehouseAvailable,
+    inventory_levels: levels.map(({ regional_warehouse: _regional, ...level }) => level),
     lead_time_note: canFulfillRequestedQuantity
       ? "Inventory is available in Shopify. Checkout should be used for final shipping method and delivery promise."
       : "Inventory is not sufficient for the requested quantity in this live read; use bulk quote or contact Packrift before promising fulfillment.",
@@ -568,13 +570,13 @@ function buildPackCalculatorSummary(
 }
 
 function buildInventorySummary(
-  results: Array<{ sku: string; total_available_quantity: number; can_fulfill_requested_quantity: boolean; box_partners_locations_in_stock: number }>,
+  results: Array<{ sku: string; total_available_quantity: number; can_fulfill_requested_quantity: boolean; warehouse_locations_in_stock: number }>,
   requestedQuantity: number
 ): string {
   if (!results.length) return "No approved Packrift inventory rows were returned.";
   const ready = results.filter((row) => row.can_fulfill_requested_quantity).length;
   const first = results[0]!;
-  return `${ready}/${results.length} approved item(s) can fulfill quantity ${requestedQuantity} in this live Shopify read. SKU ${first.sku} shows ${first.total_available_quantity} available across Shopify inventory and ${first.box_partners_locations_in_stock} BOX location(s) with available stock.`;
+  return `${ready}/${results.length} approved item(s) can fulfill quantity ${requestedQuantity} in this live Shopify read. SKU ${first.sku} shows ${first.total_available_quantity} available across Shopify inventory and ${first.warehouse_locations_in_stock} US warehouse location(s) with available stock.`;
 }
 
 function voidFillGuidance(input: z.infer<typeof packCalculatorZod>, candidateDims: { length_in: number; width_in: number; depth_in: number | null } | null) {
