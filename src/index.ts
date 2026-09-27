@@ -1,6 +1,7 @@
 import { bestEffort } from "./best-effort.js";
 import { Hono } from "hono";
 import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { shopifyQuery, type Env } from "./shopify.js";
 import { pdpEstimate } from "./pdp-estimate.js";
 import { subscribe } from "./subscribe.js";
@@ -162,6 +163,37 @@ type AppContext = Context<{ Bindings: Bindings }>;
 
 const app = new Hono<{ Bindings: Bindings }>();
 let workerStartedAtMs: number | null = null;
+
+function isStorefrontHost(hostname: string): boolean {
+  return hostname === "packrift.com" || hostname === "www.packrift.com";
+}
+
+// Storefront safety net: if this Worker fails outside Hono's error handling,
+// Cloudflare forwards the request to Shopify instead of returning an error page.
+app.use("*", async (c, next) => {
+  if (isStorefrontHost(new URL(c.req.url).hostname)) {
+    try {
+      c.executionCtx.passThroughOnException();
+    } catch {
+      // No execution context outside Workers (Node tests).
+    }
+  }
+  await next();
+});
+
+// A handler error on a storefront page read serves the plain Shopify page, so
+// shoppers and crawlers never see a Worker 500. Everything else keeps the default 500.
+app.onError((err, c) => {
+  const url = new URL(c.req.url);
+  const method = c.req.method;
+  if (isStorefrontHost(url.hostname) && (method === "GET" || method === "HEAD")) {
+    console.error(JSON.stringify({ event: "storefront_fallback", path: url.pathname, error: String(err) }));
+    return fetch(c.req.raw);
+  }
+  if (err instanceof HTTPException) return err.getResponse();
+  console.error(JSON.stringify({ event: "worker_error", host: url.hostname, path: url.pathname, error: String(err) }));
+  return c.text("Internal Server Error", 500);
+});
 
 function workerUptimeSeconds(): number {
   const now = Date.now();
