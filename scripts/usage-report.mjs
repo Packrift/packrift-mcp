@@ -43,13 +43,16 @@ async function listKeys(prefix) {
   return keys;
 }
 
-async function getValue(key) {
-  const res = await fetch(`${base}/values/${encodeURIComponent(key)}`, { headers: auth });
-  if (!res.ok) return null;
+async function getValue(key, attempt = 0) {
   try {
-    return await res.json();
-  } catch {
-    return null;
+    const res = await fetch(`${base}/values/${encodeURIComponent(key)}`, { headers: auth });
+    if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } catch (error) {
+    if (attempt >= 3) return null;
+    await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+    return getValue(key, attempt + 1);
   }
 }
 
@@ -117,7 +120,7 @@ for (let d = 0; d < days; d += 1) {
   const day = new Date(today.getTime() - d * 86_400_000).toISOString().slice(0, 10);
   dayKeys.push(...(await listKeys(`events/ai-sales/${day}/`)));
 }
-const events = (await mapLimit(dayKeys, 40, getValue)).filter((e) => e && EVENT_TYPES.has(e.event));
+const events = (await mapLimit(dayKeys, 20, (key) => getValue(key))).filter((e) => e && EVENT_TYPES.has(e.event));
 // Sessions take the bucket of their initialize event (a directory scout stays a directory scout).
 for (const e of events) if (e.event === "mcp_initialize" && e.mcp_session_id) SESSION_BUCKET.set(String(e.mcp_session_id), bucketOf(e));
 const buckets = counter();
