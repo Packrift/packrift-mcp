@@ -986,10 +986,10 @@ async function liveMcpCheck() {
     openaiProductFeedManifest?.source_reality?.no_duplicate_surface_rule?.includes("do not create a separate Packrift CLI") &&
     openaiProductFeedManifest?.validation_summary?.all_expected_row_counts_ok === true &&
     openaiProductFeedManifest?.feeds?.strict_public_current?.url === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_TSV_URL &&
-    openaiProductFeedManifest?.feeds?.strict_public_current?.observed_rows === 3405 &&
+    openaiProductFeedManifest?.feeds?.strict_public_current?.observed_rows === 3340 &&
     openaiProductFeedManifest?.feeds?.strict_public_current?.sha256 === OPENAI_STRICT_PUBLIC_PRODUCT_FEED_SHA256 &&
     openaiProductFeedManifest?.feeds?.preferred_direct_current?.url === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_TSV_URL &&
-    openaiProductFeedManifest?.feeds?.preferred_direct_current?.observed_rows === 4847 &&
+    openaiProductFeedManifest?.feeds?.preferred_direct_current?.observed_rows === 4849 &&
     openaiProductFeedManifest?.feeds?.preferred_direct_current?.sha256 === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_SHA256 &&
     openaiProductFeedManifest?.feeds?.preferred_direct_current_gzip?.url === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_URL &&
     openaiProductFeedManifest?.feeds?.preferred_direct_current_gzip?.sha256 === OPENAI_PREFERRED_DIRECT_PRODUCT_FEED_GZIP_SHA256 &&

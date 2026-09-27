@@ -1,5 +1,5 @@
-// Generated from /Users/farhan/Downloads/packrift-ai-commerce-factory/outputs/2026-07-11/mcp_corpus_sales_layer_20260712T001400Z/packrift-ai-approved-products.jsonl. Do not edit by hand.
-// Generated at 2026-07-12T00:16:15Z.
+// Generated from /Users/farhan/Downloads/packrift-ranking-system-20260908/afternoon-20260911/eligibility-recovery/approved-catalog-source.jsonl. Do not edit by hand.
+// Generated at 2026-09-11T20:06:02.996433Z
 export interface ApprovedCatalogItem {
   sku: string;
   productId: string;
@@ -14876,6 +14876,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "variantId": "53473217905008",
     "handle": "12x15-2-mil-clear-flat-poly-bags-w-suffocation-warning-100-pack",
     "title": "12x15 2 Mil Clear Flat Poly Bags w/ Suffocation Warning - 100 Pack",
+    "family": "poly_bags",
+    "riskFlags": ""
+  },
+  {
+    "sku": "PB534G100PK",
+    "productId": "15162546127216",
+    "variantId": "53986639282544",
+    "handle": "12-x-15-2-mil-green-flat-poly-bags-light-medium-duty-100-case",
+    "title": "12x15 2 Mil Green Flat Poly Bags 100/Case",
     "family": "poly_bags",
     "riskFlags": ""
   },
@@ -80640,6 +80649,15 @@ export const APPROVED_CATALOG: ApprovedCatalogItem[] = [
     "handle": "8500-145-lb-polypropylene-tying-twine-industrial-strength-case-of-1",
     "title": "8500' 145 lb Polypropylene Tying Twine - Industrial Strength, Case of 1",
     "family": "strapping",
+    "riskFlags": ""
+  },
+  {
+    "sku": "PB465G100PK",
+    "productId": "15162546061680",
+    "variantId": "53986639217008",
+    "handle": "8-x-10-2-mil-green-flat-poly-bags-light-medium-duty-100-case",
+    "title": "8x10 2 Mil Green Flat Poly Bags 100/Case",
+    "family": "poly_bags",
     "riskFlags": ""
   },
   {

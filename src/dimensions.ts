@@ -9,61 +9,63 @@ export interface Dimensions {
   raw: string;
 }
 
-// Parse "12 1/8" or "1/2" or "12.5" or "12" into a number.
-function parseFractional(token: string): number | null {
-  const t = token.trim().replace(/["']/g, "").trim();
-  if (!t) return null;
-  // mixed: "12 1/8"
-  const mixed = t.match(/^(\d+)\s+(\d+)\/(\d+)$/);
-  if (mixed) {
-    return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+const DIMENSION_NUMBER = "(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?|\\.\\d+)";
+const DIMENSION_UNIT = '(?:gauge|ga|mil|mm|millimet(?:er|re)s?|cm|centimet(?:er|re)s?|inches|inch|in|ft|feet|foot|yds?|yards?|m|met(?:er|re)s?)\\b\\.?|["\u2033\'\u2032]';
+const DIMENSION_SEPARATOR = "\\s*(?:[x×]|\\bby\\b)\\s*";
+export interface DimensionEvidence { values: number[]; unit: string; valid: boolean; kind?: "roll"; start?: number; end?: number }
+export function dimensionEvidence(value: string): DimensionEvidence[] {
+  const invalid: DimensionEvidence = { values: [], unit: "", valid: false };
+  const range = `${DIMENSION_NUMBER}\\s*(?:[-–]|\\bto\\b)\\s*${DIMENSION_NUMBER}`;
+  if (new RegExp(`${range}(?:\\s*(?:${DIMENSION_UNIT}))?${DIMENSION_SEPARATOR}`, "i").test(value)) return [invalid];
+  const axis = `${DIMENSION_NUMBER}(?:\\s*(?:${DIMENSION_UNIT}))?(?:\\s*[LWHD]\\b)?`;
+  const pattern = new RegExp(`(?<![\\w./-])${axis}(?:${DIMENSION_SEPARATOR}${axis})+(?![\\w./])`, "gi");
+  const records: DimensionEvidence[] = [...value.matchAll(pattern)].filter(match =>
+    !/(?:^|[\s\d"'′″])(?:[x×]|\bby)\s*$/i.test(value.slice(0, match.index))
+  ).map((match) => {
+    const units: string[] = [];
+    const values = match[0]!.split(/\s*(?:[x×]|\bby\b)\s*/i).map((part) => {
+      const numeric = part.match(new RegExp(`^(${DIMENSION_NUMBER})`))!;
+      const rawUnit = part.slice(numeric[0].length).trim().toLowerCase();
+      const unit = /^(mm|milli)/.test(rawUnit) ? "mm" : /^(cm|centi)/.test(rawUnit) ? "cm"
+        : /^(in\b|inch|["\u2033])/.test(rawUnit) ? "in" : /^(ft\b|feet|foot|['\u2032])/.test(rawUnit) ? "ft"
+        : /^(gauge|ga\b)/.test(rawUnit) ? "gauge" : /^mil\b/.test(rawUnit) ? "mil"
+        : /^(yd|yard)/.test(rawUnit) ? "yd" : /^(m\b|met)/.test(rawUnit) ? "m" : "";
+      units.push(unit);
+      const fraction = numeric[0].trim().match(/^(?:(\d+)\s+)?(\d+)\/(\d+)$/);
+      return fraction ? Number(fraction[1] || 0) + Number(fraction[2]) / Number(fraction[3]) : Number(numeric[0]);
+    });
+    // Inch width × yard/foot roll length is two independent product specifications,
+    // not a homogeneous box/mailer's size tuple. Enforce both in the searcher.
+    const roll = units.includes("in") && units.some(unit => ["yd", "ft", "mil", "gauge"].includes(unit))
+      && units.every(unit => ["in", "yd", "ft", "mil", "gauge"].includes(unit));
+    const suffix = value.slice(match.index! + match[0]!.length);
+    const continues = new RegExp(`^\\s*(?:(?:[-–]|\\bto\\b)\\s*${DIMENSION_NUMBER}|(?:[x×]|\\bby\\b)(?:\\s|[-+\\d.]|$))`, "i").test(suffix);
+    return { start: match.index!, end: match.index! + match[0]!.length, values,
+      unit: units.find(Boolean) ?? "", ...(roll ? { kind: "roll" as const } : {}),
+      valid: !continues && values.every(n => Number.isFinite(n) && n > 0)
+        && (roll || new Set(units.filter(Boolean)).size <= 1) };
+  });
+  // Remember malformed dimension intent even when the strict tuple regex finds
+  // no complete tuple, so callers cannot silently fall back to broad keywords.
+  const intent = new RegExp(`(?<![\\w./])[-+]?${axis}${DIMENSION_SEPARATOR}`, "gi");
+  for (const match of value.matchAll(intent)) {
+    if (!records.some(record => match.index! >= record.start! && match.index! < record.end!)) return [invalid];
   }
-  // pure fraction: "1/2"
-  const frac = t.match(/^(\d+)\/(\d+)$/);
-  if (frac) return Number(frac[1]) / Number(frac[2]);
-  // decimal or integer
-  const num = Number(t);
-  return Number.isFinite(num) ? num : null;
+  return records;
 }
-
-// Find dimensions like `12 1/8" L x 11 5/8" W x 2 5/8" H` or `10 x 8 x 4`.
+// The catalog parser emits inches. Explicit units are converted, never relabeled.
+// Bare catalog dimensions retain the documented inch default; search constraints
+// separately require explicit evidence whenever the buyer states a unit.
 export function parseDimensions(input: string | null | undefined): Dimensions | null {
   if (!input) return null;
-  const raw = input;
-  // Strip extraneous whitespace.
-  const s = raw.replace(/\s+/g, " ").trim();
-
-  // Three-dim pattern: <num> [unit] x <num> [unit] x <num> [unit]
-  // Numbers can be `12`, `12.5`, `1/2`, `12 1/8`. Unit chars `"`, `'`, `in`, `L|W|H` letters allowed and dropped.
-  const numToken = `(\\d+(?:\\s+\\d+\\/\\d+)?(?:\\.\\d+)?|\\d+\\/\\d+)`;
-  const re3 = new RegExp(
-    `${numToken}\\s*["']?\\s*[A-Za-z]?\\s*x\\s*${numToken}\\s*["']?\\s*[A-Za-z]?\\s*x\\s*${numToken}\\s*["']?\\s*[A-Za-z]?`,
-    "i"
-  );
-  const m3 = s.match(re3);
-  if (m3) {
-    const a = parseFractional(m3[1]!);
-    const b = parseFractional(m3[2]!);
-    const c = parseFractional(m3[3]!);
-    if (a !== null && b !== null && c !== null) {
-      return { length_in: a, width_in: b, depth_in: c, raw };
-    }
-  }
-
-  // Two-dim pattern (mailers/envelopes): `3" W x 4.5" H`.
-  const re2 = new RegExp(
-    `${numToken}\\s*["']?\\s*[A-Za-z]?\\s*x\\s*${numToken}\\s*["']?\\s*[A-Za-z]?`,
-    "i"
-  );
-  const m2 = s.match(re2);
-  if (m2) {
-    const a = parseFractional(m2[1]!);
-    const b = parseFractional(m2[2]!);
-    if (a !== null && b !== null) {
-      return { length_in: a, width_in: b, depth_in: null, raw };
-    }
-  }
-  return null;
+  const record = dimensionEvidence(input)[0];
+  if (!record || !record.valid || record.kind === "roll" || (record.values.length !== 2 && record.values.length !== 3)) return null;
+  const scale: Record<string, number> = { "": 1, in: 1, mm: 1 / 25.4, cm: 1 / 2.54, ft: 12, yd: 36, m: 100 / 2.54 };
+  const factor = scale[record.unit];
+  if (factor === undefined) return null;
+  const values = record.values.map(n => n * factor);
+  if (!values.every(n => Number.isFinite(n) && n > 0)) return null;
+  return { length_in: values[0]!, width_in: values[1]!, depth_in: values[2] ?? null, raw: input };
 }
 
 // Try product spec metafields then title.

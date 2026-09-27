@@ -1,12 +1,15 @@
+import { bestEffort } from "../best-effort.js";
 import { z } from "zod";
-import { Env, shopifyQuery, variantIdToNumeric } from "../shopify.js";
+import { Env, ShopifyError, shopifyQuery, variantIdToNumeric } from "../shopify.js";
 import { approvalForHandle, approvalForVariantId, approvalStatus } from "../approval.js";
 import { APPROVED_CATALOG } from "../effective-approved-catalog.js";
 import { buildConversionActions, buildMatchSummary, buildNoMatchRecovery, buildProductCard, buildTrackingContext } from "../conversion.js";
 import {
   DIMENSION_EXACT_MIN_SCORE,
+  catalogSearchCandidates,
   dimensionTokens,
   normalizeText,
+  matchesRequiredSearchConstraints,
   queryIncludesSku,
   type RankableRow,
   scoreRow,
@@ -17,7 +20,7 @@ export const searchProductsSchema = {
   name: "search_products",
   title: "Search products",
   description:
-    "Use when the user names a category by keyword (e.g. 'kraft tape', 'bubble mailer', 'starter kit') with no dimensions. For dimension-based fit, prefer find_packaging_for_item. Returns products with price, stock, URL.",
+    "Search Packrift by category, SKU, or the exact dimensions of the packaging the buyer wants. Explicit dimension tuples and pack counts must match; different sizes are not exact substitutes. Returns live price, stock and product URL. When the buyer describes an item's dimensions and needs packaging that fits around it, use find_packaging_for_item instead.",
   inputSchema: {
     type: "object",
     properties: {
@@ -61,23 +64,20 @@ const QUERY = `
   }
 `;
 
-const PRODUCT_BY_HANDLE_QUERY = `
-  query ProductByHandle($handle: String!) {
-    productByHandle(handle: $handle) {
-      id
-      handle
-      title
-      vendor
-      onlineStoreUrl
-      totalInventory
-      priceRangeV2 {
-        minVariantPrice { amount currencyCode }
-        maxVariantPrice { amount currencyCode }
-      }
-      featuredImage { url }
-      variants(first: 1) { edges { node { id availableForSale } } }
-    }
+const HYDRATION_BATCH_SIZE = 20;
+const PRODUCT_BY_HANDLE_FIELDS = `
+  id
+  handle
+  title
+  vendor
+  onlineStoreUrl
+  totalInventory
+  priceRangeV2 {
+    minVariantPrice { amount currencyCode }
+    maxVariantPrice { amount currencyCode }
   }
+  featuredImage { url }
+  variants(first: 1) { edges { node { id availableForSale } } }
 `;
 
 interface ProductNode {
@@ -99,9 +99,9 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   const { query, limit } = searchProductsZod.parse(raw);
   const suppressAnalytics = isSyntheticEval(raw);
 
-  const cacheKey = `search:ai-approve:v13:${limit}:${query}`;
+  const cacheKey = `search:ai-approve:v15:${limit}:${query}`;
   if (!suppressAnalytics) {
-    const cached = await env.CATALOG_CACHE.get(cacheKey, "json");
+    const cached = await bestEffort(() => env.CATALOG_CACHE.get(cacheKey, "json"), null, 250);
     if (cached) {
       if (Array.isArray(cached)) {
         await recordSearchDemandEvents(env, query, limit, cached, true);
@@ -120,41 +120,34 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   );
 
   const rows = data.products.edges
-    .map(({ node }) => productToSearchRow(env, node))
+    .map(({ node }) => productToSearchRow(env, node, query))
     .filter((row): row is NonNullable<ReturnType<typeof productToSearchRow>> => row !== null)
     .filter((row) => searchAllowsSensitive(query) || !isSensitiveProductText(row.title));
 
   const seen = new Set(rows.map((row) => row.handle));
   const dims = dimensionTokens(query);
   const fallbackHandles = catalogFallbackHandles(query, limit * 2).filter((handle) => !seen.has(handle));
-  // Keyword queries: always merge the top locally-ranked catalog candidates
-  // into the pool (budgeted at `limit` fetches) even when the Shopify text
-  // search already filled `limit` rows — Shopify's text match routinely misses
-  // the category-correct product (e.g. use-case queries), and the ranking pass
-  // below decides the final order anyway. Dimension queries keep fetching the
-  // full fallback list (unchanged behavior: the >=250 exact gate re-applies).
-  let keywordFallbackFetches = 0;
-  for (const handle of fallbackHandles) {
-    if (!dims.length && keywordFallbackFetches >= limit) break;
-    keywordFallbackFetches += 1;
-    try {
-      const detail = await shopifyQuery<{ productByHandle: ProductNode | null }>(
-        env,
-        PRODUCT_BY_HANDLE_QUERY,
-        { handle }
-      );
-      if (!detail.productByHandle) continue;
-      const row = productToSearchRow(env, detail.productByHandle);
-      if (!row || seen.has(row.handle)) continue;
-      if (!searchAllowsSensitive(query) && isSensitiveProductText(row.title)) continue;
-      rows.push(row);
-      seen.add(row.handle);
-    } catch {
-      // A stale approved-catalog handle should not break search.
+  // Keep the previous candidate budgets and ranking order. Hydrate at most
+  // 20 aliases per request, with batches awaited sequentially.
+  const hydrationHandles = dims.length ? fallbackHandles : fallbackHandles.slice(0, limit);
+  for (let offset = 0; offset < hydrationHandles.length; offset += HYDRATION_BATCH_SIZE) {
+    const nodes = await hydrateProductBatch(env, hydrationHandles.slice(offset, offset + HYDRATION_BATCH_SIZE));
+    for (const node of nodes) {
+      if (!node) continue;
+      try {
+        const row = productToSearchRow(env, node, query);
+        if (!row || seen.has(row.handle)) continue;
+        if (!searchAllowsSensitive(query) && isSensitiveProductText(row.title)) continue;
+        rows.push(row);
+        seen.add(row.handle);
+      } catch {
+        // One stale or malformed product must not discard healthy batch peers.
+      }
     }
   }
 
   const rankedRows = rows
+    .filter((row) => matchesRequiredSearchConstraints(query, toRankableRow(row)))
     .filter((row) => searchAllowsExactOnlyMarginHold(query, row.approved_sku ?? "", row.approved_risk_flags ?? ""))
     .map((row) => ({ row, ...scoreSearchRow(query, row) }))
     .sort((a, b) => b.score - a.score);
@@ -170,7 +163,7 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
     : filteredRows.slice(0, limit).map(({ row }) => row);
 
   if (!suppressAnalytics) {
-    await env.CATALOG_CACHE.put(cacheKey, JSON.stringify(out), { expirationTtl: 300 });
+    await bestEffort(() => env.CATALOG_CACHE.put(cacheKey, JSON.stringify(out), { expirationTtl: 300 }), undefined);
   }
   if (!suppressAnalytics) {
     await recordSearchDemandEvents(
@@ -186,6 +179,38 @@ export async function searchProductsHandler(env: Env, raw: unknown) {
   return out;
 }
 
+// The shared transport rejects GraphQL responses containing errors, including
+// partial data. Retry only healthy peers when errors identify failed aliases;
+// each retry removes handles. Transport/global failures are not amplified.
+async function hydrateProductBatch(env: Env, handles: string[]): Promise<Array<ProductNode | null>> {
+  let pending = handles;
+  while (pending.length) {
+    const declarations = pending.map((_, index) => `$handle${index}: String!`).join(", ");
+    const fields = pending.map((_, index) =>
+      `p${index}: productByHandle(handle: $handle${index}) { ${PRODUCT_BY_HANDLE_FIELDS} }`
+    ).join("\n");
+    const variables = Object.fromEntries(pending.map((handle, index) => [`handle${index}`, handle]));
+    try {
+      const data = await shopifyQuery<Record<string, ProductNode | null>>(
+        env, `query SearchProductsByHandles(${declarations}) { ${fields} }`, variables
+      );
+      return pending.map((_, index) => data[`p${index}`] ?? null);
+    } catch (error) {
+      if (!(error instanceof ShopifyError) || !Array.isArray(error.details) || !error.details.length) return [];
+      const failed = new Set<number>();
+      for (const detail of error.details) {
+        const alias = Array.isArray(detail?.path) ? detail.path[0] : null;
+        const match = typeof alias === "string" ? /^p(\d+)$/.exec(alias) : null;
+        const index = match ? Number(match[1]) : -1;
+        if (index < 0 || index >= pending.length) return [];
+        failed.add(index);
+      }
+      pending = pending.filter((_, index) => !failed.has(index));
+    }
+  }
+  return [];
+}
+
 function isSyntheticEval(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const row = raw as Record<string, unknown>;
@@ -198,9 +223,7 @@ function isSearchNoMatchResult(raw: unknown): boolean {
 }
 
 function buildSearchNoMatchResult(query: string, blockedCandidateCount: number, isDimension = false) {
-  const reason = isDimension
-    ? `No AI_APPROVE product exactly matched the dimension-bearing search "${query}". Nearby keyword matches were blocked from being presented as exact substitutes.`
-    : `No AI_APPROVE product matched the discriminating terms in "${query}". Only generic-modifier (e.g. "mil", "free", "case") matches were found, which are not reliable product matches, so they were not presented as exact substitutes.`;
+  const reason = `No AI_APPROVE product met the required SKU, dimensions, units, pack count or numeric specifications in "${query}", or matched its discriminating product terms. Candidates without the required evidence were not presented as exact substitutes.`;
   return {
     results: [],
     match: buildMatchSummary({
@@ -300,11 +323,11 @@ function summarizeSearchRows(results: unknown[]): Array<{ sku: string; handle: s
 async function recordAiSalesEvent(env: Env, payload: Record<string, unknown>) {
   const receivedAt = new Date().toISOString();
   try {
-    await env.CATALOG_CACHE.put(
+    await bestEffort(() => env.CATALOG_CACHE.put(
       `${AI_SALES_EVENT_PREFIX}/${receivedAt.slice(0, 10)}/${receivedAt}-${crypto.randomUUID()}.json`,
       JSON.stringify({ ...payload, received_at: receivedAt }),
       { expirationTtl: AI_SALES_EVENT_TTL_SECONDS }
-    );
+    ), undefined);
   } catch {
     // Search should never fail because analytics storage is temporarily unavailable.
   }
@@ -320,7 +343,7 @@ function safeEventText(value: unknown, maxLength = 180): string {
     .slice(0, maxLength);
 }
 
-function productToSearchRow(env: Env, node: ProductNode) {
+function productToSearchRow(env: Env, node: ProductNode, query: string) {
   const firstVariant = node.variants.edges[0]?.node;
   const approval =
     approvalForHandle(node.handle) ??
@@ -367,9 +390,11 @@ function productToSearchRow(env: Env, node: ProductNode) {
       source: "search_products",
       matchType: "keyword_or_exact_search",
       confidence: 0.82,
-      matchedFields: ["query", "title", "sku", "handle", "family"],
-      exactTermsMatched: searchTokens(`${approval.sku} ${node.handle} ${node.title}`).filter((token) =>
-        normalizeText(`${node.handle} ${node.title} ${approval.sku}`).includes(token)
+      matchedFields: [["title", node.title], ["sku", approval.sku], ["handle", node.handle], ["family", approval.family]]
+        .filter(([, value]) => searchTokens(query).some(token => searchTokens(value ?? "").includes(token)))
+        .map(([field]) => field!),
+      exactTermsMatched: searchTokens(query).filter((token) =>
+        searchTokens(`${node.handle} ${node.title} ${approval.sku}`).includes(token)
       ).slice(0, 12),
       reason: "Search result is AI_APPROVE-gated and ranked by exact SKU, handle, dimension, and title tokens.",
     }),
@@ -389,21 +414,25 @@ function toRankableRow(row: NonNullable<ReturnType<typeof productToSearchRow>>):
   };
 }
 
+// Candidate identities only: every request still hydrates live Shopify facts.
+// The approved catalog is bundled and unchanged for this module's lifetime.
+const FALLBACK_HANDLES = new Map<string, readonly string[]>();
 function catalogFallbackHandles(query: string, limit: number): string[] {
+  const cacheKey = JSON.stringify([query, limit]);
+  const cached = FALLBACK_HANDLES.get(cacheKey);
+  if (cached) {
+    FALLBACK_HANDLES.delete(cacheKey); FALLBACK_HANDLES.set(cacheKey, cached);
+    return [...cached];
+  }
   const dims = dimensionTokens(query);
   const allowSensitive = searchAllowsSensitive(query);
-  const scored = APPROVED_CATALOG.map((item) => {
+  const scored = catalogSearchCandidates(query).map((item) => {
+    if (!matchesRequiredSearchConstraints(query, item)) return { handle: item.handle, score: 0, qualifies: false };
     if (!allowSensitive && isSensitiveProductText(item.title)) return { handle: item.handle, score: 0, qualifies: false };
     if (!searchAllowsExactOnlyMarginHold(query, item.sku, item.riskFlags)) {
       return { handle: item.handle, score: 0, qualifies: false };
     }
-    const { score, qualifies } = scoreRow(query, {
-      sku: item.sku,
-      handle: item.handle,
-      title: item.title,
-      family: item.family,
-      searchAliases: item.searchAliases,
-    });
+    const { score, qualifies } = scoreRow(query, item);
     return { handle: item.handle, score, qualifies };
   })
     // Dimension queries can still pull near-dimension candidates into the fetch
@@ -412,7 +441,12 @@ function catalogFallbackHandles(query: string, limit: number): string[] {
     // rows ("mil"/"free" tape) never enter the candidate set.
     .filter((row) => (dims.length ? row.score > 0 : row.qualifies))
     .sort((a, b) => b.score - a.score);
-  return scored.slice(0, Math.max(limit, 1)).map((row) => row.handle);
+  const handles = scored.slice(0, Math.max(limit, 1)).map((row) => row.handle);
+  if (query.length <= 1000) {
+    FALLBACK_HANDLES.set(cacheKey, Object.freeze([...handles]));
+    if (FALLBACK_HANDLES.size > 40) FALLBACK_HANDLES.delete(FALLBACK_HANDLES.keys().next().value!);
+  }
+  return handles;
 }
 
 function searchAllowsExactOnlyMarginHold(query: string, sku: string, riskFlags: string | null): boolean {

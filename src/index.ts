@@ -1,6 +1,9 @@
+import { bestEffort } from "./best-effort.js";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { shopifyQuery, type Env } from "./shopify.js";
+import { pdpEstimate } from "./pdp-estimate.js";
+import { subscribe } from "./subscribe.js";
 import { serverCard } from "./server-card.js";
 import { capabilityCard } from "./capability-card.js";
 import { agentWebManifest } from "./agent-web-manifest.js";
@@ -2867,11 +2870,11 @@ async function maybeRecordRouteLandingTelemetry(
 async function recordAiSalesEvent(env: Env, payload: Record<string, unknown>): Promise<void> {
   const receivedAt = new Date().toISOString();
   try {
-    await env.CATALOG_CACHE.put(
+    await bestEffort(() => env.CATALOG_CACHE.put(
       `${AI_SALES_EVENT_PREFIX}/${receivedAt.slice(0, 10)}/${receivedAt}-${crypto.randomUUID()}.json`,
       JSON.stringify({ ...payload, received_at: receivedAt }),
       { expirationTtl: AI_SALES_EVENT_TTL_SECONDS }
-    );
+    ), undefined);
   } catch {
     // Telemetry must never affect buyer or crawler access.
   }
@@ -16068,7 +16071,7 @@ async function readResourceText(env: Env, uri: string): Promise<string> {
 function aiSitemapXml(): string {
   const now = new Date().toISOString().slice(0, 10);
   const urls = AI_DISCOVERY_URLS.map(
-    (url) => `  <url><loc>${url}</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq></url>`
+    (url) => `  <url><loc>${escapeXml(url)}</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq></url>`
   ).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
@@ -21010,6 +21013,12 @@ app.get("/ai/purchase-paths.jsonl", (c) =>
     ...PURCHASE_PATHS_HEADERS,
   })
 );
+
+// Product-page shipping estimate for the storefront (2026-09-06). Additive; CORS-limited to packrift.com.
+app.options("/estimate", (c) => pdpEstimate(c.env, c.req.raw));
+app.get("/estimate", (c) => pdpEstimate(c.env, c.req.raw));
+app.options("/subscribe", (c) => subscribe(c.env, c.req.raw));
+app.post("/subscribe", (c) => subscribe(c.env, c.req.raw));
 
 app.get("/health", async (c) => {
   const url = new URL(c.req.url);

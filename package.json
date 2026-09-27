@@ -28,7 +28,7 @@
   "scripts": {
     "prebuild": "node scripts/check-public-doc-hygiene.mjs",
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsc -p tsconfig.build.json && node --test scripts/test-search-ranking.mjs scripts/test-experiment-approved-catalog.mjs scripts/test-query-alias-overrides.mjs scripts/test-input-coercion.mjs",
+    "test": "tsc -p tsconfig.build.json && node --test scripts/test-search-ranking.mjs scripts/test-experiment-approved-catalog.mjs scripts/test-query-alias-overrides.mjs scripts/test-input-coercion.mjs scripts/test-quote-context.mjs scripts/test-search-constraints.mjs scripts/test-search-hydration.mjs scripts/test-muse-attribution.mjs scripts/test-search-evidence.mjs scripts/test-shopify-deadline.mjs scripts/test-best-effort.mjs scripts/test-cpu-equivalence.mjs",
     "eval:ranking": "tsc -p tsconfig.build.json && node scripts/eval-search-ranking.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

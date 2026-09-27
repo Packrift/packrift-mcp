@@ -13,12 +13,23 @@ export const getShippingEstimateSchema = {
   name: "get_shipping_estimate",
   title: "Get shipping estimate",
   description:
-    "Use when the buyer asks shipping cost for selected catalog variants. Required arguments: destination_postal_code, country (US|CA), and items with variant_id as a numeric Shopify variant ID string plus qty, for example {\"variant_id\":\"53475949216112\",\"qty\":1}. Never send variant_id as a number.",
+    "Use when the buyer asks shipping cost for selected catalog variants. Provide destination_address with address1, city and province_code for an estimate using the supplied address; otherwise the estimate uses postal-code placeholders and is approximate. Addresses are not validated. Cart shipping discounts and final tax are not evaluated; Shopify cart and checkout are authoritative. Required arguments: destination_postal_code, country (US|CA), and items with variant_id as a numeric Shopify variant ID string plus qty, for example {\"variant_id\":\"53475949216112\",\"qty\":1}. Never send variant_id as a number.",
   inputSchema: {
     type: "object",
     properties: {
       destination_postal_code: { type: "string" },
       country: { type: "string", enum: ["US", "CA"] },
+      destination_address: {
+        type: "object",
+        description: "Optional address details used with destination_postal_code and country. Supply all three fields or omit this object. Values are passed through, not address-validated.",
+        properties: {
+          address1: { type: "string", minLength: 1 },
+          city: { type: "string", minLength: 1 },
+          province_code: { type: "string", minLength: 1, description: "State or province code, for example WI or ON." },
+        },
+        required: ["address1", "city", "province_code"],
+        additionalProperties: false,
+      },
       items: {
         type: "array",
         minItems: 1,
@@ -46,9 +57,16 @@ export const getShippingEstimateSchema = {
   annotations: { readOnlyHint: true, openWorldHint: true },
 };
 
+const addressField = z.string().refine((value) => value.trim().length > 0, "Address fields must not be blank");
+
 export const getShippingEstimateZod = z.object({
   destination_postal_code: z.string().min(3),
   country: z.enum(["US", "CA"]),
+  destination_address: z.object({
+    address1: addressField,
+    city: addressField,
+    province_code: addressField,
+  }).strict().optional(),
   items: z.array(tolerantLineItemZod).min(1),
   journey_id: z.string().min(1).max(120).optional(),
   result_set_id: z.string().min(1).max(120).optional(),
@@ -93,17 +111,18 @@ export async function getShippingEstimateHandler(env: Env, raw: unknown) {
   const input = getShippingEstimateZod.parse(raw);
   assertApprovedVariantIds(input.items.map((it) => it.variant_id));
 
+  const address = input.destination_address;
   const draftInput = {
     lineItems: input.items.map((it) => ({
       variantId: numericToVariantGid(it.variant_id),
       quantity: it.qty,
     })),
     shippingAddress: {
-      address1: "1 Main Street",
-      city: input.country === "US" ? "Anywhere" : "Toronto",
+      address1: address ? address.address1 : "1 Main Street",
+      city: address ? address.city : input.country === "US" ? "Anywhere" : "Toronto",
       zip: input.destination_postal_code,
       country: input.country === "US" ? "United States" : "Canada",
-      provinceCode: input.country === "US" ? null : null,
+      provinceCode: address ? address.province_code : null,
     },
   };
 
@@ -130,6 +149,15 @@ export async function getShippingEstimateHandler(env: Env, raw: unknown) {
     price: Number(r.price.amount),
     currency: r.price.currencyCode,
     estimated_days: null,
+    destination_basis: address ? "provided_address" : "postal_code_only",
+    complete_address_provided: Boolean(address),
+    address_validated: false,
+    discounts_evaluated: false,
+    price_is_final: false,
+    final_price_authority: "Shopify cart and checkout",
+    estimate_note: address
+      ? "Shipping estimate using the supplied address fields, which have not been validated. Cart shipping discounts and final tax are not evaluated. Verify the buyer's Shopify cart and checkout for the final payable amount."
+      : "Approximate postal-code-only shipping estimate using placeholder street and city values. Supply destination_address for an estimate using the buyer's address. Cart shipping discounts and final tax are not evaluated; verify Shopify cart and checkout.",
     continuity_key: tracking.continuity_key,
     tracking,
     post_confirmation_handoff: buildPostConfirmationHandoff({

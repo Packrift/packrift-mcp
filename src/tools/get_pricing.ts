@@ -5,9 +5,9 @@ import { buildPostConfirmationHandoff, buildTrackingContext } from "../conversio
 
 export const getPricingSchema = {
   name: "get_pricing",
-  title: "Get live pricing",
+  title: "Get live base pricing",
   description:
-    "Use to confirm live unit price and line total before cart handoff. Required argument: variant_ids as an array of numeric Shopify variant IDs encoded as strings, for example [\"53475949216112\"]. Optional quantity defaults to 1. Never send variant_ids as numbers. Never cached.",
+    "Use to confirm live base catalog unit price and merchandise line total before cart handoff. Cart discounts, shipping and tax are not evaluated; the buyer's Shopify cart and checkout determine the final payable amount. Required argument: variant_ids as an array of numeric Shopify variant IDs encoded as strings, for example [\"53475949216112\"]. Optional quantity defaults to 1. Never send variant_ids as numbers. Never cached.",
   inputSchema: {
     type: "object",
     properties: {
@@ -69,11 +69,23 @@ export async function getPricingHandler(env: Env, raw: unknown) {
   const ids = variant_ids.map(numericToVariantGid);
   const data = await shopifyQuery<{ nodes: Array<VariantNode | null> }>(env, QUERY, { ids });
 
+  const pricingContext = {
+    pricing_basis: "shopify_variant_base_price",
+    discounts_evaluated: false,
+    final_cart_total: null,
+    final_price_authority: "Shopify cart and checkout",
+    pricing_note:
+      "Base merchandise pricing before cart discounts, shipping and tax. Automatic or code-based discounts may apply in the buyer's Shopify cart. Verify the cart and checkout before quoting the final payable amount.",
+  };
+
   return data.nodes.map((n, i) => {
     if (!n) {
       return {
+        ...pricingContext,
         variant_id: variant_ids[i],
         unit_price: null,
+        base_unit_price: null,
+        base_line_total: null,
         currency: null,
         available_quantity: 0,
         line_total: null,
@@ -92,10 +104,13 @@ export async function getPricingHandler(env: Env, raw: unknown) {
       matchType: match_type ?? "pricing_check",
     });
     return {
+      ...pricingContext,
       variant_id: variantId,
       ...approvalStatus(approvalForVariantId(variantId)),
       continuity_key: tracking.continuity_key,
       unit_price: unit,
+      base_unit_price: unit,
+      base_line_total: Number((unit * quantity).toFixed(2)),
       currency: n.product.priceRangeV2.minVariantPrice.currencyCode,
       available_quantity: n.inventoryQuantity ?? 0,
       available: n.availableForSale,

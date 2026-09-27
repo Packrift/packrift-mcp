@@ -119,17 +119,11 @@ test("box query: top exact box clears the dimension exact gate (>=250)", () => {
   assert.ok(ranked[0].score >= 250, `top box score ${ranked[0].score} must clear the 250 exact gate`);
 });
 
-test("box query: exact box outscores same-ECT boxes of other dimensions", () => {
-  const ranked = rank(BOX_QUERY);
-  const top = ranked[0];
-  const otherEct48 = ranked.find(
-    (r) => /ECT-48/i.test(r.item.title) && !/24\s*x\s*20\s*x\s*12/i.test(r.item.title)
-  );
-  assert.ok(otherEct48, "expected at least one other ECT-48 box in candidates");
-  assert.ok(
-    top.score > otherEct48.score,
-    `exact dim box (${top.score}) must beat other ECT-48 (${otherEct48.score})`
-  );
+test("box query: other dimensions are rejected rather than ranked as exact", () => {
+  const other = CATALOG.find(row => /ECT-48/i.test(row.title) && !/24\s*x\s*20\s*x\s*12/i.test(row.title));
+  assert.ok(other);
+  assert.equal(scoreRow(BOX_QUERY, other).score, 0);
+  assert.equal(scoreRow(BOX_QUERY, other).qualifies, false);
 });
 
 test("category keyword: 'bubble mailers' still returns mailers (family bonus protects category search)", () => {
@@ -226,7 +220,7 @@ test("use-case expansion: 'packaging for shipping t-shirts' surfaces mailers", (
   );
 });
 
-test("spec penalty cap: exact-dimension match with conflicting specs still clears the 250 gate", () => {
+test("hard numeric specs: conflicting thickness, gauge and yardage are rejected", () => {
   // Synthetic worst case: dims match (+300) but mil, gauge, inch, and yardage all conflict.
   const row = {
     sku: "SYNTHSPEC1",
@@ -235,5 +229,6 @@ test("spec penalty cap: exact-dimension match with conflicting specs still clear
     family: "poly_bags",
   };
   const scored = scoreRow('6x18 4 mil 120 gauge 3 inch 110 yard bags', row);
-  assert.ok(scored.score >= 250, `dim match must survive spec penalties, got ${scored.score}`);
+  assert.equal(scored.score, 0);
+  assert.equal(scored.qualifies, false);
 });

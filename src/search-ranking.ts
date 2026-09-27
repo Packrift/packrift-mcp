@@ -31,13 +31,15 @@
 // returning the right box. This module only changes how loose query *tokens*
 // are weighted and gated.
 
+import { dimensionEvidence } from "./dimensions.js";
 import { APPROVED_CATALOG } from "./effective-approved-catalog.js";
 
-export const RANKING_VERSION = "idf-spec-attrs-v3-2026-07-12";
+export const RANKING_VERSION = "strict-spec-evidence-v4-2026-09-23";
 
 /** Conversational filler removed before tokenizing. */
 export const STOP_WORDS = new Set([
   "find",
+  "sku",
   "packrift",
   "product",
   "products",
@@ -155,11 +157,202 @@ export function searchTokens(value: string): string[] {
 }
 
 export function dimensionTokens(value: string): string[] {
-  return [
-    ...normalizeText(value).matchAll(
-      /\b\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?(?:\s*x\s*\d+(?:\.\d+)?)?\b/g
-    ),
-  ].map((match) => match[0]!.replace(/\s+/g, ""));
+  return dimensionEvidence(value).filter(record => record.valid && record.kind !== "roll").map(record => record.values.join("x"));
+}
+
+const DIMENSION_NUMBER = "(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?|\\.\\d+)";
+const DIMENSION_SEPARATOR = "\\s*(?:[x×]|\\bby\\b)\\s*";
+
+/** A stated range is not a single exact dimension or numeric product attribute. */
+function hasUnsupportedSpecRange(value: string): boolean {
+  const range = `${DIMENSION_NUMBER}\\s*(?:[-–]|\\bto\\b)\\s*${DIMENSION_NUMBER}`;
+  return new RegExp(`${range}\\s*(?:mil\\b|gauge\\b|ga\\b|yds?\\b|yards?\\b|ft\\b|feet\\b|foot\\b|inches\\b|inch\\b|in\\b|["\u2033]|${DIMENSION_SEPARATOR})`, "i").test(value);
+}
+
+const CATALOG_BY_SKU = new Map(APPROVED_CATALOG.map(row => [row.sku.trim().toLowerCase(), row]));
+const CATALOG_ROWS = Object.freeze([...APPROVED_CATALOG]);
+const CATALOG_ORDER = new Map(CATALOG_ROWS.map((row, index) => [row, index]));
+
+/** Explicit SKU intent is an identity constraint, not an ordinary keyword. */
+function requestedSku(query: string): string | null {
+  const explicit = query.match(/(?:^|\s)sku\s*[:#]?\s+([a-z0-9][a-z0-9._/-]*)\b/i)
+    ?? query.match(/(?:^|\s)sku\s*[:#]\s*([a-z0-9][a-z0-9._/-]*)\b/i);
+  if (explicit) return explicit[1]!.toLowerCase();
+  const trimmed = query.trim().toLowerCase();
+  return CATALOG_BY_SKU.has(trimmed) ? trimmed : null;
+}
+
+/** Explicit sale-unit count only; "100 boxes" is an order quantity, not pack size. */
+export function explicitPackCount(value: string): number | null {
+  const text = value.toLowerCase();
+  const after = text.match(/\b(\d+)\s*(?:-\s*|\/\s*|per\s+)?(?:pack|bundle|case)\b/);
+  const before = text.match(/\b(?:packs?|bundles?|cases?)\s+of\s+(\d+)\b/);
+  const count = Number(before?.[1] ?? after?.[1]);
+  return Number.isInteger(count) && count > 0 ? count : null;
+}
+
+// Only parsed text is cached: no prices, inventory, eligibility decisions or
+// output rows. Exact raw strings guard dynamic/hydrated rows against stale facts.
+interface RowFeatures {
+  sku: string; handle: string; title: string; family: string; aliases: string | undefined;
+  dimensions?: ReturnType<typeof dimensionEvidence>;
+  specs?: SpecAttributes;
+  pack?: number | null;
+  scoring?: {
+    titleNorm: string; handleNorm: string; aliasPhrases: string[];
+    rowTokens: string[]; titleTokens: string[]; rowDimensions?: Set<string>;
+    exactSku?: RegExp; prefixedSku?: RegExp; skuNorm: string; numericSku: boolean;
+  };
+}
+const ROW_FEATURES = new WeakMap<RankableRow, RowFeatures>();
+function rowFeatures(row: RankableRow): RowFeatures {
+  const cached = ROW_FEATURES.get(row);
+  if (cached && cached.sku === row.sku && cached.handle === row.handle && cached.title === row.title
+    && cached.family === row.family && cached.aliases === row.searchAliases) return cached;
+  const next: RowFeatures = { sku: row.sku, handle: row.handle, title: row.title, family: row.family, aliases: row.searchAliases };
+  ROW_FEATURES.set(row, next);
+  return next;
+}
+function rowDimensionEvidence(row: RowFeatures) {
+  if (!row.dimensions) {
+    const title = dimensionEvidence(row.title).filter(record => record.kind !== "roll");
+    row.dimensions = title.length ? title : dimensionEvidence(row.handle).filter(record => record.kind !== "roll");
+  }
+  return row.dimensions;
+}
+function rowSpecsForScoring(row: RowFeatures): SpecAttributes { return row.specs ??= parseSpecAttributes(row.title); }
+function scoringFeatures(row: RankableRow, cached: RowFeatures) {
+  if (cached.scoring) return cached.scoring;
+  const skuNorm = normalizeText(row.sku);
+  return cached.scoring = {
+    titleNorm: normalizeText(row.title), handleNorm: normalizeText(row.handle),
+    aliasPhrases: String(row.searchAliases ?? "").split("||").map(normalizeText).filter(Boolean),
+    rowTokens: [...new Set(searchTokens(rowHaystack(row)))], titleTokens: [...new Set(searchTokens(row.title))],
+    skuNorm, numericSku: /^\d+$/.test(skuNorm.replace(/\s+/g, "")),
+  };
+}
+function matchesFeatureSku(features: NonNullable<RowFeatures["scoring"]>, query: string, hasDimensions: boolean): boolean {
+  if (!features.skuNorm || !query.includes(features.skuNorm)) return false;
+  // Most keyword queries contain no SKU at all. Compile identity regexes only
+  // for possible literal matches instead of retaining two per catalog product.
+  if (!features.exactSku) {
+    const pattern = features.skuNorm.split(" ").filter(Boolean).map(escapeRegExp).join("\\s+");
+    features.exactSku = new RegExp(`\\b${pattern}\\b`);
+    features.prefixedSku = new RegExp(`\\bsku\\s+${pattern}\\b`);
+  }
+  return features.numericSku
+    ? features.prefixedSku!.test(query) || (!hasDimensions && query === features.skuNorm)
+    : features.exactSku.test(query) || features.prefixedSku!.test(query);
+}
+function buildCompiledQuery(query: string) {
+  const evidence = dimensionEvidence(query);
+  const required = evidence.filter(record => record.kind !== "roll");
+  const queryNorm = normalizeText(query);
+  const queryTokens = searchTokens(query);
+  const specs = parseSpecAttributes(query);
+  const finishValues = required.length ? [...query.toLowerCase().matchAll(/\b(kraft|white|clear|black)\b/g)].map(m => m[1]!) : [];
+  const ect = required.length ? query.match(/\bect\s*[-#]?\s*(\d+)\b/i) || query.match(/\b(\d+)\s*[-#]?\s*ect\b/i) : null;
+  return {
+    queryNorm, queryTokens, specs, required, sku: requestedSku(query), pack: explicitPackCount(query),
+    invalid: hasUnsupportedSpecRange(query) || evidence.some(record => !record.valid),
+    dims: evidence.filter(record => record.valid && record.kind !== "roll").map(record => record.values.join("x")),
+    finish: new Set(finishValues).size === 1 ? new RegExp(`\\b${finishValues[0]}\\b`, "i") : null,
+    ect: ect ? new RegExp(`\\b(?:ect\\s*[-#]?\\s*${ect[1]}|${ect[1]}\\s*[-#]?\\s*ect)\\b`, "i") : null,
+    hasSpecs: specs.mil !== null || specs.gauge !== null || specs.yards !== null || specs.feet !== null || specs.inches.length > 0,
+    expansions: USE_CASE_EXPANSIONS.filter(expansion => expansion.trigger.test(queryNorm)),
+    weights: new Map<string, number>(),
+  };
+}
+type CompiledQuery = ReturnType<typeof buildCompiledQuery>;
+const QUERY_FEATURES = new Map<string, CompiledQuery>();
+function compiledQuery(query: string): CompiledQuery {
+  const cached = QUERY_FEATURES.get(query);
+  if (cached) { QUERY_FEATURES.delete(query); QUERY_FEATURES.set(query, cached); return cached; }
+  const prepared = buildCompiledQuery(query);
+  // Bound query retention by both count and length. Long queries still work.
+  if (query.length <= 1000) {
+    QUERY_FEATURES.set(query, prepared);
+    if (QUERY_FEATURES.size > 32) QUERY_FEATURES.delete(QUERY_FEATURES.keys().next().value!);
+  }
+  return prepared;
+}
+function queryTokenWeight(query: CompiledQuery, token: string): number {
+  let weight = query.weights.get(token);
+  if (weight === undefined) { weight = tokenWeight(token); query.weights.set(token, weight); }
+  return weight;
+}
+function matchesCompiledConstraints(query: CompiledQuery, row: RankableRow, cached: RowFeatures): boolean {
+  if (query.sku && row.sku.trim().toLowerCase() !== query.sku) return false;
+  if (query.invalid) return false;
+  if (query.required.length) {
+    const actual = rowDimensionEvidence(cached);
+    if (query.required.some(wanted => !actual.some(candidate => candidate.valid
+      && candidate.values.length === wanted.values.length
+      && candidate.values.every((n, i) => Math.abs(n - wanted.values[i]!) < 1e-8)
+      && (!wanted.unit || wanted.unit === candidate.unit)))) return false;
+  }
+  if (query.pack !== null) {
+    if (cached.pack === undefined) cached.pack = explicitPackCount(row.title);
+    if (cached.pack !== query.pack) return false;
+  }
+  if (query.hasSpecs) {
+    const actual = rowSpecsForScoring(cached);
+    for (const key of ["mil", "gauge", "yards", "feet"] as const) {
+      if (query.specs[key] !== null && (actual[key] === null || !specEqual(query.specs[key]!, actual[key]!))) return false;
+    }
+    if (query.specs.inches.length && query.specs.inches.some(wanted => !actual.inches.some(value => specEqual(wanted, value)))) return false;
+  }
+  if (query.finish && !query.finish.test(row.title)) return false;
+  if (query.ect && !query.ect.test(row.title)) return false;
+  return true;
+}
+type CatalogItem = (typeof APPROVED_CATALOG)[number];
+let CATALOG_DIMENSIONS: Map<string, readonly CatalogItem[]> | null = null;
+/** Narrow only by necessary identity/tuple conditions; final constraints still run.
+ * The bundled approved catalog is immutable for this Worker build. Live Shopify
+ * rows are never indexed and are rechecked using their own current text. */
+export function catalogSearchCandidates(query: string): readonly CatalogItem[] {
+  const prepared = compiledQuery(query);
+  if (prepared.invalid) return [];
+  if (prepared.sku) {
+    const item = CATALOG_BY_SKU.get(prepared.sku);
+    return item ? [item] : [];
+  }
+  if (!prepared.required.length) return CATALOG_ROWS;
+  // Bucket only ordinary 1–3 axis measurements. Adjacent buckets retain the
+  // existing 1e-8 numeric tolerance instead of demanding identical float text.
+  const scale = 1e7;
+  if (prepared.required.some(record => record.values.length > 3 || record.values.some(value => !Number.isSafeInteger(Math.round(value * scale))))) return CATALOG_ROWS;
+  if (!CATALOG_DIMENSIONS) {
+    const index = new Map<string, CatalogItem[]>();
+    for (const item of CATALOG_ROWS) {
+      const keys = new Set(rowDimensionEvidence(rowFeatures(item)).filter(record => record.valid).map(record => record.values.map(value => Math.round(value * scale)).join("x")));
+      for (const key of keys) {
+        const rows = index.get(key) ?? [];
+        rows.push(item); index.set(key, rows);
+      }
+    }
+    CATALOG_DIMENSIONS = new Map([...index].map(([key, rows]) => [key, Object.freeze(rows)]));
+  }
+  let candidates: readonly CatalogItem[] | undefined;
+  for (const wanted of prepared.required) {
+    let keys: number[][] = [[]];
+    for (const value of wanted.values) {
+      const center = Math.round(value * scale);
+      keys = keys.flatMap(prefix => [-1, 0, 1].map(delta => [...prefix, center + delta]));
+    }
+    const matches = new Set(keys.flatMap(key => CATALOG_DIMENSIONS!.get(key.join("x")) ?? []));
+    if (!matches.size) return [];
+    // Posting unions retain original catalog order, including equal-score ties.
+    const rows = [...matches].sort((a, b) => CATALOG_ORDER.get(a)! - CATALOG_ORDER.get(b)!);
+    if (!candidates || rows.length < candidates.length) candidates = rows;
+  }
+  return candidates ?? CATALOG_ROWS;
+}
+
+/** Required dimensions and explicit pack counts cannot be compensated by token scores. */
+export function matchesRequiredSearchConstraints(query: string, row: RankableRow): boolean {
+  return matchesCompiledConstraints(compiledQuery(query), row, rowFeatures(row));
 }
 
 export function escapeRegExp(value: string): string {
@@ -180,43 +373,56 @@ export interface SpecAttributes {
   /** Standalone inch-denominated measurements (tape/film widths, bubble size). */
   inches: number[];
   yards: number | null;
+  feet: number | null;
 }
 
-const MIL_RE = /(?<![\d.])(\d+(?:\.\d+)?)\s*mil\b/;
-const GAUGE_RE = /(?<![\d.])(\d+(?:\.\d+)?)\s*(?:ga|gauge)\b/;
-const YARD_RE = /(?<![\d.])(\d+(?:\.\d+)?)\s*(?:yds?|yards?)\b/;
+const MIL_RE = new RegExp(`(?<![\\d./-])(${DIMENSION_NUMBER})\\s*[-–]?\\s*mil\\b`);
+const GAUGE_RE = new RegExp(`(?<![\\d./-])(${DIMENSION_NUMBER})\\s*[-–]?\\s*(?:ga|gauge)\\b`);
+const YARD_RE = new RegExp(`(?<![\\d./-])(${DIMENSION_NUMBER})\\s*[-–]?\\s*(?:yds?|yards?)\\b`);
+const FEET_RE = new RegExp(`(?<![\\d./-])(${DIMENSION_NUMBER})\\s*[-–]?\\s*(?:ft\\b|feet\\b|foot\\b|['′])`);
 // Mixed/pure fractions with an explicit inch unit: `1 1/2"`, `3/16"`, `1/2 inch`.
 const FRACTION_INCH_RE = /(?<![\d/.])(?:(\d+)\s+)?(\d+)\/(\d+)\s*(?:"|in\b|inch(?:es)?\b)/g;
 // Plain numbers with an explicit inch unit, not preceded by x/digit/slash/dot
 // (excludes WxL members and fraction denominators).
-const PLAIN_INCH_RE = /(?<![\dx/.])(\d+(?:\.\d+)?)\s*(?:"|in\b|inch(?:es)?\b)/g;
+const PLAIN_INCH_RE = /(?<![\dx/.-])(\d+(?:\.\d+)?|\.\d+)\s*[-–]?\s*(?:"|in\b|inch(?:es)?\b)/g;
+
+function specNumber(value: string): number {
+  const fraction = value.trim().match(/^(?:(\d+)\s+)?(\d+)\/(\d+)$/);
+  return fraction ? Number(fraction[1] || 0) + Number(fraction[2]) / Number(fraction[3]) : Number(value);
+}
 
 export function parseSpecAttributes(value: string): SpecAttributes {
   const text = String(value ?? "").toLowerCase();
   const mil = text.match(MIL_RE);
   const gauge = text.match(GAUGE_RE);
-  const yards = text.match(YARD_RE);
   const inches: number[] = [];
-  for (const match of text.matchAll(FRACTION_INCH_RE)) {
+  const tupleSpans = dimensionEvidence(text).filter(record => record.valid && record.kind !== "roll" && record.start !== undefined);
+  const widthText = text.split("").map((char, index) =>
+    tupleSpans.some(span => index >= span.start! && index < span.end!) ? " " : char
+  ).join("");
+  const yards = widthText.match(YARD_RE);
+  const feet = widthText.match(FEET_RE);
+  for (const match of widthText.matchAll(FRACTION_INCH_RE)) {
     const whole = match[1] ? Number(match[1]) : 0;
     const num = Number(match[2]);
     const den = Number(match[3]);
     if (den > 0) inches.push(whole + num / den);
   }
-  const fractionSpans: Array<{ start: number; end: number }> = [...text.matchAll(FRACTION_INCH_RE)].map((m) => ({
+  const fractionSpans: Array<{ start: number; end: number }> = [...widthText.matchAll(FRACTION_INCH_RE)].map((m) => ({
     start: m.index ?? 0,
     end: (m.index ?? 0) + m[0].length,
   }));
-  for (const match of text.matchAll(PLAIN_INCH_RE)) {
+  for (const match of widthText.matchAll(PLAIN_INCH_RE)) {
     const at = match.index ?? 0;
     if (fractionSpans.some((span) => at >= span.start && at < span.end)) continue;
     inches.push(Number(match[1]));
   }
   return {
-    mil: mil ? Number(mil[1]) : null,
-    gauge: gauge ? Number(gauge[1]) : null,
+    mil: mil ? specNumber(mil[1]!) : null,
+    gauge: gauge ? specNumber(gauge[1]!) : null,
     inches,
-    yards: yards ? Number(yards[1]) : null,
+    yards: yards ? specNumber(yards[1]!) : null,
+    feet: feet ? specNumber(feet[1]!) : null,
   };
 }
 
@@ -264,7 +470,7 @@ export function queryIncludesSku(queryNorm: string, sku: string, hasDimensions: 
   const exactSku = new RegExp(`\\b${skuPattern}\\b`);
   const prefixedSku = new RegExp(`\\bsku\\s+${skuPattern}\\b`);
   const numericOnlySku = /^\d+$/.test(skuNorm.replace(/\s+/g, ""));
-  if (hasDimensions && numericOnlySku) return prefixedSku.test(queryNorm);
+  if (numericOnlySku) return prefixedSku.test(queryNorm) || (!hasDimensions && queryNorm === skuNorm);
   return exactSku.test(queryNorm) || prefixedSku.test(queryNorm);
 }
 
@@ -361,28 +567,21 @@ function rowHaystack(row: RankableRow): string {
  * scorer exactly; only the token contribution is IDF-weighted + phrase-aware.
  */
 export function scoreRow(query: string, row: RankableRow): ScoredSignal {
-  const queryNorm = normalizeText(query);
-  const haystack = rowHaystack(row);
-  const haystackNorm = normalizeText(haystack);
-  const titleNorm = normalizeText(row.title);
-  const aliasPhrases = String(row.searchAliases ?? "")
-    .split("||")
-    .map((value) => normalizeText(value))
-    .filter(Boolean);
-  const compact = haystackNorm.replace(/\s+/g, "");
-  const queryTokens = searchTokens(query);
-  const dims = dimensionTokens(query);
-  const rowTokens = new Set(searchTokens(haystack));
-  const titleTokens = new Set(searchTokens(row.title));
+  const prepared = compiledQuery(query);
+  const cached = rowFeatures(row);
+  if (!matchesCompiledConstraints(prepared, row, cached)) return { score: 0, qualifies: false, matchedDiscriminating: false };
+  const { queryNorm, queryTokens, dims } = prepared;
+  const features = scoringFeatures(row, cached);
+  const { titleNorm, aliasPhrases, rowTokens, titleTokens } = features;
 
   let score = 0;
   let structural = false;
 
-  if (queryIncludesSku(queryNorm, row.sku, dims.length > 0)) {
+  if (matchesFeatureSku(features, queryNorm, dims.length > 0)) {
     score += 1000;
     structural = true;
   }
-  if (row.handle && queryNorm.includes(normalizeText(row.handle))) {
+  if (row.handle && queryNorm.includes(features.handleNorm)) {
     score += 900;
     structural = true;
   }
@@ -401,7 +600,8 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
     structural = true;
   }
   for (const dim of dims) {
-    if (compact.includes(dim)) {
+    const rowDimensions = features.rowDimensions ??= new Set(rowDimensionEvidence(cached).filter(record => record.valid).map(record => record.values.join("x")));
+    if (rowDimensions.has(dim)) {
       score += 300;
       structural = true;
     }
@@ -410,9 +610,9 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
   // IDF-weighted token contribution (replaces the old flat +20 per token).
   let matchedDiscriminating = false;
   for (const token of queryTokens) {
-    if (!rowTokens.has(token)) continue;
-    let weight = tokenWeight(token);
-    if (titleTokens.has(token)) weight *= TITLE_FIELD_BOOST;
+    if (!rowTokens.includes(token)) continue;
+    let weight = queryTokenWeight(prepared, token);
+    if (titleTokens.includes(token)) weight *= TITLE_FIELD_BOOST;
     score += weight;
     if (!LOW_SIGNAL_MODIFIERS.has(token)) matchedDiscriminating = true;
   }
@@ -427,7 +627,7 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
     if (LOW_SIGNAL_MODIFIERS.has(first) || LOW_SIGNAL_MODIFIERS.has(second)) continue;
     const bigram = `${first} ${second}`;
     if (titleNorm.includes(bigram)) {
-      score += (tokenWeight(first) + tokenWeight(second)) * PHRASE_MULTIPLIER;
+      score += (queryTokenWeight(prepared, first) + queryTokenWeight(prepared, second)) * PHRASE_MULTIPLIER;
     }
   }
 
@@ -436,13 +636,12 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
   // must outrank near-spec siblings. Penalties only apply when BOTH sides
   // state a value and they conflict, and are cumulative-capped so a true
   // dimension match can never fall below the exact gate.
-  const querySpecs = parseSpecAttributes(query);
-  const rowSpecs = parseSpecAttributes(row.title);
+  const querySpecs = prepared.specs;
+  const rowSpecs = prepared.hasSpecs ? rowSpecsForScoring(cached) : querySpecs;
   let specPenalty = 0;
   if (querySpecs.mil !== null && rowSpecs.mil !== null) {
     if (specEqual(querySpecs.mil, rowSpecs.mil)) {
       score += MIL_EXACT_BONUS;
-      matchedDiscriminating = true;
     } else {
       specPenalty += MIL_MISMATCH_PENALTY;
     }
@@ -450,7 +649,6 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
   if (querySpecs.gauge !== null && rowSpecs.gauge !== null) {
     if (specEqual(querySpecs.gauge, rowSpecs.gauge)) {
       score += GAUGE_EXACT_BONUS;
-      matchedDiscriminating = true;
     } else {
       specPenalty += GAUGE_MISMATCH_PENALTY;
     }
@@ -458,7 +656,6 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
   if (querySpecs.inches.length === 1 && rowSpecs.inches.length > 0) {
     if (rowSpecs.inches.some((value) => specEqual(value, querySpecs.inches[0]!))) {
       score += INCH_EXACT_BONUS;
-      matchedDiscriminating = true;
     } else {
       specPenalty += INCH_MISMATCH_PENALTY;
     }
@@ -466,7 +663,6 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
   if (querySpecs.yards !== null && rowSpecs.yards !== null) {
     if (specEqual(querySpecs.yards, rowSpecs.yards)) {
       score += YARD_EXACT_BONUS;
-      matchedDiscriminating = true;
     } else {
       specPenalty += YARD_MISMATCH_PENALTY;
     }
@@ -476,10 +672,9 @@ export function scoreRow(query: string, row: RankableRow): ScoredSignal {
   // Use-case expansion: "packaging for shipping t-shirts" boosts the product
   // tokens/family that serve the use-case, so category-correct rows surface
   // even when no direct product-noun token was typed.
-  for (const expansion of USE_CASE_EXPANSIONS) {
-    if (!expansion.trigger.test(queryNorm)) continue;
+  for (const expansion of prepared.expansions) {
     for (const token of expansion.tokens) {
-      if (rowTokens.has(token)) {
+      if (rowTokens.includes(token)) {
         score += USE_CASE_TOKEN_WEIGHT;
         matchedDiscriminating = true;
       }

@@ -1,5 +1,5 @@
 import { APPROVED_CATALOG, type ApprovedCatalogItem } from "./effective-approved-catalog.js";
-import { isMcpCommerceHeldSku, MCP_COMMERCE_HELD_SKUS, MCP_COMMERCE_HOLD_REASON } from "./mcp-commerce-holds.js";
+import { isMcpCommerceHeldSku, MCP_COMMERCE_HELD_SKUS } from "./mcp-commerce-holds.js";
 import { PURCHASE_READY_SKUS } from "./purchase-ready-skus.js";
 
 export interface UcpStarterCatalogRuntime {
@@ -170,14 +170,18 @@ const UCP_STARTER_BUNDLES = [
   },
 ] as const;
 
-function requireStarterItem(sku: string): ApprovedCatalogItem {
+// Resolve a hardcoded starter SKU against the current approved catalog.
+// Returns null (instead of throwing) when the SKU has dropped out of the
+// approved catalog, is not purchase ready, or is held from MCP commerce, so a
+// catalog regeneration never turns every UCP builder page into a 500.
+// (2026-09-07: BD1212AS and IB12BPD were dropped by the 07-12 regeneration and
+// took ~80 /ai/packrift-ucp-* URLs down with "Internal Server Error".)
+function resolveStarterItem(sku: string): ApprovedCatalogItem | null {
   const normalized = sku.toUpperCase();
   const item = APPROVED_CATALOG_BY_SKU.get(normalized);
-  if (!item) throw new Error(`UCP starter catalog SKU ${normalized} is not in the approved catalog.`);
-  if (!PURCHASE_READY_SET.has(normalized)) throw new Error(`UCP starter catalog SKU ${normalized} is not purchase ready.`);
-  if (isMcpCommerceHeldSku(normalized)) {
-    throw new Error(`UCP starter catalog SKU ${normalized} is held from MCP commerce: ${MCP_COMMERCE_HOLD_REASON}`);
-  }
+  if (!item) return null;
+  if (!PURCHASE_READY_SET.has(normalized)) return null;
+  if (isMcpCommerceHeldSku(normalized)) return null;
   return item;
 }
 
@@ -239,7 +243,8 @@ function ucpCliExample(query: string): string {
 }
 
 function starterSkuRecord(sku: string, bundleId: string) {
-  const item = requireStarterItem(sku);
+  const item = resolveStarterItem(sku);
+  if (!item) return null;
   return {
     sku: item.sku,
     title: item.title,
@@ -278,8 +283,12 @@ function starterSkuRecord(sku: string, bundleId: string) {
   };
 }
 
+type StarterSkuRecord = NonNullable<ReturnType<typeof starterSkuRecord>>;
+
 function bundleRecord(bundle: (typeof UCP_STARTER_BUNDLES)[number]) {
-  const items = bundle.skus.map((sku) => starterSkuRecord(sku, bundle.id));
+  const items = bundle.skus
+    .map((sku) => starterSkuRecord(sku, bundle.id))
+    .filter((item): item is StarterSkuRecord => item !== null);
   return {
     ...bundle,
     ucp_cli_examples: bundle.ucp_queries.map((query) => ({ query, command: ucpCliExample(query) })),
@@ -293,7 +302,7 @@ function bundleRecord(bundle: (typeof UCP_STARTER_BUNDLES)[number]) {
 }
 
 function uniqueStarterItems(bundles: ReturnType<typeof bundleRecord>[]) {
-  const bySku = new Map<string, ReturnType<typeof starterSkuRecord>>();
+  const bySku = new Map<string, StarterSkuRecord>();
   for (const bundle of bundles) {
     for (const item of bundle.items) bySku.set(item.sku, item);
   }
