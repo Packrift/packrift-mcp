@@ -47,11 +47,19 @@ jobs:
       - name: Directory surface parity (live server)
         run: npm run check:directory-surface:live
 
-      # Marketing-data quality checks depend on live GA4-derived payloads and
-      # flap independently of server health; report, don't gate.
-      - name: Check all-agent capture hub
+      # The capture reports require authentication. Check the anonymous response.
+      - name: Check internal capture report access
         continue-on-error: true
-        run: npm run check:agent-capture
+        run: |
+          for extension in json md; do
+            url="https://mcp.packrift.com/ai/all-agent-capture.${extension}"
+            status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' "$url")"
+            if [[ "$status" != 404 ]]; then
+              echo "::error::Expected HTTP 404 for anonymous access to $url (received $status)"
+              exit 1
+            fi
+            echo "Anonymous access to $url returned HTTP $status"
+          done
 
       - name: Upload smoke evidence
         if: always()
@@ -59,12 +67,4 @@ jobs:
         with:
           name: mcp-cart-handoff-smoke
           path: outputs/mcp-cart-handoff-smoke/
-          if-no-files-found: ignore
-
-      - name: Upload agent capture evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: agent-capture-check
-          path: outputs/agent-capture-check/
           if-no-files-found: ignore
