@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Live smoke test for the Packrift MCP 1.0 buyer path against the hosted
+// Live smoke test for the Packrift MCP buyer path against the hosted
 // endpoint: initialize, tools/list, search, product detail, checkout link,
 // the checkout redirect, the held-SKU guard and the legacy WebMCP path.
 // Read-only: nothing is ordered. Writes evidence to outputs/mcp-cart-handoff-smoke/.
@@ -10,7 +10,15 @@ import { resolve } from "node:path";
 const DEFAULT_ENDPOINT = "https://mcp.packrift.com/mcp";
 const OUT_ROOT = resolve(process.cwd(), "outputs/mcp-cart-handoff-smoke");
 const HELD_SKUS = ["12104", "CRR40W", "FWUPS116S24P"];
-const V1_TOOLS = ["search_products", "find_packaging_for_item", "get_product", "get_shipping_estimate", "create_cart_url", "get_bulk_quote_link"];
+const PUBLIC_TOOLS = [
+  "search_products",
+  "find_packaging_for_item",
+  "get_product",
+  "get_shipping_estimate",
+  "create_cart_url",
+  "get_bulk_quote_link",
+  "right_size_packaging",
+];
 
 const argv = process.argv.slice(2);
 const flag = (name) => {
@@ -68,7 +76,7 @@ async function main() {
 
   const checks = [
     check("initialize_ok", initialize.ok && initialize.parsed?.result?.serverInfo?.version, { server: initialize.parsed?.result?.serverInfo ?? null }),
-    check("tools_list_is_v1", toolsList.ok && V1_TOOLS.every((name) => toolNames.includes(name)) && toolNames.length === V1_TOOLS.length, { tools: toolNames }),
+    check("public_tools_match", toolsList.ok && PUBLIC_TOOLS.every((name) => toolNames.includes(name)) && toolNames.length === PUBLIC_TOOLS.length, { tools: toolNames }),
     check("tools_annotated", tools.every((tool) => tool.title && tool.annotations?.readOnlyHint === true && tool.annotations?.destructiveHint === false)),
     check("search_finds_sku", !search.isToolError && search.structured?.results?.some((row) => row.sku === sku), { text: search.text.slice(0, 200) }),
     check("product_live", !product.isToolError && product.structured?.sku === sku && typeof product.structured?.price === "number", { price: product.structured?.price ?? null, in_stock: product.structured?.in_stock ?? null }),

@@ -7,7 +7,7 @@
  *   1. No internal QA / test scaffolding params in public tool schemas.
  *   2. Assistant-neutral, jargon-free descriptions (no cross-assistant steering,
  *      no "sales test" / pilot language, no internal gate names).
- *   3. The public tool list exactly matches the declared submission list below.
+ *   3. Each public tool list exactly matches its declared list below.
  *
  * Modes:
  *   node scripts/check-directory-surface.mjs           # lint the local build (dist/)
@@ -17,8 +17,7 @@
 const LIVE = process.argv.includes("--live");
 const LIVE_ENDPOINT = "https://mcp.packrift.com/mcp";
 
-// The declared public tool list. This is the single source of truth that the
-// directory submission, README, and live server must all agree with.
+// The public tools declared by the local build.
 export const DECLARED_TOOLS = [
   "search_products",
   "find_packaging_for_item",
@@ -27,6 +26,9 @@ export const DECLARED_TOOLS = [
   "create_cart_url",
   "get_bulk_quote_link",
 ];
+
+// Hosted MCP 1.2.0 also exposes the right-sizing tool.
+const LIVE_DECLARED_TOOLS = [...DECLARED_TOOLS, "right_size_packaging"];
 
 // Params that must never appear in a public inputSchema. The server may still
 // accept some of them at the zod layer for backward compatibility with older
@@ -80,12 +82,13 @@ function checkText(scope, text) {
   }
 }
 
-function checkToolList(sourceLabel, tools) {
+function checkToolList(sourceLabel, tools, declaredTools) {
   const names = tools.map((t) => t.name);
-  const missing = DECLARED_TOOLS.filter((n) => !names.includes(n));
-  const undeclared = names.filter((n) => !DECLARED_TOOLS.includes(n));
+  const missing = declaredTools.filter((name) => !names.includes(name));
+  const undeclared = names.filter((name) => !declaredTools.includes(name));
   if (missing.length) fail(sourceLabel, `declared tools missing from surface: ${missing.join(", ")}`);
   if (undeclared.length) fail(sourceLabel, `surface exposes undeclared tools: ${undeclared.join(", ")}`);
+  if (new Set(names).size !== names.length) fail(sourceLabel, "surface exposes duplicate tool names");
 
   for (const tool of tools) {
     const scope = `${sourceLabel}:${tool.name}`;
@@ -107,7 +110,7 @@ function checkToolList(sourceLabel, tools) {
 
 async function lintLocalBuild() {
   const { TOOLS, PROMPTS, SERVER_INSTRUCTIONS } = await import("../dist/index.js");
-  checkToolList("local", TOOLS.map((t) => t.schema));
+  checkToolList("local", TOOLS.map((t) => t.schema), DECLARED_TOOLS);
   checkText("local:instructions", SERVER_INSTRUCTIONS);
   for (const prompt of PROMPTS) {
     checkText(`local:prompt:${prompt.name}`, prompt.description);
@@ -154,7 +157,7 @@ async function lintLiveSurface() {
     fail("live", "tools/list returned no tools");
     return;
   }
-  checkToolList("live", tools);
+  checkToolList("live", tools, LIVE_DECLARED_TOOLS);
   const prompts = await rpc(LIVE_ENDPOINT, "prompts/list", {}, 3, init.sessionId);
   for (const prompt of prompts.json?.result?.prompts ?? []) {
     checkText(`live:prompt:${prompt.name}`, prompt.description);
@@ -168,6 +171,7 @@ const summary = {
   generated_at: new Date().toISOString(),
   mode: LIVE ? "local+live" : "local",
   declared_tool_count: DECLARED_TOOLS.length,
+  ...(LIVE ? { live_declared_tool_count: LIVE_DECLARED_TOOLS.length } : {}),
   ok: failures.length === 0,
   failures,
 };
