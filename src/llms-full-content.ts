@@ -23,7 +23,7 @@ Packrift sells packaging and shipping supplies online in the United States, with
 
 **Registered entity:** Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801, US.
 
-**Customer service:** support@packrift.com, +1 (302) 216-2975.
+**Customer service:** support@packrift.com, +1 (812) 312-4285.
 
 ---
 
@@ -337,7 +337,7 @@ Packrift runs a public MCP server for AI assistants:
 
 ## Contact
 
-- Customer support: support@packrift.com, +1 (302) 216-2975
+- Customer support: support@packrift.com, +1 (812) 312-4285
 - Bulk and custom pricing: https://packrift.com/pages/bulk-quote
 - Registered office: Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801, US
 `;

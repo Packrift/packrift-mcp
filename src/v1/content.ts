@@ -147,7 +147,7 @@ ${TOOL_SUMMARIES.map((tool) => `- ${tool.name}: ${tool.summary}`).join("\n")}
 - [Refund policy](https://packrift.com/policies/refund-policy)
 - [Privacy policy](https://packrift.com/policies/privacy-policy)
 - [MCP privacy notice](https://mcp.packrift.com/privacy)
-- Support: support@packrift.com, +1 (302) 216-2975
+- Support: support@packrift.com, +1 (812) 312-4285
 `;
 
 export const AGENT_INSTRUCTIONS_MD = `# Using Packrift from an AI assistant
@@ -172,7 +172,7 @@ ${TOOL_SUMMARIES.map((tool) => `- **${tool.name}**: ${tool.summary}`).join("\n")
 - create_cart_url returns a link to packrift.com. The buyer reviews and pays there; no order exists until they check out.
 - Shipping estimates exclude tax; checkout shows the final amount.
 
-Support: support@packrift.com, +1 (302) 216-2975.
+Support: support@packrift.com, +1 (812) 312-4285.
 `;
 
 export const SKILL_MD = `---
@@ -264,7 +264,7 @@ function pageShell(title: string, description: string, body: string): string {
 <nav><a href="#connect">Connect</a><a href="#tools">Tools</a><a href="/privacy">Privacy</a><a href="https://packrift.com">Shop</a></nav>
 </div></header>
 <main class="wrap">${body}</main>
-<footer><div class="wrap">Packrift LLC · <a href="mailto:support@packrift.com">support@packrift.com</a> · +1 (302) 216-2975 · <a href="/privacy">MCP privacy</a> · <a href="https://packrift.com/policies/privacy-policy">Privacy policy</a> · <a href="https://packrift.com/policies/terms-of-service">Terms</a> · MCP ${MCP_VERSION}</div></footer>
+<footer><div class="wrap">Packrift LLC · <a href="mailto:support@packrift.com">support@packrift.com</a> · +1 (812) 312-4285 · <a href="/privacy">MCP privacy</a> · <a href="https://packrift.com/policies/privacy-policy">Privacy policy</a> · <a href="https://packrift.com/policies/terms-of-service">Terms</a> · MCP ${MCP_VERSION}</div></footer>
 <script>document.querySelectorAll("button.copy").forEach(function(b){b.addEventListener("click",function(){var t=b.getAttribute("data-copy");if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){var o=b.textContent;b.textContent="Copied";setTimeout(function(){b.textContent=o},1400)})}})});</script>
 </body>
 </html>`;
@@ -367,7 +367,7 @@ Cloudflare hosts the server. Shopify provides product, price, stock and shipping
 
 ## Contact
 
-Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801, US · support@packrift.com · +1 (302) 216-2975
+Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801, US · support@packrift.com · +1 (812) 312-4285
 `;
 
 export function privacyPageHtml(): string {
