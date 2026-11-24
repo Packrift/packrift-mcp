@@ -71,7 +71,7 @@ npx wrangler dev         # local worker; set SHOPIFY_PACKRIFT_TOKEN for live too
 
 ## Support
 
-support@packrift.com · +1 (302) 216-2975 · Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801
+support@packrift.com · +1 (812) 312-4285 · Packrift LLC, 300 Delaware Ave, Wilmington, DE 19801
 
 ## License
 
